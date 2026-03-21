@@ -101,16 +101,40 @@ export const TEST_GENERATOR_SYSTEM_PROMPT = `You are a test generation expert fo
 Generate comprehensive React Testing Library tests for the provided component.
 Return ONLY raw TypeScript test code without markdown fences.`;
 
-export function buildIntentParsePrompt(userInput: string): string {
+export function buildIntentParsePrompt(userInput: string, knowledge: string | null = null): string {
   // Sanitize: strip any attempt to override system instructions
   const sanitized = userInput
     .substring(0, 2000) // Limit length
     .replace(/system:|assistant:|<\|.*?\|>/gi, '') // Strip role tokens
     .trim();
 
-  return `Parse this UI description and return structured JSON:\n\n"${sanitized}"`;
+  let prompt = `Parse this UI description and return structured JSON:\n\n"${sanitized}"`;
+  
+  if (knowledge) {
+    prompt += `\n\n=== EXACT TEMPLATE MATCH DETECTED ===\n${knowledge}\nEnsure the JSON "fields", "interactions", and "layout" match these strict requirements exactly.`;
+  }
+  return prompt;
 }
 
-export function buildComponentGeneratorPrompt(intent: object): string {
-  return `Generate a React TypeScript component for this UIIntent:\n\n${JSON.stringify(intent, null, 2)}`;
+import type { MemoryEntry } from './memory';
+
+export function buildComponentGeneratorPrompt(
+  intent: object,
+  knowledge: string | null = null,
+  memory: MemoryEntry[] = []
+): string {
+  let prompt = `Generate a React TypeScript component for this UIIntent:\n\n${JSON.stringify(intent, null, 2)}`;
+  
+  if (knowledge) {
+    prompt += `\n\n=== COMPONENT KNOWLEDGE BASE ===\n${knowledge}\nYou must rigidly follow these structural and stylistic rules for this component.`;
+  }
+  
+  if (memory.length > 0) {
+    prompt += `\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n`;
+    memory.forEach((mem, i) => {
+      prompt += `\n--- Example ${i + 1}: ${mem.componentName} ---\n${mem.code}\n`;
+    });
+  }
+  
+  return prompt;
 }

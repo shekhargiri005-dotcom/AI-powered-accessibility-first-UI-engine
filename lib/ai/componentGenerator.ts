@@ -1,5 +1,7 @@
 import { HfInference } from '@huggingface/inference';
 import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
+import { getRelevantExamples } from './memory';
+import { findRelevantKnowledge } from './knowledgeBase';
 import { type UIIntent } from '../validation/schemas';
 
 const hf = new HfInference(process.env.HF_TOKEN);
@@ -20,11 +22,14 @@ function cleanGeneratedCode(raw: string): string {
 
 export async function generateComponent(intent: UIIntent): Promise<GenerationResult> {
   try {
+    const knowledge = findRelevantKnowledge(intent.description + ' ' + intent.componentName);
+    const memory = getRelevantExamples(intent);
+
     const response = await hf.chatCompletion({
       model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
       messages: [
         { role: 'system', content: COMPONENT_GENERATOR_SYSTEM_PROMPT },
-        { role: 'user', content: buildComponentGeneratorPrompt(intent) }
+        { role: 'user', content: buildComponentGeneratorPrompt(intent, knowledge, memory) }
       ],
       max_tokens: 4000,
       temperature: 0.2,

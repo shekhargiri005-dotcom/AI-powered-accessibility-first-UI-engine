@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateComponent } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
 import { generateTests } from '@/lib/testGenerator';
+import { saveGeneration } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
@@ -71,6 +72,14 @@ export async function POST(request: NextRequest) {
     const finalA11yReport = appliedFixes.length > 0
       ? validateAccessibility(finalCode)
       : initialA11yReport;
+
+    // Step 4.5: Memorization loop - Only remember components that are perfectly accessible natively or easily auto-fixable
+    if (finalA11yReport.passed && finalA11yReport.score === 100) {
+      // Async so we don't block the request
+      setTimeout(() => {
+        saveGeneration(intent, finalCode, finalA11yReport.score);
+      }, 0);
+    }
 
     // Step 5: Generate tests
     const tests = generateTests(intent, finalCode);

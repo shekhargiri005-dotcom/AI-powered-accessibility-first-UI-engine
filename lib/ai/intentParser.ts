@@ -1,5 +1,6 @@
 import { HfInference } from '@huggingface/inference';
 import { INTENT_PARSER_SYSTEM_PROMPT, buildIntentParsePrompt } from './prompts';
+import { findRelevantKnowledge } from './knowledgeBase';
 import { UIIntentSchema, type UIIntent } from '../validation/schemas';
 
 const hf = new HfInference(process.env.HF_TOKEN);
@@ -19,11 +20,13 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
     return { success: false, error: 'Input too short — describe a UI component' };
   }
   try {
+    const knowledge = findRelevantKnowledge(userInput);
+
     const response = await hf.chatCompletion({
       model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
       messages: [
         { role: 'system', content: INTENT_PARSER_SYSTEM_PROMPT },
-        { role: 'user', content: buildIntentParsePrompt(userInput) }
+        { role: 'user', content: buildIntentParsePrompt(userInput, knowledge) }
       ],
       max_tokens: 2000,
       temperature: 0.1,
