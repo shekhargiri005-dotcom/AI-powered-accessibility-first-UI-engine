@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
 import { type UIIntent } from '../validation/schemas';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface GenerationResult {
   success: boolean;
@@ -20,17 +20,17 @@ function cleanGeneratedCode(raw: string): string {
 
 export async function generateComponent(intent: UIIntent): Promise<GenerationResult> {
   try {
-    const model = genAI.getGenerativeModel({
+    const response = await ai.models.generateContent({
       model: 'gemini-1.5-flash',
-      generationConfig: {
+      contents: buildComponentGeneratorPrompt(intent),
+      config: {
+        systemInstruction: COMPONENT_GENERATOR_SYSTEM_PROMPT,
         temperature: 0.2,
         maxOutputTokens: 4000,
-      },
-      systemInstruction: COMPONENT_GENERATOR_SYSTEM_PROMPT,
+      }
     });
 
-    const result = await model.generateContent(buildComponentGeneratorPrompt(intent));
-    const rawContent = result.response.text();
+    const rawContent = response.text;
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty component code' };

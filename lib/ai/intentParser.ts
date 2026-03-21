@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { INTENT_PARSER_SYSTEM_PROMPT, buildIntentParsePrompt } from './prompts';
 import { UIIntentSchema, type UIIntent } from '../validation/schemas';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 export interface ParseResult {
   success: boolean;
@@ -20,18 +20,18 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
   }
 
   try {
-    const model = genAI.getGenerativeModel({
+    const response = await ai.models.generateContent({
       model: 'gemini-1.5-flash',
-      generationConfig: {
+      contents: buildIntentParsePrompt(userInput),
+      config: {
+        systemInstruction: INTENT_PARSER_SYSTEM_PROMPT,
         temperature: 0.1,
         maxOutputTokens: 2000,
-        responseMimeType: 'application/json', // Enforces JSON output
-      },
-      systemInstruction: INTENT_PARSER_SYSTEM_PROMPT,
+        responseMimeType: 'application/json',
+      }
     });
 
-    const result = await model.generateContent(buildIntentParsePrompt(userInput));
-    const rawContent = result.response.text();
+    const rawContent = response.text;
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty response' };
