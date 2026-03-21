@@ -13,9 +13,15 @@ export interface GenerationResult {
 }
 
 function cleanGeneratedCode(raw: string): string {
-  // Strip any accidental markdown fences
+  // Try to find a code block first, ignoring any conversational filler
+  const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)\s*```/i);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  // Fallback: strip exact fences if no matching pair is found
   return raw
-    .replace(/^```(?:tsx?|jsx?|typescript)?\n?/gim, '')
+    .replace(/^```(?:tsx?|jsx?|typescript|javascript)?\n?/gim, '')
     .replace(/```\s*$/gim, '')
     .trim();
 }
@@ -43,11 +49,11 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
 
     const cleaned = cleanGeneratedCode(rawContent);
 
-    // Basic sanity check
-    if (!cleaned.includes('export default') || !cleaned.includes('return (')) {
+    // Basic sanity check - ensure it exports something and returns JSX
+    if (!cleaned.includes('export') || !cleaned.includes('return')) {
       return {
         success: false,
-        error: 'Generated code does not appear to be a valid React component',
+        error: 'Generated code does not appear to be a valid React component. The AI might have timed out or generated conversational text instead.',
       };
     }
 
