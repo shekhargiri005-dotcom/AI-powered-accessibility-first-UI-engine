@@ -52,8 +52,15 @@ OUTPUT FORMAT: You must ALWAYS return valid JSON matching this exact schema:
   ]
 }
 
-IMPORTANT:
+IMPORTANT RULES:
 - Return ONLY the JSON object — no markdown, no explanation, no code blocks
+- EVERY "id" MUST be strict kebab-case: e.g. "email-input", "submit-btn"
+- EVERY "type" MUST exactly match one of the allowed strings in the schema (e.g. "text", "email"). DO NOT invent types.
+- Every field MUST have a "label" (string). Do not omit it.
+- "layout.maxWidth" must be one of: "sm", "md", "lg", "xl", "full"
+- "layout.alignment" must be one of: "left", "center", "right"
+- "theme.variant" must be one of: "default", "primary", "secondary", "danger", "success"
+- "theme.size" must be one of: "sm", "md", "lg"
 - If the input is not a UI description, return: {"error": "Not a UI description", "componentType": "unknown"}
 - Never include actual code in your response`;
 

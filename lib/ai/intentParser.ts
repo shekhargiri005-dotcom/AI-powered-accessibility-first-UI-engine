@@ -18,10 +18,9 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
   if (userInput.trim().length < 3) {
     return { success: false, error: 'Input too short — describe a UI component' };
   }
-
   try {
     const response = await hf.chatCompletion({
-      model: 'meta-llama/Meta-Llama-3-8B-Instruct',
+      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
       messages: [
         { role: 'system', content: INTENT_PARSER_SYSTEM_PROMPT },
         { role: 'user', content: buildIntentParsePrompt(userInput) }
