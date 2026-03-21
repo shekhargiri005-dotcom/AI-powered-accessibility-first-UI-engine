@@ -77,14 +77,15 @@ MANDATORY RULES:
    - Use aria-required, aria-describedby for error messages
    - Include role attributes where appropriate
    - Add aria-live="polite" regions for dynamic content
-5. Design System & Premium SaaS Aesthetics:
-   - Keep everything minimal, uncluttered, and highly structured using consistent spacing and alignment.
-   - Use subtle 3D-style elements for depth (layered cards, soft drop shadows like shadow-sm, shadow-md, shadow-lg) — do NOT make it heavy or distracting.
-   - Avoid excessive colors or gradients. Stay consistent, refined, and professional using semantic neutral palettes (slate, zinc, gray).
-   - Include clean SVG icons to enhance the visual identity.
-   - Maintain strict accessibility (contrast, readability, visible focus states like focus:ring-2).
-   - Do NOT over-design — aim for a modern, production-ready SaaS look (e.g., Linear, Vercel, or Stripe standard apps).
-   - Use soft typography hierarchy: distinct weights (font-medium, font-semibold) and subtle text colors for secondary info (text-gray-500).
+5. Ultra-Modern SaaS Aesthetics (MANDATORY Tailwind classes):
+   - You MUST NOT generate basic/dated HTML forms. You must generate premium Vercel/Linear style UI.
+   - Cards/Containers: 'bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl shadow-sm p-6'
+   - Text Inputs: 'w-full bg-transparent border border-zinc-300 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 transition-colors'
+   - Primary Buttons: 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg px-4 py-2 text-sm font-medium hover:bg-zinc-800 dark:hover:bg-zinc-200 transition-colors tracking-tight'
+   - Secondary Buttons: 'bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg px-4 py-2 text-sm font-medium hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors'
+   - Labels: 'block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5'
+   - Checkboxes: 'h-4 w-4 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 dark:border-zinc-700 dark:bg-zinc-900'
+   - Icons: ALWAYS use standard SVG formats representing Lucide icons (size 16 or 20, stroke-width 2).
 6. Error Handling: Include form validation state with error messages using aria-describedby
 7. Loading States: Include loading state for submit buttons
 
