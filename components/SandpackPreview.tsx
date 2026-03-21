@@ -5,7 +5,6 @@ import {
   SandpackProvider,
   SandpackLayout,
   SandpackPreview as SandpackPreviewPanel,
-  SandpackCodeEditor,
 } from '@codesandbox/sandpack-react';
 import { buildSandpackFiles, SANDPACK_DEPENDENCIES } from '@/lib/sandbox/sandpackConfig';
 import { Eye, Code2 } from 'lucide-react';
@@ -51,16 +50,12 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         }}
       >
         <SandpackLayout>
-          <SandpackCodeEditor
-            showLineNumbers
-            showInlineErrors
-            wrapContent
-            style={{ height: '300px', fontSize: '12px' }}
-          />
           <SandpackPreviewPanel
-            showNavigator={false}
-            showOpenInCodeSandbox={true}
-            style={{ height: '300px' }}
+            showNavigator={true}
+            showRestartButton={true}
+            showRefreshButton={true}
+            showOpenInCodeSandbox={false}
+            style={{ height: '500px' }}
           />
         </SandpackLayout>
       </SandpackProvider>
