@@ -3,17 +3,17 @@ import { z } from 'zod';
 // ─── Field Schema ────────────────────────────────────────────────────────────
 
 export const UIFieldSchema = z.object({
-  id: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Must be kebab-case'),
+  id: z.string().catch('element'),
   type: z.enum([
     'text', 'email', 'password', 'checkbox', 'radio',
     'select', 'textarea', 'button', 'link', 'number', 'tel', 'date',
     'image', 'heading', 'paragraph', 'list', 'table', 'icon', 'video'
-  ]),
-  label: z.string().default(''),
-  placeholder: z.string().default(''),
-  required: z.boolean().default(false),
-  validation: z.string().default(''),
-  options: z.array(z.string()).default([]),
+  ]).catch('text'),
+  label: z.string().nullable().catch(''),
+  placeholder: z.string().nullable().catch(''),
+  required: z.boolean().nullable().catch(false),
+  validation: z.string().nullable().catch(''),
+  options: z.array(z.string()).nullable().catch([]),
 });
 
 export type UIField = z.infer<typeof UIFieldSchema>;
@@ -23,9 +23,9 @@ export type UIField = z.infer<typeof UIFieldSchema>;
 export const LayoutSchema = z.object({
   type: z.enum([
     'single-column', 'two-column', 'grid', 'flex-row', 'centered',
-  ]),
-  maxWidth: z.enum(['sm', 'md', 'lg', 'xl', 'full']).default('md'),
-  alignment: z.enum(['left', 'center', 'right']).default('left'),
+  ]).nullable().catch('single-column'),
+  maxWidth: z.enum(['sm', 'md', 'lg', 'xl', 'full']).nullable().catch('md'),
+  alignment: z.enum(['left', 'center', 'right']).nullable().catch('left'),
 });
 
 export type Layout = z.infer<typeof LayoutSchema>;
@@ -33,9 +33,9 @@ export type Layout = z.infer<typeof LayoutSchema>;
 // ─── Interaction Schema ──────────────────────────────────────────────────────
 
 export const InteractionSchema = z.object({
-  trigger: z.string().min(1),
-  action: z.string().min(1),
-  feedback: z.string().default(''),
+  trigger: z.string().catch('click'),
+  action: z.string().catch('update'),
+  feedback: z.string().nullable().catch(''),
 });
 
 export type Interaction = z.infer<typeof InteractionSchema>;
@@ -43,24 +43,22 @@ export type Interaction = z.infer<typeof InteractionSchema>;
 // ─── Theme Schema ────────────────────────────────────────────────────────────
 
 export const ThemeSchema = z.object({
-  variant: z.enum(['default', 'primary', 'secondary', 'danger', 'success']).default('primary'),
-  size: z.enum(['sm', 'md', 'lg']).default('md'),
+  variant: z.enum(['default', 'primary', 'secondary', 'danger', 'success']).nullable().catch('primary'),
+  size: z.enum(['sm', 'md', 'lg']).nullable().catch('md'),
 });
 
 // ─── UIIntent Schema (main output of Intent Parser) ──────────────────────────
 
 export const UIIntentSchema = z.object({
-  componentType: z.string().min(1),
-  componentName: z.string()
-    .min(1)
-    .regex(/^[A-Z][A-Za-z]+$/, 'Must be PascalCase'),
-  description: z.string().min(1),
-  fields: z.array(UIFieldSchema).default([]),
-  layout: LayoutSchema,
-  interactions: z.array(InteractionSchema).default([]),
-  theme: ThemeSchema,
-  a11yRequired: z.array(z.string()).default([]),
-  semanticElements: z.array(z.string()).default([]),
+  componentType: z.string().catch('component'),
+  componentName: z.string().catch('GeneratedComponent'),
+  description: z.string().catch('UI Component'),
+  fields: z.array(UIFieldSchema).nullable().catch([]),
+  layout: LayoutSchema.default({ type: 'single-column', maxWidth: 'md', alignment: 'left' }),
+  interactions: z.array(InteractionSchema).nullable().catch([]),
+  theme: ThemeSchema.default({ variant: 'primary', size: 'md' }),
+  a11yRequired: z.array(z.string()).nullable().catch([]),
+  semanticElements: z.array(z.string()).nullable().catch([]),
 });
 
 export type UIIntent = z.infer<typeof UIIntentSchema>;
