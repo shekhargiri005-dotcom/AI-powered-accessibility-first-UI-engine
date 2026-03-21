@@ -13,8 +13,9 @@ export interface GenerationResult {
 }
 
 function cleanGeneratedCode(raw: string): string {
-  // Try to find a code block first, ignoring any conversational filler
-  const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)\s*```/i);
+  // Try to find a code block first, ignoring any conversational filler.
+  // The closing fence (```) is optional ($) in case the LLM response is truncated due to token limits.
+  const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
   if (match && match[1]) {
     return match[1].trim();
   }
@@ -50,10 +51,10 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
     const cleaned = cleanGeneratedCode(rawContent);
 
     // Basic sanity check - ensure it exports something and returns JSX
-    if (!cleaned.includes('export') || !cleaned.includes('return')) {
+    if (!cleaned.includes('export') && !cleaned.includes('return')) {
       return {
         success: false,
-        error: 'Generated code does not appear to be a valid React component. The AI might have timed out or generated conversational text instead.',
+        error: `Generated code does not appear to be a valid React component. AI Output start: "${cleaned.substring(0, 150)}..."`,
       };
     }
 
