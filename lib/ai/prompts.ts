@@ -77,14 +77,14 @@ MANDATORY RULES:
    - Use aria-required, aria-describedby for error messages
    - Include role attributes where appropriate
    - Add aria-live="polite" regions for dynamic content
-5. Design System & Premium Aesthetics:
-   - Use stunning, modern web design aesthetics (e.g., Apple, Stripe, or Linear style).
-   - Use smooth gradients (bg-gradient-to-r, from-indigo-500, to-purple-600) occasionally for emphasis.
-   - Employ glassmorphism where appropriate (bg-white/10, backdrop-blur-lg, border border-white/20 dark:bg-black/40).
-   - Use sophisticated color palettes: slate, zinc, indigo, violet, emerald for semantic states.
-   - Include micro-animations: transition-all duration-300 ease-in-out hover:scale-[1.02] hover:-translate-y-1.
-   - Use beautiful modern soft shadows (shadow-lg, shadow-xl, shadow-indigo-500/20) and rounded corners (rounded-xl, rounded-2xl).
-   - Focus heavily on typography (tracking-tight, leading-relaxed, text-transparent bg-clip-text).
+5. Design System & Premium SaaS Aesthetics:
+   - Keep everything minimal, uncluttered, and highly structured using consistent spacing and alignment.
+   - Use subtle 3D-style elements for depth (layered cards, soft drop shadows like shadow-sm, shadow-md, shadow-lg) — do NOT make it heavy or distracting.
+   - Avoid excessive colors or gradients. Stay consistent, refined, and professional using semantic neutral palettes (slate, zinc, gray).
+   - Include clean SVG icons to enhance the visual identity.
+   - Maintain strict accessibility (contrast, readability, visible focus states like focus:ring-2).
+   - Do NOT over-design — aim for a modern, production-ready SaaS look (e.g., Linear, Vercel, or Stripe standard apps).
+   - Use soft typography hierarchy: distinct weights (font-medium, font-semibold) and subtle text colors for secondary info (text-gray-500).
 6. Error Handling: Include form validation state with error messages using aria-describedby
 7. Loading States: Include loading state for submit buttons
 
