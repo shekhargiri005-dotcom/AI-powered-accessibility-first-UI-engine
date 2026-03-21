@@ -1,14 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, ChevronRight, Plus, Bot, Mic, AudioLines, Image as ImageIcon, X, File as FileIcon } from 'lucide-react';
-
-type AttachedFile = {
-  id: string;
-  name: string;
-  type: 'image' | 'document';
-  url: string;
-};
+import { Sparkles, Send, Loader2, ChevronRight, Mic, X } from 'lucide-react';
 
 const EXAMPLE_PROMPTS = [
   'A login form with email and password fields',
@@ -30,8 +23,6 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [attachments, setAttachments] = useState<AttachedFile[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -86,35 +77,11 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      const newAttachment: AttachedFile = {
-        id: crypto.randomUUID(),
-        name: file.name,
-        type: file.type.startsWith('image/') ? 'image' : 'document',
-        url: URL.createObjectURL(file), // Free URL on unmount in a complete implementation
-      };
-      setAttachments([...attachments, newAttachment]);
-    }
-  };
-
-  const removeAttachment = (id: string) => {
-    setAttachments(attachments.filter((a) => a.id !== id));
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if ((prompt.trim() || attachments.length > 0) && !isLoading) {
-      // In a full implementation, you'd pass attachments here too.
-      // For now, we append a notice to the prompt so the user knows they attached something.
-      let finalPrompt = prompt.trim();
-      if (attachments.length > 0) {
-        finalPrompt += `\\n[Attached Files: ${attachments.map(a => a.name).join(', ')}]`;
-      }
-      onSubmit(finalPrompt);
+    if (prompt.trim() && !isLoading) {
+      onSubmit(prompt.trim());
       setPrompt('');
-      setAttachments([]);
       setIsRecording(false);
     }
   };
@@ -153,10 +120,9 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
           rounded-[28px] overflow-hidden
         `}>
           
-          {/* Attachments Rail (if files attached or recording) */}
-          {(attachments.length > 0 || isRecording) && (
-            <div className="flex flex-wrap gap-2 px-3 pt-3 pb-1 border-b border-[#303030]/50" role="region" aria-label="Attached files">
-              {isRecording && (
+          {/* Active Recording State */}
+          {isRecording && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3 pb-1 border-b border-[#303030]/50" role="region" aria-label="Recording active">
                  <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl py-1 px-3 text-xs text-red-400">
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
@@ -167,40 +133,13 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                       <X className="w-3 h-3" />
                     </button>
                  </div>
-              )}
-              {attachments.map((file) => (
-                <div key={file.id} className="flex items-center gap-1.5 bg-[#303030]/50 border border-[#404040] rounded-xl py-1 px-1.5 pr-2.5 text-xs group">
-                  {file.type === 'image' ? (
-                    <img src={file.url} alt="Preview" className="w-6 h-6 rounded-md object-cover border border-[#404040]" />
-                  ) : (
-                    <FileIcon className="w-4 h-4 text-violet-400 ml-1" />
-                  )}
-                  <span className="truncate max-w-[100px] text-zinc-300 font-medium ml-1">{file.name}</span>
-                  <button type="button" onClick={() => removeAttachment(file.id)} className="text-zinc-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
             </div>
           )}
 
           <div className="flex items-end px-2 py-2 w-full">
             {/* Left Actions */}
-            <div className="flex items-center pr-2 pl-1 pb-1 gap-2">
-               <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileUpload}
-                className="hidden"
-                accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.doc,.docx"
-              />
-              <button 
-                type="button" 
-                onClick={() => fileInputRef.current?.click()}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none"
-              >
-                <Plus className="w-5 h-5 stroke-[1.5]" />
-              </button>
+            <div className="flex items-center pr-2 pl-2 pb-1 gap-2">
+              <div className="w-5 h-5" /> {/* Spacer to align textarea with the previous Plus icon spacing */}
             </div>
 
             {/* Expanding Text Area */}
@@ -244,12 +183,12 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
 
               <button
                 type="submit"
-                disabled={(!prompt.trim() && attachments.length === 0) || isLoading || isOverLimit}
+                disabled={!prompt.trim() || isLoading || isOverLimit}
                 aria-label={isLoading ? 'Generating component, please wait' : 'Generate component'}
                 className={`
                   flex items-center justify-center w-8 h-8 rounded-full ml-1
                   transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121] focus:ring-white
-                  ${isLoading || (!prompt.trim() && attachments.length === 0 && !isRecording) 
+                  ${isLoading || !prompt.trim() 
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
                     : 'bg-white text-black hover:scale-105 active:scale-95 shadow-md'
                   }
@@ -257,10 +196,8 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin text-white" aria-hidden="true" />
-                ) : prompt.trim() || attachments.length > 0 || isRecording ? (
-                  <Send className="w-4 h-4 block ml-[2px]" aria-hidden="true" />
                 ) : (
-                  <AudioLines className="w-4 h-4" aria-hidden="true" />
+                  <Send className={`w-4 h-4 block ml-[2px] ${!prompt.trim() ? 'opacity-50' : 'opacity-100'}`} aria-hidden="true" />
                 )}
               </button>
             </div>
