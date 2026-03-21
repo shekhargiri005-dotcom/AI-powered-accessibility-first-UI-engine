@@ -1,8 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
+import { HfInference } from '@huggingface/inference';
 import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
 import { type UIIntent } from '../validation/schemas';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const hf = new HfInference(process.env.HF_TOKEN);
 
 export interface GenerationResult {
   success: boolean;
@@ -20,17 +20,17 @@ function cleanGeneratedCode(raw: string): string {
 
 export async function generateComponent(intent: UIIntent): Promise<GenerationResult> {
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: buildComponentGeneratorPrompt(intent),
-      config: {
-        systemInstruction: COMPONENT_GENERATOR_SYSTEM_PROMPT,
-        temperature: 0.2,
-        maxOutputTokens: 4000,
-      }
+    const response = await hf.chatCompletion({
+      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+      messages: [
+        { role: 'system', content: COMPONENT_GENERATOR_SYSTEM_PROMPT },
+        { role: 'user', content: buildComponentGeneratorPrompt(intent) }
+      ],
+      max_tokens: 4000,
+      temperature: 0.2,
     });
 
-    const rawContent = response.text;
+    const rawContent = response.choices[0]?.message?.content || '';
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty component code' };
@@ -49,6 +49,6 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
     return { success: true, code: cleaned };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `Gemini API error: ${msg}` };
+    return { success: false, error: `Hugging Face API error: ${msg}` };
   }
 }

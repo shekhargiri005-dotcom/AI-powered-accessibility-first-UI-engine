@@ -1,8 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
+import { HfInference } from '@huggingface/inference';
 import { INTENT_PARSER_SYSTEM_PROMPT, buildIntentParsePrompt } from './prompts';
 import { UIIntentSchema, type UIIntent } from '../validation/schemas';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const hf = new HfInference(process.env.HF_TOKEN);
 
 export interface ParseResult {
   success: boolean;
@@ -20,26 +20,29 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash',
-      contents: buildIntentParsePrompt(userInput),
-      config: {
-        systemInstruction: INTENT_PARSER_SYSTEM_PROMPT,
-        temperature: 0.1,
-        maxOutputTokens: 2000,
-        responseMimeType: 'application/json',
-      }
+    const response = await hf.chatCompletion({
+      model: 'meta-llama/Meta-Llama-3-8B-Instruct',
+      messages: [
+        { role: 'system', content: INTENT_PARSER_SYSTEM_PROMPT },
+        { role: 'user', content: buildIntentParsePrompt(userInput) }
+      ],
+      max_tokens: 2000,
+      temperature: 0.1,
     });
 
-    const rawContent = response.text;
+    const rawContent = response.choices[0]?.message?.content || '';
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty response' };
     }
 
+    // Attempt to extract JSON if the model wrapped it in markdown
+    const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawContent];
+    const cleanedRaw = jsonMatch[1].trim();
+
     let parsed: unknown;
     try {
-      parsed = JSON.parse(rawContent);
+      parsed = JSON.parse(cleanedRaw);
     } catch {
       return { success: false, error: 'AI returned malformed JSON', rawResponse: rawContent };
     }
@@ -66,6 +69,6 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
     return { success: true, intent: validation.data, rawResponse: rawContent };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `Gemini API error: ${msg}` };
+    return { success: false, error: `Hugging Face API error: ${msg}` };
   }
 }

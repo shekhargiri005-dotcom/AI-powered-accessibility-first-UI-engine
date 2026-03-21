@@ -50,9 +50,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for OpenAI API key
-    if (!process.env.GEMINI_API_KEY) {
+    if (!process.env.HF_TOKEN) {
       return NextResponse.json(
-        { success: false, error: 'GEMINI_API_KEY is not configured. Add it to your .env.local file.' },
+        { success: false, error: 'HF_TOKEN is not configured. Add it to your .env.local file.' },
         { status: 500 }
       );
     }
