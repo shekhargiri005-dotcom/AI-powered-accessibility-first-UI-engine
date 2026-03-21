@@ -20,8 +20,8 @@ OUTPUT FORMAT: You must ALWAYS return valid JSON matching this exact schema:
   "fields": [                     // Array of interactive fields/elements
     {
       "id": string,               // Unique kebab-case identifier
-      "type": string,             // "text" | "email" | "password" | "checkbox" | "radio" | "select" | "textarea" | "button" | "link"
-      "label": string,            // Human-readable label
+      "type": string,             // "text"|"email"|"password"|"checkbox"|"radio"|"select"|"textarea"|"button"|"link"|"image"|"table"|"list"|"heading"|"paragraph"
+      "label": string,            // Human-readable label (optional for non-form elements)
       "placeholder": string,      // Placeholder text (for inputs)
       "required": boolean,
       "validation": string,       // Validation rule description, e.g., "required, valid email"
@@ -55,8 +55,7 @@ OUTPUT FORMAT: You must ALWAYS return valid JSON matching this exact schema:
 IMPORTANT RULES:
 - Return ONLY the JSON object — no markdown, no explanation, no code blocks
 - EVERY "id" MUST be strict kebab-case: e.g. "email-input", "submit-btn"
-- EVERY "type" MUST exactly match one of the allowed strings in the schema (e.g. "text", "email"). DO NOT invent types.
-- Every field MUST have a "label" (string). Do not omit it.
+- EVERY "type" MUST exactly match one of the allowed strings in the schema (e.g. "text", "email", "image", "table"). DO NOT invent types.
 - "layout.maxWidth" must be one of: "sm", "md", "lg", "xl", "full"
 - "layout.alignment" must be one of: "left", "center", "right"
 - "theme.variant" must be one of: "default", "primary", "secondary", "danger", "success"

@@ -7,8 +7,9 @@ export const UIFieldSchema = z.object({
   type: z.enum([
     'text', 'email', 'password', 'checkbox', 'radio',
     'select', 'textarea', 'button', 'link', 'number', 'tel', 'date',
+    'image', 'heading', 'paragraph', 'list', 'table', 'icon', 'video'
   ]),
-  label: z.string().min(1, 'Label is required'),
+  label: z.string().default(''),
   placeholder: z.string().default(''),
   required: z.boolean().default(false),
   validation: z.string().default(''),
