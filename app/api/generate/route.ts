@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
 
     // Check for OpenAI API key
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GEMINI_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'OPENAI_API_KEY is not configured. Add it to your .env.local file.' },
+        { success: false, error: 'GEMINI_API_KEY is not configured. Add it to your .env.local file.' },
         { status: 500 }
       );
     }

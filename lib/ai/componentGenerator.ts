@@ -1,10 +1,8 @@
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
 import { type UIIntent } from '../validation/schemas';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
 export interface GenerationResult {
   success: boolean;
@@ -13,65 +11,44 @@ export interface GenerationResult {
 }
 
 function cleanGeneratedCode(raw: string): string {
-  // Strip any accidental markdown fences the model might include
+  // Strip any accidental markdown fences
   return raw
     .replace(/^```(?:tsx?|jsx?|typescript)?\n?/gim, '')
     .replace(/```\s*$/gim, '')
     .trim();
 }
 
-function injectFallbackA11y(code: string): string {
-  // If model forgot aria-label on form, inject a comment warning
-  // (actual repair is done by a11yValidator)
-  return code;
-}
-
 export async function generateComponent(intent: UIIntent): Promise<GenerationResult> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      temperature: 0.2,
-      max_tokens: 4000,
-      messages: [
-        {
-          role: 'system',
-          content: COMPONENT_GENERATOR_SYSTEM_PROMPT,
-        },
-        {
-          role: 'user',
-          content: buildComponentGeneratorPrompt(intent),
-        },
-      ],
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 4000,
+      },
+      systemInstruction: COMPONENT_GENERATOR_SYSTEM_PROMPT,
     });
 
-    const rawContent = response.choices[0]?.message?.content;
+    const result = await model.generateContent(buildComponentGeneratorPrompt(intent));
+    const rawContent = result.response.text();
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty component code' };
     }
 
     const cleaned = cleanGeneratedCode(rawContent);
-    const withA11y = injectFallbackA11y(cleaned);
 
-    // Basic sanity check — must contain a React component export
-    if (!withA11y.includes('export default') || !withA11y.includes('return (')) {
+    // Basic sanity check
+    if (!cleaned.includes('export default') || !cleaned.includes('return (')) {
       return {
         success: false,
         error: 'Generated code does not appear to be a valid React component',
       };
     }
 
-    return { success: true, code: withA11y };
+    return { success: true, code: cleaned };
   } catch (error) {
-    if (error instanceof OpenAI.APIError) {
-      return {
-        success: false,
-        error: `OpenAI API error: ${error.message} (status: ${error.status})`,
-      };
-    }
-    return {
-      success: false,
-      error: `Unexpected error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    };
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, error: `Gemini API error: ${msg}` };
   }
 }
