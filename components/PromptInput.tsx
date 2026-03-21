@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, ChevronRight, Mic, X } from 'lucide-react';
+import { Sparkles, Send, Loader2, ChevronRight, Mic, X, Plus } from 'lucide-react';
 
 const EXAMPLE_PROMPTS = [
   'A login form with email and password fields',
@@ -23,6 +23,8 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -73,6 +75,45 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
       } catch (e) {
         console.error(e);
         setIsRecording(false);
+      }
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file to extract text from.');
+        return;
+      }
+
+      setIsProcessingImage(true);
+      
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/api/image-to-text', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || 'Failed to analyze image');
+        }
+
+        const data = await response.json();
+        
+        if (data.caption) {
+           setPrompt((prev) => prev + (prev.endsWith(' ') ? '' : ' ') + `[Image Context: ${data.caption}] `);
+        }
+      } catch (error: any) {
+        alert(error.message || 'There was an error analyzing the image.');
+      } finally {
+        setIsProcessingImage(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       }
     }
   };
@@ -139,7 +180,21 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
           <div className="flex items-end px-2 py-2 w-full">
             {/* Left Actions */}
             <div className="flex items-center pr-2 pl-2 pb-1 gap-2">
-              <div className="w-5 h-5" /> {/* Spacer to align textarea with the previous Plus icon spacing */}
+               <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                className="hidden"
+                accept="image/jpeg,image/png,image/gif,image/webp"
+              />
+              <button 
+                type="button" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessingImage}
+                className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none disabled:opacity-50"
+              >
+                {isProcessingImage ? <Loader2 className="w-5 h-5 stroke-[1.5] animate-spin text-blue-400" /> : <Plus className="w-5 h-5 stroke-[1.5]" />}
+              </button>
             </div>
 
             {/* Expanding Text Area */}
@@ -183,7 +238,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
 
               <button
                 type="submit"
-                disabled={!prompt.trim() || isLoading || isOverLimit}
+                disabled={!prompt.trim() || isLoading || isOverLimit || isProcessingImage}
                 aria-label={isLoading ? 'Generating component, please wait' : 'Generate component'}
                 className={`
                   flex items-center justify-center w-8 h-8 rounded-full ml-1
