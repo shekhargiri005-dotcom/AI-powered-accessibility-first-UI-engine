@@ -1,0 +1,69 @@
+'use client';
+
+import React from 'react';
+import {
+  SandpackProvider,
+  SandpackLayout,
+  SandpackPreview as SandpackPreviewPanel,
+  SandpackCodeEditor,
+} from '@codesandbox/sandpack-react';
+import { buildSandpackFiles, SANDPACK_DEPENDENCIES } from '@/lib/sandbox/sandpackConfig';
+import { Eye, Code2 } from 'lucide-react';
+
+interface SandpackPreviewProps {
+  code: string;
+  componentName: string;
+}
+
+export default function SandpackPreviewComponent({ code, componentName }: SandpackPreviewProps) {
+  const files = buildSandpackFiles(code, componentName);
+
+  return (
+    <section
+      aria-labelledby="preview-heading"
+      className="rounded-xl border border-gray-700/50 overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-gray-900/80 border-b border-gray-700/50">
+        <Eye className="w-4 h-4 text-violet-400" aria-hidden="true" />
+        <h3 id="preview-heading" className="text-sm font-semibold text-white">
+          Live Preview
+        </h3>
+        <span className="text-xs text-gray-500 ml-auto">Powered by Sandpack</span>
+      </div>
+
+      {/* Sandpack */}
+      <SandpackProvider
+        template="react-ts"
+        theme="dark"
+        files={files}
+        customSetup={{
+          dependencies: {
+            ...SANDPACK_DEPENDENCIES,
+          },
+        }}
+        options={{
+          visibleFiles: Object.keys(files) as string[],
+          activeFile: `/${componentName}.tsx`,
+          externalResources: [
+            'https://cdn.tailwindcss.com',
+          ],
+        }}
+      >
+        <SandpackLayout>
+          <SandpackCodeEditor
+            showLineNumbers
+            showInlineErrors
+            wrapContent
+            style={{ height: '300px', fontSize: '12px' }}
+          />
+          <SandpackPreviewPanel
+            showNavigator={false}
+            showOpenInCodeSandbox={true}
+            style={{ height: '300px' }}
+          />
+        </SandpackLayout>
+      </SandpackProvider>
+    </section>
+  );
+}
