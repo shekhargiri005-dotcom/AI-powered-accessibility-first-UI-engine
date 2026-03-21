@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, Loader2, ChevronRight, Plus, Bot, Mic, AudioLines, Image as ImageIcon, X, File as FileIcon } from 'lucide-react';
-import { useRef } from 'react';
 
 type AttachedFile = {
   id: string;
@@ -33,6 +32,59 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const [isRecording, setIsRecording] = useState(false);
   const [attachments, setAttachments] = useState<AttachedFile[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = true;
+        recognitionRef.current.interimResults = true;
+        
+        recognitionRef.current.onresult = (event: any) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript + ' ';
+            }
+          }
+          if (finalTranscript) {
+            setPrompt((prev) => (prev ? prev.trim() + ' ' : '') + finalTranscript.trim() + ' ');
+          }
+        };
+
+        recognitionRef.current.onerror = (event: any) => {
+          console.error("Speech recognition error:", event.error);
+          setIsRecording(false);
+        };
+
+        recognitionRef.current.onend = () => {
+          setIsRecording(false);
+        };
+      }
+    }
+  }, []);
+
+  const toggleRecording = () => {
+    if (!recognitionRef.current) {
+      alert('Voice input is not supported in this browser. Please use Chrome, Edge, or Safari.');
+      return;
+    }
+    
+    if (isRecording) {
+      recognitionRef.current.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        recognitionRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        console.error(e);
+        setIsRecording(false);
+      }
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -110,16 +162,20 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                       <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                     </span>
-                    Listening (0:03)...
-                    <button type="button" onClick={() => setIsRecording(false)} className="ml-1 text-red-500 hover:text-white transition-colors">
+                    Listening... Speak clearly.
+                    <button type="button" onClick={toggleRecording} className="ml-1 text-red-500 hover:text-white transition-colors">
                       <X className="w-3 h-3" />
                     </button>
                  </div>
               )}
               {attachments.map((file) => (
-                <div key={file.id} className="flex items-center gap-1.5 bg-[#303030]/50 border border-[#404040] rounded-xl py-1 px-2.5 text-xs group">
-                  {file.type === 'image' ? <ImageIcon className="w-3.5 h-3.5 text-blue-400" /> : <FileIcon className="w-3.5 h-3.5 text-violet-400" />}
-                  <span className="truncate max-w-[100px] text-zinc-300 font-medium">{file.name}</span>
+                <div key={file.id} className="flex items-center gap-1.5 bg-[#303030]/50 border border-[#404040] rounded-xl py-1 px-1.5 pr-2.5 text-xs group">
+                  {file.type === 'image' ? (
+                    <img src={file.url} alt="Preview" className="w-6 h-6 rounded-md object-cover border border-[#404040]" />
+                  ) : (
+                    <FileIcon className="w-4 h-4 text-violet-400 ml-1" />
+                  )}
+                  <span className="truncate max-w-[100px] text-zinc-300 font-medium ml-1">{file.name}</span>
                   <button type="button" onClick={() => removeAttachment(file.id)} className="text-zinc-500 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100">
                     <X className="w-3.5 h-3.5" />
                   </button>
@@ -136,7 +192,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 ref={fileInputRef}
                 onChange={handleFileUpload}
                 className="hidden"
-                accept="image/*,.pdf,.doc,.docx"
+                accept="image/jpeg,image/png,image/gif,image/webp,.pdf,.doc,.docx"
               />
               <button 
                 type="button" 
@@ -182,7 +238,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 <Sparkles className="w-4 h-4 stroke-[1.5]" />
               </button>
 
-              <button type="button" onClick={() => setIsRecording(!isRecording)} className={`p-2 rounded-full transition-colors focus:outline-none hidden sm:block ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
+              <button type="button" onClick={toggleRecording} className={`p-2 rounded-full transition-colors focus:outline-none hidden sm:block ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
                 <Mic className="w-5 h-5 stroke-[1.5]" />
               </button>
 
