@@ -77,12 +77,14 @@ MANDATORY RULES:
    - Use aria-required, aria-describedby for error messages
    - Include role attributes where appropriate
    - Add aria-live="polite" regions for dynamic content
-5. Design System: Use ONLY these Tailwind spacing/color tokens:
-   - Spacing: p-2, p-3, p-4, p-6, p-8, gap-2, gap-4, gap-6, m-2, m-4, m-6
-   - Colors: blue-600, blue-700, gray-100, gray-200, gray-700, gray-900, white, red-500, green-500
-   - Text: text-sm, text-base, text-lg, text-xl, text-2xl, font-medium, font-semibold, font-bold
-   - Radius: rounded, rounded-md, rounded-lg
-   - Shadows: shadow-sm, shadow-md
+5. Design System & Premium Aesthetics:
+   - Use stunning, modern web design aesthetics (e.g., Apple, Stripe, or Linear style).
+   - Use smooth gradients (bg-gradient-to-r, from-indigo-500, to-purple-600) occasionally for emphasis.
+   - Employ glassmorphism where appropriate (bg-white/10, backdrop-blur-lg, border border-white/20 dark:bg-black/40).
+   - Use sophisticated color palettes: slate, zinc, indigo, violet, emerald for semantic states.
+   - Include micro-animations: transition-all duration-300 ease-in-out hover:scale-[1.02] hover:-translate-y-1.
+   - Use beautiful modern soft shadows (shadow-lg, shadow-xl, shadow-indigo-500/20) and rounded corners (rounded-xl, rounded-2xl).
+   - Focus heavily on typography (tracking-tight, leading-relaxed, text-transparent bg-clip-text).
 6. Error Handling: Include form validation state with error messages using aria-describedby
 7. Loading States: Include loading state for submit buttons
 
