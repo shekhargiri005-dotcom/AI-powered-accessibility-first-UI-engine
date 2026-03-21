@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseIntent } from '@/lib/ai/intentParser';
 
 // Rate limit simple implementation (per-request, no persistence)
-const MAX_INPUT_LENGTH = 2000;
+const MAX_INPUT_LENGTH = 10000;
 
 export async function POST(request: NextRequest) {
   try {

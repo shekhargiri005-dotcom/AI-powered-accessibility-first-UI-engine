@@ -101,7 +101,7 @@ Return ONLY raw TypeScript test code without markdown fences.`;
 export function buildIntentParsePrompt(userInput: string, knowledge: string | null = null): string {
   // Sanitize: strip any attempt to override system instructions
   const sanitized = userInput
-    .substring(0, 2000) // Limit length
+    .substring(0, 10000) // Limit length
     .replace(/system:|assistant:|<\|.*?\|>/gi, '') // Strip role tokens
     .trim();
 

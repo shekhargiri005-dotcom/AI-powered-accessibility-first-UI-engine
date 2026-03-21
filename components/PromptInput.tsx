@@ -35,7 +35,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   };
 
   const charCount = prompt.length;
-  const maxChars = 2000;
+  const maxChars = 10000;
   const isOverLimit = charCount > maxChars;
 
   return (
