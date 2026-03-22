@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
 
     // Check for OpenAI API key
-    if (!process.env.HF_TOKEN) {
+    if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
-        { success: false, error: 'HF_TOKEN is not configured. Add it to your .env.local file.' },
+        { success: false, error: 'OPENAI_API_KEY is not configured. Add it to your .env.local file.' },
         { status: 500 }
       );
     }
