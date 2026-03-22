@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
+import OpenAI from 'openai';
 
-const HF_TOKEN = process.env.HF_TOKEN;
-const MODEL_URL = 'https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-large';
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export async function POST(req: Request) {
-  if (!HF_TOKEN) {
-    return NextResponse.json({ error: 'HF_TOKEN is not configured.' }, { status: 500 });
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json({ error: 'OPENAI_API_KEY is not configured.' }, { status: 500 });
   }
 
   try {
@@ -18,40 +18,31 @@ export async function POST(req: Request) {
 
     const arrayBuffer = await imageFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    const base64Image = buffer.toString('base64');
+    const mimeType = imageFile.type;
+    const dataUrl = `data:${mimeType};base64,${base64Image}`;
 
-    // Call Hugging Face API
-    const response = await fetch(MODEL_URL, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        'Content-Type': imageFile.type,
-      },
-      body: buffer,
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this image and describe the UI components, layout, and purpose shown. Keep it concise but highly descriptive so it can be used to generate a matching React component.' },
+            { type: 'image_url', image_url: { url: dataUrl } },
+          ],
+        },
+      ],
+      max_tokens: 300,
     });
 
-    if (!response.ok) {
-      // Sometimes HF models are still loading
-      const errorText = await response.text();
-      return NextResponse.json(
-        { error: `API Error ${response.status}: ${errorText}` },
-        { status: response.status }
-      );
-    }
-
-    const result = await response.json();
-    
-    // BLIP usually returns an array with an object: [{ generated_text: "caption" }]
-    let caption = 'An uploaded image';
-    if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
-      caption = result[0].generated_text;
-    }
-
+    const caption = response.choices[0]?.message?.content || 'An uploaded image';
     return NextResponse.json({ caption });
 
   } catch (error: any) {
     console.error('Image to Text error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to process image.' },
+      { error: error?.message || 'Failed to process image with OpenAI Vision.' },
       { status: 500 }
     );
   }

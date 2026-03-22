@@ -1,9 +1,9 @@
-import { HfInference } from '@huggingface/inference';
+import OpenAI from 'openai';
 import { INTENT_PARSER_SYSTEM_PROMPT, buildIntentParsePrompt } from './prompts';
 import { findRelevantKnowledge } from './knowledgeBase';
 import { UIIntentSchema, type UIIntent } from '../validation/schemas';
 
-const hf = new HfInference(process.env.HF_TOKEN);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ParseResult {
   success: boolean;
@@ -22,13 +22,13 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
   try {
     const knowledge = findRelevantKnowledge(userInput);
 
-    const response = await hf.chatCompletion({
-      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: INTENT_PARSER_SYSTEM_PROMPT },
         { role: 'user', content: buildIntentParsePrompt(userInput, knowledge) }
       ],
-      max_tokens: 2000,
+      response_format: { type: 'json_object' },
       temperature: 0.1,
     });
 
@@ -71,6 +71,6 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
     return { success: true, intent: validation.data, rawResponse: rawContent };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `Hugging Face API error: ${msg}` };
+    return { success: false, error: `OpenAI API error: ${msg}` };
   }
 }

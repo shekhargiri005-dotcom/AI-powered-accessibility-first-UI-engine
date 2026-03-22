@@ -1,10 +1,10 @@
-import { HfInference } from '@huggingface/inference';
+import OpenAI from 'openai';
 import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
 import { getRelevantExamples } from './memory';
 import { findRelevantKnowledge } from './knowledgeBase';
 import { type UIIntent } from '../validation/schemas';
 
-const hf = new HfInference(process.env.HF_TOKEN);
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface GenerationResult {
   success: boolean;
@@ -32,13 +32,12 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
     const knowledge = findRelevantKnowledge(intent.description + ' ' + intent.componentName);
     const memory = getRelevantExamples(intent);
 
-    const response = await hf.chatCompletion({
-      model: 'Qwen/Qwen2.5-Coder-32B-Instruct',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
       messages: [
         { role: 'system', content: COMPONENT_GENERATOR_SYSTEM_PROMPT },
         { role: 'user', content: buildComponentGeneratorPrompt(intent, knowledge, memory) }
       ],
-      max_tokens: 4000,
       temperature: 0.2,
     });
 
@@ -61,6 +60,6 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
     return { success: true, code: cleaned };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `Hugging Face API error: ${msg}` };
+    return { success: false, error: `OpenAI API error: ${msg}` };
   }
 }
