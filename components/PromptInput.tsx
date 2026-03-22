@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2, ChevronRight, Mic, X, Plus } from 'lucide-react';
+import { Send, Loader2, ChevronRight, Mic, X, Plus, Command } from 'lucide-react';
 
 const EXAMPLE_PROMPTS = [
   'A login form with email and password fields',
@@ -139,8 +139,8 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
     <section aria-labelledby="prompt-heading">
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center">
-            <Sparkles className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <Command className="w-4 h-4 text-white" />
           </div>
           <div>
             <h2 id="prompt-heading" className="text-lg font-semibold text-white">
@@ -151,14 +151,12 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
             </p>
           </div>
         </div>
-      </div>
-
-      <form onSubmit={handleSubmit} aria-label="UI component generation form" className="relative group">
+      </div>      <form onSubmit={handleSubmit} aria-label="UI component generation form" className="relative group">
         <div className={`
-          relative flex flex-col w-full min-h-[56px] transition-all duration-300
+          relative flex flex-col w-full transition-all duration-300
           bg-[#212121] backdrop-blur-md border border-[#303030] 
           ${isFocused ? 'ring-1 ring-white/10 shadow-2xl' : 'hover:border-[#404040] shadow-xl'}
-          rounded-[28px] overflow-hidden
+          rounded-2xl overflow-hidden
         `}>
           
           {/* Active Recording State */}
@@ -177,9 +175,33 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
             </div>
           )}
 
-          <div className="flex items-end px-2 py-2 w-full">
+          {/* Expanding Text Area */}
+          <div className="relative p-3 pb-0">
+             <textarea
+              id="component-prompt"
+              name="component-prompt"
+              rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : 5}
+              className="
+                w-full resize-y bg-transparent text-zinc-100
+                placeholder-zinc-500 text-sm sm:text-base leading-relaxed
+                outline-none focus:outline-none min-h-[120px] max-h-[600px] overflow-y-auto
+              "
+              placeholder="Ask anything or paste a huge prompt..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              disabled={isLoading}
+              maxLength={maxChars + 100}
+              aria-label="Component description"
+              aria-required="true"
+            />
+          </div>
+
+          {/* Bottom Action Bar */}
+          <div className="flex items-center justify-between px-3 py-2 bg-[#212121]/50 border-t border-[#303030]/30">
             {/* Left Actions */}
-            <div className="flex items-center pr-2 pl-2 pb-1 gap-2">
+            <div className="flex items-center gap-2">
                <input
                 type="file"
                 ref={fileInputRef}
@@ -191,49 +213,26 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 type="button" 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingImage}
-                className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none disabled:opacity-50"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-md transition-colors focus:outline-none disabled:opacity-50 flex items-center gap-1.5 text-xs font-medium"
               >
-                {isProcessingImage ? <Loader2 className="w-5 h-5 stroke-[1.5] animate-spin text-blue-400" /> : <Plus className="w-5 h-5 stroke-[1.5]" />}
+                {isProcessingImage ? <Loader2 className="w-4 h-4 stroke-[2] animate-spin text-blue-400" /> : <Plus className="w-4 h-4 stroke-[2]" />}
+                <span className="hidden sm:inline">Attach</span>
               </button>
             </div>
 
-            {/* Expanding Text Area */}
-            <div className="flex-1 relative pb-1">
-               <textarea
-                id="component-prompt"
-                name="component-prompt"
-                rows={prompt.split('\\n').length > 3 ? 3 : prompt.split('\\n').length}
-                className="
-                  w-full resize-none bg-transparent pt-3 pb-1 px-1 text-zinc-100
-                  placeholder-zinc-500 text-sm sm:text-base leading-relaxed
-                  outline-none focus:outline-none min-h-[40px] max-h-[200px] overflow-y-auto
-                "
-                placeholder="Ask anything..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                disabled={isLoading}
-                maxLength={maxChars + 100}
-                aria-label="Component description"
-                aria-required="true"
-              />
-            </div>
-
             {/* Right Actions & Submit */}
-            <div className="flex items-center pl-2 gap-1.5 pb-1 pr-1">
-              
+            <div className="flex items-center gap-2">
+              <span className={`text-xs mr-2 transition-opacity duration-300 ${charCount > maxChars ? 'text-red-400 opacity-100' : 'text-zinc-500 opacity-0 group-hover:opacity-100'}`}>
+                {charCount}/{maxChars}
+              </span>
+
               {/* Optional glowing dot (if active/processing) */}
               {isLoading && (
                 <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
               )}
 
-              <button type="button" className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors focus:outline-none hidden sm:block">
-                <Sparkles className="w-4 h-4 stroke-[1.5]" />
-              </button>
-
-              <button type="button" onClick={toggleRecording} className={`p-2 rounded-full transition-colors focus:outline-none hidden sm:block ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
-                <Mic className="w-5 h-5 stroke-[1.5]" />
+              <button type="button" onClick={toggleRecording} className={`p-2 rounded-lg transition-colors focus:outline-none ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
+                <Mic className="w-4 h-4 stroke-[2]" />
               </button>
 
               <button
@@ -241,27 +240,23 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 disabled={!prompt.trim() || isLoading || isOverLimit || isProcessingImage}
                 aria-label={isLoading ? 'Generating component, please wait' : 'Generate component'}
                 className={`
-                  flex items-center justify-center w-8 h-8 rounded-full ml-1
+                  flex items-center justify-center px-4 py-1.5 rounded-lg
                   transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121] focus:ring-white
                   ${isLoading || !prompt.trim() 
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
-                    : 'bg-white text-black hover:scale-105 active:scale-95 shadow-md'
+                    : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
                   }
                 `}
               >
                 {isLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-white" aria-hidden="true" />
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Send className={`w-4 h-4 block ml-[2px] ${!prompt.trim() ? 'opacity-50' : 'opacity-100'}`} aria-hidden="true" />
+                  <>
+                    <span className="mr-1.5">Generate</span>
+                    <Send className={`w-3.5 h-3.5 block`} aria-hidden="true" />
+                  </>
                 )}
               </button>
-            </div>
-          </div>
-          
-          {/* Character limit warning underneath */}
-          <div className={`overflow-hidden transition-all duration-300 ${isOverLimit ? 'h-6 opacity-100' : 'h-0 opacity-0'}`}>
-            <div className="text-xs text-red-400 text-right px-6 pb-2">
-              {charCount}/{maxChars}
             </div>
           </div>
         </div>
