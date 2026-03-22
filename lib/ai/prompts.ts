@@ -88,15 +88,22 @@ MANDATORY RULES:
 8. PROPS FALLBACKS & MOCK DATA (CRITICAL):
    - You MUST define fallback default values for ALL array and object props in your destructuring (e.g., \`const { items = [] } = props;\`).
    - If the component represents a list, grid, or data table (like "products", "users", "articles"), you MUST declare a realistic default mock array inside the component or outside it so the sandbox preview renders beautifully right away instead of instantly crashing or rendering empty.
-9. EXACT COLORS, SVGS, ICONS & EMOJIS (CRITICAL):
+9. EXACT COLORS, INLINE SVGS, ICONS & EMOJIS (CRITICAL):
    - If the user specifies EXACT COLORS (e.g., "navy #0A1929", "orange #FF8C42"), you MUST use Tailwind arbitrary values (e.g., \`bg-[#0A1929]\`, \`text-[#FF8C42]\`) to match their layout perfectly. DO NOT fallback to generic colors!
-   - You MUST aggressively import and use \`lucide-react\` icons. Never leave a button or card as just bare text. Use emojis (🚀, 📈, 🎨, ⚡️) where contextually brilliant.
-   - If the user asks for "progress rings", "particles", or "neon glows", you MUST write the actual raw inline \`<svg>\` tags (using stroke-dasharray etc.) or use advanced CSS filter/animation techniques to build exactly what they asked for. DO NOT just write text like "60%". Draw the actual ring!
+   - You MUST NEVER import from \`lucide-react\` or any other icon library. ALL icons must be written as raw inline SVG JSX elements using stroke and path elements.
+   - Use emojis (🚀, 📈, 🎨, ⚡️, 💬, ✨) organically where contextually brilliant.
+   - If the user asks for "progress rings", "particles", or "neon glows", you MUST write the actual raw inline \`<svg>\` tags (using stroke-dasharray etc.) or use advanced CSS filter/animation techniques. DO NOT just write text like "60%". Draw the actual ring!
 
 OUTPUT FORMAT: Return ONLY the raw TSX code — no markdown fences, no explanation.
 
 The component must be a complete, self-contained file that starts with:
 import React, { useState } from 'react';
+
+DO NOT import any external UI icon library (e.g., lucide-react, react-icons, @heroicons/react, etc.).
+IMPORTANT: All icons MUST be written as raw inline SVG JSX. Example:
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07..."/>
+</svg>
 
 And ends with:
 export default ComponentName;`;
