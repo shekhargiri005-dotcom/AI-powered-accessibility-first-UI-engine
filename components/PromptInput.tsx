@@ -24,8 +24,20 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
+  const [history, setHistory] = useState<{ id: string, componentName: string, promptSnippet: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    fetch('/api/history')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.history && Array.isArray(data.history)) {
+          setHistory(data.history);
+        }
+      })
+      .catch((err) => console.error('Failed to load history', err));
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -266,30 +278,56 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
         </p>
       </form>
 
-      {/* Example prompts */}
-      <div className="mt-4" role="group" aria-label="Example component descriptions">
-        <p className="text-xs text-gray-500 mb-2 font-medium">Quick examples:</p>
+      {/* History or Example prompts */}
+      <div className="mt-4" role="group" aria-label="Prompt suggestions">
+        <p className="text-xs text-gray-500 mb-2 font-medium">
+          {history.length > 0 ? 'Your History:' : 'Quick examples:'}
+        </p>
         <div className="flex flex-wrap gap-2">
-          {EXAMPLE_PROMPTS.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => handleExampleClick(example)}
-              disabled={isLoading}
-              aria-label={`Use example: ${example}`}
-              className="
-                flex items-center gap-1 px-3 py-1.5 rounded-full text-xs
-                border border-gray-700/50 text-gray-400
-                hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/5
-                disabled:opacity-50 disabled:cursor-not-allowed
-                transition-all duration-150
-                focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
-              "
-            >
-              <ChevronRight className="w-3 h-3" aria-hidden="true" />
-              {example}
-            </button>
-          ))}
+          {history.length > 0 ? (
+            history.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setPrompt(item.promptSnippet)}
+                disabled={isLoading}
+                aria-label={`Use history: ${item.componentName}`}
+                className="
+                  flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs
+                  border border-blue-900/40 text-blue-400 bg-blue-500/10
+                  hover:border-blue-500/60 hover:text-blue-300 hover:bg-blue-500/20
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-150
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
+                "
+              >
+                <ChevronRight className="w-3 h-3 block" aria-hidden="true" />
+                <span className="font-semibold">{item.componentName}:</span> 
+                <span className="truncate max-w-[200px] sm:max-w-[400px]">{item.promptSnippet}</span>
+              </button>
+            ))
+          ) : (
+            EXAMPLE_PROMPTS.map((example) => (
+              <button
+                key={example}
+                type="button"
+                onClick={() => handleExampleClick(example)}
+                disabled={isLoading}
+                aria-label={`Use example: ${example}`}
+                className="
+                  flex items-center gap-1 px-3 py-1.5 rounded-full text-xs
+                  border border-gray-700/50 text-gray-400
+                  hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/5
+                  disabled:opacity-50 disabled:cursor-not-allowed
+                  transition-all duration-150
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
+                "
+              >
+                <ChevronRight className="w-3 h-3" aria-hidden="true" />
+                {example}
+              </button>
+            ))
+          )}
         </div>
       </div>
     </section>
