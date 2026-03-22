@@ -85,6 +85,9 @@ MANDATORY RULES:
    - Include clean SVG icons (stroke-width 2) to enhance visual hierarchy.
 6. Error Handling: Include form validation state with error messages using aria-describedby
 7. Loading States: Include loading state for submit buttons
+8. PROPS FALLBACKS & MOCK DATA (CRITICAL):
+   - You MUST define fallback default values for ALL array and object props in your destructuring (e.g., \`const { items = [] } = props;\`).
+   - If the component represents a list, grid, or data table (like "products", "users", "articles"), you MUST declare a realistic default mock array inside the component or outside it so the sandbox preview renders beautifully right away instead of instantly crashing or rendering empty.
 
 OUTPUT FORMAT: Return ONLY the raw TSX code — no markdown fences, no explanation.
 
