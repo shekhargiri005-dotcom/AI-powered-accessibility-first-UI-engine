@@ -62,6 +62,7 @@ input, textarea, select {
 export const SANDPACK_DEPENDENCIES = {
   react: '^18.2.0',
   'react-dom': '^18.2.0',
+  'lucide-react': 'latest',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {
