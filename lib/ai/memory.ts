@@ -42,8 +42,8 @@ export function saveGeneration(intent: UIIntent, code: string, a11yScore: number
       a11yScore,
     };
 
-    // Keep only the last 50 successful generations to avoid massive file bloat
-    const updatedHistory = [entry, ...history].slice(0, 50);
+    // Keep the last 500 successful generations — disk reads are trivial at this size
+    const updatedHistory = [entry, ...history].slice(0, 500);
 
     fs.writeFileSync(MEMORY_FILE_PATH, JSON.stringify(updatedHistory, null, 2));
   } catch (error) {
