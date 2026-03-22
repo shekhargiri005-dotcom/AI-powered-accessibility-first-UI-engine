@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, ChevronRight, Mic, X, Plus, Command } from 'lucide-react';
-
-const EXAMPLE_PROMPTS = [
-  'A login form with email and password fields',
-  'A product card with image, title, price, and add to cart button',
-  'A navigation bar with logo, links, and a CTA button',
-  'A user profile settings form with name, bio, and avatar upload',
-  'A modal dialog for confirming account deletion',
-  'A search bar with filters and autocomplete',
-  'A data table with pagination and sortable columns',
-  'A pricing card with features list and subscribe button',
-];
+import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock } from 'lucide-react';
 
 interface PromptInputProps {
   onSubmit: (prompt: string) => void;
@@ -139,9 +128,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
     }
   };
 
-  const handleExampleClick = (example: string) => {
-    setPrompt(example);
-  };
+
 
   const charCount = prompt.length;
   const maxChars = 10000;
@@ -278,10 +265,11 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
         </p>
       </form>
 
-      {/* History or Example prompts */}
-      <div className="mt-4" role="group" aria-label="Prompt suggestions">
-        <p className="text-xs text-gray-500 mb-2 font-medium">
-          {history.length > 0 ? 'Your History:' : 'Quick examples:'}
+      {/* True User History */}
+      <div className="mt-4" role="group" aria-label="Prompt history">
+        <p className="flex items-center gap-1.5 text-xs text-gray-400 mb-2 font-medium">
+          <Clock className="w-3 h-3 block" />
+          Your Generation History
         </p>
         <div className="flex flex-wrap gap-2">
           {history.length > 0 ? (
@@ -291,7 +279,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 type="button"
                 onClick={() => setPrompt(item.promptSnippet)}
                 disabled={isLoading}
-                aria-label={`Use history: ${item.componentName}`}
+                aria-label={`Reuse history: ${item.componentName}`}
                 className="
                   flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs
                   border border-blue-900/40 text-blue-400 bg-blue-500/10
@@ -307,26 +295,9 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
               </button>
             ))
           ) : (
-            EXAMPLE_PROMPTS.map((example) => (
-              <button
-                key={example}
-                type="button"
-                onClick={() => handleExampleClick(example)}
-                disabled={isLoading}
-                aria-label={`Use example: ${example}`}
-                className="
-                  flex items-center gap-1 px-3 py-1.5 rounded-full text-xs
-                  border border-gray-700/50 text-gray-400
-                  hover:border-blue-500/50 hover:text-blue-400 hover:bg-blue-500/5
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  transition-all duration-150
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
-                "
-              >
-                <ChevronRight className="w-3 h-3" aria-hidden="true" />
-                {example}
-              </button>
-            ))
+            <div className="text-xs text-zinc-500 italic flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full border border-white/5">
+              Nothing here yet. Build your first component!
+            </div>
           )}
         </div>
       </div>
