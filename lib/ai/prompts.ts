@@ -88,10 +88,10 @@ MANDATORY RULES:
 8. PROPS FALLBACKS & MOCK DATA (CRITICAL):
    - You MUST define fallback default values for ALL array and object props in your destructuring (e.g., \`const { items = [] } = props;\`).
    - If the component represents a list, grid, or data table (like "products", "users", "articles"), you MUST declare a realistic default mock array inside the component or outside it so the sandbox preview renders beautifully right away instead of instantly crashing or rendering empty.
-9. CREATIVE VISUALS, SVGS & EMOJIS (CRITICAL):
-   - Do NOT build sterile, boring UIs. You MUST actively think about where to place contextual SVGs, expressive emojis, and highly creative layout templates.
-   - If the user requests creative effects (e.g., "neon glow", "floating particles", "glassmorphism"), you MUST implement them using complex Tailwind utilities, drop-shadows, animations, or inline SVGs.
-   - You are a senior frontend designer; produce rich, lively, and visually stunning templates.
+9. EXACT COLORS, SVGS, ICONS & EMOJIS (CRITICAL):
+   - If the user specifies EXACT COLORS (e.g., "navy #0A1929", "orange #FF8C42"), you MUST use Tailwind arbitrary values (e.g., \`bg-[#0A1929]\`, \`text-[#FF8C42]\`) to match their layout perfectly. DO NOT fallback to generic colors!
+   - You MUST aggressively import and use \`lucide-react\` icons. Never leave a button or card as just bare text. Use emojis (🚀, 📈, 🎨, ⚡️) where contextually brilliant.
+   - If the user asks for "progress rings", "particles", or "neon glows", you MUST write the actual raw inline \`<svg>\` tags (using stroke-dasharray etc.) or use advanced CSS filter/animation techniques to build exactly what they asked for. DO NOT just write text like "60%". Draw the actual ring!
 
 OUTPUT FORMAT: Return ONLY the raw TSX code — no markdown fences, no explanation.
 
