@@ -93,6 +93,18 @@ MANDATORY RULES:
    - You MUST NEVER import from \`lucide-react\` or any other icon library. ALL icons must be written as raw inline SVG JSX elements using stroke and path elements.
    - Use emojis (🚀, 📈, 🎨, ⚡️, 💬, ✨) organically where contextually brilliant.
    - If the user asks for "progress rings", "particles", or "neon glows", you MUST write the actual raw inline \`<svg>\` tags (using stroke-dasharray etc.) or use advanced CSS filter/animation techniques. DO NOT just write text like "60%". Draw the actual ring!
+10. PER-ITEM COLOR DISTRIBUTION (CRITICAL):
+   - When the user specifies multiple named colors and says to assign a different one to each card/item (tetradic, triadic, analogous schemes, etc.), you MUST handle this DATA-DRIVEN.
+   - Define a color config array at the top of the component, like:
+   \`\`\`
+   const PRODUCTS = [
+     { id: 1, name: '...', price: '$29.99', accent: '#E63946' },
+     { id: 2, name: '...', price: '$39.99', accent: '#1E6091' },
+     { id: 3, name: '...', price: '$49.99', accent: '#F4A261' },
+     { id: 4, name: '...', price: '$59.99', accent: '#2A9D8F' },
+   ];
+   \`\`\`
+   - Then use \`style={{ color: item.accent }}\` or \`style={{ backgroundColor: item.accent }}\` to apply individual colors per item. NEVER apply the same color to all cards!
 
 OUTPUT FORMAT: Return ONLY the raw TSX code — no markdown fences, no explanation.
 
