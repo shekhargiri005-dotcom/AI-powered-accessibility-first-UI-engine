@@ -96,17 +96,13 @@ MANDATORY RULES:
    - When multiple named colors are specified for items, define a color config array and apply via style={{ backgroundColor: item.accent }}.
 
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic "Hello World" code or abbreviate. Your components must be massive, breathtaking, and extremely detailed! Write as much code as needed—whether it's 500 lines or 50k lines—to make the UI indistinguishable from an award-winning site. Implement exhaustive styling, complex layouts, micro-interactions, robust logic, and rich mock data arrays.
+You are an EXPERT UI CODER. Do not write simplistic "Hello World" code or abbreviate. Your components must be highly detailed, breathtaking, and comprehensive (300-600+ lines). Implement exhaustive styling, complex layouts, micro-interactions, robust logic, and rich mock data arrays.
 
 OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation.
 
-The component must be a complete, self-contained file that starts with:
-import React, { useState } from 'react';
-
+The component must be a complete, self-contained file.
 DO NOT import any external UI icon library. All icons MUST be raw inline SVG JSX.
-
-And ends with:
-export default ComponentName;`;
+Must use 'export default function ComponentName' or 'export default ComponentName'.`;
 
 export const TEST_GENERATOR_SYSTEM_PROMPT = `You are a test generation expert for React components.
 Generate comprehensive React Testing Library tests for the provided component.
@@ -209,14 +205,8 @@ DESIGN (REQUIRED):
 
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 
-Start with:
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-
-End with:
-export default AppName;
-
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic apps. Target 800-2000+ lines of code! Implement extremely deep routing, rich functionality, extensive mock data (dozens of items), exhaustive Tailwind styles, fluid transitions, and complete business logic UI states. NEVER truncate or abbreviate. You must deliver a massive, fully-fledged application.`;
+You are an EXPERT UI CODER. Do not write simplistic apps. Target extremely dense, detailed code (300-800+ lines)! Implement deep routing, rich functionality, extensive mock data (dozens of items), exhaustive Tailwind styles, fluid transitions, and complete business logic UI states. NEVER truncate or abbreviate. You must deliver a fully-fledged application in one valid TSX file, ensuring you export default your main component.`;
 
 export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
@@ -309,18 +299,10 @@ DESIGN:
 6. UI OVERLAY: Overlay beautiful typography and UI using Tailwind. Use glassmorphism where it looks good.
 
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic 50-line revolving cubes. Your scenes must be cinematic, breathtaking, and extremely detailed!
-Target 800-2500+ lines of code! You MUST include multiple complex geometries, shaders, intricate lighting, shadows, micro-interactions, useFrame physics, 3D environments, and a massive, fully styled Tailwind HTML overlay parsing rich mock data (headers, scrolling content, footers). Write as much code as needed—whether it's 500 lines or 50k lines—to make it indistinguishable from an award-winning Awwwards site. NEVER truncate or abbreviate.
+You are an EXPERT UI CODER. Do not write simplistic revolving cubes. Your scenes must be cinematic, breathtaking, and extremely detailed (300-800+ lines)! You MUST include multiple complex geometries, shaders, intricate lighting, shadows, micro-interactions, useFrame physics, 3D environments, and a comprehensive, fully styled Tailwind HTML overlay parsing rich mock data (headers, scrolling content, footers). NEVER truncate or abbreviate. Make sure you return a completely valid TSX file.
 
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
-
-Start with:
-import React, { useState, useRef, useMemo } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Float, ContactShadows, Html, Text, PerspectiveCamera, PresentationControls, useScroll, ScrollControls, Scroll } from '@react-three/drei';
-
-End with:
-export default AppName;`;
+Make sure to 'export default' your main component.`;
 
 export function buildWebglModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
