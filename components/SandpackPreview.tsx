@@ -28,12 +28,12 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         <h3 id="preview-heading" className="text-sm font-semibold text-white">
           Live Preview
         </h3>
-        <span className="text-xs text-gray-500 ml-auto">Powered by Sandpack</span>
+        <span className="text-xs text-gray-500 ml-auto">Powered by Vite & Sandpack</span>
       </div>
 
       {/* Sandpack */}
       <SandpackProvider
-        template="react-ts"
+        template="vite-react-ts"
         theme="dark"
         files={files}
         customSetup={{
@@ -43,7 +43,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         }}
         options={{
           visibleFiles: Object.keys(files) as string[],
-          activeFile: `/${componentName}.tsx`,
+          activeFile: `/src/${componentName}.tsx`,
           externalResources: [
             'https://cdn.tailwindcss.com',
           ],

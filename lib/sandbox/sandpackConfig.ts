@@ -2,14 +2,29 @@ import type { SandpackFiles } from '@codesandbox/sandpack-react';
 
 /**
  * Builds the Sandpack file tree for live preview.
- * Injects the generated component and bootstraps it in App.tsx.
+ * Injects the generated component and bootstraps it in App.tsx using Vite structure.
  */
 export function buildSandpackFiles(
   componentCode: string,
   componentName: string,
 ): SandpackFiles {
   return {
-    '/App.tsx': {
+    '/index.html': {
+      code: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI UI Engine</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/index.tsx"></script>
+  </body>
+</html>`,
+      active: false,
+    },
+    '/src/App.tsx': {
       code: `import React from 'react';
 import ${componentName} from './${componentName}';
 
@@ -22,11 +37,11 @@ export default function App() {
 }`,
       active: false,
     },
-    [`/${componentName}.tsx`]: {
+    [`/src/${componentName}.tsx`]: {
       code: componentCode,
       active: true,
     },
-    '/index.tsx': {
+    '/src/index.tsx': {
       code: `import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
@@ -37,7 +52,7 @@ const root = createRoot(container);
 root.render(<React.StrictMode><App /></React.StrictMode>);`,
       active: false,
     },
-    '/styles.css': {
+    '/src/styles.css': {
       code: `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -66,7 +81,6 @@ export const SANDPACK_DEPENDENCIES = {
   'three': '0.149.0',
   '@react-three/fiber': '8.11.1',
   '@react-three/drei': '9.56.24',
-
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {
