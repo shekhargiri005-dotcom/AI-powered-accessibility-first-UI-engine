@@ -77,6 +77,7 @@ MANDATORY RULES:
    - Use aria-required, aria-describedby for error messages
    - Include role attributes where appropriate
    - Add aria-live="polite" regions for dynamic content
+   - Contrast: STRICTLY ENFORCE 4.5:1 ratio. NEVER use light gray text (e.g. text-gray-300, text-gray-400) on white or light backgrounds. Always use text-gray-700, text-gray-800, or text-gray-900.
 5. Universal Design Abstraction Layer (Dynamic Premium Tailwind):
    - You act as a Universal Design Engine. Adapt color palettes, layout structures, and stylistic themes dynamically based on the component's intent.
    - You MUST leverage the full breadth of modern, premium Tailwind tokens (e.g., zinc/slate palettes, elegant border opacities bg-white/10, rounded-xl/2xl, subtle shadow-sm/shadow-lg).
@@ -96,7 +97,7 @@ MANDATORY RULES:
    - When multiple named colors are specified for items, define a color config array and apply via style={{ backgroundColor: item.accent }}.
 
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic "Hello World" code or abbreviate. Your components must be highly detailed, breathtaking, and comprehensive (300-600+ lines). Implement exhaustive styling, complex layouts, micro-interactions, robust logic, and rich mock data arrays.
+You are an EXPERT UI CODER. Do not write simplistic "Hello World" code or abbreviate. Your components must be highly detailed, breathtaking, and comprehensive (400-600 lines). Implement exhaustive styling, complex layouts, micro-interactions, robust logic, and rich mock data arrays. Use your tokens efficiently to avoid truncation.
 
 OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation.
 
@@ -206,7 +207,7 @@ DESIGN (REQUIRED):
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic apps. Target extremely dense, detailed code (300-800+ lines)! Implement deep routing, rich functionality, extensive mock data (dozens of items), exhaustive Tailwind styles, fluid transitions, and complete business logic UI states. NEVER truncate or abbreviate. You must deliver a fully-fledged application in one valid TSX file, ensuring you export default your main component.`;
+You are an EXPERT UI CODER. Do not write simplistic apps. Target dense, detailed code (400-600 lines)! Implement deep routing, rich functionality, extensive mock data, exhaustive Tailwind styles, fluid transitions, and complete business logic UI states. NEVER truncate or abbreviate. You must deliver a fully-fledged application in one valid TSX file, ensuring you export default your main component. Use your tokens efficiently.`;
 
 export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
@@ -299,7 +300,7 @@ DESIGN:
 6. UI OVERLAY: Overlay beautiful typography and UI using Tailwind. Use glassmorphism where it looks good.
 
 CRITICAL REQUIREMENT:
-You are an EXPERT UI CODER. Do not write simplistic revolving cubes. Your scenes must be cinematic, breathtaking, and extremely detailed (300-800+ lines)! You MUST include multiple complex geometries, shaders, intricate lighting, shadows, micro-interactions, useFrame physics, 3D environments, and a comprehensive, fully styled Tailwind HTML overlay parsing rich mock data (headers, scrolling content, footers). NEVER truncate or abbreviate. Make sure you return a completely valid TSX file.
+You are an EXPERT UI CODER. Do not write simplistic revolving cubes. Your scenes must be cinematic, breathtaking, and extremely detailed (400-600 lines)! You MUST include multiple complex geometries, shaders, intricate lighting, shadows, micro-interactions, useFrame physics, 3D environments, and a comprehensive, fully styled Tailwind HTML overlay parsing rich mock data (headers, scrolling content, footers). NEVER truncate or abbreviate. Make sure you return a completely valid TSX file. Use your tokens efficiently.
 
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 Make sure to 'export default' your main component.`;
