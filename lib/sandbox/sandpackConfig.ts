@@ -5,10 +5,13 @@ import type { SandpackFiles } from '@codesandbox/sandpack-react';
  * Injects the generated component and bootstraps it in App.tsx using Vite structure.
  */
 export function buildSandpackFiles(
-  componentCode: string,
+  componentCode: string | Record<string, string>,
   componentName: string,
 ): SandpackFiles {
-  return {
+  const isMultiFile = typeof componentCode !== 'string';
+  const mainCode = isMultiFile ? componentCode['App.tsx'] || '' : componentCode;
+
+  const files: SandpackFiles = {
     '/index.html': {
       code: `<!DOCTYPE html>
 <html lang="en">
@@ -24,23 +27,6 @@ export function buildSandpackFiles(
   </body>
 </html>`,
       active: false,
-    },
-    '/src/App.tsx': {
-      code: `import React from 'react';
-import GeneratedComponent from './${componentName}';
-
-export default function App() {
-  return (
-    <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
-      <GeneratedComponent />
-    </div>
-  );
-}`,
-      active: false,
-    },
-    [`/src/${componentName}.tsx`]: {
-      code: componentCode,
-      active: true,
     },
     '/src/index.tsx': {
       code: `import React from 'react';
@@ -73,6 +59,23 @@ input, textarea, select {
       active: false,
     },
   };
+
+  if (isMultiFile) {
+    for (const [filename, code] of Object.entries(componentCode)) {
+      files[`/src/${filename}`] = { code, active: filename === 'App.tsx' };
+    }
+  } else {
+    files['/src/App.tsx'] = {
+      code: `import React from 'react';\nimport GeneratedComponent from './${componentName}';\n\nexport default function App() {\n  return (\n    <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">\n      <GeneratedComponent />\n    </div>\n  );\n}`,
+      active: false,
+    };
+    files[`/src/${componentName}.tsx`] = {
+      code: mainCode as string,
+      active: true,
+    };
+  }
+
+  return files;
 }
 
 export const SANDPACK_DEPENDENCIES = {
@@ -84,6 +87,9 @@ export const SANDPACK_DEPENDENCIES = {
   '@react-three/fiber': '8.17.10',
   '@react-three/drei': '9.114.3',
   'maath': '^0.10.8',
+  '@react-spring/three': '^9.7.3',
+  '@react-spring/web': '^9.7.3',
+  'framer-motion': '^11.2.10',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {

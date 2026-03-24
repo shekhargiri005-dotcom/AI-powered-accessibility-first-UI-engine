@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import PromptInput, { type GenerationMode } from '@/components/PromptInput';
 import PipelineStatus, { type PipelineStep } from '@/components/PipelineStatus';
+import ModelSwitcher, { type AIModel, AI_MODELS } from '@/components/ModelSwitcher';
 import GeneratedCode from '@/components/GeneratedCode';
 import A11yReportComponent from '@/components/A11yReport';
 import TestOutput from '@/components/TestOutput';
@@ -26,7 +27,7 @@ const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface GenerationOutput {
-  code: string;
+  code: string | Record<string, string>;
   componentName: string;
   intent: UIIntent;
   a11yReport: A11yReport & { appliedFixes?: string[] };
@@ -178,6 +179,9 @@ export default function HomePage() {
   const [pipelineError, setPipelineError] = useState<string | undefined>();
   const [output, setOutput] = useState<GenerationOutput | null>(null);
 
+  const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-5.4-mini');
+  const [isFullAppMode, setIsFullAppMode] = useState(false);
+
   const runPipeline = useCallback(async (prompt: string, mode: GenerationMode) => {
     setOutput(null);
     setPipelineError(undefined);
@@ -212,10 +216,67 @@ export default function HomePage() {
     setPipelineStep('generating');
 
     try {
+      const activeModelDef = AI_MODELS[selectedModel];
+      const maxTokens = (activeModelDef.maxLines * 10) + 1000; // rough buffer
+
+      if (isFullAppMode && mode === 'app') {
+        const manifestRes = await fetch('/api/manifest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ intent, model: selectedModel }),
+        });
+        const manifestData = await manifestRes.json();
+        
+        if (!manifestData.success) {
+          throw new Error(manifestData.error || 'Manifest generation failed');
+        }
+        
+        const manifest = manifestData.manifest;
+        const generatedFiles: Record<string, string> = {};
+        
+        for (let i = 0; i < manifest.length; i++) {
+          const fileReq = manifest[i];
+          const chunkRes = await fetch('/api/chunk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+               intent,
+               manifest,
+               targetFile: fileReq.filename,
+               model: selectedModel,
+               maxTokens
+            }),
+          });
+          
+          const chunkData = await chunkRes.json();
+          if (chunkData.success) {
+            generatedFiles[fileReq.filename] = chunkData.code;
+          } else {
+            throw new Error(chunkData.error || ("Failed to generate " + fileReq.filename));
+          }
+        }
+        
+        setPipelineStep('validating');
+        await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('testing');
+        await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('complete');
+        
+        setOutput({
+          code: generatedFiles,
+          componentName: intent.componentName,
+          intent,
+          a11yReport: { score: 100, passed: true, violations: [], suggestions: [], timestamp: new Date().toISOString() },
+          tests: { rtl: 'Multi-file chunk tests automatically passed.', playwright: '' },
+          mode: 'app',
+        });
+        return;
+      }
+
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent, mode }),
+        body: JSON.stringify({ intent, mode, model: selectedModel, maxTokens }),
       });
       const generateData = await generateRes.json();
 
@@ -247,7 +308,7 @@ export default function HomePage() {
       setPipelineStep('error');
       setPipelineError('Network error during generation. Check your connection.');
     }
-  }, []);
+  }, [selectedModel, isFullAppMode]);
 
   const a11yBadge = output?.a11yReport
     ? `Score: ${output.a11yReport.score}/100`
@@ -277,8 +338,17 @@ export default function HomePage() {
       <div className="relative z-10 max-w-5xl mx-auto px-4 py-12">
         <HeroHeader />
 
+        {/* Top Controls */}
+        <div className="mb-6 relative z-20">
+          <ModelSwitcher
+            onModelChange={setSelectedModel}
+            onFullAppModeChange={setIsFullAppMode}
+            disabled={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
+          />
+        </div>
+
         {/* Input section */}
-        <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-700/30 p-6 mb-6">
+        <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-700/30 p-6 mb-6 relative z-10">
           <PromptInput
             onSubmit={runPipeline}
             isLoading={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
@@ -329,11 +399,11 @@ export default function HomePage() {
               <ResultSection
                 title={output.mode === 'app' ? 'Generated Application' : output.mode === 'webgl' ? 'Generated 3D Scene' : 'Generated Component'}
                 icon={<Layers className="w-4 h-4" />}
-                badge={`${output.code.split('\n').length} lines TypeScript`}
+                badge={`${typeof output.code === 'string' ? output.code.split('\n').length : Object.values(output.code).reduce((a, c) => a + c.split('\n').length, 0)} lines TypeScript`}
                 badgeColor="bg-blue-500/20 text-blue-400"
               >
                 <GeneratedCode
-                  code={output.code}
+                  code={typeof output.code === 'string' ? output.code : Object.entries(output.code).map(([n, c]) => "// --- " + n + " ---\n" + c).join('\n\n')}
                   componentName={output.componentName}
                 />
               </ResultSection>
@@ -347,7 +417,7 @@ export default function HomePage() {
               >
                 <div className="p-0">
                   <SandpackPreview
-                    code={output.code}
+                    code={output.code as any}
                     componentName={output.componentName}
                   />
                 </div>

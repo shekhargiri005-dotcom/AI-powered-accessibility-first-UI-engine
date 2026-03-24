@@ -37,7 +37,9 @@ function cleanGeneratedCode(raw: string): string {
 
 export async function generateComponent(
   intent: UIIntent,
-  mode: GenerationMode = 'component'
+  mode: GenerationMode = 'component',
+  requestedModel: string = 'gpt-5.4-mini',
+  maxTokens: number = 5000
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
@@ -63,13 +65,13 @@ export async function generateComponent(
     }
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: requestedModel || 'gpt-4o',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       temperature: mode === 'app' || mode === 'webgl' ? 0.6 : 0.4,
-      max_tokens: 16383,
+      max_tokens: maxTokens || 5000,
     });
     const rawContent = response.choices[0]?.message?.content || '';
 
