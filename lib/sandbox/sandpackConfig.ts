@@ -27,12 +27,12 @@ export function buildSandpackFiles(
     },
     '/src/App.tsx': {
       code: `import React from 'react';
-import ${componentName} from './${componentName}';
+import GeneratedComponent from './${componentName}';
 
 export default function App() {
   return (
     <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
-      <${componentName} />
+      <GeneratedComponent />
     </div>
   );
 }`,
@@ -78,10 +78,13 @@ input, textarea, select {
 export const SANDPACK_DEPENDENCIES = {
   react: '^18.2.0',
   'react-dom': '^18.2.0',
+  'react-reconciler': '0.29.2',
   'lucide-react': 'latest',
   'three': '0.149.0',
+  '@types/three': '^0.149.0',
   '@react-three/fiber': '8.11.1',
   '@react-three/drei': '9.56.24',
+  'maath': '^0.5.3',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {

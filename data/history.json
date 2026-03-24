@@ -1,0 +1,48 @@
+[
+  {
+    "id": "1ed798a8-1e28-4982-b335-d307abfb7f81",
+    "timestamp": "2026-03-24T18:48:03.678Z",
+    "componentType": "button",
+    "componentName": "SimpleBlueButton",
+    "intent": {
+      "componentType": "button",
+      "componentName": "SimpleBlueButton",
+      "description": "A simple blue button.",
+      "fields": [
+        {
+          "id": "simple-blue-button",
+          "type": "button",
+          "label": "Simple Blue Button",
+          "placeholder": "",
+          "required": false,
+          "validation": "",
+          "options": []
+        }
+      ],
+      "layout": {
+        "type": "centered",
+        "maxWidth": "sm",
+        "alignment": "center"
+      },
+      "interactions": [
+        {
+          "trigger": "click",
+          "action": "perform action",
+          "feedback": "none"
+        }
+      ],
+      "theme": {
+        "variant": "primary",
+        "size": "md"
+      },
+      "a11yRequired": [
+        "aria-label on button"
+      ],
+      "semanticElements": [
+        "button"
+      ]
+    },
+    "code": "import React from 'react';\n\ninterface SimpleBlueButtonProps {\n  onClick: () => void;\n}\n\nconst SimpleBlueButton: React.FC<SimpleBlueButtonProps> = ({ onClick }) => {\n  return (\n    <div className=\"flex justify-center items-center max-w-sm mx-auto\">\n      <button\n        id=\"simple-blue-button\"\n        type=\"button\"\n        onClick={onClick}\n        aria-label=\"Simple Blue Button\"\n        className=\"bg-blue-500 text-white font-medium py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-400 transition ease-in-out duration-150\"\n      >\n        Simple Blue Button\n      </button>\n    </div>\n  );\n};\n\nexport default SimpleBlueButton;",
+    "a11yScore": 100
+  }
+]

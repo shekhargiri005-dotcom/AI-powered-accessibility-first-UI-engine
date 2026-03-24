@@ -95,7 +95,18 @@ export async function parseIntent(
       };
     }
 
-    return { success: true, intent: validation.data, rawResponse: rawContent };
+    const validIntent = validation.data;
+    if (validIntent.componentName) {
+      validIntent.componentName = validIntent.componentName
+        .split(/[^a-zA-Z0-9]+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join('');
+      if (!/^[a-zA-Z]/.test(validIntent.componentName)) {
+        validIntent.componentName = 'C' + validIntent.componentName;
+      }
+    }
+
+    return { success: true, intent: validIntent, rawResponse: rawContent };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `OpenAI API error: ${msg}` };
