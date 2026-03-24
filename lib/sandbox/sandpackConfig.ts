@@ -103,12 +103,14 @@ export const SANDPACK_DEPENDENCIES = {
   '@react-spring/three': '^9.7.3',
   '@react-spring/web': '^9.7.3',
   'framer-motion': '^11.2.10',
+  'react-router-dom': '^6.22.3',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {
   '@types/react': '^18.2.0',
   '@types/react-dom': '^18.2.0',
   typescript: '^5.0.0',
+  '@types/react-router-dom': '^5.3.3',
 } as const;
 
 export const SANDPACK_TAILWIND_CDN = `
