@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const intent = intentValidation.data;
-    const { mode, model, maxTokens } = body as { mode?: string; model?: string; maxTokens?: number };
+    const { mode, model, maxTokens, isMultiSlide } = body as { mode?: string; model?: string; maxTokens?: number; isMultiSlide?: boolean };
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
     if (!process.env.OPENAI_API_KEY) {
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1: Generate component/app code
-    const generationResult = await generateComponent(intent, generationMode, model, maxTokens);
+    const generationResult = await generateComponent(intent, generationMode, model, maxTokens, isMultiSlide);
     if (!generationResult.success || !generationResult.code) {
       return NextResponse.json(
         { success: false, error: generationResult.error },

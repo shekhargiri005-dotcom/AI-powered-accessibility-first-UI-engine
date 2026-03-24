@@ -130,19 +130,24 @@ import type { MemoryEntry } from './memory';
 export function buildComponentGeneratorPrompt(
   intent: object,
   knowledge: string | null = null,
-  memory: MemoryEntry[] = []
+  memory: MemoryEntry[] = [],
+  isMultiSlide: boolean = false
 ): string {
-  let prompt = `Generate a React TypeScript component for this UIIntent:\n\n${JSON.stringify(intent, null, 2)}`;
+  let prompt = "Generate a React TypeScript component for this UIIntent:\n\n" + JSON.stringify(intent, null, 2);
   
   if (knowledge) {
-    prompt += `\n\n=== COMPONENT KNOWLEDGE BASE ===\n${knowledge}\nYou must rigidly follow these structural and stylistic rules for this component.`;
+    prompt += "\n\n=== COMPONENT KNOWLEDGE BASE ===\n" + knowledge + "\nYou must rigidly follow these structural and stylistic rules for this component.";
   }
   
   if (memory.length > 0) {
-    prompt += `\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n`;
+    prompt += "\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n";
     memory.forEach((mem, i) => {
-      prompt += `\n--- Example ${i + 1}: ${mem.componentName} ---\n${mem.code}\n`;
+      prompt += "\n--- Example " + (i + 1) + ": " + mem.componentName + " ---\n" + mem.code + "\n";
     });
+  }
+
+  if (isMultiSlide) {
+    prompt += "\n\n=== MULTI-SLIDE ARCHITECTURE REQUIREMENT ===\nCRITICAL: The user has requested this component function as a MULTI-SLIDE or MULTI-PAGE experience. You MUST build internal state (e.g. using useState) to paginate distinct views. Include accessible Next/Previous navigation controls or dots. Animate the transitions smoothly using generic styling.";
   }
   
   return prompt;
@@ -226,19 +231,24 @@ export function buildAppModeIntentPrompt(userInput: string, knowledge: string | 
 export function buildAppModeGeneratorPrompt(
   intent: object,
   knowledge: string | null = null,
-  memory: MemoryEntry[] = []
+  memory: MemoryEntry[] = [],
+  isMultiSlide: boolean = false
 ): string {
-  let prompt = `Build a complete, multi-screen React application for this app concept:\n\n${JSON.stringify(intent, null, 2)}\n\nGenerate ALL screens, navigation, and rich mock data. Make it look and feel like the real app.`;
+  let prompt = "Build a complete, multi-screen React application for this app concept:\n\n" + JSON.stringify(intent, null, 2) + "\n\nGenerate ALL screens, navigation, and rich mock data. Make it look and feel like the real app.";
 
   if (knowledge) {
-    prompt += `\n\n=== APP KNOWLEDGE BASE ===\n${knowledge}\nFollow this blueprint EXACTLY for screens, features, colors, and layout style.`;
+    prompt += "\n\n=== APP KNOWLEDGE BASE ===\n" + knowledge + "\nFollow this blueprint EXACTLY for screens, features, colors, and layout style.";
   }
 
   if (memory.length > 0) {
-    prompt += `\n\n=== REFERENCE STYLE ===\nEmulate the aesthetic quality of these past generations:\n`;
+    prompt += "\n\n=== REFERENCE STYLE ===\nEmulate the aesthetic quality of these past generations:\n";
     memory.forEach((mem, i) => {
-      prompt += `\n--- Reference ${i + 1}: ${mem.componentName} ---\n${mem.code.substring(0, 500)}...\n`;
+      prompt += "\n--- Reference " + (i + 1) + ": " + mem.componentName + " ---\n" + mem.code.substring(0, 500) + "...\n";
     });
+  }
+
+  if (isMultiSlide) {
+    prompt += "\n\n=== MULTI-SLIDE / PAGINATION REQUIREMENT ===\nCRITICAL: Generate a sophisticated multi-page / multi-slide router. The App must act as a guided presentation or wizard with distinct, richly designed screens. Include robust, accessible Next/Previous buttons and pagination indicators. Use premium smooth sliding transition logic out-of-the-box.";
   }
 
   return prompt;
@@ -322,12 +332,17 @@ export function buildWebglModeIntentPrompt(userInput: string, knowledge: string 
 
 export function buildWebglModeGeneratorPrompt(
   intent: object,
-  knowledge: string | null = null
+  knowledge: string | null = null,
+  isMultiSlide: boolean = false
 ): string {
   let prompt = `Build a complete React Three Fiber application for this concept:\n\n${JSON.stringify(intent, null, 2)}\n\nGenerate the Canvas wrapper, lighting, 3D meshes, useFrame animations, and the standard Tailwind UI overlay. Make it look beautiful and interactive.`;
 
   if (knowledge) {
     prompt += `\n\n=== 3D KNOWLEDGE BASE ===\n${knowledge}\nFollow this blueprint EXACTLY.`;
+  }
+
+  if (isMultiSlide) {
+    prompt += "\n\n=== MULTI-SLIDE 3D SCENE REQUIREMENT ===\nCRITICAL: The user wants a MULTI-SLIDE Interactive 3D presentation! You MUST:\n1. Maintain a SINGLE core Canvas that does NOT unmount between slides.\n2. Create state (e.g. activeSlide) that changes the 3D scene (swapping models, altering materials, or heavily animating camera positions/fov via react-spring/three or React Three Fiber's useFrame).\n3. Overlay HTML UI arrows and pagination dots to glide the user between distinct 3D focal states smoothly. Example: Slide 1 shows the object, Slide 2 rotates and explodes it, Slide 3 shifts camera to wireframe view.";
   }
 
   return prompt;

@@ -181,6 +181,7 @@ export default function HomePage() {
 
   const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-5.4-mini');
   const [isFullAppMode, setIsFullAppMode] = useState(false);
+  const [isMultiSlideMode, setIsMultiSlideMode] = useState(false);
 
   const runPipeline = useCallback(async (prompt: string, mode: GenerationMode) => {
     setOutput(null);
@@ -223,7 +224,7 @@ export default function HomePage() {
         const manifestRes = await fetch('/api/manifest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intent, model: selectedModel }),
+          body: JSON.stringify({ intent, model: selectedModel, isMultiSlide: isMultiSlideMode }),
         });
         const manifestData = await manifestRes.json();
         
@@ -244,7 +245,8 @@ export default function HomePage() {
                manifest,
                targetFile: fileReq.filename,
                model: selectedModel,
-               maxTokens
+               maxTokens,
+               isMultiSlide: isMultiSlideMode
             }),
           });
           
@@ -276,7 +278,7 @@ export default function HomePage() {
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent, mode, model: selectedModel, maxTokens }),
+        body: JSON.stringify({ intent, mode, model: selectedModel, maxTokens, isMultiSlide: isMultiSlideMode }),
       });
       const generateData = await generateRes.json();
 
@@ -308,7 +310,7 @@ export default function HomePage() {
       setPipelineStep('error');
       setPipelineError('Network error during generation. Check your connection.');
     }
-  }, [selectedModel, isFullAppMode]);
+  }, [selectedModel, isFullAppMode, isMultiSlideMode]);
 
   const a11yBadge = output?.a11yReport
     ? `Score: ${output.a11yReport.score}/100`
@@ -343,6 +345,7 @@ export default function HomePage() {
           <ModelSwitcher
             onModelChange={setSelectedModel}
             onFullAppModeChange={setIsFullAppMode}
+            onMultiSlideModeChange={setIsMultiSlideMode}
             disabled={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
           />
         </div>

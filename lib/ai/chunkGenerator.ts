@@ -10,9 +10,10 @@ export interface FileManifestItem {
 
 export async function generateAppManifest(
   intent: UIIntent,
-  model: string
+  model: string,
+  isMultiSlide: boolean = false
 ): Promise<FileManifestItem[]> {
-  const prompt = "You are an elite React UI Architect. The user wants to build a massive application.\n" +
+  let prompt = "You are an elite React UI Architect. The user wants to build a massive application.\n" +
 "Break this application down into a modular React architecture file manifest.\n" +
 "You must return a valid JSON array of objects, where each object has \"filename\" and \"description\".\n" +
 "The entry point MUST be named \"App.tsx\".\n" +
@@ -20,6 +21,10 @@ export async function generateAppManifest(
 "Include at least 4-6 files for a full application.\n\n" +
 "USER INTENT:\n" +
 JSON.stringify(intent, null, 2);
+
+  if (isMultiSlide) {
+    prompt += "\n\nCRITICAL MULTI-SLIDE ARCHITECTURE REQUIREMENT: The user requested a MULTI-SLIDE / PAGINATED experience. Ensure your manifest implies a router or slide orchestrator component (usually App.tsx) that manages navigation between distinct feature screens/views.";
+  }
 
   const response = await openai.chat.completions.create({
     model: model || 'gpt-4o',
@@ -46,11 +51,12 @@ export async function generateFileChunk(
   manifest: FileManifestItem[],
   targetFile: string,
   model: string,
-  maxTokens: number
+  maxTokens: number,
+  isMultiSlide: boolean = false
 ): Promise<string> {
   const fileDef = manifest.find((f) => f.filename === targetFile);
 
-  const prompt = "You are an elite React/TypeScript engineer building a massive application.\n" +
+  let prompt = "You are an elite React/TypeScript engineer building a massive application.\n" +
 "We are chunking the generation. You are currently writing the file: \"" + targetFile + "\".\n\n" +
 "FILE DESCRIPTION: " + (fileDef ? fileDef.description : 'Component for the app') + "\n\n" +
 "APP MANIFEST (For Context / Imports):\n" +
@@ -63,8 +69,13 @@ JSON.stringify(intent, null, 2) + "\n\n" +
 "3. Import other components from \"./[filename]\" relative paths based on the manifest.\n" +
 "4. Export default the main component of this file.\n" +
 "5. If it is App.tsx, orchestrate the other components.\n" +
-"6. Write dense, production-ready code.\n\n" +
-"RETURN ONLY THE RAW CODE.";
+"6. Write dense, production-ready code.\n\n";
+
+  if (isMultiSlide) {
+    prompt += "CRITICAL MULTI-SLIDE ARCHITECTURE REQUIREMENT:\nThe app must function as a multi-slide or paginated experience. When generating App.tsx or view components, include robust navigation state (Next/Prev buttons, dots). For 3D WebGL scenes, alter the react-three-fiber camera or mesh positions over these slide states.\n\n";
+  }
+
+  prompt += "RETURN ONLY THE RAW CODE.";
 
   const response = await openai.chat.completions.create({
     model: model || 'gpt-4o',

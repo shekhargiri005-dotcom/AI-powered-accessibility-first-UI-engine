@@ -39,7 +39,8 @@ export async function generateComponent(
   intent: UIIntent,
   mode: GenerationMode = 'component',
   requestedModel: string = 'gpt-5.4-mini',
-  maxTokens: number = 5000
+  maxTokens: number = 5000,
+  isMultiSlide: boolean = false
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
@@ -51,17 +52,17 @@ export async function generateComponent(
     if (mode === 'webgl') {
       knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
       systemPrompt = WEBGL_MODE_SYSTEM_PROMPT;
-      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge);
+      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge, isMultiSlide);
     } else if (mode === 'app') {
       knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
       const memory = getRelevantExamples(intent);
       systemPrompt = APP_MODE_SYSTEM_PROMPT;
-      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory);
+      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory, isMultiSlide);
     } else {
       knowledge = findRelevantKnowledge(searchText);
       const memory = getRelevantExamples(intent);
       systemPrompt = COMPONENT_GENERATOR_SYSTEM_PROMPT;
-      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory);
+      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, isMultiSlide);
     }
 
     const response = await openai.chat.completions.create({
