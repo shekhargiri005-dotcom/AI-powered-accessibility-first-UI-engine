@@ -62,14 +62,7 @@ export async function generateComponent(
       userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory);
     }
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: mode === 'app' || mode === 'webgl' ? 0.3 : 0.2,
-    });
+
 
     const rawContent = response.choices[0]?.message?.content || '';
 
