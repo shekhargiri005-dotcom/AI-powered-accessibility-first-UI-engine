@@ -16,6 +16,7 @@ export function buildSandpackFiles(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI UI Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
   <body>
     <div id="root"></div>
@@ -30,7 +31,7 @@ import ${componentName} from './${componentName}';
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-8">
+    <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">
       <${componentName} />
     </div>
   );
