@@ -111,7 +111,7 @@ Return ONLY raw TypeScript test code without markdown fences.`;
 
 export function buildIntentParsePrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
-    .substring(0, 10000)
+    .substring(0, 20000)
     .replace(/system:|assistant:|<\|.*?\|>/gi, '')
     .trim();
 
@@ -216,7 +216,7 @@ Target 350-600 lines. Pack real, functional content into every screen.`;
 
 export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
-    .substring(0, 10000)
+    .substring(0, 20000)
     .replace(/system:|assistant:|<\|.*?\|>/gi, '')
     .trim();
 
@@ -317,7 +317,7 @@ export default AppName;`;
 
 export function buildWebglModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
-    .substring(0, 10000)
+    .substring(0, 20000)
     .replace(/system:|assistant:|<\|.*?\|>/gi, '')
     .trim();
 

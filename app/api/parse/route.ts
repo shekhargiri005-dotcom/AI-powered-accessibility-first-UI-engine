@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { parseIntent } from '@/lib/ai/intentParser';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 
-const MAX_INPUT_LENGTH = 10000;
+const MAX_INPUT_LENGTH = 20000;
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     if (prompt.length > MAX_INPUT_LENGTH) {
       return NextResponse.json(
-        { success: false, error: `prompt exceeds maximum length of ${MAX_INPUT_LENGTH} characters` },
+        { success: false, error: 'Your prompt is too long and detailed. Please provide a more concise description.' },
         { status: 400 }
       );
     }
