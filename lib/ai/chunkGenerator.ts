@@ -92,7 +92,13 @@ JSON.stringify(intent, null, 2) + "\n\n" +
   });
 
   let rawContent = response.choices[0]?.message?.content || '';
-  rawContent = rawContent.replace(/^```(?:tsx?|jsx?|typescript|javascript)?\n?/gim, '').replace(/```\s*$/gim, '').trim();
-  
+
+  const match = rawContent.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
+  if (match && match[1]) {
+    rawContent = match[1].trim();
+  } else {
+    rawContent = rawContent.replace(/^```(?:tsx?|jsx?|typescript|javascript)?\n?/gim, '').replace(/```\s*$/gim, '').trim();
+  }
+
   return rawContent;
 }
