@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseIntent } from '@/lib/ai/intentParser';
+import type { GenerationMode } from '@/lib/ai/componentGenerator';
 
-// Rate limit simple implementation (per-request, no persistence)
 const MAX_INPUT_LENGTH = 10000;
 
 export async function POST(request: NextRequest) {
   try {
-    // Parse request body
     let body: unknown;
     try {
       body = await request.json();
@@ -17,7 +16,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Type guard
     if (!body || typeof body !== 'object' || !('prompt' in body)) {
       return NextResponse.json(
         { success: false, error: 'Missing required field: prompt' },
@@ -25,9 +23,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt } = body as { prompt: unknown };
+    const { prompt, mode } = body as { prompt: unknown; mode?: unknown };
 
-    // Validate prompt type and length
     if (typeof prompt !== 'string') {
       return NextResponse.json(
         { success: false, error: 'prompt must be a string' },
@@ -49,7 +46,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check for OpenAI API key
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { success: false, error: 'OPENAI_API_KEY is not configured. Add it to your .env.local file.' },
@@ -57,8 +53,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse intent via AI
-    const result = await parseIntent(prompt);
+    const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
+    const result = await parseIntent(prompt, generationMode);
 
     if (!result.success) {
       return NextResponse.json(

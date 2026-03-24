@@ -1,10 +1,19 @@
 import OpenAI from 'openai';
-import { COMPONENT_GENERATOR_SYSTEM_PROMPT, buildComponentGeneratorPrompt } from './prompts';
+import {
+  COMPONENT_GENERATOR_SYSTEM_PROMPT,
+  APP_MODE_SYSTEM_PROMPT,
+  WEBGL_MODE_SYSTEM_PROMPT,
+  buildComponentGeneratorPrompt,
+  buildAppModeGeneratorPrompt,
+  buildWebglModeGeneratorPrompt,
+} from './prompts';
 import { getRelevantExamples } from './memory';
-import { findRelevantKnowledge } from './knowledgeBase';
+import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
 import { type UIIntent } from '../validation/schemas';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+export type GenerationMode = 'component' | 'app' | 'webgl';
 
 export interface GenerationResult {
   success: boolean;
@@ -14,7 +23,6 @@ export interface GenerationResult {
 
 function cleanGeneratedCode(raw: string): string {
   // Try to find a code block first, ignoring any conversational filler.
-  // The closing fence (```) is optional ($) in case the LLM response is truncated due to token limits.
   const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
   if (match && match[1]) {
     return match[1].trim();
@@ -27,18 +35,40 @@ function cleanGeneratedCode(raw: string): string {
     .trim();
 }
 
-export async function generateComponent(intent: UIIntent): Promise<GenerationResult> {
+export async function generateComponent(
+  intent: UIIntent,
+  mode: GenerationMode = 'component'
+): Promise<GenerationResult> {
   try {
-    const knowledge = findRelevantKnowledge(intent.description + ' ' + intent.componentName);
-    const memory = getRelevantExamples(intent);
+    const searchText = intent.description + ' ' + intent.componentName;
+
+    let knowledge: string | null;
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (mode === 'webgl') {
+      knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
+      systemPrompt = WEBGL_MODE_SYSTEM_PROMPT;
+      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge);
+    } else if (mode === 'app') {
+      knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
+      const memory = getRelevantExamples(intent);
+      systemPrompt = APP_MODE_SYSTEM_PROMPT;
+      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory);
+    } else {
+      knowledge = findRelevantKnowledge(searchText);
+      const memory = getRelevantExamples(intent);
+      systemPrompt = COMPONENT_GENERATOR_SYSTEM_PROMPT;
+      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory);
+    }
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: COMPONENT_GENERATOR_SYSTEM_PROMPT },
-        { role: 'user', content: buildComponentGeneratorPrompt(intent, knowledge, memory) }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
-      temperature: 0.2,
+      temperature: mode === 'app' || mode === 'webgl' ? 0.3 : 0.2,
     });
 
     const rawContent = response.choices[0]?.message?.content || '';
@@ -49,7 +79,7 @@ export async function generateComponent(intent: UIIntent): Promise<GenerationRes
 
     const cleaned = cleanGeneratedCode(rawContent);
 
-    // Basic sanity check - ensure it exports something and returns JSX
+    // Basic sanity check
     if (!cleaned.includes('export') && !cleaned.includes('return')) {
       return {
         success: false,

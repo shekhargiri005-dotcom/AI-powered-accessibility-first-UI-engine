@@ -1,7 +1,15 @@
 import OpenAI from 'openai';
-import { INTENT_PARSER_SYSTEM_PROMPT, buildIntentParsePrompt } from './prompts';
-import { findRelevantKnowledge } from './knowledgeBase';
+import {
+  INTENT_PARSER_SYSTEM_PROMPT,
+  APP_MODE_INTENT_SYSTEM_PROMPT,
+  WEBGL_MODE_INTENT_SYSTEM_PROMPT,
+  buildIntentParsePrompt,
+  buildAppModeIntentPrompt,
+  buildWebglModeIntentPrompt,
+} from './prompts';
+import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
 import { UIIntentSchema, type UIIntent } from '../validation/schemas';
+import type { GenerationMode } from './componentGenerator';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -12,21 +20,40 @@ export interface ParseResult {
   rawResponse?: string;
 }
 
-export async function parseIntent(userInput: string): Promise<ParseResult> {
+export async function parseIntent(
+  userInput: string,
+  mode: GenerationMode = 'component'
+): Promise<ParseResult> {
   if (!userInput || userInput.trim().length === 0) {
     return { success: false, error: 'Input cannot be empty' };
   }
   if (userInput.trim().length < 3) {
-    return { success: false, error: 'Input too short — describe a UI component' };
+    return { success: false, error: 'Input too short — describe a UI component or app' };
   }
   try {
-    const knowledge = findRelevantKnowledge(userInput);
+    let knowledge: string | null;
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (mode === 'webgl') {
+      knowledge = findWebglTemplate(userInput) ?? findRelevantKnowledge(userInput);
+      systemPrompt = WEBGL_MODE_INTENT_SYSTEM_PROMPT;
+      userPrompt = buildWebglModeIntentPrompt(userInput, knowledge);
+    } else if (mode === 'app') {
+      knowledge = findAppTemplate(userInput) ?? findRelevantKnowledge(userInput);
+      systemPrompt = APP_MODE_INTENT_SYSTEM_PROMPT;
+      userPrompt = buildAppModeIntentPrompt(userInput, knowledge);
+    } else {
+      knowledge = findRelevantKnowledge(userInput);
+      systemPrompt = INTENT_PARSER_SYSTEM_PROMPT;
+      userPrompt = buildIntentParsePrompt(userInput, knowledge);
+    }
 
     const response = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: INTENT_PARSER_SYSTEM_PROMPT },
-        { role: 'user', content: buildIntentParsePrompt(userInput, knowledge) }
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
@@ -38,7 +65,7 @@ export async function parseIntent(userInput: string): Promise<ParseResult> {
       return { success: false, error: 'AI returned empty response' };
     }
 
-    // Attempt to extract JSON if the model wrapped it in markdown
+    // Extract JSON if wrapped in markdown
     const jsonMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawContent];
     const cleanedRaw = jsonMatch[1].trim();
 

@@ -3,13 +3,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock } from 'lucide-react';
 
+export type GenerationMode = 'component' | 'app' | 'webgl';
+
 interface PromptInputProps {
-  onSubmit: (prompt: string) => void;
+  onSubmit: (prompt: string, mode: GenerationMode) => void;
   isLoading: boolean;
 }
 
 export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
+  const [mode, setMode] = useState<GenerationMode>('component');
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -122,77 +125,181 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim() && !isLoading) {
-      onSubmit(prompt.trim());
+      onSubmit(prompt.trim(), mode);
       setPrompt('');
       setIsRecording(false);
     }
   };
 
-
-
   const charCount = prompt.length;
   const maxChars = 10000;
   const isOverLimit = charCount > maxChars;
 
+  const placeholder = mode === 'app'
+    ? 'Describe a full app in one line, e.g. "Build an Instagram-like social media app" or "Create a Spotify music player"'
+    : 'Describe a UI component, e.g. "A login form with email and password" or paste a design prompt…';
+
   return (
     <section aria-labelledby="prompt-heading">
-      <div className="mb-6">
-        <div className="flex items-center gap-2 mb-2">
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-3">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Command className="w-4 h-4 text-white" />
           </div>
           <div>
             <h2 id="prompt-heading" className="text-lg font-semibold text-white">
-              Describe Your UI Component
+              Describe Your UI
             </h2>
             <p className="text-xs text-gray-400">
-              Natural language → accessible React component
+              Natural language → accessible React {mode === 'app' ? 'application' : 'component'}
             </p>
           </div>
         </div>
-      </div>      <form onSubmit={handleSubmit} aria-label="UI component generation form" className="relative group">
+
+        {/* ── Mode Toggle ─────────────────────────────────────────── */}
+        <div
+          role="group"
+          aria-label="Generation mode"
+          className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-800/60 border border-gray-700/40 mb-3"
+        >
+          <button
+            type="button"
+            onClick={() => setMode('component')}
+            aria-pressed={mode === 'component'}
+            disabled={isLoading}
+            className={`
+              flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${mode === 'component'
+                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'
+                : 'text-gray-400 hover:text-white'
+              }
+            `}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7" rx="1" />
+              <rect x="14" y="3" width="7" height="7" rx="1" />
+              <rect x="3" y="14" width="7" height="7" rx="1" />
+              <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+            Component
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('app')}
+            aria-pressed={mode === 'app'}
+            disabled={isLoading}
+            className={`
+              flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${mode === 'app'
+                ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-md shadow-violet-500/25'
+                : 'text-gray-400 hover:text-white'
+              }
+            `}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" />
+              <path d="M2 17l10 5 10-5" />
+              <path d="M2 12l10 5 10-5" />
+            </svg>
+            Full App
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('webgl')}
+            aria-pressed={mode === 'webgl'}
+            disabled={isLoading}
+            className={`
+              flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
+              focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              disabled:opacity-50 disabled:cursor-not-allowed
+              ${mode === 'webgl'
+                ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white shadow-md shadow-cyan-500/25'
+                : 'text-gray-400 hover:text-white'
+              }
+            `}
+          >
+            <span role="img" aria-hidden="true" className="text-[14px] leading-none">🧊</span>
+            3D WebGL
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-semibold">NEW</span>
+          </button>
+        </div>
+
+        {/* Hints */}
+        {mode === 'app' && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <p className="text-xs text-violet-300 leading-relaxed">
+              <span className="font-semibold text-violet-200">Full App Mode:</span> Generates a complete multi-screen application with navigation and mock data. Try: <span className="italic">"Build an Instagram-like app"</span>.
+            </p>
+          </div>
+        )}
+        {mode === 'webgl' && (
+          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" aria-hidden="true">
+              <polygon points="12 2 2 7 12 12 22 7 12 2" />
+              <polyline points="2 17 12 22 22 17" />
+              <polyline points="2 12 12 17 22 12" />
+            </svg>
+            <p className="text-xs text-cyan-300 leading-relaxed">
+              <span className="font-semibold text-cyan-200">3D WebGL Mode:</span> Generates interactive 3D scenes using React Three Fiber. Try: <span className="italic">"Build a 3D portfolio landing page with floating rotating cubes"</span>.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} aria-label="UI generation form" className="relative group">
         <div className={`
           relative flex flex-col w-full transition-all duration-300
           bg-[#212121] backdrop-blur-md border border-[#303030] 
           ${isFocused ? 'ring-1 ring-white/10 shadow-2xl' : 'hover:border-[#404040] shadow-xl'}
+          ${mode === 'app' ? 'ring-1 ring-violet-500/20' : ''}
+          ${mode === 'webgl' ? 'ring-1 ring-cyan-500/20' : ''}
           rounded-2xl overflow-hidden
         `}>
           
           {/* Active Recording State */}
           {isRecording && (
             <div className="flex flex-wrap gap-2 px-3 pt-3 pb-1 border-b border-[#303030]/50" role="region" aria-label="Recording active">
-                 <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl py-1 px-3 text-xs text-red-400">
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                    </span>
-                    Listening... Speak clearly.
-                    <button type="button" onClick={toggleRecording} className="ml-1 text-red-500 hover:text-white transition-colors">
-                      <X className="w-3 h-3" />
-                    </button>
-                 </div>
+              <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl py-1 px-3 text-xs text-red-400">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                </span>
+                Listening... Speak clearly.
+                <button type="button" onClick={toggleRecording} className="ml-1 text-red-500 hover:text-white transition-colors" aria-label="Stop recording">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
             </div>
           )}
 
           {/* Expanding Text Area */}
           <div className="relative p-3 pb-0">
-             <textarea
+            <textarea
               id="component-prompt"
               name="component-prompt"
-              rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : 5}
+              rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : mode === 'app' ? 4 : 5}
               className="
                 w-full resize-y bg-transparent text-zinc-100
                 placeholder-zinc-500 text-sm sm:text-base leading-relaxed
-                outline-none focus:outline-none min-h-[120px] max-h-[600px] overflow-y-auto
+                outline-none focus:outline-none min-h-[100px] max-h-[600px] overflow-y-auto
               "
-              placeholder="Ask anything or paste a huge prompt..."
+              placeholder={placeholder}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               disabled={isLoading}
               maxLength={maxChars + 100}
-              aria-label="Component description"
+              aria-label={mode === 'app' ? 'App description' : 'Component description'}
               aria-required="true"
             />
           </div>
@@ -201,7 +308,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
           <div className="flex items-center justify-between px-3 py-2 bg-[#212121]/50 border-t border-[#303030]/30">
             {/* Left Actions */}
             <div className="flex items-center gap-2">
-               <input
+              <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleFileUpload}
@@ -212,7 +319,8 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 type="button" 
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isProcessingImage}
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-md transition-colors focus:outline-none disabled:opacity-50 flex items-center gap-1.5 text-xs font-medium"
+                aria-label="Attach image for AI analysis"
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 flex items-center gap-1.5 text-xs font-medium"
               >
                 {isProcessingImage ? <Loader2 className="w-4 h-4 stroke-[2] animate-spin text-blue-400" /> : <Plus className="w-4 h-4 stroke-[2]" />}
                 <span className="hidden sm:inline">Attach</span>
@@ -225,25 +333,34 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                 {charCount}/{maxChars}
               </span>
 
-              {/* Optional glowing dot (if active/processing) */}
               {isLoading && (
                 <div className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
               )}
 
-              <button type="button" onClick={toggleRecording} className={`p-2 rounded-lg transition-colors focus:outline-none ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}>
+              <button
+                type="button"
+                onClick={toggleRecording}
+                aria-label={isRecording ? 'Stop recording' : 'Start voice input'}
+                className={`p-2 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${isRecording ? 'bg-red-500/20 text-red-500' : 'text-zinc-400 hover:text-white hover:bg-white/10'}`}
+              >
                 <Mic className="w-4 h-4 stroke-[2]" />
               </button>
 
               <button
                 type="submit"
                 disabled={!prompt.trim() || isLoading || isOverLimit || isProcessingImage}
-                aria-label={isLoading ? 'Generating component, please wait' : 'Generate component'}
+                aria-label={isLoading ? 'Generating, please wait' : mode === 'app' ? 'Generate full app' : 'Generate component'}
                 className={`
                   flex items-center justify-center px-4 py-1.5 rounded-lg
-                  transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121] focus:ring-white
+                  transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121]
+                  ${mode === 'app' ? 'focus:ring-violet-500' : mode === 'webgl' ? 'focus:ring-cyan-500' : 'focus:ring-white'}
                   ${isLoading || !prompt.trim() 
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
-                    : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
+                    : mode === 'app'
+                      ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 shadow-md shadow-violet-500/25 font-medium text-sm'
+                      : mode === 'webgl'
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-400 shadow-md shadow-cyan-500/25 font-medium text-sm'
+                        : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
                   }
                 `}
               >
@@ -251,8 +368,8 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
                   <>
-                    <span className="mr-1.5">Generate</span>
-                    <Send className={`w-3.5 h-3.5 block`} aria-hidden="true" />
+                    <span className="mr-1.5">{mode === 'app' ? 'Build App' : mode === 'webgl' ? 'Build 3D' : 'Generate'}</span>
+                    <Send className="w-3.5 h-3.5 block" aria-hidden="true" />
                   </>
                 )}
               </button>
@@ -261,11 +378,13 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
         </div>
 
         <p id="prompt-hint" className="sr-only">
-          Enter a description of the UI component you want to build, then click Generate to create a React component with accessibility features.
+          {mode === 'app'
+            ? 'Describe a full application to generate a complete multi-screen React app with navigation and mock data.'
+            : 'Enter a description of the UI component you want to build, then click Generate.'}
         </p>
       </form>
 
-      {/* True User History */}
+      {/* Generation History */}
       <div className="mt-4" role="group" aria-label="Prompt history">
         <p className="flex items-center gap-1.5 text-xs text-gray-400 mb-2 font-medium">
           <Clock className="w-3 h-3 block" />
@@ -296,7 +415,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
             ))
           ) : (
             <div className="text-xs text-zinc-500 italic flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full border border-white/5">
-              Nothing here yet. Build your first component!
+              Nothing here yet. Build your first component or app!
             </div>
           )}
         </div>

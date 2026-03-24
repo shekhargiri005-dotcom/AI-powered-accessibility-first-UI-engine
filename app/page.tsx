@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import PromptInput from '@/components/PromptInput';
+import PromptInput, { type GenerationMode } from '@/components/PromptInput';
 import PipelineStatus, { type PipelineStep } from '@/components/PipelineStatus';
 import GeneratedCode from '@/components/GeneratedCode';
 import A11yReportComponent from '@/components/A11yReport';
@@ -9,7 +9,7 @@ import TestOutput from '@/components/TestOutput';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 import {
   Cpu, GitBranch, Layers, ChevronDown, ChevronUp,
-  Braces, Shield, FlaskConical,
+  Braces, Shield, FlaskConical, Sparkles,
 } from 'lucide-react';
 
 // Lazy import Sandpack to avoid SSR issues
@@ -31,6 +31,7 @@ interface GenerationOutput {
   intent: UIIntent;
   a11yReport: A11yReport & { appliedFixes?: string[] };
   tests: { rtl: string; playwright: string };
+  mode: GenerationMode;
 }
 
 // ─── Section Wrapper ──────────────────────────────────────────────────────────
@@ -139,7 +140,7 @@ function HeroHeader() {
           UI Engine
         </h1>
         <p className="text-lg text-gray-400 max-w-xl mx-auto leading-relaxed">
-          Describe any UI component in plain English. Get{' '}
+          Describe any UI component or full application in plain English. Get{' '}
           <span className="text-white font-medium">TypeScript React code</span>,{' '}
           <span className="text-white font-medium">WCAG 2.1 AA validation</span>, and{' '}
           <span className="text-white font-medium">automated tests</span> — instantly.
@@ -153,6 +154,8 @@ function HeroHeader() {
             { icon: <Layers className="w-3 h-3" />, label: 'Zod Validated' },
             { icon: <GitBranch className="w-3 h-3" />, label: 'Sandpack Preview' },
             { icon: <FlaskConical className="w-3 h-3" />, label: 'RTL + Playwright' },
+            { icon: <Sparkles className="w-3 h-3" />, label: 'Full App Mode' },
+            { icon: <Layers className="w-3 h-3" />, label: '3D WebGL Mode' },
           ].map(({ icon, label }) => (
             <span
               key={label}
@@ -175,7 +178,7 @@ export default function HomePage() {
   const [pipelineError, setPipelineError] = useState<string | undefined>();
   const [output, setOutput] = useState<GenerationOutput | null>(null);
 
-  const runPipeline = useCallback(async (prompt: string) => {
+  const runPipeline = useCallback(async (prompt: string, mode: GenerationMode) => {
     setOutput(null);
     setPipelineError(undefined);
 
@@ -187,7 +190,7 @@ export default function HomePage() {
       const parseRes = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, mode }),
       });
       const parseData = await parseRes.json();
 
@@ -205,14 +208,14 @@ export default function HomePage() {
       return;
     }
 
-    // ─── Step 2: Generate Component ────────────────────────────────────────
+    // ─── Step 2: Generate Component / App ─────────────────────────────────
     setPipelineStep('generating');
 
     try {
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent }),
+        body: JSON.stringify({ intent, mode }),
       });
       const generateData = await generateRes.json();
 
@@ -224,7 +227,7 @@ export default function HomePage() {
 
       // ─── Step 3: Validate ─────────────────────────────────────────────
       setPipelineStep('validating');
-      await new Promise(r => setTimeout(r, 400)); // Visual pause for pipeline UX
+      await new Promise(r => setTimeout(r, 400));
 
       // ─── Step 4: Tests ────────────────────────────────────────────────
       setPipelineStep('testing');
@@ -238,10 +241,11 @@ export default function HomePage() {
         intent,
         a11yReport: generateData.a11yReport,
         tests: generateData.tests,
+        mode: mode,
       });
     } catch (err) {
       setPipelineStep('error');
-      setPipelineError('Network error during component generation. Check your connection.');
+      setPipelineError('Network error during generation. Check your connection.');
     }
   }, []);
 
@@ -293,7 +297,29 @@ export default function HomePage() {
 
         {/* Results */}
         {output && (
-          <main aria-label="Generated component results">
+          <main aria-label="Generated results">
+            {/* App Mode banner */}
+            {output.mode === 'app' && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 mb-4">
+                <Sparkles className="w-4 h-4 text-violet-400" aria-hidden="true" />
+                <span className="text-sm text-violet-300">
+                  <span className="font-semibold text-violet-200">Full App generated:</span>{' '}
+                  {output.componentName} — Multi-screen application with navigation and mock data
+                </span>
+              </div>
+            )}
+
+            {/* WebGL Mode banner */}
+            {output.mode === 'webgl' && (
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
+                <span role="img" aria-hidden="true" className="text-cyan-400 text-sm">🧊</span>
+                <span className="text-sm text-cyan-300">
+                  <span className="font-semibold text-cyan-200">3D WebGL scene generated:</span>{' '}
+                  {output.componentName} — React Three Fiber interactive application
+                </span>
+              </div>
+            )}
+
             <div className="space-y-4">
 
               {/* Structured Intent */}
@@ -301,7 +327,7 @@ export default function HomePage() {
 
               {/* Generated TSX Code */}
               <ResultSection
-                title="Generated Component"
+                title={output.mode === 'app' ? 'Generated Application' : output.mode === 'webgl' ? 'Generated 3D Scene' : 'Generated Component'}
                 icon={<Layers className="w-4 h-4" />}
                 badge={`${output.code.split('\n').length} lines TypeScript`}
                 badgeColor="bg-blue-500/20 text-blue-400"
@@ -316,8 +342,8 @@ export default function HomePage() {
               <ResultSection
                 title="Live Preview"
                 icon={<GitBranch className="w-4 h-4" />}
-                badge="Sandpack"
-                badgeColor="bg-violet-500/20 text-violet-400"
+                badge={output.mode === 'app' ? 'Full App · Sandpack' : output.mode === 'webgl' ? 'React Three Fiber · Sandpack' : 'Sandpack'}
+                badgeColor={output.mode === 'app' ? 'bg-violet-500/20 text-violet-400' : output.mode === 'webgl' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-500/20 text-blue-400'}
               >
                 <div className="p-0">
                   <SandpackPreview

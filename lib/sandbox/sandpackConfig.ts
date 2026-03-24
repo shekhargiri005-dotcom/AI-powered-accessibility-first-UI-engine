@@ -63,6 +63,9 @@ export const SANDPACK_DEPENDENCIES = {
   react: '^18.2.0',
   'react-dom': '^18.2.0',
   'lucide-react': 'latest',
+  'three': 'latest',
+  '@react-three/fiber': 'latest',
+  '@react-three/drei': 'latest',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {
