@@ -61,8 +61,21 @@ input, textarea, select {
   };
 
   if (isMultiFile) {
+    let hasApp = false;
     for (const [filename, code] of Object.entries(componentCode)) {
-      files[`/src/${filename}`] = { code, active: filename === 'App.tsx' };
+      const cleanName = filename.replace(/^\/+/, '');
+      if (cleanName === 'App.tsx' || cleanName === 'App.jsx') hasApp = true;
+      files[`/src/${cleanName}`] = { code: typeof code === 'string' ? code : '', active: cleanName === 'App.tsx' };
+    }
+    
+    // Safety fallback: Sandpack crashes if activeFile '/src/App.tsx' does not exist
+    if (!hasApp) {
+      const firstKey = Object.keys(componentCode)[0]?.replace(/^\/+/, '') || 'Component';
+      const importName = firstKey.replace(/\.[tj]sx?$/, '');
+      files['/src/App.tsx'] = {
+        code: `import React from 'react';\nimport FallbackComponent from './${importName}';\n\nexport default function App() {\n  return <FallbackComponent />;\n}`,
+        active: true
+      };
     }
   } else {
     files['/src/App.tsx'] = {
