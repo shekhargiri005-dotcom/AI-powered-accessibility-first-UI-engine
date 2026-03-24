@@ -68,7 +68,7 @@ export async function generateComponent(
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      temperature: mode === 'app' || mode === 'webgl' ? 0.3 : 0.2,
+      temperature: mode === 'app' || mode === 'webgl' ? 0.6 : 0.4,
       max_tokens: 16383,
     });
     const rawContent = response.choices[0]?.message?.content || '';
