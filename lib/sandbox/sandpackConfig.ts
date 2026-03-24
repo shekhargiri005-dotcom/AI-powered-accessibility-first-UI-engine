@@ -70,12 +70,20 @@ input, textarea, select {
     
     // Safety fallback: Sandpack crashes if activeFile '/src/App.tsx' does not exist
     if (!hasApp) {
-      const firstKey = Object.keys(componentCode)[0]?.replace(/^\/+/, '') || 'Component';
-      const importName = firstKey.replace(/\.[tj]sx?$/, '');
-      files['/src/App.tsx'] = {
-        code: `import React from 'react';\nimport FallbackComponent from './${importName}';\n\nexport default function App() {\n  return <FallbackComponent />;\n}`,
-        active: true
-      };
+      const keys = Object.keys(componentCode);
+      if (keys.length === 0) {
+        files['/src/App.tsx'] = {
+          code: `import React from 'react';\nexport default function App() {\n  return <div className="p-8 text-red-500 font-mono text-center">Generation Error: The AI failed to yield any file chunks. Try again.</div>;\n}`,
+          active: true
+        };
+      } else {
+        const firstKey = keys[0].replace(/^\/+/, '');
+        const importName = firstKey.replace(/\.[tj]sx?$/, '');
+        files['/src/App.tsx'] = {
+          code: `import React from 'react';\nimport FallbackComponent from './${importName}';\n\nexport default function App() {\n  return <FallbackComponent />;\n}`,
+          active: true
+        };
+      }
     }
   } else {
     files['/src/App.tsx'] = {
