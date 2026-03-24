@@ -8,6 +8,13 @@ export interface FileManifestItem {
   description: string;
 }
 
+function mapModel(req: string): string {
+  if (req.includes('nano') || req.includes('mini')) return 'gpt-4o-mini';
+  if (req === 'gpt-4.1') return 'gpt-4-turbo';
+  if (req.includes('5.4')) return 'gpt-4o';
+  return req || 'gpt-4o';
+}
+
 export async function generateAppManifest(
   intent: UIIntent,
   model: string,
@@ -27,7 +34,7 @@ JSON.stringify(intent, null, 2);
   }
 
   const response = await openai.chat.completions.create({
-    model: model || 'gpt-4o',
+    model: mapModel(model),
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.3,
     response_format: { type: 'json_object' }, 
@@ -78,7 +85,7 @@ JSON.stringify(intent, null, 2) + "\n\n" +
   prompt += "RETURN ONLY THE RAW CODE.";
 
   const response = await openai.chat.completions.create({
-    model: model || 'gpt-4o',
+    model: mapModel(model),
     messages: [{ role: 'user', content: prompt }],
     temperature: 0.5,
     max_tokens: maxTokens || 4000,

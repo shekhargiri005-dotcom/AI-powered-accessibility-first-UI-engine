@@ -21,6 +21,13 @@ export interface GenerationResult {
   error?: string;
 }
 
+function mapModel(req: string): string {
+  if (req.includes('nano') || req.includes('mini')) return 'gpt-4o-mini';
+  if (req === 'gpt-4.1') return 'gpt-4-turbo';
+  if (req.includes('5.4')) return 'gpt-4o';
+  return req || 'gpt-4o';
+}
+
 function cleanGeneratedCode(raw: string): string {
   // Try to find a code block first, ignoring any conversational filler.
   const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
@@ -66,7 +73,7 @@ export async function generateComponent(
     }
 
     const response = await openai.chat.completions.create({
-      model: requestedModel || 'gpt-4o',
+      model: mapModel(requestedModel),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },

@@ -10,7 +10,7 @@ import { buildSandpackFiles, SANDPACK_DEPENDENCIES } from '@/lib/sandbox/sandpac
 import { Eye, Code2 } from 'lucide-react';
 
 interface SandpackPreviewProps {
-  code: string;
+  code: string | Record<string, string>;
   componentName: string;
 }
 
@@ -43,7 +43,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         }}
         options={{
           visibleFiles: Object.keys(files) as string[],
-          activeFile: `/src/${componentName}.tsx`,
+          activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
           externalResources: [
             'https://cdn.tailwindcss.com',
           ],
