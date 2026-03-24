@@ -288,11 +288,11 @@ export const WEBGL_MODE_SYSTEM_PROMPT = `You are a world-class Creative Develope
 
 ARCHITECTURE:
 1. SINGLE FILE: All components, 3D meshes, and standard UI must be in one file.
-2. LIBRARIES: You MUST use \`@react-three/fiber\`, \`@react-three/drei\`, and \`three\`. 
+2. LIBRARIES: You MUST use \`@react-three/fiber\` and \`@react-three/drei\`. 
    Export them using:
-   import * as THREE from 'three';
    import { Canvas, useFrame } from '@react-three/fiber';
    import { OrbitControls, Environment, ContactShadows, Float, Text3D, Center, Html } from '@react-three/drei';
+   Do NOT import * as THREE from 'three' unless critically necessary. Rely on R3F JSX elements like <meshStandardMaterial>.
 3. STRUCTURE:
    - Create isolated 3D component functions (e.g. \`function Scene()\`)
    - Create a main \`App\` component that returns a full-screen \`div\` wrapper (\`w-full h-screen relative\`).
@@ -308,7 +308,6 @@ OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 
 Start with:
 import React, { useState, useRef, useMemo } from 'react';
-import * as THREE from 'three';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Environment, Float, ContactShadows, Html } from '@react-three/drei';
 
