@@ -95,6 +95,9 @@ MANDATORY RULES:
 10. PER-ITEM COLOR DISTRIBUTION (CRITICAL):
    - When multiple named colors are specified for items, define a color config array and apply via style={{ backgroundColor: item.accent }}.
 
+CRITICAL REQUIREMENT:
+You are an EXPERT UI CODER. Do not write simplistic "Hello World" code or abbreviate. Your components must be massive, breathtaking, and extremely detailed! Write as much code as needed—whether it's 500 lines or 50k lines—to make the UI indistinguishable from an award-winning site. Implement exhaustive styling, complex layouts, micro-interactions, robust logic, and rich mock data arrays.
+
 OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation.
 
 The component must be a complete, self-contained file that starts with:
@@ -212,7 +215,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 End with:
 export default AppName;
 
-Target 350-600 lines. Pack real, functional content into every screen.`;
+CRITICAL REQUIREMENT:
+You are an EXPERT UI CODER. Do not write simplistic apps. Target 800-2000+ lines of code! Implement extremely deep routing, rich functionality, extensive mock data (dozens of items), exhaustive Tailwind styles, fluid transitions, and complete business logic UI states. NEVER truncate or abbreviate. You must deliver a massive, fully-fledged application.`;
 
 export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
@@ -304,12 +308,16 @@ DESIGN:
 5. ANIMATION: Use \`useFrame((state, delta) => { ... })\` to animate meshes via refs (rotation, float, bounce).
 6. UI OVERLAY: Overlay beautiful typography and UI using Tailwind. Use glassmorphism where it looks good.
 
+CRITICAL REQUIREMENT:
+You are an EXPERT UI CODER. Do not write simplistic 50-line revolving cubes. Your scenes must be cinematic, breathtaking, and extremely detailed!
+Target 800-2500+ lines of code! You MUST include multiple complex geometries, shaders, intricate lighting, shadows, micro-interactions, useFrame physics, 3D environments, and a massive, fully styled Tailwind HTML overlay parsing rich mock data (headers, scrolling content, footers). Write as much code as needed—whether it's 500 lines or 50k lines—to make it indistinguishable from an award-winning Awwwards site. NEVER truncate or abbreviate.
+
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 
 Start with:
 import React, { useState, useRef, useMemo } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment, Float, ContactShadows, Html } from '@react-three/drei';
+import { OrbitControls, Environment, Float, ContactShadows, Html, Text, PerspectiveCamera, PresentationControls, useScroll, ScrollControls, Scroll } from '@react-three/drei';
 
 End with:
 export default AppName;`;
