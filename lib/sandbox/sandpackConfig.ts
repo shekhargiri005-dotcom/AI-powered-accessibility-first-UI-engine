@@ -104,6 +104,7 @@ export const SANDPACK_DEPENDENCIES = {
   '@react-spring/web': '^9.7.3',
   'framer-motion': '^11.2.10',
   'react-router-dom': '^6.22.3',
+  'react-icons': '^5.0.1',
 } as const;
 
 export const SANDPACK_DEV_DEPENDENCIES = {
