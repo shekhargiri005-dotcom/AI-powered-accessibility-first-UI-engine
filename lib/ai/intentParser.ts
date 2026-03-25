@@ -8,7 +8,12 @@ import {
   buildWebglModeIntentPrompt,
 } from './prompts';
 import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
-import { UIIntentSchema, type UIIntent } from '../validation/schemas';
+import { 
+  UIIntentSchema, 
+  AppIntentSchema, 
+  WebGLIntentSchema, 
+  type UIIntent 
+} from '../validation/schemas';
 import type { GenerationMode } from './componentGenerator';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -85,8 +90,11 @@ export async function parseIntent(
       };
     }
 
+    // Select schema based on mode
+    const schema = mode === 'app' ? AppIntentSchema : mode === 'webgl' ? WebGLIntentSchema : UIIntentSchema;
+
     // Validate against Zod schema
-    const validation = UIIntentSchema.safeParse(parsed);
+    const validation = schema.safeParse(parsed);
     if (!validation.success) {
       return {
         success: false,

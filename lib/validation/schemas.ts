@@ -61,7 +61,63 @@ export const UIIntentSchema = z.object({
   semanticElements: z.array(z.string()).catch([]),
 });
 
-export type UIIntent = z.infer<typeof UIIntentSchema>;
+// ─── AppIntent Schema ─────────────────────────────────────────────────────────
+
+export const AppIntentSchema = UIIntentSchema.extend({
+  componentType: z.literal('app'),
+  appType: z.string().catch('multiscreen'),
+  screens: z.array(z.object({
+    name: z.string(),
+    description: z.string(),
+    isDefault: z.boolean().catch(false),
+  })).catch([]),
+  colorScheme: z.object({
+    primary: z.string(),
+    background: z.string(),
+    surface: z.string(),
+    text: z.string(),
+  }).catch({ primary: '#3B82F6', background: '#000000', surface: '#111827', text: '#FFFFFF' }),
+  features: z.array(z.string()).catch([]),
+  navStyle: z.enum(['bottom', 'sidebar', 'top']).catch('bottom'),
+});
+
+// ─── WebGLIntent Schema ───────────────────────────────────────────────────────
+
+export const WebGLIntentSchema = UIIntentSchema.extend({
+  componentType: z.literal('webgl'),
+  webglType: z.string().catch('canvas'),
+  sceneElements: z.array(z.object({
+    name: z.string(),
+    type: z.string(),
+    behavior: z.string(),
+  })).catch([]),
+  colorScheme: z.object({
+    primary: z.string(),
+    background: z.string(),
+    ambientLight: z.string(),
+    directionalLight: z.string(),
+  }).catch({ primary: '#3B82F6', background: '#000000', ambientLight: '#FFFFFF', directionalLight: '#FFFFFF' }),
+  uiOverlay: z.array(z.object({
+    element: z.string(),
+    position: z.string(),
+  })).catch([]),
+  cameraSetup: z.object({
+    position: z.array(z.number()).length(3),
+    fov: z.number(),
+  }).catch({ position: [0, 0, 5], fov: 75 }),
+});
+
+export type UIIntent = z.infer<typeof UIIntentSchema> & {
+  screens?: z.infer<typeof AppIntentSchema>['screens'];
+  appType?: string;
+  colorScheme?: any;
+  features?: string[];
+  navStyle?: string;
+  webglType?: string;
+  sceneElements?: any;
+  uiOverlay?: any;
+  cameraSetup?: any;
+};
 
 // ─── Generated Component Schema ───────────────────────────────────────────────
 
