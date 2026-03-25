@@ -77,7 +77,7 @@ JSON.stringify(intent, null, 2) + "\n\n" +
 "4. Export default the main component of this file.\n" +
 "5. If it is App.tsx, orchestrate the other components.\n" +
 "6. Write dense, production-ready code.\n" +
-"7. CRITICAL: Use `lucide-react` ONLY for icons. Do NOT use `react-icons` or any other icon library.\n\n";
+"7. CRITICAL: Use \`lucide-react\` EXCLUSIVELY for icons. Import them individually using destructuring: \`import { ... } from 'lucide-react';\`\n\n";
 
   if (isMultiSlide) {
     prompt += "CRITICAL MULTI-SLIDE ARCHITECTURE REQUIREMENT:\nThe app must function as a multi-slide or paginated experience. When generating App.tsx or view components, include robust navigation state (Next/Prev buttons, dots). For 3D WebGL scenes, alter the react-three-fiber camera or mesh positions over these slide states.\n\n";

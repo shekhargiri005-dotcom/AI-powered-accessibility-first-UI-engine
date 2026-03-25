@@ -6,7 +6,7 @@ import {
   SandpackLayout,
   SandpackPreview as SandpackPreviewPanel,
 } from '@codesandbox/sandpack-react';
-import { buildSandpackFiles, SANDPACK_DEPENDENCIES } from '@/lib/sandbox/sandpackConfig';
+import { buildSandpackFiles, getSandpackDependencies } from '@/lib/sandbox/sandpackConfig';
 import { Eye, Code2 } from 'lucide-react';
 
 interface SandpackPreviewProps {
@@ -16,6 +16,7 @@ interface SandpackPreviewProps {
 
 export default function SandpackPreviewComponent({ code, componentName }: SandpackPreviewProps) {
   const files = buildSandpackFiles(code, componentName);
+  const dynamicDeps = getSandpackDependencies(code);
 
   return (
     <section
@@ -37,9 +38,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         theme="dark"
         files={files}
         customSetup={{
-          dependencies: {
-            ...SANDPACK_DEPENDENCIES,
-          },
+          dependencies: dynamicDeps,
         }}
         options={{
           visibleFiles: Object.keys(files) as string[],

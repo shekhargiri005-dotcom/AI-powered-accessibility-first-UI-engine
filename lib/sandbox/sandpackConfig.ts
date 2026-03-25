@@ -34,9 +34,19 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles.css';
 
-const container = document.getElementById('root')!;
-const root = createRoot(container);
-root.render(<React.StrictMode><App /></React.StrictMode>);`,
+const render = () => {
+  const container = document.getElementById('root');
+  if (container) {
+    const root = createRoot(container);
+    root.render(<React.StrictMode><App /></React.StrictMode>);
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', render);
+} else {
+  render();
+}`,
       active: false,
     },
     '/src/styles.css': {
@@ -102,7 +112,7 @@ input, textarea, select {
 export const SANDPACK_DEPENDENCIES = {
   react: '^18.3.1',
   'react-dom': '^18.3.1',
-  'lucide-react': 'latest',
+  'lucide-react': '^0.378.0',
   'three': '0.164.0',
   '@types/three': '0.164.0',
   '@react-three/fiber': '8.17.10',
@@ -114,6 +124,37 @@ export const SANDPACK_DEPENDENCIES = {
   'react-router-dom': '^6.22.3',
   'react-icons': '^5.0.1',
 } as const;
+
+export function getSandpackDependencies(componentCode: string | Record<string, string>) {
+  const codeString = typeof componentCode === 'string' 
+    ? componentCode 
+    : Object.values(componentCode).join('\\n');
+    
+  const deps: Record<string, string> = {
+    react: '^18.3.1',
+    'react-dom': '^18.3.1',
+  };
+
+  if (codeString.includes('lucide-react')) deps['lucide-react'] = '^0.378.0';
+  if (codeString.includes('framer-motion')) deps['framer-motion'] = '^11.2.10';
+  if (codeString.includes('react-router-dom')) deps['react-router-dom'] = '^6.22.3';
+  if (codeString.includes('react-icons')) deps['react-icons'] = '^5.0.1';
+
+  if (codeString.includes('three') || codeString.includes('@react-three')) {
+    deps['three'] = '0.164.0';
+    deps['@types/three'] = '0.164.0';
+    deps['@react-three/fiber'] = '8.17.10';
+    deps['@react-three/drei'] = '9.114.3';
+    deps['maath'] = '^0.10.8';
+  }
+
+  if (codeString.includes('@react-spring')) {
+    deps['@react-spring/three'] = '^9.7.3';
+    deps['@react-spring/web'] = '^9.7.3';
+  }
+
+  return deps;
+}
 
 export const SANDPACK_DEV_DEPENDENCIES = {
   '@types/react': '^18.2.0',

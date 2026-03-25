@@ -39,23 +39,27 @@ export default function ModelSwitcher({ onModelChange, onFullAppModeChange, onMu
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedModel = localStorage.getItem('uiEngine_model') as AIModel | null;
-    const savedAppMode = localStorage.getItem('uiEngine_fullAppMode');
-    const savedSlideMode = localStorage.getItem('uiEngine_multiSlideMode');
-    
-    if (savedModel && AI_MODELS[savedModel]) {
-      setSelectedModel(savedModel);
-      onModelChange(savedModel);
-    }
-    if (savedAppMode) {
-      const isEnabled = savedAppMode === 'true';
-      setIsFullAppMode(isEnabled);
-      onFullAppModeChange(isEnabled);
-    }
-    if (savedSlideMode) {
-      const isEnabled = savedSlideMode === 'true';
-      setIsMultiSlideMode(isEnabled);
-      onMultiSlideModeChange(isEnabled);
+    try {
+      const savedModel = localStorage.getItem('uiEngine_model') as AIModel | null;
+      const savedAppMode = localStorage.getItem('uiEngine_fullAppMode');
+      const savedSlideMode = localStorage.getItem('uiEngine_multiSlideMode');
+      
+      if (savedModel && AI_MODELS[savedModel]) {
+        setSelectedModel(savedModel);
+        onModelChange(savedModel);
+      }
+      if (savedAppMode) {
+        const isEnabled = savedAppMode === 'true';
+        setIsFullAppMode(isEnabled);
+        onFullAppModeChange(isEnabled);
+      }
+      if (savedSlideMode) {
+        const isEnabled = savedSlideMode === 'true';
+        setIsMultiSlideMode(isEnabled);
+        onMultiSlideModeChange(isEnabled);
+      }
+    } catch (e) {
+      console.warn("LocalStorage access denied or unavailable", e);
     }
   }, []);
 

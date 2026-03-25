@@ -35,30 +35,34 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
     if (typeof window !== 'undefined') {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = true;
-        recognitionRef.current.interimResults = true;
-        
-        recognitionRef.current.onresult = (event: any) => {
-          let finalTranscript = '';
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript + ' ';
+        try {
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.continuous = true;
+          recognitionRef.current.interimResults = true;
+          
+          recognitionRef.current.onresult = (event: any) => {
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript + ' ';
+              }
             }
-          }
-          if (finalTranscript) {
-            setPrompt((prev) => (prev ? prev.trim() + ' ' : '') + finalTranscript.trim() + ' ');
-          }
-        };
+            if (finalTranscript) {
+              setPrompt((prev) => (prev ? prev.trim() + ' ' : '') + finalTranscript.trim() + ' ');
+            }
+          };
 
-        recognitionRef.current.onerror = (event: any) => {
-          console.error("Speech recognition error:", event.error);
-          setIsRecording(false);
-        };
+          recognitionRef.current.onerror = (event: any) => {
+            console.error("Speech recognition error:", event.error);
+            setIsRecording(false);
+          };
 
-        recognitionRef.current.onend = () => {
-          setIsRecording(false);
-        };
+          recognitionRef.current.onend = () => {
+            setIsRecording(false);
+          };
+        } catch (e) {
+          console.warn("Speech recognition initialization failed", e);
+        }
       }
     }
   }, []);

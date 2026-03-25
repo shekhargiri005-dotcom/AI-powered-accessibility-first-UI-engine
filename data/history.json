@@ -1,5 +1,80 @@
 [
   {
+    "id": "a81d7916-e94b-4fe4-a278-69fd3811c99c",
+    "timestamp": "2026-03-25T05:27:49.317Z",
+    "componentType": "form",
+    "componentName": "LoginPage",
+    "intent": {
+      "componentType": "form",
+      "componentName": "LoginPage",
+      "description": "A glassmorphic login page with lucide icons.",
+      "fields": [
+        {
+          "id": "email-input",
+          "type": "email",
+          "label": "Email",
+          "placeholder": "Enter your email",
+          "required": true,
+          "validation": "required, valid email",
+          "options": []
+        },
+        {
+          "id": "password-input",
+          "type": "password",
+          "label": "Password",
+          "placeholder": "Enter your password",
+          "required": true,
+          "validation": "required",
+          "options": []
+        },
+        {
+          "id": "submit-btn",
+          "type": "button",
+          "label": "Login",
+          "placeholder": "",
+          "required": false,
+          "validation": "",
+          "options": []
+        }
+      ],
+      "layout": {
+        "type": "centered",
+        "maxWidth": "md",
+        "alignment": "center"
+      },
+      "interactions": [
+        {
+          "trigger": "submit",
+          "action": "validate form",
+          "feedback": "show error"
+        },
+        {
+          "trigger": "submit",
+          "action": "submit form",
+          "feedback": "loading state"
+        }
+      ],
+      "theme": {
+        "variant": "default",
+        "size": "md"
+      },
+      "a11yRequired": [
+        "aria-label on form",
+        "error announcements",
+        "keyboard navigation"
+      ],
+      "semanticElements": [
+        "form",
+        "fieldset",
+        "legend",
+        "label",
+        "button"
+      ]
+    },
+    "code": "import React, { useState } from 'react';\nimport { Lock, User } from 'lucide-react';\n\ninterface Props {\n  onSubmit: (email: string, password: string) => Promise<void>;\n}\n\nconst LoginPage: React.FC<Props> = ({ onSubmit }) => {\n  const [email, setEmail] = useState<string>('');\n  const [password, setPassword] = useState<string>('');\n  const [loading, setLoading] = useState<boolean>(false);\n  const [error, setError] = useState<string>('');\n\n  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {\n    event.preventDefault();\n    setError('');\n    \n    if (!email || !password) {\n      setError('Both fields are required.');\n      return;\n    }\n\n    if (!/\\S+@\\S+\\.\\S+/.test(email)) {\n      setError('Please enter a valid email address.');\n      return;\n    }\n\n    setLoading(true);\n    try {\n      await onSubmit(email, password);\n    } catch (err) {\n      setError('Login failed. Please try again.');\n    } finally {\n      setLoading(false);\n    }\n  };\n\n  return (\n    <div className=\"flex items-center justify-center min-h-screen bg-gray-100\">\n      <form \n        onSubmit={handleSubmit} \n        aria-label=\"Login Form\" \n        className=\"bg-white backdrop-blur-lg rounded-xl shadow-lg p-8 max-w-md w-full\"\n      >\n        <fieldset className=\"mb-4\">\n          <legend className=\"text-2xl font-bold text-gray-800\">Login</legend>\n          \n          <div className=\"mb-4\">\n            <label htmlFor=\"email-input\" className=\"block text-gray-700 mb-1\">\n              <User className=\"inline mr-2\" />\n              Email\n            </label>\n            <input \n              id=\"email-input\" \n              type=\"email\" \n              placeholder=\"Enter your email\" \n              required \n              value={email} \n              onChange={(e) => setEmail(e.target.value)} \n              className=\"w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500\"\n              aria-describedby={error ? \"email-error\" : undefined}\n            />\n            {error && <span id=\"email-error\" className=\"text-red-600 text-sm\">{error}</span>}\n          </div>\n\n          <div className=\"mb-4\">\n            <label htmlFor=\"password-input\" className=\"block text-gray-700 mb-1\">\n              <Lock className=\"inline mr-2\" />\n              Password\n            </label>\n            <input \n              id=\"password-input\" \n              type=\"password\" \n              placeholder=\"Enter your password\" \n              required \n              value={password} \n              onChange={(e) => setPassword(e.target.value)} \n              className=\"w-full p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500\"\n              aria-describedby={error ? \"password-error\" : undefined}\n            />\n            {error && <span id=\"password-error\" className=\"text-red-600 text-sm\">{error}</span>}\n          </div>\n\n          <button \n            type=\"submit\" \n            disabled={loading} \n            className={`w-full p-2 rounded-lg text-white ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700 transition-all duration-300 active:scale-95'}`}\n            aria-live=\"polite\"\n          >\n            {loading ? 'Loading...' : 'Login'}\n          </button>\n        </fieldset>\n      </form>\n    </div>\n  );\n};\n\nexport default LoginPage;",
+    "a11yScore": 100
+  },
+  {
     "id": "1ed798a8-1e28-4982-b335-d307abfb7f81",
     "timestamp": "2026-03-24T18:48:03.678Z",
     "componentType": "button",
