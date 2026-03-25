@@ -19,7 +19,6 @@ export function buildSandpackFiles(
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI UI Engine</title>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       #root { min-height: 100vh; display: flex; flex-direction: column; }
       body { margin: 0; background: #000; color: #fff; }
@@ -63,7 +62,11 @@ if (document.readyState === 'loading') {
       active: false,
     },
     '/src/styles.css': {
-      code: `@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+      code: `@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'Inter', sans-serif; line-height: 1.5; color: #111827; background: #f9fafb; }
@@ -78,6 +81,29 @@ input, textarea, select {
 :focus-visible {
   outline: 2px solid #2563eb;
   outline-offset: 2px;
+}`,
+      active: false,
+    },
+    '/tailwind.config.js': {
+      code: `/** @type {import('tailwindcss').Config} */
+module.exports = {
+  content: [
+    "./src/**/*.{js,jsx,ts,tsx}",
+    "./index.html",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}`,
+      active: false,
+    },
+    '/postcss.config.js': {
+      code: `module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
 }`,
       active: false,
     },
@@ -174,9 +200,9 @@ export const SANDPACK_DEV_DEPENDENCIES = {
   '@types/react-dom': '^18.2.0',
   typescript: '^5.0.0',
   '@types/react-router-dom': '^5.3.3',
+  tailwindcss: '^3.4.1',
+  postcss: '^8.4.35',
+  autoprefixer: '^10.4.18',
 } as const;
 
-export const SANDPACK_TAILWIND_CDN = `
-  <link href="https://cdn.tailwindcss.com" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
-`;
+export const SANDPACK_TAILWIND_CDN = ``;
