@@ -73,8 +73,8 @@ JSON.stringify(intent, null, 2) + "\n\n" +
 "REQUIREMENTS:\n" +
 "1. Write ONLY the raw TSX code for \"" + targetFile + "\". No markdown fences, no explanations.\n" +
 "2. Use Tailwind CSS exclusively for styling.\n" +
-"3. Import other components from \"./[filename]\" relative paths based on the manifest.\n" +
-"4. Export default the main component of this file.\n" +
+"3. Import other components from \"./[filename]\" relative paths. Use DEFAULT IMPORTS: \`import ComponentName from './ComponentName';\`\n" +
+"4. Export default the main component of this file: \`export default function ComponentName() { ... }\`.\n" +
 "5. If it is App.tsx, orchestrate the other components.\n" +
 "6. Write dense, production-ready code.\n" +
 "7. CRITICAL: Use \`lucide-react\` EXCLUSIVELY for icons. Import them individually using destructuring: \`import { ... } from 'lucide-react';\`\n\n";

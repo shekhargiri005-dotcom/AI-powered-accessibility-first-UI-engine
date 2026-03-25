@@ -20,6 +20,10 @@ export function buildSandpackFiles(
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI UI Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      #root { min-height: 100vh; display: flex; flex-direction: column; }
+      body { margin: 0; background: #000; color: #fff; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
@@ -39,6 +43,15 @@ const render = () => {
   if (container) {
     const root = createRoot(container);
     root.render(<React.StrictMode><App /></React.StrictMode>);
+  } else {
+    // Retry once in case of mount delay
+    setTimeout(() => {
+      const retryContainer = document.getElementById('root');
+      if (retryContainer) {
+        const root = createRoot(retryContainer);
+        root.render(<React.StrictMode><App /></React.StrictMode>);
+      }
+    }, 100);
   }
 };
 
