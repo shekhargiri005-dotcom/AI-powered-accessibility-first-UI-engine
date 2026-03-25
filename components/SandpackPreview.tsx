@@ -43,9 +43,6 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         options={{
           visibleFiles: Object.keys(files) as string[],
           activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
-          externalResources: [
-            'https://cdn.tailwindcss.com',
-          ],
         }}
       >
         <SandpackLayout>

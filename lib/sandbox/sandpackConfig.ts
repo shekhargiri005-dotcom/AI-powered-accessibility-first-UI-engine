@@ -107,6 +107,29 @@ module.exports = {
 }`,
       active: false,
     },
+    '/tsconfig.json': {
+      code: `{
+  "compilerOptions": {
+    "target": "ESNext",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src"]
+}`,
+      active: false,
+    },
   };
 
   if (isMultiFile) {
@@ -172,6 +195,9 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
   const deps: Record<string, string> = {
     react: '^18.3.1',
     'react-dom': '^18.3.1',
+    tailwindcss: '^3.4.1',
+    postcss: '^8.4.35',
+    autoprefixer: '^10.4.18',
   };
 
   if (codeString.includes('lucide-react')) deps['lucide-react'] = '^0.378.0';

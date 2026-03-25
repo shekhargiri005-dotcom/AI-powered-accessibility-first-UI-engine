@@ -1,5 +1,84 @@
 [
   {
+    "id": "d381b4b2-9b5c-4d5b-8629-fb0192db422c",
+    "timestamp": "2026-03-25T06:19:34.821Z",
+    "componentType": "card",
+    "componentName": "ProfileCard",
+    "intent": {
+      "componentType": "card",
+      "componentName": "ProfileCard",
+      "description": "A profile card with name, bio, avatar upload, and save button.",
+      "fields": [
+        {
+          "id": "name-input",
+          "type": "text",
+          "label": "Name",
+          "placeholder": "Enter your name",
+          "required": true,
+          "validation": "required",
+          "options": []
+        },
+        {
+          "id": "bio-textarea",
+          "type": "textarea",
+          "label": "Bio",
+          "placeholder": "Tell us about yourself",
+          "required": false,
+          "validation": "",
+          "options": []
+        },
+        {
+          "id": "avatar-upload",
+          "type": "image",
+          "label": "Avatar",
+          "placeholder": "",
+          "required": false,
+          "validation": "",
+          "options": []
+        },
+        {
+          "id": "save-button",
+          "type": "button",
+          "label": "Save",
+          "placeholder": "",
+          "required": false,
+          "validation": "",
+          "options": []
+        }
+      ],
+      "layout": {
+        "type": "single-column",
+        "maxWidth": "md",
+        "alignment": "center"
+      },
+      "interactions": [
+        {
+          "trigger": "click",
+          "action": "validate form",
+          "feedback": "show success message"
+        }
+      ],
+      "theme": {
+        "variant": "default",
+        "size": "md"
+      },
+      "a11yRequired": [
+        "aria-label on form",
+        "error announcements",
+        "keyboard navigation"
+      ],
+      "semanticElements": [
+        "form",
+        "fieldset",
+        "legend",
+        "label",
+        "button"
+      ]
+    },
+    "code": "import React, { useState } from 'react';\nimport { User, Camera, Check } from 'lucide-react';\n\ninterface ProfileCardProps {\n  onSave: (data: { name: string; bio: string; avatar: File | null }) => void;\n}\n\nconst ProfileCard: React.FC<ProfileCardProps> = ({ onSave }) => {\n  const [name, setName] = useState<string>('');\n  const [bio, setBio] = useState<string>('');\n  const [avatar, setAvatar] = useState<File | null>(null);\n  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);\n  const [error, setError] = useState<string | null>(null);\n  const [successMessage, setSuccessMessage] = useState<string>('');\n\n  const handleSubmit = (e: React.FormEvent) => {\n    e.preventDefault();\n    setError(null);\n    setSuccessMessage('');\n\n    if (!name) {\n      setError('Name is required.');\n      return;\n    }\n\n    setIsSubmitting(true);\n    onSave({ name, bio, avatar });\n    setSuccessMessage('Profile saved successfully!');\n    setIsSubmitting(false);\n  };\n\n  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {\n    if (e.target.files) {\n      setAvatar(e.target.files[0]);\n    }\n  };\n\n  return (\n    <div className=\"flex justify-center items-center min-h-screen bg-gray-100\">\n      <form\n        onSubmit={handleSubmit}\n        aria-label=\"Profile Settings Form\"\n        className=\"bg-white shadow-lg rounded-lg p-6 max-w-md w-full\"\n      >\n        <fieldset className=\"mb-4\">\n          <legend className=\"text-xl font-semibold text-gray-800\">Profile Information</legend>\n          <div className=\"mb-4\">\n            <label htmlFor=\"name-input\" className=\"block text-gray-700 font-medium mb-2\">\n              Name\n            </label>\n            <input\n              id=\"name-input\"\n              type=\"text\"\n              placeholder=\"Enter your name\"\n              required\n              value={name}\n              onChange={(e) => setName(e.target.value)}\n              className=\"w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 transition duration-150\"\n              aria-describedby={error ? 'name-error' : undefined}\n              aria-required=\"true\"\n            />\n            {error && <p id=\"name-error\" className=\"text-red-500 text-sm\">{error}</p>}\n          </div>\n\n          <div className=\"mb-4\">\n            <label htmlFor=\"bio-textarea\" className=\"block text-gray-700 font-medium mb-2\">\n              Bio\n            </label>\n            <textarea\n              id=\"bio-textarea\"\n              placeholder=\"Tell us about yourself\"\n              value={bio}\n              onChange={(e) => setBio(e.target.value)}\n              className=\"w-full border border-gray-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 transition duration-150\"\n              rows={4}\n            />\n          </div>\n\n          <div className=\"mb-4\">\n            <label htmlFor=\"avatar-upload\" className=\"block text-gray-700 font-medium mb-2 flex items-center\">\n              <Camera className=\"mr-2\" />\n              Avatar\n            </label>\n            <input\n              id=\"avatar-upload\"\n              type=\"file\"\n              accept=\"image/*\"\n              onChange={handleAvatarChange}\n              className=\"border border-gray-300 rounded-lg p-2 w-full cursor-pointer focus:ring-2 focus:ring-blue-500 transition duration-150\"\n            />\n            {avatar && <p className=\"text-gray-600 mt-2\">Selected file: {avatar.name}</p>}\n          </div>\n        </fieldset>\n\n        <button\n          type=\"submit\"\n          disabled={isSubmitting}\n          className={`flex items-center justify-center w-full py-2 px-4 rounded-lg text-white transition duration-300 ${\n            isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'\n          }`}\n          aria-label=\"Save Profile\"\n        >\n          {isSubmitting ? 'Saving...' : <><Check className=\"mr-2\" /> Save</>}\n        </button>\n\n        {successMessage && (\n          <div role=\"alert\" aria-live=\"polite\" className=\"mt-4 text-green-600\">\n            {successMessage}\n          </div>\n        )}\n      </form>\n    </div>\n  );\n};\n\nexport default ProfileCard;",
+    "a11yScore": 100
+  },
+  {
     "id": "a81d7916-e94b-4fe4-a278-69fd3811c99c",
     "timestamp": "2026-03-25T05:27:49.317Z",
     "componentType": "form",
