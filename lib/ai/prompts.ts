@@ -202,6 +202,7 @@ ARCHITECTURE (NON-NEGOTIABLE):
 3. ICONS: Use \`lucide-react\` EXCLUSIVELY. Import individually: \`import { ... } from 'lucide-react'\`.
 4. NO react-icons, NO @headlessui, NO @radix-ui.
 5. RESPONSIVE DESIGN: You MUST use Tailwind responsive prefixes (sm:, md:, lg:) to ensure mobile-first pixel perfection.
+6. SELF-CONTAINMENT: All custom hooks, helper functions, and constants MUST be defined within the component file itself. NEVER import from or assume the existence of a \`utils/\`, \`hooks/\`, or \`context/\` directory. Only import from the filenames explicitly provided in the AI generation manifest.
 
 DESIGN & ENGAGEMENT (REQUIRED):
 7. TAILWIND ABSOLUTE MASTERY: Use Tailwind arbitrary values for brand colors: \`bg-[#E1306C]\`. Use complex grid layouts (\`grid-cols-1 md:grid-cols-2 lg:grid-cols-3\`), flexbox alignments, and backdrop filters.
