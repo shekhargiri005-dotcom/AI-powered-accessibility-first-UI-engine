@@ -79,11 +79,6 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
             options={{
               visibleFiles: Object.keys(files) as string[],
               activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
-              // Disable the built-in Sandpack terminal/log panel
-              showTabs: false,
-              showLineNumbers: false,
-              showInlineErrors: true,
-              wrapContent: false,
             }}
           >
             {/*
