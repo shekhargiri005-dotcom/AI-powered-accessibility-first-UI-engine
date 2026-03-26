@@ -7,6 +7,26 @@ import type { IntentClassification } from '@/lib/validation/schemas';
 
 export type GenerationMode = 'component' | 'app' | 'webgl';
 
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: { isFinal: boolean; [key: number]: { transcript: string } }[];
+  error?: string;
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionEvent) => void) | null;
+  onend: (() => void) | null;
+  start: () => void;
+  stop: () => void;
+}
+
+interface SpeechRecognitionConstructor {
+  new (): SpeechRecognitionInstance;
+}
+
 interface PromptInputProps {
   onSubmit: (prompt: string, mode: GenerationMode) => void;
   isLoading: boolean;
@@ -25,7 +45,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   const [isClassifying, setIsClassifying] = useState(false);
   const classifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   useEffect(() => {
     fetch('/api/history')
@@ -40,14 +60,14 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      const SpeechRecognition = (window as unknown as { SpeechRecognition: SpeechRecognitionConstructor }).SpeechRecognition || (window as unknown as { webkitSpeechRecognition: SpeechRecognitionConstructor }).webkitSpeechRecognition;
       if (SpeechRecognition) {
         try {
-          recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.continuous = true;
-          recognitionRef.current.interimResults = true;
+          const recognition = new SpeechRecognition();
+          recognition.continuous = true;
+          recognition.interimResults = true;
           
-          recognitionRef.current.onresult = (event: any) => {
+          recognition.onresult = (event) => {
             let finalTranscript = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
               if (event.results[i].isFinal) {
@@ -59,14 +79,16 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             }
           };
 
-          recognitionRef.current.onerror = (event: any) => {
+          recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
             setIsRecording(false);
           };
 
-          recognitionRef.current.onend = () => {
+          recognition.onend = () => {
             setIsRecording(false);
           };
+          
+          recognitionRef.current = recognition;
         } catch (e) {
           console.warn("Speech recognition initialization failed", e);
         }
@@ -124,8 +146,8 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         if (data.caption) {
            setPrompt((prev) => prev + (prev.endsWith(' ') ? '' : ' ') + `[Image Context: ${data.caption}] `);
         }
-      } catch (error: any) {
-        alert(error.message || 'There was an error analyzing the image.');
+      } catch (error) {
+        alert(error instanceof Error ? error.message : 'There was an error analyzing the image.');
       } finally {
         setIsProcessingImage(false);
         if (fileInputRef.current) fileInputRef.current.value = '';
@@ -171,8 +193,8 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   const isOverLimit = charCount > maxChars;
 
   const placeholder = mode === 'app'
-    ? 'Describe a full app in one line, e.g. "Build an Instagram-like social media app" or "Create a Spotify music player"'
-    : 'Describe a UI component, e.g. "A login form with email and password" or paste a design prompt…';
+    ? 'Describe a full app in one line, e.g. &quot;Build an Instagram-like social media app&quot; or &quot;Create a Spotify music player&quot;'
+    : 'Describe a UI component, e.g. &quot;A login form with email and password&quot; or paste a design prompt…';
 
   return (
     <section aria-labelledby="prompt-heading">
@@ -272,7 +294,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
             <p className="text-xs text-violet-300 leading-relaxed">
-              <span className="font-semibold text-violet-200">Full App Mode:</span> Generates a complete multi-screen application with navigation and mock data. Try: <span className="italic">"Build an Instagram-like app"</span>.
+              <span className="font-semibold text-violet-200">Full App Mode:</span> Generates a complete multi-screen application with navigation and mock data. Try: <span className="italic">&quot;Build an Instagram-like app&quot;</span>.
             </p>
           </div>
         )}
@@ -284,7 +306,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               <polyline points="2 12 12 17 22 12" />
             </svg>
             <p className="text-xs text-cyan-300 leading-relaxed">
-              <span className="font-semibold text-cyan-200">3D WebGL Mode:</span> Generates interactive 3D scenes using React Three Fiber. Try: <span className="italic">"Build a 3D portfolio landing page with floating rotating cubes"</span>.
+              <span className="font-semibold text-cyan-200">3D WebGL Mode:</span> Generates interactive 3D scenes using React Three Fiber. Try: <span className="italic">&quot;Build a 3D portfolio landing page with floating rotating cubes&quot;</span>.
             </p>
           </div>
         )}

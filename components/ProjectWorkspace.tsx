@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Sparkles, Eye, Code, FileCode, Layers, Clock, FolderKanban,
+  Sparkles, Eye, Code, FileCode, Layers, Clock,
 } from 'lucide-react';
 import { type UIIntent, type A11yReport } from '@/lib/validation/schemas';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
@@ -84,8 +84,7 @@ export default function ProjectWorkspace({
       }]);
       setCurrentVersion(1);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialProject.id]);
+  }, [initialProject.id, initialProject.timestamp, initialProject.code, initialProject.intent, initialProject.a11yReport, versions]);
 
   // When parent generates a new output (refinement), append as new version
   useEffect(() => {
@@ -107,8 +106,7 @@ export default function ProjectWorkspace({
         setCurrentVersion(newVer.version);
       }
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialProject.timestamp, isRefining]);
+  }, [initialProject.timestamp, isRefining, initialProject.code, initialProject.intent, initialProject.a11yReport, versions]);
 
   const handleRollback = useCallback(async (version: number) => {
     if (!projectId) {
@@ -216,7 +214,7 @@ export default function ProjectWorkspace({
                   </div>
                 </div>
                 <SandpackPreview
-                  code={activeVersion.code as any}
+                  code={activeVersion.code as string | Record<string, string>}
                   componentName={activeVersion.intent.componentName}
                 />
               </div>

@@ -48,7 +48,7 @@ JSON.stringify(intent, null, 2);
     if (parsed.files && Array.isArray(parsed.files)) return parsed.files;
     if (parsed.manifest && Array.isArray(parsed.manifest)) return parsed.manifest;
     return [];
-  } catch(e) {
+  } catch {
     return [{ filename: 'App.tsx', description: 'Main application entry point' }];
   }
 }

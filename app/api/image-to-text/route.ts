@@ -39,10 +39,10 @@ export async function POST(req: Request) {
     const caption = response.choices[0]?.message?.content || 'An uploaded image';
     return NextResponse.json({ caption });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Image to Text error:', error);
     return NextResponse.json(
-      { error: error?.message || 'Failed to process image with OpenAI Vision.' },
+      { error: error instanceof Error ? error.message : 'Failed to process image with OpenAI Vision.' },
       { status: 500 }
     );
   }

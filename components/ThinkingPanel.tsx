@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import {
   Brain, CheckCircle2, Layers, ListOrdered, HelpCircle, Zap,
-  ChevronDown, ChevronUp, Play, RefreshCw, Edit3, X, Sparkles,
+  ChevronDown, ChevronUp, Play, RefreshCw, Edit3, X,
   MessageSquarePlus, SlidersHorizontal, SkipForward,
 } from 'lucide-react';
 import type { ThinkingPlan } from '@/lib/validation/schemas';
@@ -83,7 +83,6 @@ export default function ThinkingPanel({
   onChangeIntent,
   onDismiss,
   onAskClarification,
-  originalPrompt,
 }: ThinkingPanelProps) {
   const [showRequirements, setShowRequirements] = useState(true);
   const [showPlan, setShowPlan] = useState(true);

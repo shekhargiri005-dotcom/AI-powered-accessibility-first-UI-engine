@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, Check, Settings2, ShieldAlert, Layers } from 'lucide-react';
+import { ChevronDown, Check, Settings2, Layers } from 'lucide-react';
 
 export type AIModel = 'gpt-5.4-nano' | 'gpt-5.4-mini' | 'gpt-4.1' | 'gpt-5.4' | 'gpt-4o';
 
@@ -45,23 +45,29 @@ export default function ModelSwitcher({ onModelChange, onFullAppModeChange, onMu
       const savedSlideMode = localStorage.getItem('uiEngine_multiSlideMode');
       
       if (savedModel && AI_MODELS[savedModel]) {
-        setSelectedModel(savedModel);
-        onModelChange(savedModel);
+        setTimeout(() => {
+          setSelectedModel(savedModel);
+          onModelChange(savedModel);
+        }, 0);
       }
       if (savedAppMode) {
         const isEnabled = savedAppMode === 'true';
-        setIsFullAppMode(isEnabled);
-        onFullAppModeChange(isEnabled);
+        setTimeout(() => {
+          setIsFullAppMode(isEnabled);
+          onFullAppModeChange(isEnabled);
+        }, 0);
       }
       if (savedSlideMode) {
         const isEnabled = savedSlideMode === 'true';
-        setIsMultiSlideMode(isEnabled);
-        onMultiSlideModeChange(isEnabled);
+        setTimeout(() => {
+          setIsMultiSlideMode(isEnabled);
+          onMultiSlideModeChange(isEnabled);
+        }, 0);
       }
     } catch (e) {
       console.warn("LocalStorage access denied or unavailable", e);
     }
-  }, []);
+  }, [onFullAppModeChange, onModelChange, onMultiSlideModeChange]);
 
   // Close dropdown on outside click
   useEffect(() => {

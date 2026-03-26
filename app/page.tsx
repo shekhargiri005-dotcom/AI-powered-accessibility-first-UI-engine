@@ -298,7 +298,7 @@ export default function HomePage() {
 
       {/* Center AI Work Pane */}
       <div className={`
-        flex-1 flex flex-col h-full overflow-hidden transition-all duration-300
+        flex-1 flex flex-col min-h-0 min-w-0 h-full transition-all duration-300 relative z-20
         ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-r border-gray-800/60' : 'w-full'}
         pt-14 lg:pt-0
       `}>
@@ -358,7 +358,7 @@ export default function HomePage() {
 
       {/* Right Dev Panel */}
       {output && (
-        <div className="flex-1 h-full w-full lg:w-2/3 xl:w-[60%] flex flex-col bg-gray-950 overflow-hidden slide-in-from-right-8 animate-in duration-500">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 h-full w-full lg:w-2/3 xl:w-[60%] bg-gray-950 relative z-10 transition-all duration-500">
           <RightPanel
             initialProject={{
               id: activeProjectId || 'current',

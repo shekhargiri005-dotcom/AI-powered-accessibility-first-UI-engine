@@ -49,7 +49,7 @@ export async function generateComponent(
   requestedModel: string = 'gpt-5.4-mini',
   maxTokens: number = 5000,
   isMultiSlide: boolean = false,
-  refinementContext?: { code: string; manifest?: any }
+  refinementContext?: { code: string; manifest?: unknown }
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;

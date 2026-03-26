@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  GitCommit, RotateCcw, ChevronRight, Clock, CheckCircle2, Plus, Minus,
+  GitCommit, RotateCcw, Clock, CheckCircle2, Plus,
 } from 'lucide-react';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
 

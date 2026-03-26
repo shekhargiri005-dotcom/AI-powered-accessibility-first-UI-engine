@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  CheckCircle, Circle, Loader2, AlertCircle,
+  CheckCircle, Loader2, AlertCircle,
   Brain, Code2, ShieldCheck, TestTube, Eye, Zap,
 } from 'lucide-react';
 

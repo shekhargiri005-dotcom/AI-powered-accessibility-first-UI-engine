@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateAppManifest } from '@/lib/ai/chunkGenerator';
-import { UIIntentSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
   try {

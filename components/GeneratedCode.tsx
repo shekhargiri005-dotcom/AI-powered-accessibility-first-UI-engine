@@ -47,7 +47,7 @@ export default function GeneratedCode({ code, componentName }: GeneratedCodeProp
   return (
     <section
       aria-labelledby="generated-code-heading"
-      className="rounded-xl border border-gray-700/50 bg-gray-900/60 backdrop-blur-sm overflow-hidden"
+      className="h-full flex flex-col rounded-xl border border-gray-700/50 bg-gray-900/60 backdrop-blur-sm overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50 bg-gray-900/80">
@@ -107,7 +107,7 @@ export default function GeneratedCode({ code, componentName }: GeneratedCodeProp
       <div
         role="region"
         aria-label="Generated TypeScript component code"
-        className="overflow-auto max-h-[500px]"
+        className="flex-1 overflow-auto"
       >
         <CodeMirror
           value={code}

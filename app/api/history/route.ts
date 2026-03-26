@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     
     // We don't want to send the entire raw code blocks over the wire just for a history list,
     // so we map it out to lightweight summary chips
-    const summarizedHistory = parsed.map((entry: any) => ({
+    const summarizedHistory = parsed.map((entry: { id: string, timestamp: string, componentType: string, componentName: string, intent: { description: string } }) => ({
       id: entry.id,
       timestamp: entry.timestamp,
       componentType: entry.componentType,

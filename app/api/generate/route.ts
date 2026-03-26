@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 0: Handle Refinement Context
-    let refinementContext: { code: string; manifest?: any } | undefined;
+    let refinementContext: { code: string; manifest?: unknown } | undefined;
     if (intent.isRefinement && intent.previousProjectId) {
       const parentProject = getProjectById(intent.previousProjectId);
       if (parentProject) {

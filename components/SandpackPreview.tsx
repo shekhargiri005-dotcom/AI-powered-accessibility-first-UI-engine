@@ -7,7 +7,7 @@ import {
   SandpackPreview as SandpackPreviewPanel,
 } from '@codesandbox/sandpack-react';
 import { buildSandpackFiles, getSandpackDependencies } from '@/lib/sandbox/sandpackConfig';
-import { Eye, Code2 } from 'lucide-react';
+import { Eye } from 'lucide-react';
 
 interface SandpackPreviewProps {
   code: string | Record<string, string>;

@@ -188,7 +188,7 @@ export default function RightPanel({
         {activeTab === 'preview' && (
           <div className="absolute inset-0 z-0">
             <SandpackPreview 
-              code={activeV.code as any} 
+              code={activeV.code as string | Record<string, string>} 
               componentName={activeV.intent.componentName} 
             />
           </div>

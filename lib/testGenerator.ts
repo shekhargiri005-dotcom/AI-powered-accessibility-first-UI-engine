@@ -8,7 +8,7 @@ interface GeneratedTests {
 export function generateTests(intent: UIIntent, componentCode: string): GeneratedTests {
   const { componentName, fields, interactions, componentType } = intent;
 
-  const rtl = generateRTLTests(componentName, fields, interactions, componentCode);
+  const rtl = generateRTLTests(componentName, fields, interactions);
   const playwright = generatePlaywrightTests(componentName, fields, interactions, componentType);
 
   return { rtl, playwright };
@@ -18,7 +18,6 @@ function generateRTLTests(
   componentName: string,
   fields: UIIntent['fields'],
   interactions: UIIntent['interactions'],
-  _code: string,
 ): string {
   const inputFields = fields.filter(f => ['text', 'email', 'password', 'textarea', 'number', 'tel'].includes(f.type));
   const buttonFields = fields.filter(f => f.type === 'button');

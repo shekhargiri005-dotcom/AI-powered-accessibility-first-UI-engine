@@ -177,13 +177,13 @@ export const WebGLIntentSchema = UIIntentSchema.extend({
 export type UIIntent = z.infer<typeof UIIntentSchema> & {
   screens?: z.infer<typeof AppIntentSchema>['screens'];
   appType?: string;
-  colorScheme?: any;
+  colorScheme?: unknown;
   features?: string[];
   navStyle?: string;
   webglType?: string;
-  sceneElements?: any;
-  uiOverlay?: any;
-  cameraSetup?: any;
+  sceneElements?: unknown;
+  uiOverlay?: unknown;
+  cameraSetup?: unknown;
   // Refinement fields are already in the base schema but for clarity:
   isRefinement?: boolean;
   targetFiles?: string[];

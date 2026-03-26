@@ -23,11 +23,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt, mode, contextId, model } = body as {
+    const { prompt, mode, contextId } = body as {
       prompt: string;
       mode: GenerationMode;
       contextId?: string;
-      model?: string;
     };
 
     if (typeof prompt !== 'string') {

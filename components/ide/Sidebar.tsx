@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  FolderKanban, Plus, Clock, Search, Folders,
+  Plus, Clock, Search, Folders,
   Code, Box, Layers, Settings, ChevronRight, Hash, X
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';

@@ -63,14 +63,14 @@ export default function CenterWorkspace({
   const showFeed = stage !== 'idle' || isThinkingLoading || thinkingPlan !== null;
 
   return (
-    <main className="flex-1 flex flex-col min-w-0 bg-gray-950/60 relative">
+    <main className="flex-1 flex flex-col min-h-0 min-w-0 bg-gray-950/60 relative">
       {/* Background glow effects */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
       </div>
 
       {/* Header */}
-      <header className="flex-shrink-0 flex flex-wrap items-center justify-between px-6 py-4 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md z-10 gap-4">
+      <header className="flex-shrink-0 flex flex-wrap items-center justify-between px-6 py-4 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md z-30 gap-4 relative">
         <div className="flex items-center gap-3 shrink-0">
           <div className="p-2 border border-blue-500/20 bg-blue-500/10 rounded-xl">
             <Cpu className="w-5 h-5 text-blue-400" />
