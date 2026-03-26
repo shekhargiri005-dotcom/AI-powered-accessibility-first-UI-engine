@@ -32,3 +32,53 @@ export function validateBrowserSafeCode(code: string): CodeValidationResult {
     issues,
   };
 }
+
+/**
+ * sanitizeGeneratedCode
+ * 
+ * Fixes common AI code generation patterns that cause Sandpack / Babel parse errors:
+ * 1. Multi-line template literals in JSX attribute values (e.g. className={`...\n  ...\n`})
+ *    → collapsed to single line so Babel doesn't choke on the newline inside the expression
+ * 2. Strips any remaining carriage returns
+ */
+export function sanitizeGeneratedCode(code: string): string {
+  if (!code) return code;
+
+  // Flatten multi-line template literals so Sandpack's Babel parser can handle them.
+  // Template literals that span multiple lines inside JSX attributes (e.g. className={`...\n...\n`})
+  // cause Babel to throw "Missing semicolon" in nodebox environments.
+  //
+  // Strategy: scan character-by-character to find backtick-delimited strings and
+  // collapse any newlines+leading whitespace inside them to a single space.
+  let result = '';
+  let i = 0;
+  while (i < code.length) {
+    if (code[i] === '`') {
+      // Start of a template literal — collect until closing backtick (handle escapes)
+      let tpl = '`';
+      i++;
+      while (i < code.length) {
+        if (code[i] === '\\') {
+          tpl += code[i] + (code[i + 1] ?? '');
+          i += 2;
+          continue;
+        }
+        if (code[i] === '`') {
+          tpl += '`';
+          i++;
+          break;
+        }
+        tpl += code[i];
+        i++;
+      }
+      // Collapse newlines + surrounding whitespace inside the template literal
+      result += tpl.replace(/\r?\n[ \t]*/g, ' ');
+    } else {
+      result += code[i];
+      i++;
+    }
+  }
+
+  // Remove any stray carriage returns
+  return result.replace(/\r/g, '');
+}

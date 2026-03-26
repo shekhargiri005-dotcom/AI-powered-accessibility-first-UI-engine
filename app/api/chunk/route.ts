@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateFileChunk } from '@/lib/ai/chunkGenerator';
-import { validateBrowserSafeCode } from '@/lib/validation/security';
+import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +10,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide);
+    let code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide);
+
+    // Sanitize chunk for Babel compatibility
+    code = sanitizeGeneratedCode(code);
 
     // Validate chunk is browser-safe for component/screen files
     const isEntryFile = /index|main|app/i.test(targetFile);

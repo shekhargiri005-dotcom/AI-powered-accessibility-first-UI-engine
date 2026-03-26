@@ -68,7 +68,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
         <span className="text-xs text-gray-500 ml-auto">Powered by Vite &amp; Sandpack</span>
       </div>
 
-      {/* Preview fills all remaining height — NO console, NO terminal panel */}
+      {/* Preview fills all remaining height */}
       <div className="flex-1 min-h-0 relative">
         <PreviewErrorBoundary componentName={componentName}>
           <SandpackProvider
@@ -81,14 +81,10 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
               activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
             }}
           >
-            {/*
-              SandpackLayout must NOT have flexDirection:'column' with a console child —
-              that was what caused the console to consume space and trigger clearScreenDown.
-              We use a single SandpackPreviewPanel with explicit full sizing.
-            */}
             <SandpackLayout
               style={{
-                height: '100%',
+                position: 'absolute',
+                inset: 0,
                 border: 'none',
                 borderRadius: 0,
                 background: 'transparent',
@@ -99,11 +95,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
                 showRestartButton={true}
                 showRefreshButton={true}
                 showOpenInCodeSandbox={false}
-                style={{
-                  height: '100%',
-                  width: '100%',
-                  flex: 1,
-                }}
+                style={{ height: '100%', width: '100%', flex: 1 }}
               />
             </SandpackLayout>
           </SandpackProvider>

@@ -6,7 +6,7 @@ import { generateTests } from '@/lib/testGenerator';
 import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
 import { saveGeneration, getProjectById } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
-import { validateBrowserSafeCode } from '@/lib/validation/security';
+import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
 
 export async function POST(request: NextRequest) {
   try {
@@ -113,6 +113,9 @@ export async function POST(request: NextRequest) {
     } catch (e) {
       console.warn('UI Reviewer failed, proceeding with original code:', e);
     }
+
+    // Step 1.6: Sanitize — flatten multi-line template literals that break Sandpack's Babel parser
+    finalSourceCode = sanitizeGeneratedCode(finalSourceCode);
 
     // Step 1.75: Browser Safety Validation — block code with Node/TTY imports
     const safetyCheck = validateBrowserSafeCode(finalSourceCode);
