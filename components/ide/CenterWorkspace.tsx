@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { Sparkles, Brain, Cpu, MessageSquare } from 'lucide-react';
+import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw } from 'lucide-react';
 import PromptInput, { type GenerationMode } from '@/components/PromptInput';
 import ThinkingPanel from '@/components/ThinkingPanel';
 import PipelineStatus from '@/components/PipelineStatus';
@@ -159,9 +159,17 @@ export default function CenterWorkspace({
 
             {/* Error Message */}
             {stage === 'error' && pipelineError && (
-              <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300 shadow-lg">
-                <div className="font-semibold text-red-400 mb-1 tracking-wide uppercase text-[10px]">Pipeline Error</div>
-                {pipelineError}
+              <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300 shadow-lg flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="font-semibold text-red-400 mb-1 tracking-wide uppercase text-[10px]">Pipeline Error</div>
+                  {pipelineError}
+                </div>
+                <button
+                  onClick={() => onPromptSubmit(originalPrompt, 'component')}
+                  className="flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-100 text-xs font-semibold transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Retry
+                </button>
               </div>
             )}
 
