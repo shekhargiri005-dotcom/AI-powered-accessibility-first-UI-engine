@@ -347,7 +347,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               className="
                 w-full resize-y bg-transparent text-zinc-100
                 placeholder-zinc-500 text-sm sm:text-base leading-relaxed
-                outline-none focus:outline-none min-h-[100px] max-h-[600px] overflow-y-auto
+                outline-none focus:outline-none min-h-[100px] max-h-[35vh] overflow-y-auto
               "
               placeholder={placeholder}
               value={prompt}
@@ -467,7 +467,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           <Clock className="w-3 h-3 block" />
           Your Generation History
         </p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide items-center">
           {history.length > 0 ? (
             history.map((item) => (
               <button
@@ -483,11 +483,12 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-150
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
+                  flex-shrink-0 whitespace-nowrap
                 "
               >
-                <ChevronRight className="w-3 h-3 block" aria-hidden="true" />
+                <ChevronRight className="w-3 h-3 block flex-shrink-0" aria-hidden="true" />
                 <span className="font-semibold">{item.componentName}:</span> 
-                <span className="truncate max-w-[200px] sm:max-w-[400px]">{item.promptSnippet}</span>
+                <span className="truncate max-w-[200px]">{item.promptSnippet}</span>
               </button>
             ))
           ) : (
