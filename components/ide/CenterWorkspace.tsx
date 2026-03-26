@@ -30,6 +30,7 @@ interface CenterWorkspaceProps {
   onDismissThinking: () => void;
   onAskClarification: (q: string) => void;
   originalPrompt: string;
+  headerControls?: React.ReactNode;
 }
 
 export default function CenterWorkspace({
@@ -47,7 +48,8 @@ export default function CenterWorkspace({
   onChangeIntent,
   onDismissThinking,
   onAskClarification,
-  originalPrompt
+  originalPrompt,
+  headerControls
 }: CenterWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -68,19 +70,20 @@ export default function CenterWorkspace({
       </div>
 
       {/* Header */}
-      <header className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md z-10">
-        <div className="flex items-center gap-3">
+      <header className="flex-shrink-0 flex flex-wrap items-center justify-between px-6 py-4 border-b border-gray-800/60 bg-gray-950/80 backdrop-blur-md z-10 gap-4">
+        <div className="flex items-center gap-3 shrink-0">
           <div className="p-2 border border-blue-500/20 bg-blue-500/10 rounded-xl">
             <Cpu className="w-5 h-5 text-blue-400" />
           </div>
           <div>
             <h1 className="text-sm font-bold text-gray-200">AI Command Console</h1>
-            <p className="text-[10px] text-gray-500">GPT-4o Interactive Mode</p>
+            <p className="text-[10px] text-gray-500">Interactive Mode</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4 flex-wrap justify-end flex-1">
+          {headerControls}
           {stage === 'generating' && (
-            <span className="flex items-center gap-2 text-xs text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 animate-pulse">
+            <span className="flex items-center gap-2 text-xs text-blue-400 bg-blue-500/10 px-3 py-1.5 rounded-full border border-blue-500/20 animate-pulse shrink-0">
               <Sparkles className="w-3.5 h-3.5" />
               Synthesizing UI...
             </span>
@@ -94,7 +97,7 @@ export default function CenterWorkspace({
         className="flex-1 overflow-y-auto p-6 scrollbar-hide flex flex-col relative z-0"
       >
         {!showFeed ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto mb-12">
+          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto mb-12 flex-shrink-0">
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center mb-6 shadow-2xl">
               <Sparkles className="w-8 h-8 text-blue-400/80" />
             </div>
@@ -121,7 +124,7 @@ export default function CenterWorkspace({
             </div>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
+          <div className="max-w-3xl mx-auto w-full space-y-6 pb-4 flex-shrink-0">
             {/* User Prompt Bubble */}
             {originalPrompt && (
               <div className="flex justify-end mb-6">

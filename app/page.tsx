@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import type { GenerationMode } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
-import { type AIModel, AI_MODELS } from '@/components/ModelSwitcher';
+import ModelSwitcher, { type AIModel, AI_MODELS } from '@/components/ModelSwitcher';
 import type { UIIntent, A11yReport, ThinkingPlan, IntentClassification } from '@/lib/validation/schemas';
 import { Menu } from 'lucide-react';
 import Sidebar from '@/components/ide/Sidebar';
@@ -303,6 +303,14 @@ export default function HomePage() {
         pt-14 lg:pt-0
       `}>
         <CenterWorkspace
+          headerControls={
+            <ModelSwitcher
+              onModelChange={setSelectedModel}
+              onFullAppModeChange={setIsFullAppMode}
+              onMultiSlideModeChange={setIsMultiSlideMode}
+              disabled={isRunning}
+            />
+          }
           onPromptSubmit={handlePromptSubmit}
           isLoading={isRunning}
           hasActiveProject={!!activeProjectId}
