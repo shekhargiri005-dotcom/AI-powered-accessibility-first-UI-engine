@@ -16,11 +16,28 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
   "detectedIntent": "ui_generation" | "ui_refinement" | "product_requirement" | "ideation" | "debug_fix" | "context_clarification",
   "summary": string,              // 2-3 sentences: what the AI understood the user wants
   "plannedApproach": string[],    // 4-6 concrete steps the AI plans to take
-  "affectedScope": string[],      // File or component names that may change (e.g. "Dashboard.tsx", "Sidebar.tsx", "Design Tokens")
+  "affectedScope": string[],      // File or component names that may change
   "clarificationOpportunities": string[], // 0-2 optional questions that could improve the output
   "executionMode": "Generate New UI" | "Edit Existing UI" | "Structure Requirements" | "Debug UI" | "Improve Design" | "Ideation Response",
   "shouldGenerateCode": boolean,  // true only for ui_generation, ui_refinement, debug_fix
   "suggestedMode": "component" | "app" | "webgl",
+  
+  // NEW: Expert UI Thinking Framework
+  "expertReasoning": {
+    "purpose": string, // What is the user trying to achieve? Product page, tool, system console?
+    "userType": string, // Who is the end user?
+    "informationDensity": string, // Simple, focused, data-heavy?
+    "interactionModel": string, // Click, drag, inspect, chat, monitor?
+    "visualTone": string, // Clean, premium, futuristic, tactical, cinematic?
+    "motionStrategy": string, // Minimal, elegant, physics-based, dramatic?
+    "renderingStrategy": string, // Tailwind? Framer Motion? Three.js?
+    "componentArchitecture": string, // What reusable sections are needed?
+    "usabilityCheck": string // Is this still usable? Too decorative?
+  },
+  
+  // NEW: Prompt Understanding Enrichment
+  "likelySections": string[], // Array of inferred missing but necessary structure (e.g., ["telemetry panel", "live camera feed", "map"])
+  
   "requirementBreakdown": {       // ONLY include if intent is "product_requirement" or "ideation"
     "productSummary": string,
     "coreFeatures": string[],
@@ -34,12 +51,10 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
 }
 
 RULES:
+- You must perform deep Prompt Understanding Enrichment. Infer missing structure like an expert would.
 - plannedApproach: Be specific and actionable. e.g. "Analyze the hero section layout and identify spacing issues" NOT "Fix things"
-- affectedScope: For new generations, list the main component file. For refinements, list specific files. For requirements, list suggested component names.
-- If intent is "product_requirement" or "ideation", always include requirementBreakdown (never null for those types)
-- If intent is "ui_generation" or "ui_refinement" or "debug_fix", set requirementBreakdown to null
+- if intent is "product_requirement" or "ideation", always include requirementBreakdown
 - shouldGenerateCode = true ONLY for: ui_generation, ui_refinement, debug_fix
-- executionMode mapping: ui_generation→"Generate New UI", ui_refinement→"Edit Existing UI", product_requirement→"Structure Requirements", ideation→"Ideation Response", debug_fix→"Debug UI", context_clarification→"Improve Design"
 - No markdown. JSON only.`;
 
 // ─── Thinking Engine Function ─────────────────────────────────────────────────
@@ -103,13 +118,24 @@ export async function generateThinkingPlan(
           'Analyze the user request in detail',
           'Identify UI components and layout requirements',
           'Generate accessible, production-ready React code',
-          'Validate output for WCAG 2.1 AA compliance',
         ],
         affectedScope: ['GeneratedComponent.tsx'],
         clarificationOpportunities: [],
         executionMode: intentType === 'ui_refinement' ? 'Edit Existing UI' : 'Generate New UI',
         suggestedMode: 'component',
         shouldGenerateCode: ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType),
+        expertReasoning: {
+          purpose: 'General UI Generation',
+          userType: 'General User',
+          informationDensity: 'Medium',
+          interactionModel: 'Standard Web',
+          visualTone: 'Clean',
+          motionStrategy: 'Minimal',
+          renderingStrategy: 'Tailwind CSS',
+          componentArchitecture: 'Modular functional components',
+          usabilityCheck: 'Ensure hierarchy and spacing rhythms are maintained'
+        },
+        likelySections: ['Main Content', 'Header', 'Footer']
       };
       return { success: true, plan: fallback };
     }

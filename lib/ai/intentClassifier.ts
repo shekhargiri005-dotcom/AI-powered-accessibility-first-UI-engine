@@ -33,8 +33,20 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
   "suggestedMode": "component" | "app" | "webgl",
   "needsClarification": boolean,
   "clarificationQuestion": string | null,
-  "shouldGenerateCode": boolean
+  "shouldGenerateCode": boolean,
+  "purpose": "landing-page" | "dashboard" | "admin-panel" | "saas-tool" | "chat-ui" | "portfolio" | "login-signup" | "onboarding" | "e-commerce" | "education" | "simulation" | "robotics-drone" | "cyber-tactical" | "dev-tool" | "analytics" | "unknown",
+  "visualType": "2d-standard" | "aesthetic-motion" | "minimal-futuristic" | "3d-component" | "full-3d" | "physics-based" | "simulation-ui" | "hud-ui" | "cinematic" | "hybrid" | "unknown",
+  "complexity": "simple" | "medium" | "advanced" | "system-level",
+  "platform": "web" | "mobile" | "tablet" | "desktop" | "responsive",
+  "layout": "single-page" | "multi-section" | "split-screen" | "multi-panel" | "dashboard-grid" | "wizard-flow" | "command-workspace" | "immersive-spatial",
+  "motionLevel": "none" | "subtle" | "moderate" | "high",
+  "preferredStack": ["react", "tailwind", "framer-motion", "threejs", "r3f", "canvas"]
 }
+
+TECH STACK SELECTION RULES:
+- React + Tailwind: for standard dashboards, forms, admin panels, SaaS layouts, normal landing pages.
+- React + Tailwind + framer-motion: for premium landing pages, animated portfolios, polished AI interfaces.
+- React + Tailwind + framer-motion + threejs/r3f: for 3D hero sections, futuristic UIs, holographic scenes.
 
 No markdown. No explanation. JSON only.`;
 
@@ -69,7 +81,7 @@ export async function classifyIntent(
       ],
       response_format: { type: 'json_object' },
       temperature: 0.1,
-      max_tokens: 300,
+      max_tokens: 600,
     });
 
     const raw = response.choices[0]?.message?.content || '';

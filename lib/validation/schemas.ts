@@ -21,6 +21,26 @@ export const IntentClassificationSchema = z.object({
   needsClarification: z.boolean().catch(false),
   clarificationQuestion: z.string().optional(),
   shouldGenerateCode: z.boolean().catch(true),
+  
+  // New: Expert UI Classification
+  purpose: z.enum([
+    'landing-page', 'dashboard', 'admin-panel', 'saas-tool', 'chat-ui', 
+    'portfolio', 'login-signup', 'onboarding', 'e-commerce', 'education', 
+    'simulation', 'robotics-drone', 'cyber-tactical', 'dev-tool', 'analytics', 'unknown'
+  ]).catch('unknown'),
+  visualType: z.enum([
+    '2d-standard', 'aesthetic-motion', 'minimal-futuristic', 
+    '3d-component', 'full-3d', 'physics-based', 'simulation-ui', 
+    'hud-ui', 'cinematic', 'hybrid', 'unknown'
+  ]).catch('unknown'),
+  complexity: z.enum(['simple', 'medium', 'advanced', 'system-level']).catch('medium'),
+  platform: z.enum(['web', 'mobile', 'tablet', 'desktop', 'responsive']).catch('responsive'),
+  layout: z.enum([
+    'single-page', 'multi-section', 'split-screen', 'multi-panel', 
+    'dashboard-grid', 'wizard-flow', 'command-workspace', 'immersive-spatial'
+  ]).catch('single-page'),
+  motionLevel: z.enum(['none', 'subtle', 'moderate', 'high']).catch('subtle'),
+  preferredStack: z.array(z.string()).catch(['react', 'tailwind']),
 });
 
 export type IntentClassification = z.infer<typeof IntentClassificationSchema>;
@@ -56,6 +76,21 @@ export const ThinkingPlanSchema = z.object({
     'Improve Design',
     'Ideation Response',
   ]).catch('Generate New UI'),
+  
+  // Prompt Understanding Enrichment & Expert Context
+  expertReasoning: z.object({
+    purpose: z.string(),
+    userType: z.string(),
+    informationDensity: z.string(),
+    interactionModel: z.string(),
+    visualTone: z.string(),
+    motionStrategy: z.string(),
+    renderingStrategy: z.string(),
+    componentArchitecture: z.string(),
+    usabilityCheck: z.string()
+  }).optional(),
+  likelySections: z.array(z.string()).optional(),
+
   requirementBreakdown: RequirementBreakdownSchema.optional(),
   suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
   shouldGenerateCode: z.boolean().catch(true),

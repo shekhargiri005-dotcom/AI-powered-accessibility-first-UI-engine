@@ -3,6 +3,7 @@ import { generateComponent } from '@/lib/ai/componentGenerator';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
 import { generateTests } from '@/lib/testGenerator';
+import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
 import { saveGeneration, getProjectById } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 
@@ -88,12 +89,36 @@ export async function POST(request: NextRequest) {
 
     const code = generationResult.code;
 
+    // Step 1.5: UI Expert Critique & Repair Agent
+    let finalSourceCode = code;
+    let critiqueData: unknown;
+    try {
+      const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
+      
+      critiqueData = reviewResult;
+      
+      if (!reviewResult.passed && reviewResult.repairInstructions) {
+        console.log(`[Critique Failed] Score: ${reviewResult.score}. Triggering UI Repair Agent...`);
+        const repairedCode = await repairGeneratedCode(finalSourceCode, reviewResult.repairInstructions);
+        
+        // Ensure repair didn't return garbage
+        if (repairedCode && repairedCode.length > 200) {
+          console.log('[Repair Success] UI improved by agent.');
+          finalSourceCode = repairedCode;
+        }
+      } else {
+        console.log(`[Critique Passed] Score: ${reviewResult.score}. Good to go.`);
+      }
+    } catch (e) {
+      console.warn('UI Reviewer failed, proceeding with original code:', e);
+    }
+
     // Step 2 & 5: Parallel Logic (A11y + Tests)
     const [a11yResult, tests] = await Promise.all([
       // A11y Flow
       (async () => {
-        const initialReport = validateAccessibility(code);
-        let finalCode = code;
+        const initialReport = validateAccessibility(finalSourceCode);
+        let finalCode = finalSourceCode;
         let appliedFixes: string[] = [];
 
         if (!initialReport.passed) {
@@ -110,7 +135,7 @@ export async function POST(request: NextRequest) {
       })(),
       // Test Generation Flow (uses initial code for speed, repairs are usually minor)
       (async () => {
-        return generateTests(intent, code);
+        return generateTests(intent, finalSourceCode);
       })()
     ]);
 
@@ -136,6 +161,7 @@ export async function POST(request: NextRequest) {
         ...finalReport,
         appliedFixes,
       },
+      critique: critiqueData,
       tests,
       mode: generationMode,
     });
