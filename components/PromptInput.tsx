@@ -1,22 +1,29 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock, Sparkles } from 'lucide-react';
+import IntentBadge from './IntentBadge';
+import type { IntentClassification } from '@/lib/validation/schemas';
 
 export type GenerationMode = 'component' | 'app' | 'webgl';
 
 interface PromptInputProps {
   onSubmit: (prompt: string, mode: GenerationMode) => void;
   isLoading: boolean;
+  onIntentDetected?: (classification: IntentClassification) => void;
+  hasActiveProject?: boolean;
 }
 
-export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
+export default function PromptInput({ onSubmit, isLoading, onIntentDetected, hasActiveProject }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<GenerationMode>('component');
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [history, setHistory] = useState<{ id: string, componentName: string, promptSnippet: string }[]>([]);
+  const [liveIntent, setLiveIntent] = useState<IntentClassification | null>(null);
+  const [isClassifying, setIsClassifying] = useState(false);
+  const classifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
@@ -126,12 +133,36 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
     }
   };
 
+  // Debounced live intent classification
+  const scheduleClassify = useCallback((text: string) => {
+    if (classifyTimerRef.current) clearTimeout(classifyTimerRef.current);
+    if (text.trim().length < 10) { setLiveIntent(null); return; }
+    classifyTimerRef.current = setTimeout(async () => {
+      setIsClassifying(true);
+      try {
+        const res = await fetch('/api/classify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text, hasActiveProject: hasActiveProject ?? false }),
+        });
+        const data = await res.json();
+        if (data.success && data.classification) {
+          setLiveIntent(data.classification);
+          onIntentDetected?.(data.classification);
+        }
+      } catch { /* ignore */ } finally {
+        setIsClassifying(false);
+      }
+    }, 600);
+  }, [hasActiveProject, onIntentDetected]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (prompt.trim() && !isLoading) {
       onSubmit(prompt.trim(), mode);
       setPrompt('');
       setIsRecording(false);
+      setLiveIntent(null);
     }
   };
 
@@ -298,7 +329,7 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
               "
               placeholder={placeholder}
               value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              onChange={(e) => { setPrompt(e.target.value); scheduleClassify(e.target.value); }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               disabled={isLoading}
@@ -306,6 +337,26 @@ export default function PromptInput({ onSubmit, isLoading }: PromptInputProps) {
               aria-label={mode === 'app' ? 'App description' : 'Component description'}
               aria-required="true"
             />
+
+            {/* Live intent hint */}
+            {(liveIntent || isClassifying) && (
+              <div className="flex items-center gap-2 px-1 py-1.5">
+                {isClassifying ? (
+                  <span className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                    <Sparkles className="w-3 h-3 animate-pulse text-blue-400" />
+                    Analyzing intent…
+                  </span>
+                ) : liveIntent ? (
+                  <>
+                    <span className="text-[11px] text-gray-500">Detected:</span>
+                    <IntentBadge intentType={liveIntent.intentType} confidence={liveIntent.confidence} size="sm" />
+                    {!liveIntent.shouldGenerateCode && (
+                      <span className="text-[11px] text-amber-400/80 italic">Will show planning panel first</span>
+                    )}
+                  </>
+                ) : null}
+              </div>
+            )}
           </div>
 
           {/* Bottom Action Bar */}

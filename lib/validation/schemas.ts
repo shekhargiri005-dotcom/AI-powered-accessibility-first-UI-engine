@@ -1,5 +1,68 @@
 import { z } from 'zod';
 
+// ─── Intent Classification Schema ────────────────────────────────────────────
+
+export const INTENT_TYPES = [
+  'ui_generation',
+  'ui_refinement',
+  'product_requirement',
+  'ideation',
+  'debug_fix',
+  'context_clarification',
+] as const;
+
+export type IntentType = typeof INTENT_TYPES[number];
+
+export const IntentClassificationSchema = z.object({
+  intentType: z.enum(INTENT_TYPES).catch('ui_generation'),
+  confidence: z.number().min(0).max(1).catch(0.8),
+  summary: z.string().catch(''),
+  suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
+  needsClarification: z.boolean().catch(false),
+  clarificationQuestion: z.string().optional(),
+  shouldGenerateCode: z.boolean().catch(true),
+});
+
+export type IntentClassification = z.infer<typeof IntentClassificationSchema>;
+
+// ─── Requirement Builder Schema ───────────────────────────────────────────────
+
+export const RequirementBreakdownSchema = z.object({
+  productSummary: z.string().catch(''),
+  coreFeatures: z.array(z.string()).catch([]),
+  userFlow: z.array(z.string()).catch([]),
+  uiSections: z.array(z.string()).catch([]),
+  designStyle: z.string().catch(''),
+  targetAudience: z.string().catch(''),
+  uxPriorities: z.array(z.string()).catch([]),
+  componentSuggestions: z.array(z.string()).catch([]),
+});
+
+export type RequirementBreakdown = z.infer<typeof RequirementBreakdownSchema>;
+
+// ─── Thinking Plan Schema ─────────────────────────────────────────────────────
+
+export const ThinkingPlanSchema = z.object({
+  detectedIntent: z.enum(INTENT_TYPES).catch('ui_generation'),
+  summary: z.string().catch(''),
+  plannedApproach: z.array(z.string()).catch([]),
+  affectedScope: z.array(z.string()).catch([]),
+  clarificationOpportunities: z.array(z.string()).catch([]),
+  executionMode: z.enum([
+    'Generate New UI',
+    'Edit Existing UI',
+    'Structure Requirements',
+    'Debug UI',
+    'Improve Design',
+    'Ideation Response',
+  ]).catch('Generate New UI'),
+  requirementBreakdown: RequirementBreakdownSchema.optional(),
+  suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
+  shouldGenerateCode: z.boolean().catch(true),
+});
+
+export type ThinkingPlan = z.infer<typeof ThinkingPlanSchema>;
+
 // ─── Field Schema ────────────────────────────────────────────────────────────
 
 export const UIFieldSchema = z.object({
