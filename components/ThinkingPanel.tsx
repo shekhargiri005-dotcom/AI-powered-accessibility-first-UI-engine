@@ -32,6 +32,67 @@ function ThinkingSkeleton() {
   );
 }
 
+// ─── Clarification Item with Inline Answer Input ──────────────────────────────
+
+function ClarificationItem({
+  question,
+  onAnswer,
+}: {
+  question: string;
+  onAnswer: (answer: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [answer, setAnswer] = useState('');
+
+  const submit = () => {
+    if (!answer.trim()) return;
+    onAnswer(answer.trim());
+    setAnswer('');
+    setOpen(false);
+  };
+
+  return (
+    <div className="rounded-xl border border-cyan-500/15 bg-cyan-500/5 overflow-hidden">
+      <div className="flex items-start gap-3 p-3">
+        <HelpCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
+        <span className="text-sm text-gray-300 flex-1">{question}</span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className="flex-shrink-0 text-[10px] font-semibold text-cyan-400 hover:text-cyan-200 flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-cyan-500/15 border border-cyan-500/20 transition-colors"
+        >
+          <MessageSquarePlus className="w-3 h-3" />
+          {open ? 'Cancel' : 'Answer'}
+        </button>
+      </div>
+      {open && (
+        <div className="px-3 pb-3 flex flex-col gap-2 border-t border-cyan-500/10">
+          <textarea
+            autoFocus
+            className="w-full mt-2 resize-none rounded-lg bg-gray-900 border border-cyan-500/20 text-sm text-gray-200 placeholder-gray-600 px-3 py-2 outline-none focus:border-cyan-400/50 focus:ring-1 focus:ring-cyan-400/20 min-h-[72px]"
+            placeholder="Type your answer here…"
+            value={answer}
+            onChange={(e) => setAnswer(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit(); }
+            }}
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[10px] text-gray-600">Press Enter to submit, Shift+Enter for new line</span>
+            <button
+              onClick={submit}
+              disabled={!answer.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <MessageSquarePlus className="w-3 h-3" />
+              Add to Prompt
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Section Block ────────────────────────────────────────────────────────────
 
 function Block({
@@ -235,21 +296,16 @@ export default function ThinkingPanel({
             <Block icon={<HelpCircle className="w-3 h-3" />} title="Clarification Opportunities" accent="cyan">
               <div className="space-y-2">
                 {plan.clarificationOpportunities.map((q, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-cyan-500/8 border border-cyan-500/15">
-                    <HelpCircle className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-gray-300 flex-1">{q}</span>
-                    <button
-                      onClick={() => onAskClarification(q)}
-                      className="flex-shrink-0 text-[10px] font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-cyan-500/10 transition-colors"
-                    >
-                      <MessageSquarePlus className="w-3 h-3" />
-                      Answer
-                    </button>
-                  </div>
+                  <ClarificationItem
+                    key={i}
+                    question={q}
+                    onAnswer={(answer) => onAskClarification(`${q}\n\nMy answer: ${answer}`)}
+                  />
                 ))}
               </div>
             </Block>
           )}
+
 
           {/* 7. Action Buttons */}
           <div className="pt-2 border-t border-gray-700/30">

@@ -5,23 +5,20 @@ import { Sparkles, Brain, Cpu, MessageSquare } from 'lucide-react';
 import PromptInput, { type GenerationMode } from '@/components/PromptInput';
 import ThinkingPanel from '@/components/ThinkingPanel';
 import PipelineStatus from '@/components/PipelineStatus';
-import type { 
-  ThinkingPlan, 
-  IntentClassification 
+import type {
+  ThinkingPlan,
+  IntentClassification
 } from '@/lib/validation/schemas';
 import type { PipelineStep } from '@/components/PipelineStatus';
 
 interface CenterWorkspaceProps {
-  // Input
   onPromptSubmit: (prompt: string, mode: GenerationMode) => void;
   isLoading: boolean;
   hasActiveProject: boolean;
   onIntentDetected: (classification: IntentClassification | null) => void;
-  // State
   stage: string;
   pipelineStep: PipelineStep;
   pipelineError?: string;
-  // Thinking
   thinkingPlan: ThinkingPlan | null;
   isThinkingLoading: boolean;
   onProceed: () => void;
@@ -53,7 +50,7 @@ export default function CenterWorkspace({
 }: CenterWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of the feed when thinking or pipeline active
+  // Auto-scroll when feed content changes
   useEffect(() => {
     if (scrollRef.current && (isThinkingLoading || thinkingPlan || stage !== 'idle')) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -62,9 +59,29 @@ export default function CenterWorkspace({
 
   const showFeed = stage !== 'idle' || isThinkingLoading || thinkingPlan !== null;
 
+  // Prompt is visible inside the feed when waiting for user action (not while pipeline is running)
+  const showPromptInFeed = showFeed && ['idle', 'awaiting_confirm', 'error', 'complete'].includes(stage);
+
+  const promptBlock = (
+    <div className="w-full max-w-3xl mx-auto">
+      <PromptInput
+        onSubmit={onPromptSubmit}
+        isLoading={isLoading}
+        onIntentDetected={onIntentDetected}
+        hasActiveProject={hasActiveProject}
+      />
+      <div className="text-center mt-3">
+        <p className="text-[10px] text-gray-600 flex items-center justify-center gap-1.5">
+          <Brain className="w-3 h-3 text-blue-500/50" />
+          AI UI Engine intelligently classifies requests. Use <b>Shift + Enter</b> for new lines.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <main className="flex-1 flex flex-col min-h-0 min-w-0 bg-gray-950/60 relative">
-      {/* Background glow effects */}
+      {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[-10%] left-[20%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
       </div>
@@ -91,43 +108,49 @@ export default function CenterWorkspace({
         </div>
       </header>
 
-      {/* Scrollable Feed Area */}
-      <div 
+      {/* Scrollable Feed — contains all content including prompt input */}
+      <div
         ref={scrollRef}
         className="flex-1 overflow-y-auto min-h-0 p-6 scrollbar-hide flex flex-col relative z-0"
       >
         {!showFeed ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto mb-12 flex-shrink-0">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center mb-6 shadow-2xl">
-              <Sparkles className="w-8 h-8 text-blue-400/80" />
+          /* ── Idle / Empty State: prompt centered with suggestions ── */
+          <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto gap-6">
+            <div>
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-gray-800 to-gray-900 border border-gray-700/50 flex items-center justify-center mb-6 shadow-2xl mx-auto">
+                <Sparkles className="w-8 h-8 text-blue-400/80" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-200 mb-2">What are we building today?</h2>
+              <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                Describe a new app idea, a complex UI component, or select a workspace to continue engineering.
+              </p>
+              <div className="grid grid-cols-2 gap-3 w-full mb-8">
+                {[
+                  "Build a modern SaaS dashboard",
+                  "Create a dark-mode portfolio",
+                  "Design a crypto trading hero",
+                  "Make an interactive WebGL scene"
+                ].map(sug => (
+                  <button
+                    key={sug}
+                    onClick={() => onPromptSubmit(sug, 'component')}
+                    className="p-3 text-left rounded-xl border border-gray-800/60 bg-gray-900/30 hover:bg-gray-800 hover:border-gray-700 text-xs text-gray-400 hover:text-gray-200 transition-all duration-200"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 mb-2 opacity-50" />
+                    {sug}
+                  </button>
+                ))}
+              </div>
             </div>
-            <h2 className="text-xl font-bold text-gray-200 mb-2">What are we building today?</h2>
-            <p className="text-sm text-gray-500 leading-relaxed mb-8">
-              Describe a new app idea, a complex UI component, or select a workspace to continue engineering.
-            </p>
-            <div className="grid grid-cols-2 gap-3 w-full">
-              {[
-                "Build a modern SaaS dashboard",
-                "Create a dark-mode portfolio",
-                "Design a crypto trading hero",
-                "Make an interactive WebGL scene"
-              ].map(sug => (
-                <button 
-                  key={sug}
-                  onClick={() => onPromptSubmit(sug, 'component')}
-                  className="p-3 text-left rounded-xl border border-gray-800/60 bg-gray-900/30 hover:bg-gray-800 hover:border-gray-700 text-xs text-gray-400 hover:text-gray-200 transition-all duration-200"
-                >
-                  <MessageSquare className="w-3.5 h-3.5 mb-2 opacity-50" />
-                  {sug}
-                </button>
-              ))}
-            </div>
+            {/* Prompt box flows under the suggestions on the idle screen */}
+            {promptBlock}
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto w-full space-y-6 pb-4 flex-shrink-0">
+          /* ── Active Feed: prompt flows at the bottom below thinking panel ── */
+          <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
             {/* User Prompt Bubble */}
             {originalPrompt && (
-              <div className="flex justify-end mb-6">
+              <div className="flex justify-end">
                 <div className="max-w-[85%] bg-blue-600/10 border border-blue-500/20 text-blue-100 px-5 py-3.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed shadow-sm">
                   {originalPrompt}
                 </div>
@@ -136,7 +159,7 @@ export default function CenterWorkspace({
 
             {/* Error Message */}
             {stage === 'error' && pipelineError && (
-              <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300 shadow-lg mb-4">
+              <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-sm text-red-300 shadow-lg">
                 <div className="font-semibold text-red-400 mb-1 tracking-wide uppercase text-[10px]">Pipeline Error</div>
                 {pipelineError}
               </div>
@@ -164,24 +187,15 @@ export default function CenterWorkspace({
                 <PipelineStatus currentStep={pipelineStep} errorMessage={pipelineError} />
               </div>
             )}
+
+            {/* Prompt input — visible below the thinking panel when awaiting user action */}
+            {showPromptInFeed && (
+              <div className="pt-2 animate-in fade-in duration-300">
+                {promptBlock}
+              </div>
+            )}
           </div>
         )}
-      </div>
-
-      {/* Input Area (Pinned to bottom) */}
-      <div className="flex-shrink-0 p-6 pt-0 relative z-10 max-w-4xl mx-auto w-full">
-        <PromptInput
-          onSubmit={onPromptSubmit}
-          isLoading={isLoading}
-          onIntentDetected={onIntentDetected}
-          hasActiveProject={hasActiveProject}
-        />
-        <div className="text-center mt-3">
-          <p className="text-[10px] text-gray-600 flex items-center justify-center gap-1.5">
-            <Brain className="w-3 h-3 text-blue-500/50" />
-            AI UI Engine intelligently classifies requests. Use <b>Shift + Enter</b> for new lines.
-          </p>
-        </div>
       </div>
     </main>
   );
