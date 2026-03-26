@@ -8,6 +8,16 @@ import {
 } from 'lucide-react';
 import { type UIIntent, type A11yReport } from '@/lib/validation/schemas';
 import PromptInput from './PromptInput';
+import dynamic from 'next/dynamic';
+
+const SandpackPreview = dynamic(() => import('./SandpackPreview'), {
+  ssr: false,
+  loading: () => (
+    <div className="rounded-xl border border-gray-700/50 bg-gray-900/60 h-48 flex items-center justify-center">
+      <span className="text-gray-500 text-sm">Loading live preview...</span>
+    </div>
+  ),
+});
 
 interface ProjectIteration {
   id: string;
@@ -138,13 +148,10 @@ export default function ProjectWorkspace({
                     <Eye className="w-3 h-3" /> Live Sandpack Runtime
                   </div>
                 </div>
-                {/* 
-                  Integration Note: We'll pass the code to Sandpack 
-                  but for the component view we might need props 
-                */}
-                <div className="w-full h-full flex items-center justify-center italic text-gray-500 text-sm">
-                   Preview Rendering... {current.componentName}
-                </div>
+                <SandpackPreview 
+                  code={current.code as any} 
+                  componentName={current.componentName} 
+                />
               </div>
             ) : (
               <div className="h-full rounded-2xl border border-gray-700/50 bg-gray-950 overflow-hidden font-mono text-xs">
