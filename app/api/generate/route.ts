@@ -6,6 +6,7 @@ import { generateTests } from '@/lib/testGenerator';
 import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
 import { saveGeneration, getProjectById } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
+import { validateBrowserSafeCode } from '@/lib/validation/security';
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,6 +112,17 @@ export async function POST(request: NextRequest) {
       }
     } catch (e) {
       console.warn('UI Reviewer failed, proceeding with original code:', e);
+    }
+
+    // Step 1.75: Browser Safety Validation — block code with Node/TTY imports
+    const safetyCheck = validateBrowserSafeCode(finalSourceCode);
+    if (!safetyCheck.isValid) {
+      const issueList = safetyCheck.issues.join(' | ');
+      console.error('[/api/generate] Code failed browser safety check:', issueList);
+      return NextResponse.json(
+        { success: false, error: `Generated code contains browser-unsafe patterns: ${issueList}`, safetyIssues: safetyCheck.issues },
+        { status: 422 }
+      );
     }
 
     // Step 2 & 5: Parallel Logic (A11y + Tests)

@@ -238,8 +238,15 @@ export default function HomePage() {
         if (data.success) {
           classification = data.classification;
           setLiveClassification(data.classification);
+        } else {
+          // 422 or other classify failure — fallback but show a warning
+          console.warn('[classify] API error:', data.error);
+          // Use a safe default so generation can still proceed
+          classification = null;
         }
-      } catch { /* ignore */ }
+      } catch {
+        console.warn('[classify] Network error. Proceeding with default.');
+      }
     }
 
     setStage('thinking');

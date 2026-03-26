@@ -43,9 +43,21 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   const [history, setHistory] = useState<{ id: string, componentName: string, promptSnippet: string }[]>([]);
   const [liveIntent, setLiveIntent] = useState<IntentClassification | null>(null);
   const [isClassifying, setIsClassifying] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const classifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+
+  // ─── Input Validation ──────────────────────────────────────────────────────
+  const validatePrompt = (text: string): string | null => {
+    const trimmed = text.trim();
+    if (!trimmed) return null; // silent until user tries to submit
+    if (trimmed.length < 10) return 'Prompt is too short — describe what you want in more detail.';
+    if (/^[\W\d_\s]{8,}$/.test(trimmed)) return 'Prompt appears to be random characters or symbols.';
+    return null;
+  };
+
+  const isPromptValid = prompt.trim().length >= 10;
 
   useEffect(() => {
     fetch('/api/history')
@@ -180,12 +192,17 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (prompt.trim() && !isLoading) {
-      onSubmit(prompt.trim(), mode);
-      setPrompt('');
-      setIsRecording(false);
-      setLiveIntent(null);
+    const errMsg = validatePrompt(prompt);
+    if (errMsg) {
+      setValidationError(errMsg);
+      return;
     }
+    if (!isPromptValid || isLoading) return;
+    setValidationError(null);
+    onSubmit(prompt.trim(), mode);
+    setPrompt('');
+    setIsRecording(false);
+    setLiveIntent(null);
   };
 
   const charCount = prompt.length;
@@ -351,7 +368,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               "
               placeholder={placeholder}
               value={prompt}
-              onChange={(e) => { setPrompt(e.target.value); scheduleClassify(e.target.value); }}
+              onChange={(e) => { setPrompt(e.target.value); setValidationError(null); scheduleClassify(e.target.value); }}
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               disabled={isLoading}
@@ -359,6 +376,13 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               aria-label={mode === 'app' ? 'App description' : 'Component description'}
               aria-required="true"
             />
+
+            {/* Validation Error */}
+            {validationError && (
+              <p className="px-1 pt-1 pb-0.5 text-[11px] text-red-400 flex items-center gap-1">
+                <span aria-hidden="true">⚠</span> {validationError}
+              </p>
+            )}
 
             {/* Live intent hint */}
             {(liveIntent || isClassifying) && (
@@ -425,13 +449,13 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
 
               <button
                 type="submit"
-                disabled={!prompt.trim() || isLoading || isOverLimit || isProcessingImage}
+                disabled={!isPromptValid || isLoading || isOverLimit || isProcessingImage}
                 aria-label={isLoading ? 'Generating, please wait' : mode === 'app' ? 'Generate full app' : 'Generate component'}
                 className={`
                   flex items-center justify-center px-4 py-1.5 rounded-lg
                   transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121]
                   ${mode === 'app' ? 'focus:ring-violet-500' : mode === 'webgl' ? 'focus:ring-cyan-500' : 'focus:ring-white'}
-                  ${isLoading || !prompt.trim() 
+                  ${isLoading || !isPromptValid
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
                     : mode === 'app'
                       ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 shadow-md shadow-violet-500/25 font-medium text-sm'
