@@ -21,7 +21,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
   return (
     <section
       aria-labelledby="preview-heading"
-      className="rounded-xl border border-gray-700/50 overflow-hidden"
+      className="h-full w-full flex flex-col rounded-xl border border-gray-700/50 overflow-hidden"
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 bg-gray-900/80 border-b border-gray-700/50">
@@ -45,13 +45,13 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
           activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
         }}
       >
-        <SandpackLayout>
+        <SandpackLayout style={{ flex: 1, minHeight: 0, height: '100%' }}>
           <SandpackPreviewPanel
             showNavigator={true}
             showRestartButton={true}
             showRefreshButton={true}
             showOpenInCodeSandbox={false}
-            style={{ height: '500px' }}
+            style={{ width: '100%', height: '100%' }}
           />
         </SandpackLayout>
       </SandpackProvider>

@@ -139,8 +139,8 @@ export default function RightPanel({
 
   return (
     <div className={`
-      flex flex-col bg-gray-950 border-l border-gray-800/60 z-20 transition-all duration-300
-      ${isFullscreen ? 'fixed inset-0 lg:left-72 z-50' : 'relative h-full w-full'}
+      flex flex-col flex-1 min-h-0 bg-gray-950 border-t lg:border-t-0 lg:border-l border-gray-800/60 z-20
+      ${isFullscreen ? 'fixed inset-0 lg:left-72 z-50' : 'relative w-full'}
     `}>
       {/* Top Header */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gray-950/80 backdrop-blur-md border-b border-gray-800/60">
@@ -184,10 +184,11 @@ export default function RightPanel({
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative bg-black/20">
+      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/20">
         {activeTab === 'preview' && (
           <div className="absolute inset-0 z-0">
             <SandpackPreview 
+              key={`preview-${activeV.timestamp}-${currentVersion}`}
               code={activeV.code as string | Record<string, string>} 
               componentName={activeV.intent.componentName} 
             />

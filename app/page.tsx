@@ -272,7 +272,7 @@ export default function HomePage() {
   const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
+    <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-gray-950/80 backdrop-blur-md z-40 border-b border-gray-800/60 flex items-center px-4">
         <button onClick={() => setIsMobileSidebarOpen(true)} className="p-2 text-gray-400 hover:text-white rounded-lg">
@@ -298,8 +298,8 @@ export default function HomePage() {
 
       {/* Center AI Work Pane */}
       <div className={`
-        flex-1 flex flex-col min-h-0 min-w-0 h-full transition-all duration-300 relative z-20
-        ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-r border-gray-800/60' : 'w-full'}
+        flex-1 flex flex-col min-h-0 min-w-0 relative z-20
+        ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-b lg:border-b-0 lg:border-r border-gray-800/60' : 'w-full'}
         pt-14 lg:pt-0
       `}>
         <CenterWorkspace
@@ -358,7 +358,7 @@ export default function HomePage() {
 
       {/* Right Dev Panel */}
       {output && (
-        <div className="flex-1 flex flex-col min-h-0 min-w-0 h-full w-full lg:w-2/3 xl:w-[60%] bg-gray-950 relative z-10 transition-all duration-500">
+        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full lg:w-2/3 xl:w-[60%] bg-gray-950 relative z-10">
           <RightPanel
             initialProject={{
               id: activeProjectId || 'current',

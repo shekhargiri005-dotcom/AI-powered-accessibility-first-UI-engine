@@ -64,7 +64,7 @@ export default function Sidebar({
       {/* Sidebar Container */}
       <aside className={`
         fixed inset-y-0 left-0 z-50 w-72 bg-gray-950/80 backdrop-blur-xl border-r border-gray-800/60
-        flex flex-col transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
+        flex flex-col min-h-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Header / Brand */}
@@ -105,7 +105,7 @@ export default function Sidebar({
         </div>
 
         {/* Project List */}
-        <div className="flex-1 overflow-y-auto px-3 space-y-1 scrollbar-hide pb-6">
+        <div className="flex-1 overflow-y-auto min-h-0 px-3 space-y-1 scrollbar-hide pb-6">
           <div className="px-2 pb-2 mt-2">
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
               <Folders className="w-3.5 h-3.5" />

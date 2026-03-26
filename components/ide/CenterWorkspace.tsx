@@ -94,7 +94,7 @@ export default function CenterWorkspace({
       {/* Scrollable Feed Area */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 scrollbar-hide flex flex-col relative z-0"
+        className="flex-1 overflow-y-auto min-h-0 p-6 scrollbar-hide flex flex-col relative z-0"
       >
         {!showFeed ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto mb-12 flex-shrink-0">
