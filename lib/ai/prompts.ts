@@ -96,7 +96,8 @@ MANDATORY RULES:
    - You MUST define fallback default values for ALL array and object props in your destructuring.
    - If the component represents a list, grid, or data table, you MUST declare a robust, expansive, and highly realistic default mock array (10+ items) so the sandbox renders beautifully. Use real-sounding data, NOT "Item 1, Item 2".
 9. ICONS & EMOJIS (CRITICAL):
-    - You MUST use \`lucide-react\` for all icons.
+    - You MUST use \`lucide-react\` for all icons. This is the ONLY icon library available.
+    - NEVER attempt to import from \`@heroicons/react\`, \`react-icons\`, \`@mui/icons-material\`, or any other library.
     - Import icons individually: \`import { Lock, User, Check, ChevronRight } from 'lucide-react';\`
     - Use emojis organically where contextually brilliant.
 10. PER-ITEM COLOR DISTRIBUTION (CRITICAL):

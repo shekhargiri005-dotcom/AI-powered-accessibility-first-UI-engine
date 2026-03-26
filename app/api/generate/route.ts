@@ -86,45 +86,54 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 2: Run accessibility validation
-    const initialA11yReport = validateAccessibility(generationResult.code);
+    const code = generationResult.code;
 
-    // Step 3: Auto-repair common a11y issues
-    let finalCode = generationResult.code;
-    let appliedFixes: string[] = [];
+    // Step 2 & 5: Parallel Logic (A11y + Tests)
+    const [a11yResult, tests] = await Promise.all([
+      // A11y Flow
+      (async () => {
+        const initialReport = validateAccessibility(code);
+        let finalCode = code;
+        let appliedFixes: string[] = [];
 
-    if (!initialA11yReport.passed) {
-      const repaired = autoRepairA11y(generationResult.code);
-      finalCode = repaired.code;
-      appliedFixes = repaired.appliedFixes;
-    }
+        if (!initialReport.passed) {
+          const repaired = autoRepairA11y(code);
+          finalCode = repaired.code;
+          appliedFixes = repaired.appliedFixes;
+        }
 
-    // Step 4: Re-validate after auto-repair
-    const finalA11yReport = appliedFixes.length > 0
-      ? validateAccessibility(finalCode)
-      : initialA11yReport;
+        const finalReport = appliedFixes.length > 0
+          ? validateAccessibility(finalCode)
+          : initialReport;
+          
+        return { finalCode, finalReport, appliedFixes };
+      })(),
+      // Test Generation Flow (uses initial code for speed, repairs are usually minor)
+      (async () => {
+        return generateTests(intent, code);
+      })()
+    ]);
 
-    // Step 4.5: Save to memory (projects and successful generations)
-    if (generationMode === 'app' || (generationMode === 'component' && finalA11yReport.passed && finalA11yReport.score >= 80)) {
+    const { finalCode, finalReport, appliedFixes } = a11yResult;
+
+    // Step 6: Save to memory (async)
+    if (generationMode === 'app' || (generationMode === 'component' && finalReport.passed && finalReport.score >= 80)) {
       setTimeout(() => {
         saveGeneration(
           intent, 
           finalCode, 
-          finalA11yReport.score, 
-          undefined, // TODO: support multi-file manifestation in generate routing
+          finalReport.score, 
+          undefined,
           intent.previousProjectId
         );
       }, 0);
     }
 
-    // Step 5: Generate tests
-    const tests = generateTests(intent, finalCode);
-
     return NextResponse.json({
       success: true,
       code: finalCode,
       a11yReport: {
-        ...finalA11yReport,
+        ...finalReport,
         appliedFixes,
       },
       tests,

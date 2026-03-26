@@ -28,7 +28,8 @@ export interface ParseResult {
 export async function parseIntent(
   userInput: string,
   mode: GenerationMode = 'component',
-  contextId?: string // Link to persistent project if provided
+  contextId?: string, // Link to persistent project if provided
+  model: string = 'gpt-4o-mini' // Default to mini for parsing speed
 ): Promise<ParseResult> {
   if (!userInput || userInput.trim().length === 0) {
     return { success: false, error: 'Input cannot be empty' };
@@ -60,13 +61,13 @@ export async function parseIntent(
     }
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.1,
+      temperature: 0.2,
     });
 
     const rawContent = response.choices[0]?.message?.content || '';
