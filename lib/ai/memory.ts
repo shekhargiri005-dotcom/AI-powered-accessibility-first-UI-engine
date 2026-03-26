@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { type UIIntent } from '../validation/schemas';
+import { type FileManifestItem } from './chunkGenerator';
 
 const MEMORY_FILE_PATH = path.join(process.cwd(), 'data', 'history.json');
 
@@ -10,8 +11,10 @@ export interface MemoryEntry {
   componentType: string;
   componentName: string;
   intent: UIIntent;
-  code: string;
+  code: string | Record<string, string>;
+  manifest?: FileManifestItem[];
   a11yScore: number;
+  parentId?: string;
 }
 
 // Ensure data directory exists
@@ -25,7 +28,13 @@ function ensureMemoryFile() {
   }
 }
 
-export function saveGeneration(intent: UIIntent, code: string, a11yScore: number): void {
+export function saveGeneration(
+  intent: UIIntent, 
+  code: string | Record<string, string>, 
+  a11yScore: number,
+  manifest?: FileManifestItem[],
+  parentId?: string
+): void {
   try {
     ensureMemoryFile();
     const data = fs.readFileSync(MEMORY_FILE_PATH, 'utf-8');
@@ -39,7 +48,9 @@ export function saveGeneration(intent: UIIntent, code: string, a11yScore: number
       componentName: intent.componentName,
       intent,
       code,
+      manifest,
       a11yScore,
+      parentId,
     };
 
     // Keep the last 500 successful generations — disk reads are trivial at this size
@@ -48,6 +59,18 @@ export function saveGeneration(intent: UIIntent, code: string, a11yScore: number
     fs.writeFileSync(MEMORY_FILE_PATH, JSON.stringify(updatedHistory, null, 2));
   } catch (error) {
     console.error('Failed to save memory:', error);
+  }
+}
+
+export function getProjectById(id: string): MemoryEntry | null {
+  try {
+    ensureMemoryFile();
+    const data = fs.readFileSync(MEMORY_FILE_PATH, 'utf-8');
+    const history: MemoryEntry[] = JSON.parse(data);
+    return history.find((entry) => entry.id === id) || null;
+  } catch (error) {
+    console.error(`Failed to find project with ID ${id}:`, error);
+    return null;
   }
 }
 

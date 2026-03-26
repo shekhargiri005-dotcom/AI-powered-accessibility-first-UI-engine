@@ -3,7 +3,7 @@ import { generateComponent } from '@/lib/ai/componentGenerator';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
 import { generateTests } from '@/lib/testGenerator';
-import { saveGeneration } from '@/lib/ai/memory';
+import { saveGeneration, getProjectById } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 
 export async function POST(request: NextRequest) {
@@ -48,8 +48,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Step 0: Handle Refinement Context
+    let refinementContext: { code: string; manifest?: any } | undefined;
+    if (intent.isRefinement && intent.previousProjectId) {
+      const parentProject = getProjectById(intent.previousProjectId);
+      if (parentProject) {
+        // Find the specific file to refine if targetFiles is provided, 
+        // otherwise default to the first file or the full component string
+        let targetCode: string;
+        if (typeof parentProject.code === 'string') {
+          targetCode = parentProject.code;
+        } else {
+          const targetFile = intent.targetFiles?.[0] || Object.keys(parentProject.code)[0];
+          targetCode = parentProject.code[targetFile] || Object.values(parentProject.code)[0];
+        }
+
+        refinementContext = {
+          code: targetCode,
+          manifest: parentProject.manifest
+        };
+      }
+    }
+
     // Step 1: Generate component/app code
-    const generationResult = await generateComponent(intent, generationMode, model, maxTokens, isMultiSlide);
+    const generationResult = await generateComponent(
+      intent, 
+      generationMode, 
+      model, 
+      maxTokens, 
+      isMultiSlide,
+      refinementContext
+    );
     if (!generationResult.success || !generationResult.code) {
       return NextResponse.json(
         { success: false, error: generationResult.error },
@@ -75,10 +104,16 @@ export async function POST(request: NextRequest) {
       ? validateAccessibility(finalCode)
       : initialA11yReport;
 
-    // Step 4.5: Save to memory (only perfect-score component mode)
-    if (generationMode === 'component' && finalA11yReport.passed && finalA11yReport.score === 100) {
+    // Step 4.5: Save to memory (projects and successful generations)
+    if (generationMode === 'app' || (generationMode === 'component' && finalA11yReport.passed && finalA11yReport.score >= 80)) {
       setTimeout(() => {
-        saveGeneration(intent, finalCode, finalA11yReport.score);
+        saveGeneration(
+          intent, 
+          finalCode, 
+          finalA11yReport.score, 
+          undefined, // TODO: support multi-file manifestation in generate routing
+          intent.previousProjectId
+        );
       }, 0);
     }
 

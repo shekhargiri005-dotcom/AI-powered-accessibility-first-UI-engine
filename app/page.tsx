@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import PromptInput, { type GenerationMode } from '@/components/PromptInput';
 import PipelineStatus, { type PipelineStep } from '@/components/PipelineStatus';
 import ModelSwitcher, { type AIModel, AI_MODELS } from '@/components/ModelSwitcher';
@@ -10,8 +10,9 @@ import TestOutput from '@/components/TestOutput';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 import {
   Cpu, GitBranch, Layers, ChevronDown, ChevronUp,
-  Braces, Shield, FlaskConical, Sparkles,
+  Braces, Shield, FlaskConical, Sparkles, History as HistoryIcon,
 } from 'lucide-react';
+import ProjectWorkspace from '@/components/ProjectWorkspace';
 
 // Lazy import Sandpack to avoid SSR issues
 import dynamic from 'next/dynamic';
@@ -26,11 +27,21 @@ const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface ProjectIteration {
+  id: string;
+  timestamp: string;
+  code: string | Record<string, string>;
+  intent: UIIntent;
+  a11yReport: A11yReport;
+  componentName: string;
+}
+
 interface GenerationOutput {
   code: string | Record<string, string>;
   componentName: string;
   intent: UIIntent;
-  a11yReport: A11yReport & { appliedFixes?: string[] };
+  a11yReport: A11yReport;
+  appliedFixes?: string[];
   tests: { rtl: string; playwright: string };
   mode: GenerationMode;
 }
@@ -183,6 +194,51 @@ export default function HomePage() {
   const [isFullAppMode, setIsFullAppMode] = useState(false);
   const [isMultiSlideMode, setIsMultiSlideMode] = useState(false);
 
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+
+  const fetchHistory = useCallback(async () => {
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      setHistory(data.history || []);
+    } catch (err) {
+      console.error('Failed to fetch history:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistory();
+  }, [fetchHistory]);
+
+  const loadProject = async (id: string) => {
+    setPipelineStep('parsing');
+    try {
+      const res = await fetch(`/api/history?id=${id}`);
+      const data = await res.json();
+      if (data.success && data.project) {
+        setOutput({
+          code: data.project.code,
+          componentName: data.project.componentName,
+          intent: data.project.intent,
+          a11yReport: {
+            ...data.project.a11yReport,
+            score: data.project.a11yScore
+          },
+          tests: data.project.tests || { rtl: '', playwright: '' },
+          mode: data.project.componentType === 'app' ? 'app' : data.project.componentType === 'webgl' ? 'webgl' : 'component'
+        });
+        setActiveProjectId(id);
+        setPipelineStep('complete');
+        setShowHistory(false);
+      }
+    } catch (err) {
+      setPipelineError('Failed to load project history.');
+      setPipelineStep('error');
+    }
+  };
+
   const runPipeline = useCallback(async (prompt: string, mode: GenerationMode) => {
     setOutput(null);
     setPipelineError(undefined);
@@ -195,7 +251,11 @@ export default function HomePage() {
       const parseRes = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode }),
+        body: JSON.stringify({ 
+          prompt, 
+          mode, 
+          contextId: activeProjectId || undefined 
+        }),
       });
       const parseData = await parseRes.json();
 
@@ -298,19 +358,32 @@ export default function HomePage() {
 
       // ─── Complete ─────────────────────────────────────────────────────
       setPipelineStep('complete');
-      setOutput({
+      const newOutput = {
         code: generateData.code,
         componentName: intent.componentName,
         intent,
         a11yReport: generateData.a11yReport,
+        appliedFixes: generateData.appliedFixes,
         tests: generateData.tests,
         mode: mode,
-      });
+      };
+      setOutput(newOutput);
+      
+      // Refresh history list
+      fetchHistory();
     } catch (err) {
       setPipelineStep('error');
       setPipelineError('Network error during generation. Check your connection.');
     }
-  }, [selectedModel, isFullAppMode, isMultiSlideMode]);
+  }, [selectedModel, isFullAppMode, isMultiSlideMode, activeProjectId, fetchHistory]);
+
+  const handleRefine = useCallback(async (prompt: string, mode: GenerationMode) => {
+    // This function will be called by PromptInput for refinement
+    // It should trigger the pipeline with the new prompt and current mode
+    await runPipeline(prompt, mode);
+  }, [runPipeline]);
+
+  const isRefining = pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error';
 
   const a11yBadge = output?.a11yReport
     ? `Score: ${output.a11yReport.score}/100`
@@ -341,21 +414,56 @@ export default function HomePage() {
         <HeroHeader />
 
         {/* Top Controls */}
-        <div className="mb-6 relative z-20">
-          <ModelSwitcher
-            onModelChange={setSelectedModel}
-            onFullAppModeChange={setIsFullAppMode}
-            onMultiSlideModeChange={setIsMultiSlideMode}
-            disabled={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
-          />
+        <div className="mb-6 flex flex-col md:flex-row gap-4 relative z-20">
+          <div className="flex-1">
+            <ModelSwitcher
+              onModelChange={setSelectedModel}
+              onFullAppModeChange={setIsFullAppMode}
+              onMultiSlideModeChange={setIsMultiSlideMode}
+              disabled={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
+            />
+          </div>
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-900 border border-gray-700/50 rounded-xl hover:bg-gray-800 transition-colors"
+          >
+            <HistoryIcon className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-medium">History</span>
+          </button>
         </div>
+
+        {/* History Dropdown */}
+        {showHistory && (
+          <div className="mb-6 bg-gray-900/60 border border-gray-700/50 rounded-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+            <div className="p-4 border-b border-gray-700/30 flex justify-between items-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+              Recent Generations
+            </div>
+            <div className="max-h-64 overflow-y-auto p-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {history.length > 0 ? history.map(item => (
+                <button
+                  key={item.id}
+                  onClick={() => loadProject(item.id)}
+                  className="p-3 text-left rounded-xl border border-transparent hover:border-gray-700 hover:bg-gray-800/60 transition-all flex flex-col gap-1"
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-white line-clamp-1">{item.componentName}</span>
+                    <span className="text-[10px] text-gray-500">{new Date(item.timestamp).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-[11px] text-gray-400 line-clamp-1 italic">"{item.promptSnippet}"</p>
+                </button>
+              )) : (
+                <div className="col-span-2 p-8 text-center text-gray-500 text-sm">No local history found. Generate something first!</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Input section */}
         <div className="bg-gray-900/40 backdrop-blur-sm rounded-2xl border border-gray-700/30 p-6 mb-6 relative z-10">
-          <PromptInput
-            onSubmit={runPipeline}
-            isLoading={pipelineStep !== 'idle' && pipelineStep !== 'complete' && pipelineStep !== 'error'}
-          />
+               <PromptInput 
+                 onSubmit={handleRefine}
+                 isLoading={isRefining}
+               />
         </div>
 
         {/* Pipeline status */}
@@ -368,92 +476,55 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Results */}
+        {/* Results / Workspace */}
         {output && (
-          <main aria-label="Generated results">
-            {/* App Mode banner */}
-            {output.mode === 'app' && (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-violet-500/10 border border-violet-500/20 mb-4">
-                <Sparkles className="w-4 h-4 text-violet-400" aria-hidden="true" />
-                <span className="text-sm text-violet-300">
-                  <span className="font-semibold text-violet-200">Full App generated:</span>{' '}
-                  {output.componentName} — Multi-screen application with navigation and mock data
-                </span>
-              </div>
-            )}
+          <div className="space-y-6">
+            <ProjectWorkspace
+               initialProject={{
+                 id: activeProjectId || 'current',
+                 timestamp: new Date().toISOString(),
+                 code: output.code,
+                 intent: output.intent,
+                 a11yReport: output.a11yReport,
+                 componentName: output.componentName
+               }}
+               onRefine={async (prompt: string) => {
+                 await runPipeline(prompt, output.mode);
+               }}
+               isRefining={pipelineStep === 'parsing' || pipelineStep === 'generating'}
+            />
 
-            {/* WebGL Mode banner */}
-            {output.mode === 'webgl' && (
-              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 mb-4">
-                <span role="img" aria-hidden="true" className="text-cyan-400 text-sm">🧊</span>
-                <span className="text-sm text-cyan-300">
-                  <span className="font-semibold text-cyan-200">3D WebGL scene generated:</span>{' '}
-                  {output.componentName} — React Three Fiber interactive application
-                </span>
-              </div>
-            )}
+            <main aria-label="Detailed technical breakdown" className="opacity-60 hover:opacity-100 transition-opacity">
+               <div className="flex items-center gap-2 mb-4">
+                 <div className="h-px flex-1 bg-gray-800" />
+                 <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest px-4">Technical Details</span>
+                 <div className="h-px flex-1 bg-gray-800" />
+               </div>
+               
+               {/* Original Results Breakdown */}
+               <div className="space-y-4">
+                 {/* ... (keep existing sections but maybe collapsed by default) */}
+                 <IntentViewer intent={output.intent} />
+                 
+                 <ResultSection
+                   title="Live Preview"
+                   icon={<GitBranch className="w-4 h-4" />}
+                   badge={output.mode === 'app' ? 'Full App' : 'Sandpack'}
+                   defaultOpen={false}
+                 >
+                    <SandpackPreview code={output.code as any} componentName={output.componentName} />
+                 </ResultSection>
 
-            <div className="space-y-4">
-
-              {/* Structured Intent */}
-              <IntentViewer intent={output.intent} />
-
-              {/* Generated TSX Code */}
-              <ResultSection
-                title={output.mode === 'app' ? 'Generated Application' : output.mode === 'webgl' ? 'Generated 3D Scene' : 'Generated Component'}
-                icon={<Layers className="w-4 h-4" />}
-                badge={`${typeof output.code === 'string' ? output.code.split('\n').length : Object.values(output.code).reduce((a, c) => a + c.split('\n').length, 0)} lines TypeScript`}
-                badgeColor="bg-blue-500/20 text-blue-400"
-              >
-                <GeneratedCode
-                  code={typeof output.code === 'string' ? output.code : Object.entries(output.code).map(([n, c]) => "// --- " + n + " ---\n" + c).join('\n\n')}
-                  componentName={output.componentName}
-                />
-              </ResultSection>
-
-              {/* Live Preview */}
-              <ResultSection
-                title="Live Preview"
-                icon={<GitBranch className="w-4 h-4" />}
-                badge={output.mode === 'app' ? 'Full App · Sandpack' : output.mode === 'webgl' ? 'React Three Fiber · Sandpack' : 'Sandpack'}
-                badgeColor={output.mode === 'app' ? 'bg-violet-500/20 text-violet-400' : output.mode === 'webgl' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-blue-500/20 text-blue-400'}
-              >
-                <div className="p-0">
-                  <SandpackPreview
-                    code={output.code as any}
-                    componentName={output.componentName}
-                  />
-                </div>
-              </ResultSection>
-
-              {/* Accessibility Report */}
-              <ResultSection
-                title="Accessibility Report"
-                icon={<Shield className="w-4 h-4" />}
-                badge={a11yBadge}
-                badgeColor={a11yBadgeColor}
-              >
-                <div className="border-0">
-                  <A11yReportComponent report={output.a11yReport} />
-                </div>
-              </ResultSection>
-
-              {/* Generated Tests */}
-              <ResultSection
-                title="Generated Tests"
-                icon={<FlaskConical className="w-4 h-4" />}
-                badge="RTL + Playwright"
-                badgeColor="bg-yellow-500/20 text-yellow-400"
-                defaultOpen={false}
-              >
-                <TestOutput
-                  tests={output.tests}
-                  componentName={output.componentName}
-                />
-              </ResultSection>
-
-            </div>
-          </main>
+                 <ResultSection
+                   title="Raw Code & Engineering"
+                   icon={<Braces className="w-4 h-4" />}
+                   defaultOpen={false}
+                 >
+                    <GeneratedCode code={typeof output.code === 'string' ? output.code : JSON.stringify(output.code, null, 2)} componentName={output.componentName} />
+                 </ResultSection>
+               </div>
+            </main>
+          </div>
         )}
       </div>
     </div>

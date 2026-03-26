@@ -61,7 +61,13 @@ IMPORTANT RULES:
 - "theme.variant" must be one of: "default", "primary", "secondary", "danger", "success"
 - "theme.size" must be one of: "sm", "md", "lg"
 - If the input is not a UI description, return: {"error": "Not a UI description", "componentType": "unknown"}
-- Never include actual code in your response`;
+- Never include actual code in your response
+
+REFINEMENT & MODIFICATION RULES:
+- If the user prompt refers to an existing project (e.g., "Change the color", "Add a button to the hero", "Fix the navbar"), set "isRefinement": true.
+- Identify the likely target files/components if mentioned (e.g., "navbar", "Hero.tsx") and list them in "targetFiles".
+- Ensure "description" reflects the specific modification requested.
+- If it's a new request, set "isRefinement": false.`;
 
 export const COMPONENT_GENERATOR_SYSTEM_PROMPT = `You are an expert React/TypeScript component generator specializing in accessibility-first UI development.
 
@@ -107,6 +113,20 @@ The component must be a complete file.
 Standardize on \`lucide-react\` for all iconography.
 Must use 'export default function ComponentName' or 'export default ComponentName'.`;
 
+export const REFINEMENT_SYSTEM_PROMPT = `You are an expert React/TypeScript refactoring agent.
+You receive:
+1. A target file's CURRENT code.
+2. The full APP MANIFEST for context.
+3. A REFINEMENT INTENT describing the requested change.
+
+Your goal is to apply the requested change while:
+1. Maintaining the existing style, naming conventions, and Tailwind aesthetic.
+2. Ensuring no breaking changes to imports/exports unless explicitly asked.
+3. Preserving all accessibility features.
+4. Keeping the code dense and production-ready.
+
+OUTPUT FORMAT: Return ONLY the updated raw TSX code for the target file. No markdown fences. No explanations.`;
+
 export const TEST_GENERATOR_SYSTEM_PROMPT = `You are a test generation expert for React components.
 Generate comprehensive React Testing Library tests for the provided component.
 Return ONLY raw TypeScript test code without markdown fences.`;
@@ -142,7 +162,10 @@ export function buildComponentGeneratorPrompt(
   if (memory.length > 0) {
     prompt += "\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n";
     memory.forEach((mem, i) => {
-      prompt += "\n--- Example " + (i + 1) + ": " + mem.componentName + " ---\n" + mem.code + "\n";
+      const codeSnippet = typeof mem.code === 'string' 
+        ? mem.code 
+        : Object.values(mem.code)[0] || '';
+      prompt += "\n--- Example " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet + "\n";
     });
   }
 
@@ -245,7 +268,10 @@ export function buildAppModeGeneratorPrompt(
   if (memory.length > 0) {
     prompt += "\n\n=== REFERENCE STYLE ===\nEmulate the aesthetic quality of these past generations:\n";
     memory.forEach((mem, i) => {
-      prompt += "\n--- Reference " + (i + 1) + ": " + mem.componentName + " ---\n" + mem.code.substring(0, 500) + "...\n";
+      const codeSnippet = typeof mem.code === 'string' 
+        ? mem.code 
+        : Object.values(mem.code)[0] || '';
+      prompt += "\n--- Reference " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet.substring(0, 500) + "...\n";
     });
   }
 

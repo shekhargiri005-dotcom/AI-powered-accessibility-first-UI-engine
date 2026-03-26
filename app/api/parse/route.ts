@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt, mode } = body as { prompt: unknown; mode?: unknown };
+    const { prompt, mode, contextId } = body as { prompt: unknown; mode?: unknown; contextId?: unknown };
 
     if (typeof prompt !== 'string') {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
-    const result = await parseIntent(prompt, generationMode);
+    const result = await parseIntent(prompt, generationMode, typeof contextId === 'string' ? contextId : undefined);
 
     if (!result.success) {
       return NextResponse.json(

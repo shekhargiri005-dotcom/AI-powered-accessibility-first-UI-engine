@@ -1,9 +1,21 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getProjectById } from '@/lib/ai/memory';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (id) {
+      const project = getProjectById(id);
+      if (!project) {
+        return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
+      }
+      return NextResponse.json({ success: true, project });
+    }
+
     const MEMORY_FILE_PATH = path.join(process.cwd(), 'data', 'history.json');
     if (!fs.existsSync(MEMORY_FILE_PATH)) {
       return NextResponse.json({ history: [] });
@@ -17,6 +29,7 @@ export async function GET() {
     const summarizedHistory = parsed.map((entry: any) => ({
       id: entry.id,
       timestamp: entry.timestamp,
+      componentType: entry.componentType,
       componentName: entry.componentName,
       promptSnippet: entry.intent.description.length > 60 
         ? entry.intent.description.substring(0, 60) + '...' 

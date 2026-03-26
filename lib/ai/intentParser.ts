@@ -27,7 +27,8 @@ export interface ParseResult {
 
 export async function parseIntent(
   userInput: string,
-  mode: GenerationMode = 'component'
+  mode: GenerationMode = 'component',
+  contextId?: string // Link to persistent project if provided
 ): Promise<ParseResult> {
   if (!userInput || userInput.trim().length === 0) {
     return { success: false, error: 'Input cannot be empty' };
@@ -52,6 +53,10 @@ export async function parseIntent(
       knowledge = findRelevantKnowledge(userInput);
       systemPrompt = INTENT_PARSER_SYSTEM_PROMPT;
       userPrompt = buildIntentParsePrompt(userInput, knowledge);
+    }
+
+    if (contextId) {
+      userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
     }
 
     const response = await openai.chat.completions.create({

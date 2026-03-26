@@ -6,6 +6,7 @@ import {
   buildComponentGeneratorPrompt,
   buildAppModeGeneratorPrompt,
   buildWebglModeGeneratorPrompt,
+  REFINEMENT_SYSTEM_PROMPT,
 } from './prompts';
 import { getRelevantExamples } from './memory';
 import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
@@ -47,7 +48,8 @@ export async function generateComponent(
   mode: GenerationMode = 'component',
   requestedModel: string = 'gpt-5.4-mini',
   maxTokens: number = 5000,
-  isMultiSlide: boolean = false
+  isMultiSlide: boolean = false,
+  refinementContext?: { code: string; manifest?: any }
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
@@ -56,7 +58,12 @@ export async function generateComponent(
     let systemPrompt: string;
     let userPrompt: string;
 
-    if (mode === 'webgl') {
+    if (intent.isRefinement && refinementContext) {
+      systemPrompt = REFINEMENT_SYSTEM_PROMPT;
+      userPrompt = `TARGET FILE CODE:\n${refinementContext.code}\n\n` +
+                   `APP MANIFEST:\n${JSON.stringify(refinementContext.manifest || [], null, 2)}\n\n` +
+                   `REFINEMENT INTENT:\n${JSON.stringify(intent, null, 2)}`;
+    } else if (mode === 'webgl') {
       knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
       systemPrompt = WEBGL_MODE_SYSTEM_PROMPT;
       userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge, isMultiSlide);

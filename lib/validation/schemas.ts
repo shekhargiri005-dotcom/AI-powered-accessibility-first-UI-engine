@@ -59,6 +59,10 @@ export const UIIntentSchema = z.object({
   theme: ThemeSchema.catch({ variant: 'primary', size: 'md' }),
   a11yRequired: z.array(z.string()).catch([]),
   semanticElements: z.array(z.string()).catch([]),
+  // Iterative Context
+  isRefinement: z.boolean().optional(),
+  targetFiles: z.array(z.string()).optional(),
+  previousProjectId: z.string().optional(),
 });
 
 // ─── AppIntent Schema ─────────────────────────────────────────────────────────
@@ -117,6 +121,10 @@ export type UIIntent = z.infer<typeof UIIntentSchema> & {
   sceneElements?: any;
   uiOverlay?: any;
   cameraSetup?: any;
+  // Refinement fields are already in the base schema but for clarity:
+  isRefinement?: boolean;
+  targetFiles?: string[];
+  previousProjectId?: string;
 };
 
 // ─── Generated Component Schema ───────────────────────────────────────────────
