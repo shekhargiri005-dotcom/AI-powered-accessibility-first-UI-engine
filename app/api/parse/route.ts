@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseIntent } from '@/lib/ai/intentParser';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
+import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 
 const MAX_INPUT_LENGTH = 20000;
 
@@ -29,26 +30,16 @@ export async function POST(request: NextRequest) {
       contextId?: string;
     };
 
-    if (typeof prompt !== 'string') {
+    // ─── Input Validation (UI Intelligence Layer) ─────────────────────────────
+    const inputCheck = validatePromptInput(prompt);
+    if (!inputCheck.valid) {
       return NextResponse.json(
-        { success: false, error: 'prompt must be a string' },
+        { success: false, error: inputCheck.reason, suggestions: inputCheck.suggestions },
         { status: 400 }
       );
     }
-
-    if (prompt.trim().length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'prompt cannot be empty' },
-        { status: 400 }
-      );
-    }
-
-    if (prompt.length > MAX_INPUT_LENGTH) {
-      return NextResponse.json(
-        { success: false, error: 'Your prompt is too long and detailed. Please provide a more concise description.' },
-        { status: 400 }
-      );
-    }
+    // Use sanitized version from input validator
+    const sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(

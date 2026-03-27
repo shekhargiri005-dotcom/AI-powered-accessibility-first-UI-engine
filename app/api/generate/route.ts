@@ -7,6 +7,8 @@ import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
 import { saveGeneration, getProjectById } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
+import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
+import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,6 +29,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const { mode, model, maxTokens, isMultiSlide, prompt } = body as {
+      mode?: string; model?: string; maxTokens?: number;
+      isMultiSlide?: boolean; prompt?: string;
+    };
+
+    // Step 0a: Input validation (if prompt is provided alongside intent)
+    if (prompt !== undefined) {
+      const promptCheck = validatePromptInput(prompt);
+      if (!promptCheck.valid) {
+        return NextResponse.json(
+          { success: false, error: promptCheck.reason, suggestions: promptCheck.suggestions },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Step 0b: Mode validation
+    const modeCheck = validateGenerationMode(mode ?? 'component');
+    if (!modeCheck.valid) {
+      return NextResponse.json(
+        { success: false, error: modeCheck.reason },
+        { status: 400 }
+      );
+    }
+
     // Validate intent shape with Zod
     const intentValidation = UIIntentSchema.safeParse((body as { intent: unknown }).intent);
     if (!intentValidation.success) {
@@ -40,7 +67,6 @@ export async function POST(request: NextRequest) {
     }
 
     const intent = intentValidation.data;
-    const { mode, model, maxTokens, isMultiSlide } = body as { mode?: string; model?: string; maxTokens?: number; isMultiSlide?: boolean };
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
     if (!process.env.OPENAI_API_KEY) {
@@ -169,9 +195,24 @@ export async function POST(request: NextRequest) {
       }, 0);
     }
 
+    // Step 6b: Dependency resolution for multi-file outputs (applies to original generated files)
+    let resolverPatchLog: string[] = [];
+    const rawGeneratedCode = generationResult.code;
+    let resolvedCode: string | Record<string, string>;
+    if (rawGeneratedCode && typeof rawGeneratedCode === 'object') {
+      const { files: patchedFiles, patchLog } = resolveAndPatch(rawGeneratedCode as Record<string, string>);
+      resolvedCode = patchedFiles;
+      resolverPatchLog = patchLog;
+      if (patchLog.length > 0) {
+        console.log('[/api/generate] Dependency resolver patched files:', patchLog);
+      }
+    } else {
+      resolvedCode = finalCode;
+    }
+
     return NextResponse.json({
       success: true,
-      code: finalCode,
+      code: resolvedCode,
       a11yReport: {
         ...finalReport,
         appliedFixes,
@@ -179,6 +220,11 @@ export async function POST(request: NextRequest) {
       critique: critiqueData,
       tests,
       mode: generationMode,
+      generatorMeta: {
+        blueprint: generationResult.blueprint,
+        validationWarnings: generationResult.validationWarnings,
+        repairsApplied: [...(generationResult.repairsApplied ?? []), ...resolverPatchLog],
+      },
     });
   } catch (error) {
     console.error('[/api/generate] Unexpected error:', error);

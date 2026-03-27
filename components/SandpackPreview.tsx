@@ -72,6 +72,7 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
       <div className="flex-1 min-h-0 relative">
         <PreviewErrorBoundary componentName={componentName}>
           <SandpackProvider
+            key={componentName}
             template="vite-react-ts"
             theme="dark"
             files={files}

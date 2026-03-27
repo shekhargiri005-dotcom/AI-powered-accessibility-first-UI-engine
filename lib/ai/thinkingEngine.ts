@@ -1,5 +1,7 @@
 import OpenAI from 'openai';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
+import { findMatchingLayouts } from '../intelligence/layoutRegistry';
+import { selectBlueprint } from '../intelligence/blueprintEngine';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -72,11 +74,18 @@ export async function generateThinkingPlan(
 ): Promise<ThinkingResult> {
   const sanitized = prompt.substring(0, 10000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
 
+  // ─── Blueprint pre-enrichment ───────────────────────────────────────────────
+  const blueprint = selectBlueprint(sanitized);
+  const matchedLayouts = findMatchingLayouts(sanitized, 2);
+  const blueprintHint = matchedLayouts.length > 0
+    ? `\n\nUI INTELLIGENCE HINT:\nDetected layout: ${blueprint.layoutName}\nStructural sections: ${blueprint.structuralSections.join(', ')}\nVisual style: ${blueprint.visualStyle}\nAnimation level: ${blueprint.animationDensity}`
+    : '';
+
   const contextBlock = projectContext
     ? `\n\nPROJECT CONTEXT:\nActive Component: ${projectContext.componentName || 'Unknown'}\nProject Files: ${(projectContext.files || []).join(', ') || 'None listed'}`
     : '';
 
-  const userMessage = `Intent Type: ${intentType}\n\nUser Input:\n"${sanitized}"${contextBlock}`;
+  const userMessage = `Intent Type: ${intentType}\n\nUser Input:\n"${sanitized}"${contextBlock}${blueprintHint}`;
 
   try {
     const response = await openai.chat.completions.create({
@@ -135,7 +144,9 @@ export async function generateThinkingPlan(
           componentArchitecture: 'Modular functional components',
           usabilityCheck: 'Ensure hierarchy and spacing rhythms are maintained'
         },
-        likelySections: ['Main Content', 'Header', 'Footer']
+        likelySections: blueprint.structuralSections.length > 0
+          ? blueprint.structuralSections
+          : ['Main Content', 'Header', 'Footer']
       };
       return { success: true, plan: fallback };
     }

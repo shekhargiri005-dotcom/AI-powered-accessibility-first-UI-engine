@@ -11,6 +11,11 @@ import {
 import { getRelevantExamples } from './memory';
 import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
 import { type UIIntent } from '../validation/schemas';
+import { selectBlueprint, formatBlueprintForPrompt } from '../intelligence/blueprintEngine';
+import { applyDesignRules, formatDesignRulesForPrompt } from '../intelligence/designRules';
+import { validateGeneratedCode } from '../intelligence/codeValidator';
+import { runRepairPipeline } from '../intelligence/repairPipeline';
+import { repairGeneratedCode } from './uiReviewer';
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -20,6 +25,9 @@ export interface GenerationResult {
   success: boolean;
   code?: string;
   error?: string;
+  blueprint?: ReturnType<typeof selectBlueprint>;
+  validationWarnings?: string[];
+  repairsApplied?: string[];
 }
 
 function mapModel(req: string): string {
@@ -54,6 +62,13 @@ export async function generateComponent(
   try {
     const searchText = intent.description + ' ' + intent.componentName;
 
+    // ─── Step 0: UI Intelligence — Blueprint + Design Rules ─────────────────
+    const blueprint = selectBlueprint(searchText);
+    const designRules = applyDesignRules(searchText, blueprint.pageType);
+    const blueprintContext = formatBlueprintForPrompt(blueprint);
+    const designContext = formatDesignRulesForPrompt(designRules);
+    const intelligenceContext = `${blueprintContext}\n\n${designContext}`;
+
     let knowledge: string | null;
     let systemPrompt: string;
     let userPrompt: string;
@@ -66,17 +81,17 @@ export async function generateComponent(
     } else if (mode === 'webgl') {
       knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
       systemPrompt = WEBGL_MODE_SYSTEM_PROMPT;
-      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge, isMultiSlide);
+      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge, isMultiSlide) + '\n\n' + intelligenceContext;
     } else if (mode === 'app') {
       knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
       const memory = getRelevantExamples(intent);
       systemPrompt = APP_MODE_SYSTEM_PROMPT;
-      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory, isMultiSlide);
+      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory, isMultiSlide) + '\n\n' + intelligenceContext;
     } else {
       knowledge = findRelevantKnowledge(searchText);
       const memory = getRelevantExamples(intent);
       systemPrompt = COMPONENT_GENERATOR_SYSTEM_PROMPT;
-      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, isMultiSlide);
+      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, isMultiSlide) + '\n\n' + intelligenceContext;
     }
 
     const response = await openai.chat.completions.create({
@@ -104,7 +119,21 @@ export async function generateComponent(
       };
     }
 
-    return { success: true, code: cleaned };
+    // ─── Post-Generation: Validate + Auto-Repair ────────────────────────────
+    const validation = validateGeneratedCode(cleaned);
+    let finalCode = cleaned;
+    let repairsApplied: string[] = [];
+    const validationWarnings = validation.warnings.map(w => w.message);
+
+    if (!validation.valid) {
+      const repairResult = await runRepairPipeline(cleaned, async (code, instructions) => {
+        return repairGeneratedCode(code, instructions);
+      });
+      finalCode = repairResult.code;
+      repairsApplied = repairResult.repairsApplied;
+    }
+
+    return { success: true, code: finalCode, blueprint, validationWarnings, repairsApplied };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `OpenAI API error: ${msg}` };
