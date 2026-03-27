@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Dependency Resolver — builds a valid file graph and detects missing imports.
  * Prevents "Failed to resolve import" errors in Sandpack.
  */
@@ -23,7 +23,7 @@ const SAFE_EXTERNAL_PACKAGES = new Set([
   'lucide-react','framer-motion','react-router-dom',
   '@react-three/fiber','@react-three/drei','three',
   '@react-spring/web','@react-spring/three','maath',
-  'react-icons',
+  'react-icons','recharts',
 ]);
 
 function isSafeExternal(importPath: string): boolean {

@@ -185,6 +185,7 @@ export const SANDPACK_DEPENDENCIES = {
   'framer-motion': '^11.2.10',
   'react-router-dom': '^6.22.3',
   'react-icons': '^5.0.1',
+  'recharts': '^2.12.7',
 } as const;
 
 export function getSandpackDependencies(componentCode: string | Record<string, string>) {
@@ -204,6 +205,7 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
   if (codeString.includes('framer-motion')) deps['framer-motion'] = '^11.2.10';
   if (codeString.includes('react-router-dom')) deps['react-router-dom'] = '^6.22.3';
   if (codeString.includes('react-icons')) deps['react-icons'] = '^5.0.1';
+  if (codeString.includes('recharts')) deps['recharts'] = '^2.12.7';
 
   if (codeString.includes('three') || codeString.includes('@react-three')) {
     deps['three'] = '0.164.0';
