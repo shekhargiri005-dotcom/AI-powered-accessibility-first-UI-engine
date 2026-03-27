@@ -258,5 +258,56 @@ export function autoRepairA11y(code: string): { code: string; appliedFixes: stri
     appliedFixes.push('Added role="alert" aria-live="polite" to error message elements');
   }
 
+  // Fix 3: Add aria-label to <input> elements missing an accessible name
+  const inputMatches = [...repaired.matchAll(/<input\s+([^>]+)>/g)];
+  for (const match of inputMatches) {
+    const fullTag = match[0];
+    const attrs = match[1];
+    
+    // Skip if it already has an accessible name
+    if (attrs.includes('aria-label') || attrs.includes('aria-labelledby')) continue;
+
+    const idMatch = attrs.match(/\bid\s*=\s*["'{`]([^"'}`]+)["'{`]/);
+    let hasLabel = false;
+    
+    if (idMatch) {
+      const inputId = idMatch[1];
+      // Check if a matching htmlFor exists anywhere in the code
+      if (new RegExp(`htmlFor\\s*=\\s*["'{${"`"}]${inputId}["'{${"`"}]`).test(repaired)) {
+        hasLabel = true;
+      }
+    }
+
+    if (!hasLabel) {
+      // Derive a sensible label from placeholder, name, id, or default
+      const placeholderMatch = attrs.match(/\bplaceholder\s*=\s*["']([^"']+)["']/);
+      const nameMatch = attrs.match(/\bname\s*=\s*["']([^"'}`]+)["']/);
+      
+      let labelText = 'Input field';
+      if (placeholderMatch) labelText = placeholderMatch[1];
+      else if (nameMatch) labelText = nameMatch[1];
+      else if (idMatch) labelText = idMatch[1].replace(/[-_]/g, ' ');
+
+      // Make sure the first letter is capitalized
+      labelText = labelText.charAt(0).toUpperCase() + labelText.slice(1);
+
+      const newTag = `<input aria-label="${labelText}" ${attrs}>`;
+      repaired = repaired.replace(fullTag, newTag);
+      appliedFixes.push(`Added aria-label="${labelText}" to unlabelled <input>`);
+    }
+  }
+
+  // Fix 4: Add aria-label to icon-only buttons
+  const buttonMatches = [...repaired.matchAll(/<button\s+([^>]+)>(\s*<[^>]+>\s*)<\/button>/g)];
+  for (const match of buttonMatches) {
+    const fullTag = match[0];
+    const attrs = match[1];
+    if (!attrs.includes('aria-label') && !attrs.includes('aria-labelledby')) {
+      const newTag = `<button aria-label="Action button" ${attrs}>${match[2]}</button>`;
+      repaired = repaired.replace(fullTag, newTag);
+      appliedFixes.push('Added aria-label="Action button" to icon-only <button>');
+    }
+  }
+
   return { code: repaired, appliedFixes };
 }
