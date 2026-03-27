@@ -19,7 +19,7 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
   "summary": string,              // 2-3 sentences: what the AI understood the user wants
   "plannedApproach": string[],    // 4-6 concrete steps the AI plans to take
   "affectedScope": string[],      // File or component names that may change
-  "clarificationOpportunities": string[], // 0-2 optional questions that could improve the output
+  "clarificationOpportunities": string[], // 1-3 critical questions to ask the user for further rectification or missing details
   "executionMode": "Generate New UI" | "Edit Existing UI" | "Structure Requirements" | "Debug UI" | "Improve Design" | "Ideation Response",
   "shouldGenerateCode": boolean,  // true only for ui_generation, ui_refinement, debug_fix
   "suggestedMode": "component" | "app" | "webgl",
@@ -54,6 +54,7 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
 
 RULES:
 - You must perform deep Prompt Understanding Enrichment. Infer missing structure like an expert would.
+- If the user's prompt is vague, lacks specific styling details, or omits crucial functional requirements, you MUST ask for further rectification by providing 1-3 targeted questions in \`clarificationOpportunities\`.
 - plannedApproach: Be specific and actionable. e.g. "Analyze the hero section layout and identify spacing issues" NOT "Fix things"
 - if intent is "product_requirement" or "ideation", always include requirementBreakdown
 - shouldGenerateCode = true ONLY for: ui_generation, ui_refinement, debug_fix
