@@ -2,6 +2,7 @@
  * Prompt templates for the AI-Powered Accessibility-First UI Engine.
  * All prompts include injection-prevention guards and enforce strict output formats.
  */
+import { UI_ECOSYSTEM_API_CHEAT_SHEET } from './uiCheatSheet';
 
 export const INTENT_PARSER_SYSTEM_PROMPT = `You are a strict UI intent parser for an accessibility-first component generation system.
 
@@ -111,6 +112,8 @@ CRITICAL REQUIREMENT:
 Your component MUST be structurally massive, breathtaking, and hyper-detailed (500-800 lines). You MUST implement at least 4 distinct sub-components, exhaustive styling, complex responsive layouts, micro-interactions, robust business logic, hover/focus states, and rich mock data arrays with dozens of items. Never abbreviate or write simplistic code.
 
 OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation.
+
+\${UI_ECOSYSTEM_API_CHEAT_SHEET}
 
 === FEW-SHOT EXAMPLE ===
 If requested to build a "SaaS dashboard", structure it like this:
@@ -254,6 +257,8 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Utilize \`@ui/layout\` and \`@ui/a11y\` to handle heavy lifting.
 
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
+
+\${UI_ECOSYSTEM_API_CHEAT_SHEET}
 
 CRITICAL REQUIREMENT:
 You are a WORLD-CLASS UI ENGINEER. Target extremely dense, professional-grade code (500-800 lines)! You MUST physically implement at least 5 distinct, fully-styled interactive sections or screens. You MUST include deep routing logic, expansive mock data (20+ items), exhaustive Tailwind styles on every element (gradients, transitions, shadows), Recharts, modals, and the live color picker. Do not take shortcuts. NEVER truncate or abbreviate. You must deliver a massive, fully-fledged application in one valid TSX file, exporting default the main component.

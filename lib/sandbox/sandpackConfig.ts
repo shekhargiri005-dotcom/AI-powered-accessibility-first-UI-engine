@@ -1,4 +1,5 @@
 import type { SandpackFiles } from '@codesandbox/sandpack-react';
+import uiEcosystem from './ui-ecosystem.json';
 
 /**
  * Builds the Sandpack file tree for live preview.
@@ -113,6 +114,10 @@ module.exports = {
     "target": "ESNext",
     "useDefineForClassFields": true,
     "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "baseUrl": ".",
+    "paths": {
+      "@ui/*": ["./packages/*"]
+    },
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": false,
@@ -126,7 +131,7 @@ module.exports = {
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src"]
+  "include": ["src", "packages"]
 }`,
       active: false,
     },
@@ -139,7 +144,7 @@ module.exports = {
       if (cleanName === 'App.tsx' || cleanName === 'App.jsx') hasApp = true;
       files[`/src/${cleanName}`] = { code: typeof code === 'string' ? code : '', active: cleanName === 'App.tsx' };
     }
-    
+
     // Safety fallback: Sandpack crashes if activeFile '/src/App.tsx' does not exist
     if (!hasApp) {
       const keys = Object.keys(componentCode);
@@ -168,6 +173,11 @@ module.exports = {
     };
   }
 
+  // Inject the entire @ui ecosystem into the Sandpack virtual filesystem
+  Object.entries(uiEcosystem as Record<string, string>).forEach(([filepath, code]) => {
+    files[filepath] = { code, active: false };
+  });
+
   return files;
 }
 
@@ -189,10 +199,10 @@ export const SANDPACK_DEPENDENCIES = {
 } as const;
 
 export function getSandpackDependencies(componentCode: string | Record<string, string>) {
-  const codeString = typeof componentCode === 'string' 
-    ? componentCode 
+  const codeString = typeof componentCode === 'string'
+    ? componentCode
     : Object.values(componentCode).join('\\n');
-    
+
   const deps: Record<string, string> = {
     react: '^18.3.1',
     'react-dom': '^18.3.1',
