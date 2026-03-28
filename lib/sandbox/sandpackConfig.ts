@@ -196,6 +196,12 @@ export const SANDPACK_DEPENDENCIES = {
   'react-router-dom': '^6.22.3',
   'react-icons': '^5.0.1',
   'recharts': '^2.12.7',
+  'class-variance-authority': '^0.7.0',
+  'clsx': '^2.1.1',
+  'tailwind-merge': '^2.3.0',
+  '@radix-ui/react-slot': '^1.0.2',
+  '@radix-ui/react-dialog': '^1.0.5',
+  'cmdk': '^1.0.0',
 } as const;
 
 export function getSandpackDependencies(componentCode: string | Record<string, string>) {
@@ -216,6 +222,12 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
   if (codeString.includes('react-router-dom')) deps['react-router-dom'] = '^6.22.3';
   if (codeString.includes('react-icons')) deps['react-icons'] = '^5.0.1';
   if (codeString.includes('recharts')) deps['recharts'] = '^2.12.7';
+  if (codeString.includes('cva') || codeString.includes('class-variance-authority')) deps['class-variance-authority'] = '^0.7.0';
+  if (codeString.includes('clsx')) deps['clsx'] = '^2.1.1';
+  if (codeString.includes('tailwind-merge')) deps['tailwind-merge'] = '^2.3.0';
+  if (codeString.includes('@radix-ui/react-slot')) deps['@radix-ui/react-slot'] = '^1.0.2';
+  if (codeString.includes('@radix-ui/react-dialog')) deps['@radix-ui/react-dialog'] = '^1.0.5';
+  if (codeString.includes('cmdk')) deps['cmdk'] = '^1.0.0';
 
   if (codeString.includes('three') || codeString.includes('@react-three')) {
     deps['three'] = '0.164.0';
