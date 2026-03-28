@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateFileChunk } from '@/lib/ai/chunkGenerator';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const reqLogger = logger.createRequestLogger('/api/chunk');
+  reqLogger.info('Received chunk generation request');
+
   try {
     const { intent, manifest, targetFile, model, maxTokens, isMultiSlide } = await request.json();
-    
+
     if (!intent || !manifest || !targetFile || !model) {
+      reqLogger.warn('Missing required parameters', { targetFile, model });
       return NextResponse.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
+    reqLogger.debug('Generating file chunk', { targetFile, model, maxTokens });
     let code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide);
 
     // Sanitize chunk for Babel compatibility
@@ -19,12 +25,15 @@ export async function POST(request: NextRequest) {
     const isEntryFile = /index|main|app/i.test(targetFile);
     const safetyCheck = validateBrowserSafeCode(code);
     if (!safetyCheck.isValid && !isEntryFile) {
-      console.warn(`[/api/chunk] Browser safety warning for ${targetFile}:`, safetyCheck.issues);
+      reqLogger.warn(`Browser safety warning for ${targetFile}`, { issues: safetyCheck.issues });
     }
+
+    reqLogger.info('Chunk generated successfully', { targetFile, codeLength: code.length });
+    reqLogger.end('Request completed successfully');
 
     return NextResponse.json({ success: true, code, safetyWarnings: safetyCheck.issues.length ? safetyCheck.issues : undefined });
   } catch (error) {
-    console.error('[/api/chunk] Error:', error);
+    reqLogger.error('Chunk generation failed', error);
     return NextResponse.json({ success: false, error: 'Chunk generation failed' }, { status: 500 });
   }
 }

@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateThinkingPlan } from '@/lib/ai/thinkingEngine';
 import type { IntentType } from '@/lib/validation/schemas';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const reqLogger = logger.createRequestLogger('/api/think');
+  reqLogger.info('Received thinking plan request');
+
   try {
     let body: unknown;
     try { body = await request.json(); } catch {
+      reqLogger.warn('Invalid JSON in request body');
       return NextResponse.json({ success: false, error: 'Invalid JSON' }, { status: 400 });
     }
 
@@ -27,15 +32,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'OPENAI_API_KEY not configured' }, { status: 500 });
     }
 
+    reqLogger.debug('Generating thinking plan', { intentType });
     const result = await generateThinkingPlan(prompt, intentType, projectContext);
 
     if (!result.success) {
+      reqLogger.warn('Thinking plan generation failed', { error: result.error });
       return NextResponse.json({ success: false, error: result.error }, { status: 422 });
     }
 
+    reqLogger.info('Thinking plan generated successfully');
+    reqLogger.end('Request completed successfully');
     return NextResponse.json({ success: true, plan: result.plan });
   } catch (error) {
-    console.error('[/api/think] Error:', error);
+    reqLogger.error('Error during thinking plan generation', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }

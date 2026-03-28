@@ -9,13 +9,18 @@ import { UIIntentSchema } from '@/lib/validation/schemas';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
 import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
 import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
+  const reqLogger = logger.createRequestLogger('/api/generate');
+  reqLogger.info('Received UI generation request');
+
   try {
     let body: unknown;
     try {
       body = await request.json();
     } catch {
+      reqLogger.warn('Invalid JSON in request body');
       return NextResponse.json(
         { success: false, error: 'Invalid JSON in request body' },
         { status: 400 }
@@ -100,10 +105,10 @@ export async function POST(request: NextRequest) {
 
     // Step 1: Generate component/app code
     const generationResult = await generateComponent(
-      intent, 
-      generationMode, 
-      model, 
-      maxTokens, 
+      intent,
+      generationMode,
+      model,
+      maxTokens,
       isMultiSlide,
       refinementContext
     );
@@ -121,23 +126,23 @@ export async function POST(request: NextRequest) {
     let critiqueData: unknown;
     try {
       const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
-      
+
       critiqueData = reviewResult;
-      
+
       if (!reviewResult.passed && reviewResult.repairInstructions) {
-        console.log(`[Critique Failed] Score: ${reviewResult.score}. Triggering UI Repair Agent...`);
+        reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
         const repairedCode = await repairGeneratedCode(finalSourceCode, reviewResult.repairInstructions);
-        
+
         // Ensure repair didn't return garbage
         if (repairedCode && repairedCode.length > 200) {
-          console.log('[Repair Success] UI improved by agent.');
+          reqLogger.info('Repair success. UI improved by agent.');
           finalSourceCode = repairedCode;
         }
       } else {
-        console.log(`[Critique Passed] Score: ${reviewResult.score}. Good to go.`);
+        reqLogger.info('Critique passed', { score: reviewResult.score });
       }
     } catch (e) {
-      console.warn('UI Reviewer failed, proceeding with original code:', e);
+      reqLogger.warn('UI Reviewer failed, proceeding with original code', { error: e });
     }
 
     // Step 1.6: Sanitize — flatten multi-line template literals that break Sandpack's Babel parser
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
     const safetyCheck = validateBrowserSafeCode(finalSourceCode);
     if (!safetyCheck.isValid) {
       const issueList = safetyCheck.issues.join(' | ');
-      console.error('[/api/generate] Code failed browser safety check:', issueList);
+      reqLogger.error('Code failed browser safety check', { issues: safetyCheck.issues });
       return NextResponse.json(
         { success: false, error: `Generated code contains browser-unsafe patterns: ${issueList}`, safetyIssues: safetyCheck.issues },
         { status: 422 }
@@ -171,7 +176,7 @@ export async function POST(request: NextRequest) {
         const finalReport = appliedFixes.length > 0
           ? validateAccessibility(finalCode)
           : initialReport;
-          
+
         return { finalCode, finalReport, appliedFixes };
       })(),
       // Test Generation Flow (uses initial code for speed, repairs are usually minor)
@@ -186,9 +191,9 @@ export async function POST(request: NextRequest) {
     if (generationMode === 'app' || (generationMode === 'component' && finalReport.passed && finalReport.score >= 80)) {
       setTimeout(() => {
         saveGeneration(
-          intent, 
-          finalCode, 
-          finalReport.score, 
+          intent,
+          finalCode,
+          finalReport.score,
           undefined,
           intent.previousProjectId
         );
@@ -204,11 +209,17 @@ export async function POST(request: NextRequest) {
       resolvedCode = patchedFiles;
       resolverPatchLog = patchLog;
       if (patchLog.length > 0) {
-        console.log('[/api/generate] Dependency resolver patched files:', patchLog);
+        reqLogger.info('Dependency resolver patched files', { patchLog });
       }
     } else {
       resolvedCode = finalCode;
     }
+
+    reqLogger.end('UI Generation pipeline completed successfully', {
+      mode: generationMode,
+      a11yScore: finalReport.score,
+      appliedFixesCount: appliedFixes.length
+    });
 
     return NextResponse.json({
       success: true,
@@ -227,7 +238,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('[/api/generate] Unexpected error:', error);
+    reqLogger.error('Unexpected error during UI generation', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }
