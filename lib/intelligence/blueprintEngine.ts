@@ -43,9 +43,11 @@ const DEFAULT_BLUEPRINT: UIBlueprint = {
   ],
   assemblyRules: [
     'Use export default for the main component',
-    'Import only from lucide-react for icons',
+    "Import ALL UI primitives (Button, Card, Input, Modal) from '@ui/core'",
+    "Import advanced layout components from '@ui/layout'",
+    "Use @ui/motion for animations instead of raw framer-motion",
+    "Compose the UI using the @ui/* ecosystem heavily (e.g., @ui/icons, @ui/forms, @ui/typography)",
     'All data must be hardcoded as mock arrays',
-    'No external state management libraries',
   ],
   structuralSections: ['Header', 'Main', 'Footer'],
   responsiveStrategy: 'mobile-first with Tailwind responsive prefixes',
@@ -89,10 +91,11 @@ function resolveAnimationDensity(prompt: string, layout?: LayoutEntry): UIBluepr
 function resolveAssemblyRules(layout: LayoutEntry, is3D: boolean, hasMotion: boolean): string[] {
   const rules = [
     'Use export default for the main component',
+    "Import ALL UI primitives (Button, Card, Modal, Input) from '@ui/core'",
+    "Import layout primitives (Grid, Stack) from '@ui/layout'",
+    "Use @ui/icons for all iconography",
     'All mock data must be declared at the top of the file',
-    'Import icons only from lucide-react',
-    'Use Tailwind CSS classes exclusively — no inline styles',
-    'All interactive elements must have hover and focus states',
+    'Use Tailwind CSS classes for layout glue and specific overrides',
     'Ensure proper semantic HTML elements',
   ];
   if (is3D) {
@@ -101,9 +104,8 @@ function resolveAssemblyRules(layout: LayoutEntry, is3D: boolean, hasMotion: boo
     rules.push('Layer HTML UI over canvas with z-index and pointer-events');
   }
   if (hasMotion) {
-    rules.push('Import animation utilities from framer-motion');
-    rules.push('Use motion.div for animated containers');
-    rules.push('Apply entrance animations with whileInView and viewport');
+    rules.push('Import the <Motion> component from @ui/motion for all animations');
+    rules.push('Do NOT import framer-motion directly unless writing complex gestural overrides');
   }
   if (layout.category === 'dashboard') {
     rules.push('Sidebar must be sticky and full-height');
@@ -127,7 +129,7 @@ export function selectBlueprint(
 
   const visualStyle = resolveVisualStyle(prompt, classification);
   const is3D = primaryLayout.threeDSuitability || prompt.toLowerCase().includes('3d') || prompt.toLowerCase().includes('three.js') || prompt.toLowerCase().includes('webgl');
-  const hasMotion = ['moderate','high','cinematic'].includes(primaryLayout.animationSuitability) || prompt.toLowerCase().includes('animated') || prompt.toLowerCase().includes('motion');
+  const hasMotion = ['moderate', 'high', 'cinematic'].includes(primaryLayout.animationSuitability) || prompt.toLowerCase().includes('animated') || prompt.toLowerCase().includes('motion');
   const animationDensity = resolveAnimationDensity(prompt, primaryLayout);
   const isPhysics = primaryLayout.physicsSuitability || prompt.toLowerCase().includes('physics') || prompt.toLowerCase().includes('spring');
 

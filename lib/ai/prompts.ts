@@ -76,12 +76,17 @@ Expand the user request into a detailed specification covering pages, components
 
 MANDATORY RULES:
 1. TypeScript: Use strict types. Define all props interfaces. Use React.FC<Props>.
-2. Tailwind CSS ONLY: No inline styles.
-3. Design System & Aesthetics (STRICT):
+2. UI ECOSYSTEM (CRITICAL): You MUST build this component by composing primitives from the built-in library ecosystem. DO NOT build raw HTML elements (like standard <button> or <input>) if a library equivalent exists.
+   - Core primitives: \`import { Button, Card, Modal, Input } from '@ui/core';\`
+   - Advanced layout: \`import { Grid, Stack, Container } from '@ui/layout';\`
+   - Motion/Animation: \`import { Motion } from '@ui/motion';\`
+   - Forms/Validation: \`import { Form, Field } from '@ui/forms';\`
+   - Icons: \`import { Icon } from '@ui/icons';\` (uses Lucide perfectly)
+   - Other available packages: \`@ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.
+3. Tailwind CSS: Use Tailwind for layout glue, padding, margins, and custom overrides. The base components from \`@ui/*\` are already perfectly styled.
+4. Design System & Aesthetics (STRICT):
    - You MUST use a modern, consistent visual style.
-   - Default Palette: slate-800, blue-500.
-   - Tokens: rounded-xl, shadow-sm, p-6.
-   - All generated components MUST use these tokens to ensure a polished look.
+   - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
 4. Built-In Theme / Color Picker (REQUIRED):
    - EVERY generated UI MUST contain a built-in way for the end-user to choose colors.
    - Implement a floating button or settings drawer with color inputs for primary, secondary, background, and text colors.
@@ -100,7 +105,7 @@ MANDATORY RULES:
    - Layouts MUST be mobile-first: grid wraps, sidebars collapse to hamburger menus.
    - Use semantic HTML, ARIA labels, focus rings (\`focus:ring-2 focus:ring-blue-500\`), and ensure keyboard navigation.
    - Respect \`prefers-reduced-motion\` (\`motion-safe:\` or \`motion-reduce:\`).
-8. ICONS: Use \`lucide-react\` exclusively.
+   - Use the \`@ui/a11y\` primitives like \`<FocusTrap>\` and \`<SkipLink>\` where appropriate.
 
 CRITICAL REQUIREMENT:
 Your component MUST be structurally massive, breathtaking, and hyper-detailed (500-800 lines). You MUST implement at least 4 distinct sub-components, exhaustive styling, complex responsive layouts, micro-interactions, robust business logic, hover/focus states, and rich mock data arrays with dozens of items. Never abbreviate or write simplistic code.
@@ -109,11 +114,10 @@ OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation
 
 === FEW-SHOT EXAMPLE ===
 If requested to build a "SaaS dashboard", structure it like this:
-1. Sidebar navigation with Lucide icons.
+1. Import essentials: \`import { Stack, Grid } from '@ui/layout'; import { Card, Button } from '@ui/core'; import { Icon } from '@ui/icons';\`
 2. Top header with user profile, theme picker floating button, and search.
 3. Main content grid with 4 KPI cards (revenue, users, conversion, churn) featuring loading skeletons that fade into values.
-4. A large Recharts LineChart showing revenue over 12 months.
-5. A sortable, filterable client-side user data table.
+4. Client-side user data table using native HTML with Tailwind glue.
 `;
 
 export const REFINEMENT_SYSTEM_PROMPT = `You are an expert React/TypeScript refactoring agent.
@@ -141,7 +145,7 @@ export function buildIntentParsePrompt(userInput: string, knowledge: string | nu
     .trim();
 
   let prompt = `Parse this UI description and return structured JSON:\n\n"${sanitized}"`;
-  
+
   if (knowledge) {
     prompt += `\n\n=== EXACT TEMPLATE MATCH DETECTED ===\n${knowledge}\nEnsure the JSON "fields", "interactions", and "layout" match these strict requirements exactly.`;
   }
@@ -157,16 +161,16 @@ export function buildComponentGeneratorPrompt(
   isMultiSlide: boolean = false
 ): string {
   let prompt = "Generate a React TypeScript component for this UIIntent:\n\n" + JSON.stringify(intent, null, 2);
-  
+
   if (knowledge) {
     prompt += "\n\n=== COMPONENT KNOWLEDGE BASE ===\n" + knowledge + "\nYou must rigidly follow these structural and stylistic rules for this component.";
   }
-  
+
   if (memory.length > 0) {
     prompt += "\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n";
     memory.forEach((mem, i) => {
-      const codeSnippet = typeof mem.code === 'string' 
-        ? mem.code 
+      const codeSnippet = typeof mem.code === 'string'
+        ? mem.code
         : Object.values(mem.code)[0] || '';
       prompt += "\n--- Example " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet + "\n";
     });
@@ -175,7 +179,7 @@ export function buildComponentGeneratorPrompt(
   if (isMultiSlide) {
     prompt += "\n\n=== MULTI-SLIDE ARCHITECTURE REQUIREMENT ===\nCRITICAL: The user has requested this component function as a MULTI-SLIDE or MULTI-PAGE experience. You MUST build internal state (e.g. using useState) to paginate distinct views. Include accessible Next/Previous navigation controls or dots. Animate the transitions smoothly using generic styling.";
   }
-  
+
   return prompt;
 }
 
@@ -225,11 +229,12 @@ Expand the user request into a detailed specification covering pages, components
 
 ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
 1. MODULAR COMPONENT PATTERN: Break the UI into modular functional components. Every file MUST use DEFAULT EXPORTS.
-2. DESIGN SYSTEM & AESTHETICS (STRICT):
-   - You MUST use a modern, consistent visual style.
-   - Default Palette: slate-800, blue-500.
-   - Tokens: rounded-xl, shadow-sm, p-6.
-   - All generated components MUST use these tokens to ensure a polished look.
+2. UI ECOSYSTEM (CRITICAL): You MUST build this application by composing modern primitives from the available library ecosystem:
+   - Core primitives: \`import { Button, Card, Modal, Input } from '@ui/core';\`
+   - Advanced layout: \`import { Grid, Stack, Container } from '@ui/layout';\`
+   - Motion/Animation: \`import { Motion } from '@ui/motion';\`
+   - Other packages available: \`@ui/forms, @ui/icons, @ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.
+   - Never build a raw HTML button or card if \`@ui/core\` has one.
 3. BUILT-IN THEME / COLOR PICKER (REQUIRED):
    - EVERY generated UI MUST contain a built-in way for the end-user to choose colors.
    - Implement a floating button or settings drawer with color inputs for primary, secondary, background, and text colors.
@@ -245,8 +250,8 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Clicking on elements should open modals, drawers, or navigate state.
 6. RESPONSIVE & ACCESSIBLE:
    - Layouts MUST be mobile-first: sidebar collapses to hamburger menu, grid wraps.
-   - Use semantic HTML, ARIA labels, focus rings, and ensure keyboard navigation works. Respect prefers-reduced-motion.
-7. NO react-icons, NO @headlessui. ICONS: Use \`lucide-react\` EXCLUSIVELY.
+   - Use semantic HTML, ARIA labels, focus rings, and ensure keyboard navigation works.
+   - Utilize \`@ui/layout\` and \`@ui/a11y\` to handle heavy lifting.
 
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
 
@@ -291,8 +296,8 @@ export function buildAppModeGeneratorPrompt(
   if (memory.length > 0) {
     prompt += "\n\n=== REFERENCE STYLE ===\nEmulate the aesthetic quality of these past generations:\n";
     memory.forEach((mem, i) => {
-      const codeSnippet = typeof mem.code === 'string' 
-        ? mem.code 
+      const codeSnippet = typeof mem.code === 'string'
+        ? mem.code
         : Object.values(mem.code)[0] || '';
       prompt += "\n--- Reference " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet.substring(0, 500) + "...\n";
     });
