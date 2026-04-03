@@ -70,3 +70,17 @@ export const encryptionService = {
     return decrypted;
   }
 };
+
+// Validate key at startup (if not skipping validation for builds)
+if (process.env.NODE_ENV !== "test" && !process.env.SKIP_ENV_VALIDATION) {
+  try {
+    getSecretKey();
+  } catch (err) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("CRITICAL:", err instanceof Error ? err.message : String(err));
+      process.exit(1);
+    } else {
+      console.warn("WARNING:", err instanceof Error ? err.message : String(err));
+    }
+  }
+}

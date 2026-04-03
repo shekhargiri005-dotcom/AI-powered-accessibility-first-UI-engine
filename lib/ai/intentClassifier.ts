@@ -102,6 +102,7 @@ export async function classifyIntent(
 
     const result = IntentClassificationSchema.safeParse(parsed);
     if (!result.success) {
+      console.warn('Classification schema validation failed. Raw JSON:', parsed, 'Errors:', result.error.flatten());
       return { success: false, error: 'Classification schema validation failed' };
     }
 

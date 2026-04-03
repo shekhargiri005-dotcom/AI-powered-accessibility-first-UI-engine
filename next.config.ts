@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   // Required for Prisma to work in Vercel serverless functions
   serverExternalPackages: ["@prisma/client", "prisma"],
 
+  reactCompiler: true,
+  cacheComponents: true,
+
   experimental: {
     // Optimise server actions for production
     serverActions: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createTextStreamResponse } from 'ai';
 import { generateComponent } from '@/lib/ai/componentGenerator';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
@@ -11,6 +12,7 @@ import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/
 import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
 import { logger } from '@/lib/logger';
 import { getAdapter, getWorkspaceAdapter, resolveModelName, detectProvider } from '@/lib/ai/adapters/index';
+import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/generate');
@@ -42,16 +44,20 @@ export async function POST(request: NextRequest) {
 
     // ── Early exit: SSE streaming path ──────────────────────────────────────
     if (streamFlag) {
+      const session = await auth();
+      const userId = session?.user?.id;
+      // Get workspaceId from headers or request body
+      const workspaceId = request.headers.get('x-workspace-id') || (body as any).workspaceId || 'default';
+
       const resolvedModel = resolveModelName(model ?? 'gpt-4o');
       // Use workspace-aware adapter (falls back to env vars automatically)
-      const adapter = await getWorkspaceAdapter(resolvedModel);
+      const adapter = await getWorkspaceAdapter(resolvedModel, workspaceId, userId);
 
       // Build a minimal system prompt for streaming (full pipeline runs in non-stream mode)
       const systemPrompt = 'You are an expert React/Tailwind UI engineer. Generate a single, complete, accessible React component. Return only raw TSX code, no markdown fences.';
       const userPrompt = prompt ?? 'Generate a simple hello world UI component.';
 
-      const encoder = new TextEncoder();
-      const readable = new ReadableStream({
+      const textStream = new ReadableStream<string>({
         async start(controller) {
           try {
             for await (const chunk of adapter.stream({
@@ -62,28 +68,20 @@ export async function POST(request: NextRequest) {
               ],
               maxTokens: maxTokens ?? 5000,
             })) {
-              // SSE format: data: <json>\n\n
-              const sseData = JSON.stringify({ delta: chunk.delta, done: chunk.done });
-              controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
+              if (chunk.delta) {
+                controller.enqueue(chunk.delta);
+              }
               if (chunk.done) break;
             }
           } catch (err) {
-            const msg = err instanceof Error ? err.message : 'Stream error';
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg, done: true })}\n\n`));
+            controller.enqueue(`\n[Stream Error: ${err instanceof Error ? err.message : 'Unknown'}]`);
           } finally {
             controller.close();
           }
         },
       });
 
-      return new Response(readable, {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache, no-transform',
-          'X-Accel-Buffering': 'no',
-          Connection: 'keep-alive',
-        },
-      });
+      return createTextStreamResponse({ textStream });
     }
     // ── End streaming path ──────────────────────────────────────────────────
 
@@ -124,20 +122,6 @@ export async function POST(request: NextRequest) {
 
     const isLocalModel = model?.toLowerCase().includes('deepseek') || model?.toLowerCase().includes('ollama');
 
-    // Check if we have any key available (workspace DB key or env var)
-    if (!isLocalModel) {
-      const { getWorkspaceApiKey } = await import('@/lib/security/workspaceKeyService');
-      const { detectProvider } = await import('@/lib/ai/adapters/index');
-      const provider = detectProvider(model ?? 'gpt-4o');
-      const workspaceKey = await getWorkspaceApiKey(provider);
-      const envKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.DEEPSEEK_API_KEY;
-      if (!workspaceKey && !envKey) {
-        return NextResponse.json(
-          { success: false, error: 'No API key found. Add one via Workspace Settings or set an env var in .env.local.' },
-          { status: 500 }
-        );
-      }
-    }
 
     // Step 0: Handle Refinement Context
     let refinementContext: { code: string; manifest?: unknown } | undefined;
@@ -161,6 +145,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Step 0.5: Workspace Auth check for non-streaming
+    const session = await auth();
+    const userId = session?.user?.id;
+    const workspaceId = request.headers.get('x-workspace-id') || (body as any).workspaceId || 'default';
+
     // Step 1: Generate component/app code
     const generationResult = await generateComponent(
       intent,
@@ -168,7 +157,10 @@ export async function POST(request: NextRequest) {
       model,
       maxTokens,
       isMultiSlide,
-      refinementContext
+      refinementContext,
+      undefined,
+      workspaceId,
+      userId
     );
     if (!generationResult.success || !generationResult.code) {
       return NextResponse.json(

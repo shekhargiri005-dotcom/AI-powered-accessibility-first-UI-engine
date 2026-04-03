@@ -1,0 +1,235 @@
+
+> app-scaffold@0.1.0 test:coverage
+> jest --coverage
+
+PASS __tests__/encryption.test.ts
+PASS __tests__/base.test.ts
+PASS __tests__/security.test.ts
+PASS __tests__/adapters.test.ts
+PASS __tests__/a11yValidator.test.ts
+PASS __tests__/fallbackAdapter.test.ts
+  ● Console
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 0ms (attempt 1/3)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:42:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 2ms (attempt 2/3)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:42:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 1/2)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 2/2)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary failed (attempt 3/3, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 1/1)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] primary failed (attempt 2/2, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] secondary transient error — retrying in 0ms (attempt 1/1)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] secondary failed (attempt 2/2, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+FAIL __tests__/workspaceKeyService.test.ts
+  ● WorkspaceKeyService › getWorkspaceApiKey › should decrypt and return key if found
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "decrypted-key"
+    Received: null
+
+    [0m [90m 47 |[39m
+     [90m 48 |[39m       [36mconst[39m key [33m=[39m [36mawait[39m getWorkspaceApiKey([32m'openai'[39m[33m,[39m [32m'test-pw'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 49 |[39m       expect(key)[33m.[39mtoBe([32m'decrypted-key'[39m)[33m;[39m
+     [90m    |[39m                   [31m[1m^[22m[39m
+     [90m 50 |[39m     })[33m;[39m
+     [90m 51 |[39m
+     [90m 52 |[39m     it([32m'should use cache on subsequent calls'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (__tests__/workspaceKeyService.test.ts:49:19)
+
+  ● WorkspaceKeyService › getWorkspaceApiKey › should use cache on subsequent calls
+
+    expect(jest.fn()).toHaveBeenCalledTimes(expected)
+
+    Expected number of calls: 1
+    Received number of calls: 0
+
+    [0m [90m 59 |[39m       [36mawait[39m getWorkspaceApiKey([32m'openai'[39m[33m,[39m [32m'cached-ws'[39m)[33m;[39m
+     [90m 60 |[39m       
+    [31m[1m>[22m[39m[90m 61 |[39m       expect(prisma[33m.[39mworkspaceSettings[33m.[39mfindUnique)[33m.[39mtoHaveBeenCalledTimes([35m1[39m)[33m;[39m
+     [90m    |[39m                                                   [31m[1m^[22m[39m
+     [90m 62 |[39m     })[33m;[39m
+     [90m 63 |[39m   })[33m;[39m
+     [90m 64 |[39m[0m
+
+      at Object.toHaveBeenCalledTimes (__tests__/workspaceKeyService.test.ts:61:51)
+
+  ● WorkspaceKeyService › getWorkspaceModel › should return model name if found
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "gpt-4o"
+    Received: null
+
+    [0m [90m 69 |[39m       })[33m;[39m
+     [90m 70 |[39m       [36mconst[39m model [33m=[39m [36mawait[39m getWorkspaceModel([32m'openai'[39m[33m,[39m [32m'test-ws'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 71 |[39m       expect(model)[33m.[39mtoBe([32m'gpt-4o'[39m)[33m;[39m
+     [90m    |[39m                     [31m[1m^[22m[39m
+     [90m 72 |[39m     })[33m;[39m
+     [90m 73 |[39m   })[33m;[39m
+     [90m 74 |[39m })[33m;[39m[0m
+
+      at Object.toBe (__tests__/workspaceKeyService.test.ts:71:21)
+
+PASS __tests__/schemas.test.ts
+FAIL __tests__/adapterIndex.test.ts
+  ● Adapter Index › getAdapter › should return an OpenAI adapter for gpt models
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "openai"
+    Received: "ollama"
+
+    [0m [90m 48 |[39m     it([32m'should return an OpenAI adapter for gpt models'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 49 |[39m         [36mconst[39m adapter [33m=[39m [36mawait[39m getAdapter([32m'gpt-4o'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 50 |[39m         expect(adapter[33m.[39mprovider)[33m.[39mtoBe([32m'openai'[39m)[33m;[39m
+     [90m    |[39m                                  [31m[1m^[22m[39m
+     [90m 51 |[39m     })[33m;[39m
+     [90m 52 |[39m
+     [90m 53 |[39m     it([32m'should return an Ollama adapter for local models'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (__tests__/adapterIndex.test.ts:50:34)
+
+-------------------------|---------|----------|---------|---------|-----------------------------------
+File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                 
+-------------------------|---------|----------|---------|---------|-----------------------------------
+All files                |   83.62 |    60.15 |   82.14 |   83.62 |                                   
+ ai/adapters             |   77.56 |    50.31 |      75 |   77.56 |                                   
+  anthropic.ts           |   69.23 |    57.14 |   66.66 |   69.23 | 29-33,54,60-77                    
+  base.ts                |     100 |      100 |     100 |     100 |                                   
+  deepseek.ts            |    78.4 |    28.57 |   66.66 |    78.4 | 38,65,71-87                       
+  fallback.ts            |   67.03 |    54.54 |   85.71 |   67.03 | 40-53,55-59,139-178               
+  google.ts              |   77.52 |    26.66 |   66.66 |   77.52 | 36,45,66,72-88                    
+  index.ts               |   68.16 |       75 |   69.23 |   68.16 | 75-78,113-139,142-176,231-242     
+  ollama.ts              |    77.1 |    16.66 |   66.66 |    77.1 | 33,60,66-82                       
+  openai.ts              |   91.75 |    18.18 |     100 |   91.75 | 29,38,61,88-92                    
+ security                |   81.81 |    57.69 |   85.71 |   81.81 |                                   
+  encryption.ts          |   76.74 |    57.14 |     100 |   76.74 | 9-10,17-18,24-26,57-58,76-86      
+  workspaceKeyService.ts |   86.66 |    58.33 |      75 |   86.66 | 49,55-57,65-70,88-89              
+ validation              |   93.01 |    82.43 |     100 |   93.01 |                                   
+  a11yValidator.ts       |   85.23 |    79.24 |     100 |   85.23 | 40-41,100,103-106,158-163,275-309 
+  schemas.ts             |     100 |      100 |     100 |     100 |                                   
+  security.ts            |     100 |    90.47 |     100 |     100 | 45,62                             
+-------------------------|---------|----------|---------|---------|-----------------------------------
+Test Suites: 2 failed, 7 passed, 9 total
+Tests:       4 failed, 56 passed, 60 total
+Snapshots:   0 total
+Time:        2.7 s
+Ran all test suites.

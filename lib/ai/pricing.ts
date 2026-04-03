@@ -1,62 +1,39 @@
-export type ModelPricing = {
-  inputPer1k: number;
-  outputPer1k: number;
+// lib/ai/pricing.ts
+
+export const PRICING_RATES: Record<string, { prompt: number; completion: number }> = {
+  // Rates per 1M tokens in USD (estimates based on public pricing)
+  'gpt-4o': { prompt: 5.0, completion: 15.0 },
+  'gpt-4o-mini': { prompt: 0.150, completion: 0.600 },
+  'claude-3-5-sonnet-latest': { prompt: 3.0, completion: 15.0 },
+  'claude-3-5-haiku-latest': { prompt: 0.25, completion: 1.25 },
+  'claude-3-haiku-20240307': { prompt: 0.25, completion: 1.25 },
+  'deepseek-chat': { prompt: 0.14, completion: 0.28 },
+  'deepseek-coder': { prompt: 0.14, completion: 0.28 },
+  'deepseek-reasoner': { prompt: 0.55, completion: 2.19 }, // placeholder max 
+  'gemini-1.5-pro': { prompt: 3.5, completion: 10.5 },
+  'gemini-1.5-flash': { prompt: 0.075, completion: 0.3 },
+  'llama-3.1-8b-instant': { prompt: 0.05, completion: 0.08 },
+  'llama-3.1-70b-versatile': { prompt: 0.59, completion: 0.79 },
+  // Default fallback if not found
+  'default': { prompt: 0, completion: 0 },
 };
 
-// Pricing in USD per 1,000 tokens
-// Data as of recent general pricing (adjust as needed via env later if desired)
-export const PRICING_TABLE: Record<string, ModelPricing> = {
-  // OpenAI
-  'gpt-4o': { inputPer1k: 0.005, outputPer1k: 0.015 },
-  'gpt-4o-mini': { inputPer1k: 0.00015, outputPer1k: 0.0006 },
-  'gpt-4-turbo': { inputPer1k: 0.01, outputPer1k: 0.03 },
-  'gpt-3.5-turbo': { inputPer1k: 0.0005, outputPer1k: 0.0015 },
-
-  // Anthropic
-  'claude-3-opus-20240229': { inputPer1k: 0.015, outputPer1k: 0.075 },
-  'claude-3-sonnet-20240229': { inputPer1k: 0.003, outputPer1k: 0.015 },
-  'claude-3-haiku-20240307': { inputPer1k: 0.00025, outputPer1k: 0.00125 },
-  'claude-3-5-sonnet-20240620': { inputPer1k: 0.003, outputPer1k: 0.015 },
-  'claude-3-5-sonnet-latest': { inputPer1k: 0.003, outputPer1k: 0.015 },
-
-  // DeepSeek
-  'deepseek-coder': { inputPer1k: 0.001, outputPer1k: 0.002 },
-  'deepseek-chat': { inputPer1k: 0.001, outputPer1k: 0.002 },
-
-  // Google
-  'gemini-1.5-pro': { inputPer1k: 0.0035, outputPer1k: 0.0105 },
-  'gemini-1.5-flash': { inputPer1k: 0.00035, outputPer1k: 0.00105 },
-  'gemini-2.0-flash': { inputPer1k: 0.0001, outputPer1k: 0.0004 },
-  'gemini-2.0-flash-lite': { inputPer1k: 0.000075, outputPer1k: 0.0003 },
-
-  // Ollama & Locals
-  'ollama': { inputPer1k: 0, outputPer1k: 0 },
-};
-
-/**
- * Calculates the cost of a generation in USD.
- */
-export function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
-  let pricingKeys = Object.keys(PRICING_TABLE);
-  
+export function calculateCost(provider: string, model: string, promptTokens: number, completionTokens: number): number {
   // Try exact match first
-  let pricing = PRICING_TABLE[model];
-
-  // Try partial match
-  if (!pricing) {
-    const matchedKey = pricingKeys.find(k => model.toLowerCase().includes(k.toLowerCase()));
-    if (matchedKey) {
-      pricing = PRICING_TABLE[matchedKey];
-    }
+  let rates = PRICING_RATES[model];
+  
+  if (!rates) {
+    // Try substring matching
+    const normalizedModel = Object.keys(PRICING_RATES).find(m => model.includes(m)) || 'default';
+    rates = PRICING_RATES[normalizedModel];
   }
-
-  // Fallback to 0 if unknown (e.g. local ollama model)
-  if (!pricing) {
-    return 0;
+  
+  if (!rates) {
+    rates = PRICING_RATES['default'];
   }
-
-  const inputCost = (promptTokens / 1000) * pricing.inputPer1k;
-  const outputCost = (completionTokens / 1000) * pricing.outputPer1k;
-
-  return inputCost + outputCost;
+  
+  const promptCost = (promptTokens / 1_000_000) * rates.prompt;
+  const completionCost = (completionTokens / 1_000_000) * rates.completion;
+  
+  return promptCost + completionCost;
 }

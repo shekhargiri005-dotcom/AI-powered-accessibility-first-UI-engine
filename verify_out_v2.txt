@@ -1,0 +1,29 @@
+WARNING: ENCRYPTION_SECRET environment variable is missing.
+🚀 Starting Multi-tenancy Isolation Test...
+prisma:error 
+Invalid `prisma.workspace.create()` invocation in
+C:\PROJECT\AI-powered accessibility first UI engine\tmp\verify_multitenancy.ts:16:38
+
+  13 const userB = await prisma.user.create({ data: { name: 'User B', email: 'b@test.com' } });
+  14 
+  15 // 2. Setup Workspaces
+→ 16 const wsA = await prisma.workspace.create(
+Unique constraint failed on the fields: (`slug`)
+❌ Verification failed: PrismaClientKnownRequestError: 
+Invalid `prisma.workspace.create()` invocation in
+C:\PROJECT\AI-powered accessibility first UI engine\tmp\verify_multitenancy.ts:16:38
+
+  13 const userB = await prisma.user.create({ data: { name: 'User B', email: 'b@test.com' } });
+  14 
+  15 // 2. Setup Workspaces
+→ 16 const wsA = await prisma.workspace.create(
+Unique constraint failed on the fields: (`slug`)
+    at ei.handleRequestError (C:\PROJECT\AI-powered accessibility first UI engine\node_modules\@prisma\client\src\runtime\RequestHandler.ts:228:13)
+    at ei.handleAndLogRequestError (C:\PROJECT\AI-powered accessibility first UI engine\node_modules\@prisma\client\src\runtime\RequestHandler.ts:174:12)
+    at ei.request (C:\PROJECT\AI-powered accessibility first UI engine\node_modules\@prisma\client\src\runtime\RequestHandler.ts:143:12)
+    at async a (C:\PROJECT\AI-powered accessibility first UI engine\node_modules\@prisma\client\src\runtime\getPrismaClient.ts:833:24)
+    at async verify (C:\PROJECT\AI-powered accessibility first UI engine\tmp\verify_multitenancy.ts:16:15) {
+  code: 'P2002',
+  meta: { modelName: 'Workspace', target: [ 'slug' ] },
+  clientVersion: '6.19.2'
+}

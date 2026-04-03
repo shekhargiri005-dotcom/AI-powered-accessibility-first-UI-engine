@@ -29,6 +29,9 @@ export const metadata: Metadata = {
   ],
 };
 
+import SessionProvider from "@/components/auth/SessionProvider";
+import { WorkspaceProvider } from "@/components/workspace/WorkspaceProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -39,7 +42,13 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full bg-gray-950 text-white">{children}</body>
+      <body className="min-h-full bg-gray-950 text-white font-sans">
+        <SessionProvider>
+          <WorkspaceProvider>
+            {children}
+          </WorkspaceProvider>
+        </SessionProvider>
+      </body>
     </html>
   );
 }

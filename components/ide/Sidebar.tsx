@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';
 import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
+import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
+import UserNav from '@/components/auth/UserNav';
 
 interface SidebarProps {
   activeProjectId: string | null;
@@ -69,19 +71,22 @@ export default function Sidebar({
         flex flex-col min-h-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        {/* Header / Brand */}
-        <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-gray-800/60">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 p-[1px] shadow-lg shadow-blue-500/20 group-hover:shadow-blue-500/40 transition-all duration-300">
-              <div className="w-full h-full bg-gray-950/90 rounded-[11px] flex items-center justify-center">
-                <div className="w-3 h-3 rounded-full bg-blue-400 animate-pulse" />
+        {/* Header / Brand + Switcher */}
+        <div className="flex-shrink-0 flex flex-col gap-3 px-5 py-4 border-b border-gray-800/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-violet-600 p-[1px]">
+                  <div className="w-full h-full bg-gray-950/90 rounded-[11px] flex items-center justify-center">
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                  </div>
               </div>
+              <span className="font-bold text-gray-200 text-sm tracking-tight">AI UI Engine</span>
             </div>
-            <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400 tracking-tight">AI UI Engine</span>
+            <button onClick={onCloseMobile} className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
+              <X className="w-5 h-5" />
+            </button>
           </div>
-          <button onClick={onCloseMobile} className="lg:hidden p-2 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">
-            <X className="w-5 h-5" />
-          </button>
+          <WorkspaceSwitcher />
         </div>
 
         {/* Action Bar */}
@@ -166,24 +171,9 @@ export default function Sidebar({
           )}
         </div>
 
-        {/* Footer / User Settings placeholder */}
-        <div className="p-4 mt-auto border-t border-gray-800/60 bg-gray-950/80 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center flex-shrink-0">
-              <span className="text-xs font-bold text-white">US</span>
-            </div>
-            <div className="min-w-0 pr-2">
-              <p className="text-xs font-semibold text-gray-200 truncate">Developer Flow</p>
-              <p className="text-[10px] text-gray-500 truncate">Pro Workspace</p>
-            </div>
-          </div>
-          <button 
-            onClick={() => setIsSettingsOpen(true)}
-            className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label="Open API Key Settings"
-          >
-            <Settings className="w-4 h-4" />
-          </button>
+        {/* Footer / User Settings */}
+        <div className="p-3 mt-auto border-t border-gray-800/60 bg-gray-950/80 flex flex-col gap-2 shrink-0">
+          <UserNav />
         </div>
       </aside>
 

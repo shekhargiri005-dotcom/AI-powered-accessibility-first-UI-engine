@@ -1,0 +1,280 @@
+
+> app-scaffold@0.1.0 test:coverage
+> jest --coverage
+
+PASS __tests__/security.test.ts
+PASS __tests__/base.test.ts
+PASS __tests__/encryption.test.ts
+PASS __tests__/fallbackAdapter.test.ts
+  ● Console
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 1/3)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:42:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 2/3)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:42:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 1ms (attempt 1/2)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 2ms (attempt 2/2)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary failed (attempt 3/3, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:53:20)
+
+    console.warn
+      [FallbackAdapter] primary transient error — retrying in 0ms (attempt 1/1)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] primary failed (attempt 2/2, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] secondary transient error — retrying in 0ms (attempt 1/1)...
+
+    [0m [90m 120 |[39m           [90m// Exponential backoff with jitter[39m
+     [90m 121 |[39m           [36mconst[39m waitMs [33m=[39m [33mMath[39m[33m.[39mmin(jitter(backoff)[33m,[39m [36mthis[39m[33m.[39mmaxBackoffMs)[33m;[39m
+    [31m[1m>[22m[39m[90m 122 |[39m           console[33m.[39mwarn(
+     [90m     |[39m                   [31m[1m^[22m[39m
+     [90m 123 |[39m             [32m`[FallbackAdapter] ${adapter.provider} transient error — `[39m [33m+[39m
+     [90m 124 |[39m             [32m`retrying in ${waitMs}ms (attempt ${attempt + 1}/${this.maxRetries})...`[39m
+     [90m 125 |[39m           )[33m;[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:122:19)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+    console.warn
+      [FallbackAdapter] secondary failed (attempt 2/2, retryable=true): 429 Rate Limit Exceeded
+
+    [0m [90m 109 |[39m           [36mif[39m ([33m![39mretryable [33m||[39m isLastAttempt) {
+     [90m 110 |[39m             [90m// Non-retryable error OR retries exhausted → break to next adapter[39m
+    [31m[1m>[22m[39m[90m 111 |[39m             console[33m.[39mwarn(
+     [90m     |[39m                     [31m[1m^[22m[39m
+     [90m 112 |[39m               [32m`[FallbackAdapter] ${adapter.provider} failed`[39m [33m+[39m
+     [90m 113 |[39m               [32m` (attempt ${attempt + 1}/${this.maxRetries + 1},`[39m [33m+[39m
+     [90m 114 |[39m               [32m` retryable=${retryable}):`[39m[33m,[39m[0m
+
+      at FallbackAdapter.warn [as generate] (lib/ai/adapters/fallback.ts:111:21)
+      at Object.<anonymous> (__tests__/fallbackAdapter.test.ts:65:5)
+
+FAIL __tests__/workspaceKeyService.test.ts
+  ● WorkspaceKeyService › getWorkspaceApiKey › should decrypt and return key if found
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "decrypted-key"
+    Received: null
+
+    [0m [90m 38 |[39m
+     [90m 39 |[39m       [36mconst[39m key [33m=[39m [36mawait[39m getWorkspaceApiKey([32m'openai'[39m[33m,[39m [32m'test-pw'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 40 |[39m       expect(key)[33m.[39mtoBe([32m'decrypted-key'[39m)[33m;[39m
+     [90m    |[39m                   [31m[1m^[22m[39m
+     [90m 41 |[39m       expect(encryptionService[33m.[39mdecrypt)[33m.[39mtoHaveBeenCalledWith([32m'encrypted-stuff'[39m)[33m;[39m
+     [90m 42 |[39m     })[33m;[39m
+     [90m 43 |[39m[0m
+
+      at Object.toBe (__tests__/workspaceKeyService.test.ts:40:19)
+
+PASS __tests__/a11yValidator.test.ts
+PASS __tests__/schemas.test.ts
+FAIL __tests__/adapterIndex.test.ts
+  ● Adapter Index › getAdapter › should return an OpenAI adapter for gpt models
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "openai"
+    Received: "ollama"
+
+    [0m [90m 46 |[39m     it([32m'should return an OpenAI adapter for gpt models'[39m[33m,[39m [36masync[39m () [33m=>[39m {
+     [90m 47 |[39m         [36mconst[39m adapter [33m=[39m [36mawait[39m require([32m'@/lib/ai/adapters/index'[39m)[33m.[39mgetAdapter([32m'gpt-4o'[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 48 |[39m         expect(adapter[33m.[39mprovider)[33m.[39mtoBe([32m'openai'[39m)[33m;[39m
+     [90m    |[39m                                  [31m[1m^[22m[39m
+     [90m 49 |[39m     })[33m;[39m
+     [90m 50 |[39m
+     [90m 51 |[39m     it([32m'should return an Ollama adapter for local models'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (__tests__/adapterIndex.test.ts:48:34)
+
+FAIL __tests__/adapters.test.ts
+  ● AI Adapters › OpenAIAdapter › generate should call OpenAI API
+
+    TypeError: Cannot read properties of undefined (reading 'entries')
+
+    [0m [90m 30 |[39m       [33m:[39m undefined[33m;[39m
+     [90m 31 |[39m
+    [31m[1m>[22m[39m[90m 32 |[39m     [36mconst[39m response [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mclient[33m.[39mchat[33m.[39mcompletions[33m.[39mcreate({
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 33 |[39m       model[33m:[39m options[33m.[39mmodel[33m,[39m
+     [90m 34 |[39m       messages[33m:[39m options[33m.[39mmessages[33m,[39m
+     [90m 35 |[39m       temperature[33m:[39m options[33m.[39mtemperature [33m?[39m[33m?[39m [35m0.4[39m[33m,[39m[0m
+
+      at OpenAI.makeRequest (node_modules/openai/src/client.ts:691:49)
+      at OpenAIAdapter.generate (lib/ai/adapters/openai.ts:32:22)
+      at Object.<anonymous> (__tests__/adapters.test.ts:32:22)
+
+  ● AI Adapters › AnthropicAdapter › generate should call Anthropic API
+
+    AnthropicAdapter: ANTHROPIC_API_KEY is not set. Install @anthropic-ai/sdk and provide a key to use Claude.
+
+    [0m [90m 27 |[39m   [36masync[39m generate(options[33m:[39m [33mGenerateOptions[39m)[33m:[39m [33mPromise[39m[33m<[39m[33mGenerateResult[39m[33m>[39m {
+     [90m 28 |[39m     [36mif[39m ([33m![39mprocess[33m.[39menv[33m.[39m[33mANTHROPIC_API_KEY[39m) {
+    [31m[1m>[22m[39m[90m 29 |[39m       [36mthrow[39m [36mnew[39m [33mError[39m(
+     [90m    |[39m             [31m[1m^[22m[39m
+     [90m 30 |[39m         [32m'AnthropicAdapter: ANTHROPIC_API_KEY is not set. '[39m [33m+[39m
+     [90m 31 |[39m         [32m'Install @anthropic-ai/sdk and provide a key to use Claude.'[39m
+     [90m 32 |[39m       )[33m;[39m[0m
+
+      at AnthropicAdapter.generate (lib/ai/adapters/anthropic.ts:29:13)
+      at Object.generate (__tests__/adapters.test.ts:57:36)
+
+  ● AI Adapters › DeepSeekAdapter › generate should call DeepSeek API
+
+    TypeError: Cannot read properties of undefined (reading 'entries')
+
+    [0m [90m 39 |[39m       [33m:[39m undefined[33m;[39m
+     [90m 40 |[39m
+    [31m[1m>[22m[39m[90m 41 |[39m     [36mconst[39m response [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mclient[33m.[39mchat[33m.[39mcompletions[33m.[39mcreate({
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 42 |[39m       model[33m:[39m options[33m.[39mmodel[33m,[39m
+     [90m 43 |[39m       messages[33m:[39m options[33m.[39mmessages[33m,[39m
+     [90m 44 |[39m       temperature[33m:[39m options[33m.[39mtemperature [33m?[39m[33m?[39m [35m0.4[39m[33m,[39m[0m
+
+      at OpenAI.makeRequest (node_modules/openai/src/client.ts:691:49)
+      at DeepSeekAdapter.generate (lib/ai/adapters/deepseek.ts:41:22)
+      at Object.<anonymous> (__tests__/adapters.test.ts:81:22)
+
+  ● AI Adapters › GoogleAdapter › generate should call Google Gemini API
+
+    TypeError: Cannot read properties of undefined (reading 'entries')
+
+    [0m [90m 37 |[39m       [33m:[39m undefined[33m;[39m
+     [90m 38 |[39m
+    [31m[1m>[22m[39m[90m 39 |[39m     [36mconst[39m response [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mclient[33m.[39mchat[33m.[39mcompletions[33m.[39mcreate({
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 40 |[39m       model[33m:[39m options[33m.[39mmodel[33m,[39m
+     [90m 41 |[39m       messages[33m:[39m options[33m.[39mmessages[33m,[39m
+     [90m 42 |[39m       temperature[33m:[39m options[33m.[39mtemperature [33m?[39m[33m?[39m [35m0.4[39m[33m,[39m[0m
+
+      at OpenAI.makeRequest (node_modules/openai/src/client.ts:691:49)
+      at GoogleAdapter.generate (lib/ai/adapters/google.ts:39:22)
+      at Object.<anonymous> (__tests__/adapters.test.ts:103:22)
+
+  ● AI Adapters › OllamaAdapter › generate should call local Ollama API
+
+    TypeError: Cannot read properties of undefined (reading 'entries')
+
+    [0m [90m 34 |[39m       [33m:[39m undefined[33m;[39m
+     [90m 35 |[39m
+    [31m[1m>[22m[39m[90m 36 |[39m     [36mconst[39m response [33m=[39m [36mawait[39m [36mthis[39m[33m.[39mclient[33m.[39mchat[33m.[39mcompletions[33m.[39mcreate({
+     [90m    |[39m                      [31m[1m^[22m[39m
+     [90m 37 |[39m       model[33m:[39m options[33m.[39mmodel[33m,[39m
+     [90m 38 |[39m       messages[33m:[39m options[33m.[39mmessages[33m,[39m
+     [90m 39 |[39m       temperature[33m:[39m options[33m.[39mtemperature [33m?[39m[33m?[39m [35m0.4[39m[33m,[39m[0m
+
+      at OpenAI.makeRequest (node_modules/openai/src/client.ts:691:49)
+      at OllamaAdapter.generate (lib/ai/adapters/ollama.ts:36:22)
+      at Object.<anonymous> (__tests__/adapters.test.ts:127:22)
+
+-------------------------|---------|----------|---------|---------|-----------------------------------------------------------
+File                     | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s                                         
+-------------------------|---------|----------|---------|---------|-----------------------------------------------------------
+All files                |   78.12 |    54.27 |   78.57 |   78.12 |                                                           
+ ai/adapters             |   70.25 |     40.8 |   69.44 |   70.25 |                                                           
+  anthropic.ts           |   56.41 |       20 |   66.66 |   56.41 | 34-38,42-46,49-54,60-77                                   
+  base.ts                |     100 |      100 |     100 |     100 |                                                           
+  deepseek.ts            |   63.63 |    11.11 |   66.66 |   63.63 | 28-32,38,50-52,60-65,71-87                                
+  fallback.ts            |   67.03 |    54.54 |   85.71 |   67.03 | 40-53,55-59,139-178                                       
+  google.ts              |   68.53 |    10.52 |   66.66 |   68.53 | 36,45,51-53,61-66,72-88                                   
+  index.ts               |   67.34 |    69.81 |   61.53 |   67.34 | 85-88,90-93,95-98,113-139,142-176,200-201,203-204,206-207 
+  ollama.ts              |   67.46 |     12.5 |   66.66 |   67.46 | 33,45-47,55-60,66-82                                      
+  openai.ts              |   57.73 |    10.52 |   66.66 |   57.73 | 29,38,44-46,56-61,67-96                                   
+ security                |   85.79 |    71.42 |     100 |   85.79 |                                                           
+  encryption.ts          |   76.74 |    57.14 |     100 |   76.74 | 9-10,17-18,24-26,57-58,76-86                              
+  workspaceKeyService.ts |   94.44 |    85.71 |     100 |   94.44 | 55-57,88-89                                               
+ validation              |   87.75 |    82.08 |    92.3 |   87.75 |                                                           
+  a11yValidator.ts       |   74.07 |    78.26 |    90.9 |   74.07 | 40-41,100,103-106,158-163,254-324                         
+  schemas.ts             |     100 |      100 |     100 |     100 |                                                           
+  security.ts            |     100 |    90.47 |     100 |     100 | 45,62                                                     
+-------------------------|---------|----------|---------|---------|-----------------------------------------------------------
+Test Suites: 3 failed, 6 passed, 9 total
+Tests:       7 failed, 51 passed, 58 total
+Snapshots:   0 total
+Time:        2.661 s
+Ran all test suites.

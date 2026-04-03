@@ -50,13 +50,24 @@ const A11Y_RULES: A11yRule[] = [
     severity: 'error',
     description: 'All buttons must have an accessible name',
     check: (code) => {
-      // Check for buttons with no text content and no aria-label
-      const buttonPattern = /<button(?:\s[^>]*)?>(\s*)<\/button>/g;
-      const emptyButtons = [...code.matchAll(buttonPattern)];
-      if (emptyButtons.length > 0) {
-        return { passed: false, element: '<button>', detail: 'Button has no text content' };
+      // Find all button tags
+      const buttonMatches = [...code.matchAll(/<button([^>]*)>([\s\S]*?)<\/button>/g)];
+      
+      for (const match of buttonMatches) {
+        const attrs = match[1];
+        const content = match[2].trim();
+        
+        const hasAriaLabel = /aria-label\s*=/.test(attrs) || /aria-labelledby\s*=/.test(attrs);
+        
+        // If it has no accessible label via attributes
+        if (!hasAriaLabel) {
+          // Check if it has any text content (stripping tags)
+          const textContent = content.replace(/<[^>]*>/g, '').trim();
+          if (!textContent) {
+            return { passed: false, element: `<button ${attrs.slice(0, 20)}...>`, detail: 'Button has no accessible text or aria-label' };
+          }
+        }
       }
-      // Check button tags for aria-label if they appear to have icon-only content
       return { passed: true };
     },
     suggestion: 'Add visible text or aria-label="Description" to every <button>',
@@ -298,12 +309,13 @@ export function autoRepairA11y(code: string): { code: string; appliedFixes: stri
   }
 
   // Fix 4: Add aria-label to icon-only buttons
-  const buttonMatches = [...repaired.matchAll(/<button\s+([^>]+)>(\s*<[^>]+>\s*)<\/button>/g)];
+  // Regex updated to handle <button> without space
+  const buttonMatches = [...repaired.matchAll(/<button(\s*[^>]*)?>(\s*<[^>]+>\s*)<\/button>/g)];
   for (const match of buttonMatches) {
     const fullTag = match[0];
-    const attrs = match[1];
+    const attrs = match[1] ?? '';
     if (!attrs.includes('aria-label') && !attrs.includes('aria-labelledby')) {
-      const newTag = `<button aria-label="Action button" ${attrs}>${match[2]}</button>`;
+      const newTag = `<button aria-label="Action button"${attrs}>${match[2]}</button>`;
       repaired = repaired.replace(fullTag, newTag);
       appliedFixes.push('Added aria-label="Action button" to icon-only <button>');
     }

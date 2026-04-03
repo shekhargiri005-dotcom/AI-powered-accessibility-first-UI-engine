@@ -26,11 +26,24 @@ function makeCacheKey(workspaceId: string, provider: string): string {
 /**
  * Returns the decrypted API key for the given workspace+provider, or null
  * if none is stored (caller should fall back to env vars).
+ * 
+ * If userId is provided, it verifies the user is a member of that workspace.
  */
 export async function getWorkspaceApiKey(
   provider: string,
-  workspaceId = DEFAULT_WORKSPACE
+  workspaceId = DEFAULT_WORKSPACE,
+  userId?: string
 ): Promise<string | null> {
+  // 1. Authorization check if userId is provided
+  if (userId && workspaceId !== DEFAULT_WORKSPACE) {
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId, userId }
+      }
+    });
+    if (!membership) return null;
+  }
+
   const cKey = makeCacheKey(workspaceId, provider);
   const cached = keyCache.get(cKey);
   
@@ -59,7 +72,6 @@ export async function getWorkspaceApiKey(
 
 /**
  * Invalidates the cache for a specific workspace+provider.
- * Call this after saving a new key so the next request picks up the new key.
  */
 export function invalidateWorkspaceKey(
   provider: string,
@@ -74,8 +86,19 @@ export function invalidateWorkspaceKey(
  */
 export async function getWorkspaceModel(
   provider: string,
-  workspaceId = DEFAULT_WORKSPACE
+  workspaceId = DEFAULT_WORKSPACE,
+  userId?: string
 ): Promise<string | null> {
+  // Authorization check
+  if (userId && workspaceId !== DEFAULT_WORKSPACE) {
+    const membership = await prisma.workspaceMember.findUnique({
+      where: {
+        workspaceId_userId: { workspaceId, userId }
+      }
+    });
+    if (!membership) return null;
+  }
+
   try {
     const settings = await prisma.workspaceSettings.findUnique({
       where: {

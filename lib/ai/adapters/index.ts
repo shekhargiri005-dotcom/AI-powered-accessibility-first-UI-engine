@@ -34,10 +34,11 @@ import { getCache, generateCacheKey } from '../cache';
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
   if (m.includes('deepseek')) return 'deepseek';
-  if (m.includes('ollama') || m.includes(':')) return 'ollama';
   if (m.includes('claude')) return 'anthropic';
   if (m.includes('gemini')) return 'google';
-  return 'openai';
+  if (m.includes('gpt-')) return 'openai';
+  // Default to ollama for local/custom models, or if it has the ollama-style colon
+  return 'ollama';
 }
 
 // ─── Canonical Model Name ─────────────────────────────────────────────────────
@@ -55,6 +56,11 @@ export function resolveModelName(model: string): string {
   if (m === 'gemini-flash' || m === 'gemini-2.0-flash') return 'gemini-2.0-flash';
   if (m === 'gemini-flash-lite') return 'gemini-2.0-flash-lite';
   if (m === 'gemini-pro' || m === 'gemini-1.5-pro') return 'gemini-1.5-pro';
+  // Claude aliases
+  if (m === 'claude-3-5-sonnet') return 'claude-3-5-sonnet-20240620';
+  if (m === 'claude-3-opus') return 'claude-3-opus-20240229';
+  if (m === 'claude-3-sonnet') return 'claude-3-sonnet-20240229';
+  if (m === 'claude-3-haiku') return 'claude-3-haiku-20240307';
   return model; // pass-through if already canonical
 }
 
@@ -194,37 +200,53 @@ export function getAdapter(model?: string, apiKey?: string): AIAdapter {
       adapter = getDeepSeekAdapterInstance(apiKey);
       break;
     case 'anthropic':
+      if (!apiKey && !process.env.ANTHROPIC_API_KEY) {
+        throw new Error('Anthropic API key is missing. Please configure it in Workspace Settings or set ANTHROPIC_API_KEY in .env.local');
+      }
       adapter = getAnthropicAdapterInstance(apiKey);
       break;
     case 'google':
+      if (!apiKey && !process.env.GOOGLE_API_KEY) {
+         throw new Error('Google API key is missing. Please configure it in Workspace Settings or set GOOGLE_API_KEY in .env.local');
+      }
       adapter = getGoogleAdapterInstance(apiKey);
       break;
     case 'openai':
     default:
-      adapter = hasOpenAIKey ? getOpenAIAdapterInstance(apiKey) : getOllamaAdapterInstance();
+      if (!hasOpenAIKey) {
+        throw new Error('OpenAI API key is missing. Please configure it in Workspace Settings or set OPENAI_API_KEY in .env.local');
+      }
+      adapter = getOpenAIAdapterInstance(apiKey);
       break;
   }
 
-  return new CachedAdapter(adapter);
+  // Always wrap with FallbackAdapter, falling back to Ollama if primary fails
+  const fallbacks = provider !== 'ollama' 
+    ? [getOllamaAdapterInstance()] 
+    : [];
+
+  return new CachedAdapter(new FallbackAdapter(adapter, fallbacks));
 }
 
 /**
  * Workspace-aware adapter factory.
  * Looks up a stored API key for the given provider from the database
  * (with TTL caching). Falls back to env vars if no key is stored.
- *
+ * 
  * @param model       - Model name (determines provider)
  * @param workspaceId - Workspace identifier (defaults to 'default')
+ * @param userId      - Optional user ID for authorization check
  */
 export async function getWorkspaceAdapter(
   model: string,
-  workspaceId = 'default'
+  workspaceId = 'default',
+  userId?: string
 ): Promise<AIAdapter> {
   const { getWorkspaceApiKey } = await import('../../security/workspaceKeyService');
   const provider = detectProvider(model);
 
   // Try to get a workspace-specific key; null means fall back to env
-  const workspaceKey = await getWorkspaceApiKey(provider, workspaceId);
+  const workspaceKey = await getWorkspaceApiKey(provider, workspaceId, userId);
 
   // Use workspace key if found, otherwise getAdapter falls back to env vars
   return getAdapter(model, workspaceKey ?? undefined);

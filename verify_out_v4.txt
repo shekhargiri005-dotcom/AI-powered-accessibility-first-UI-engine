@@ -1,0 +1,6 @@
+WARNING: ENCRYPTION_SECRET must be exactly 32 bytes (base64 or string).
+🚀 Starting Multi-tenancy Isolation Test...
+❌ Verification failed: Error: ENCRYPTION_SECRET must be exactly 32 bytes (base64 or string).
+    at getSecretKey (C:\PROJECT\AI-powered accessibility first UI engine\lib\security\encryption.ts:25:9)
+    at Object.encrypt (C:\PROJECT\AI-powered accessibility first UI engine\lib\security\encryption.ts:36:17)
+    at verify (C:\PROJECT\AI-powered accessibility first UI engine\tmp\verify_multitenancy.ts:36:43)

@@ -1,4 +1,4 @@
-import { getAdapter, resolveModelName } from './adapters/index';
+import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
 import { executeToolCalls } from './tools';
 import { DEFAULT_AGENT_TOOLS } from './agentTools';
 import type { Message } from './adapters/base';
@@ -56,13 +56,16 @@ export async function generateComponent(
   requestedModel: string = 'gpt-5.4-mini',
   maxTokens: number = 5000,
   isMultiSlide: boolean = false,
-  refinementContext?: { code: string; manifest?: unknown }
+  refinementContext?: { code: string; manifest?: unknown },
+  blueprintOverride?: any,
+  workspaceId?: string,
+  userId?: string
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
 
     // ─── Step 0: UI Intelligence — Blueprint + Design Rules ─────────────────
-    const blueprint = selectBlueprint(searchText);
+    const blueprint = blueprintOverride || selectBlueprint(searchText);
     const designRules = applyDesignRules(searchText, blueprint.pageType);
     const blueprintContext = formatBlueprintForPrompt(blueprint);
     const designContext = formatDesignRulesForPrompt(designRules);
@@ -94,7 +97,7 @@ export async function generateComponent(
     }
 
     const resolvedModel = resolveModelName(requestedModel);
-    const adapter = getAdapter(resolvedModel);
+    const adapter = await getWorkspaceAdapter(resolvedModel, workspaceId, userId);
 
     // ─── Agentic Tool Loop ───────────────────────────────────────────────────
     // The model may call tools (design-system lookup, a11y advisor, etc.)
