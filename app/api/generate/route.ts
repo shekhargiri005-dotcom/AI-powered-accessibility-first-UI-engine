@@ -10,6 +10,7 @@ import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation
 import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
 import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
 import { logger } from '@/lib/logger';
+import { getAdapter, getWorkspaceAdapter, resolveModelName, detectProvider } from '@/lib/ai/adapters/index';
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/generate');
@@ -34,10 +35,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { mode, model, maxTokens, isMultiSlide, prompt } = body as {
+    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag } = body as {
       mode?: string; model?: string; maxTokens?: number;
-      isMultiSlide?: boolean; prompt?: string;
+      isMultiSlide?: boolean; prompt?: string; stream?: boolean;
     };
+
+    // ── Early exit: SSE streaming path ──────────────────────────────────────
+    if (streamFlag) {
+      const resolvedModel = resolveModelName(model ?? 'gpt-4o');
+      // Use workspace-aware adapter (falls back to env vars automatically)
+      const adapter = await getWorkspaceAdapter(resolvedModel);
+
+      // Build a minimal system prompt for streaming (full pipeline runs in non-stream mode)
+      const systemPrompt = 'You are an expert React/Tailwind UI engineer. Generate a single, complete, accessible React component. Return only raw TSX code, no markdown fences.';
+      const userPrompt = prompt ?? 'Generate a simple hello world UI component.';
+
+      const encoder = new TextEncoder();
+      const readable = new ReadableStream({
+        async start(controller) {
+          try {
+            for await (const chunk of adapter.stream({
+              model: resolvedModel,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt },
+              ],
+              maxTokens: maxTokens ?? 5000,
+            })) {
+              // SSE format: data: <json>\n\n
+              const sseData = JSON.stringify({ delta: chunk.delta, done: chunk.done });
+              controller.enqueue(encoder.encode(`data: ${sseData}\n\n`));
+              if (chunk.done) break;
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Stream error';
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: msg, done: true })}\n\n`));
+          } finally {
+            controller.close();
+          }
+        },
+      });
+
+      return new Response(readable, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache, no-transform',
+          'X-Accel-Buffering': 'no',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+    // ── End streaming path ──────────────────────────────────────────────────
 
     // Step 0a: Input validation (if prompt is provided alongside intent)
     if (prompt !== undefined) {
@@ -74,11 +122,21 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { success: false, error: 'OPENAI_API_KEY is not configured. Add it to your .env.local file.' },
-        { status: 500 }
-      );
+    const isLocalModel = model?.toLowerCase().includes('deepseek') || model?.toLowerCase().includes('ollama');
+
+    // Check if we have any key available (workspace DB key or env var)
+    if (!isLocalModel) {
+      const { getWorkspaceApiKey } = await import('@/lib/security/workspaceKeyService');
+      const { detectProvider } = await import('@/lib/ai/adapters/index');
+      const provider = detectProvider(model ?? 'gpt-4o');
+      const workspaceKey = await getWorkspaceApiKey(provider);
+      const envKey = process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.DEEPSEEK_API_KEY;
+      if (!workspaceKey && !envKey) {
+        return NextResponse.json(
+          { success: false, error: 'No API key found. Add one via Workspace Settings or set an env var in .env.local.' },
+          { status: 500 }
+        );
+      }
     }
 
     // Step 0: Handle Refinement Context

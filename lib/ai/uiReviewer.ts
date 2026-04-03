@@ -1,7 +1,7 @@
-import OpenAI from 'openai';
+import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
 import { z } from 'zod';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Dynamic client used inside functions.
 
 const ReviewSchema = z.object({
   passed: z.boolean(),
@@ -38,18 +38,22 @@ Be highly critical. We want premium, expert-level interfaces, not basic template
 
 export async function reviewGeneratedCode(code: string, intentContext: string): Promise<UIReviewResult> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o', // Use the strongest model for critique
+    const modelName = process.env.REVIEW_MODEL || 'gpt-4o';
+    const resolvedModel = resolveModelName(modelName);
+    const adapter = await getWorkspaceAdapter(resolvedModel);
+
+    const adapterResult = await adapter.generate({
+      model: resolvedModel,
       messages: [
         { role: 'system', content: REVIEWER_SYSTEM_PROMPT },
         { role: 'user', content: `Original Intent Context:\n${intentContext}\n\nGenerated Code to Review:\n\`\`\`tsx\n${code}\n\`\`\`` },
       ],
-      response_format: { type: 'json_object' },
+      responseFormat: 'json_object',
       temperature: 0.1,
-      max_tokens: 500,
+      maxTokens: 500,
     });
 
-    const raw = response.choices[0]?.message?.content || '';
+    const raw = adapterResult.content;
     if (!raw) return { passed: true, score: 80, critiques: ['Reviewer returned empty'] };
 
     let parsed: unknown;
@@ -79,17 +83,21 @@ OUTPUT FORMAT: Return ONLY the raw TSX code for the fixed component. No markdown
 
 export async function repairGeneratedCode(brokenCode: string, repairInstructions: string): Promise<string> {
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const modelName = process.env.REPAIR_MODEL || 'gpt-4o';
+    const resolvedModel = resolveModelName(modelName);
+    const adapter = await getWorkspaceAdapter(resolvedModel);
+
+    const adapterResult = await adapter.generate({
+      model: resolvedModel,
       messages: [
         { role: 'system', content: REPAIR_SYSTEM_PROMPT },
         { role: 'user', content: `REPAIR INSTRUCTIONS:\n${repairInstructions}\n\nBROKEN / SUBPAR CODE:\n\`\`\`tsx\n${brokenCode}\n\`\`\`` },
       ],
-      temperature: 0.2, // Low temp for reliable fixing
-      max_tokens: 5000,
+      temperature: 0.2,
+      maxTokens: 5000,
     });
 
-    const rawContent = response.choices[0]?.message?.content || '';
+    const rawContent = adapterResult.content;
     
     // Clean code
     const match = rawContent.match(/```(?:tsx?|jsx?|typescript|javascript)?\\s*([\\s\\S]*?)(?:```|$)/i);

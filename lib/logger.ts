@@ -4,8 +4,8 @@ interface LogPayload {
     endpoint: string;
     requestId?: string;
     durationMs?: number;
-    error?: any;
-    metadata?: Record<string, any>;
+    error?: unknown;
+    metadata?: Record<string, unknown>;
     message: string;
 }
 
@@ -21,12 +21,12 @@ class BackendLogger {
             endpoint,
             requestId: requestId || 'N/A',
             message,
-            ...(durationMs !== undefined && { durationMs: `${durationMs}ms` }),
-            ...(metadata && { metadata }),
-            ...(error && {
-                error: error.message || error.toString(),
-                stack: error.stack
-            })
+            ...(durationMs !== undefined ? { durationMs: `${durationMs}ms` } : {}),
+            ...(metadata ? { metadata } : {}),
+            ...(error != null ? {
+                error: (error instanceof Error ? error.message : String(error)),
+                stack: (error instanceof Error ? error.stack : undefined)
+            } : {})
         };
 
         // Output as a single line JSON string for robust parsing on Render
@@ -58,15 +58,15 @@ class BackendLogger {
 
         return {
             requestId,
-            info: (message: string, metadata?: Record<string, any>) =>
+            info: (message: string, metadata?: Record<string, unknown>) =>
                 this.info({ endpoint, requestId, message, metadata }),
-            warn: (message: string, metadata?: Record<string, any>) =>
+            warn: (message: string, metadata?: Record<string, unknown>) =>
                 this.warn({ endpoint, requestId, message, metadata }),
-            error: (message: string, error?: any, metadata?: Record<string, any>) =>
+            error: (message: string, error?: unknown, metadata?: Record<string, unknown>) =>
                 this.error({ endpoint, requestId, message, error, metadata }),
-            debug: (message: string, metadata?: Record<string, any>) =>
+            debug: (message: string, metadata?: Record<string, unknown>) =>
                 this.debug({ endpoint, requestId, message, metadata }),
-            end: (message: string, metadata?: Record<string, any>) => {
+            end: (message: string, metadata?: Record<string, unknown>) => {
                 const durationMs = Date.now() - startTime;
                 this.info({ endpoint, requestId, message, durationMs, metadata });
             }

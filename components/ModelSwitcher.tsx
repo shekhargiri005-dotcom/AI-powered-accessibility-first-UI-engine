@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Check, Settings2, Layers } from 'lucide-react';
 
-export type AIModel = 'gpt-5.4-nano' | 'gpt-5.4-mini' | 'gpt-4.1' | 'gpt-5.4' | 'gpt-4o';
+export type AIModel = 'gpt-5.4-nano' | 'gpt-5.4-mini' | 'gpt-4.1' | 'gpt-5.4' | 'gpt-4o' | 'gpt-4o-mini' | 'deepseek-coder';
 
 export interface ModelDef {
   id: AIModel;
@@ -19,6 +19,8 @@ export const AI_MODELS: Record<AIModel, ModelDef> = {
   'gpt-4.1': { id: 'gpt-4.1', name: 'GPT-4.1', description: 'Massive context', icon: '📦', maxLines: 500 },
   'gpt-5.4': { id: 'gpt-5.4', name: 'GPT-5.4', description: 'Advanced reasoning', icon: '🧠', maxLines: 1000 },
   'gpt-4o': { id: 'gpt-4o', name: 'GPT-4o', description: 'Multimodal', icon: '🖼️', maxLines: 500 },
+  'gpt-4o-mini': { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast multimodal', icon: '🧠', maxLines: 400 },
+  'deepseek-coder': { id: 'deepseek-coder', name: 'DeepSeek 6.7B (Local)', description: 'Ollama-powered local AI', icon: '🦙', maxLines: 800 },
 };
 
 interface ModelSwitcherProps {

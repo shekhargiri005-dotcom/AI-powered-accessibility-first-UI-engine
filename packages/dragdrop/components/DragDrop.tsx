@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Stubs for drag and drop library components
-export function Draggable({ children, id }: { children: React.ReactNode; id: string }) {
+export function Draggable({ children, id: _id }: { children: React.ReactNode; id: string }) {
   return <div draggable className="cursor-grab active:cursor-grabbing hover:ring-2 ring-blue-500/50 rounded-lg">{children}</div>;
 }
 
@@ -20,7 +20,7 @@ export function Droppable({ children, onDrop }: { children: React.ReactNode; onD
   );
 }
 
-export function SortableList({ items, onSort }: { items: string[]; onSort?: (newItems: string[]) => void }) {
+export function SortableList({ items, onSort: _onSort }: { items: string[]; onSort?: (newItems: string[]) => void }) {
   return (
     <ul className="space-y-2">
       {items.map((item, i) => (

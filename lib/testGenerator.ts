@@ -5,7 +5,7 @@ interface GeneratedTests {
   playwright: string;
 }
 
-export function generateTests(intent: UIIntent, componentCode: string): GeneratedTests {
+export function generateTests(intent: UIIntent, _componentCode: string): GeneratedTests {
   const { componentName, fields, interactions, componentType } = intent;
 
   const rtl = generateRTLTests(componentName, fields, interactions);
@@ -56,7 +56,7 @@ function generateRTLTests(
     render(<${componentName} />);
     const submitButton = screen.getByRole('button', { name: /submit/i });
     await user.click(submitButton);
-    ${requiredFields.slice(0, 2).map(f =>
+    ${requiredFields.slice(0, 2).map(() =>
       `expect(screen.queryByText(/required/i) || screen.queryByRole('alert')).toBeInTheDocument();`
     ).join('\n    ')}
   });` : '';

@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { ElementType } from 'react';
 
 export function Heading({ children, level = 1, className = '' }: { children: React.ReactNode; level?: 1|2|3|4|5|6; className?: string }) {
-  const Tag = `h${level}` as keyof JSX.IntrinsicElements;
+  const Tag = `h${level}` as ElementType;
   const sizes = {
     1: 'text-4xl md:text-5xl font-extrabold',
     2: 'text-3xl md:text-4xl font-bold',

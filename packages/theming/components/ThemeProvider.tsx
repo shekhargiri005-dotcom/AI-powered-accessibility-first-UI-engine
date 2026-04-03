@@ -20,7 +20,9 @@ export function ThemeProvider({ children, defaultTheme = 'system' }: { children:
 
   useEffect(() => {
     const saved = localStorage.getItem('ui-theme');
-    if (saved) setTheme(saved);
+    if (saved) {
+      setTimeout(() => setTheme(saved), 0);
+    }
   }, []);
 
   return (

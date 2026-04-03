@@ -1,4 +1,4 @@
-export async function generateChartData(description: string): Promise<any[]> {
+export async function generateChartData(description: string): Promise<Record<string, unknown>[]> {
   console.log(`Generating chart data for: ${description}`);
   // Mock AI natural language to chart data
   return [

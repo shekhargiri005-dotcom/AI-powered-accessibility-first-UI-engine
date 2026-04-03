@@ -4,7 +4,7 @@ import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 import { logger } from '@/lib/logger';
 
-const MAX_INPUT_LENGTH = 20000;
+
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/parse');
@@ -48,16 +48,13 @@ export async function POST(request: NextRequest) {
     const sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
 
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { success: false, error: 'OPENAI_API_KEY is not configured. Add it to your .env.local file.' },
-        { status: 500 }
-      );
+      reqLogger.warn('OPENAI_API_KEY not configured. Falling back to local parser if available.');
     }
 
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
     reqLogger.debug('Parsing intent', { mode: generationMode });
-    const result = await parseIntent(prompt, generationMode, typeof contextId === 'string' ? contextId : undefined);
+    const result = await parseIntent(sanitizedPrompt, generationMode, typeof contextId === 'string' ? contextId : undefined);
 
     if (!result.success) {
       reqLogger.warn('Intent parsing failed', { error: result.error });

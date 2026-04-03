@@ -1,0 +1,1 @@
+﻿packages/tokens/index.ts(3,1): error TS2308: Module './typography' has already exported a member named 'spacing'. Consider explicitly re-exporting to resolve the ambiguity.

@@ -1,4 +1,5 @@
-import OpenAI from 'openai';
+import { DEFAULT_LOCAL_MODEL } from './config';
+import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
 import {
   INTENT_PARSER_SYSTEM_PROMPT,
   APP_MODE_INTENT_SYSTEM_PROMPT,
@@ -16,7 +17,7 @@ import {
 } from '../validation/schemas';
 import type { GenerationMode } from './componentGenerator';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Dynamic client used inside the function.
 
 export interface ParseResult {
   success: boolean;
@@ -60,17 +61,21 @@ export async function parseIntent(
       userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
     }
 
-    const response = await openai.chat.completions.create({
-      model: model,
+    const selectedModel = (model === 'gpt-4o-mini' && !process.env.OPENAI_API_KEY) ? DEFAULT_LOCAL_MODEL : model;
+    const resolvedModel = resolveModelName(selectedModel);
+    const adapter = await getWorkspaceAdapter(resolvedModel);
+
+    const adapterResult = await adapter.generate({
+      model: resolvedModel,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      response_format: { type: 'json_object' },
+      responseFormat: 'json_object',
       temperature: 0.2,
     });
 
-    const rawContent = response.choices[0]?.message?.content || '';
+    const rawContent = adapterResult.content;
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty response' };

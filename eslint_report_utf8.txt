@@ -1,0 +1,90 @@
+﻿
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\generate\route.ts
+  52:55  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\history\route.ts
+  29:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\image-to-text\route.ts
+  42:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\manifest\route.ts
+  3:10  warning  'UIIntentSchema' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\parse\route.ts
+  26:38  warning  'model' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ModelSwitcher.tsx
+   4:41  warning  'ShieldAlert' is defined but never used                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   @typescript-eslint/no-unused-vars
+  48:9   error    Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ModelSwitcher.tsx:48:9
+  46 |       
+  47 |       if (savedModel && AI_MODELS[savedModel]) {
+> 48 |         setSelectedModel(savedModel);
+     |         ^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  49 |         onModelChange(savedModel);
+  50 |       }
+  51 |       if (savedAppMode) {  react-hooks/set-state-in-effect
+  64:6   warning  React Hook useEffect has missing dependencies: 'onFullAppModeChange', 'onModelChange', and 'onMultiSlideModeChange'. Either include them or remove the dependency array. If 'onModelChange' changes too often, find the parent component that defines it and wrap that definition in useCallback                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          react-hooks/exhaustive-deps
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\PipelineStatus.tsx
+  5:16  warning  'Circle' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ProjectWorkspace.tsx
+    5:49  warning  'FolderKanban' is defined but never used  @typescript-eslint/no-unused-vars
+  219:47  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\PromptInput.tsx
+   28:33   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   43:44   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   43:81   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   50:53   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   62:52   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  127:23   error  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  275:192  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  275:220  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  287:170  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  287:233  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\SandpackPreview.tsx
+  10:15  warning  'Code2' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ThinkingPanel.tsx
+   6:54  warning  'Sparkles' is defined but never used        @typescript-eslint/no-unused-vars
+  86:3   warning  'originalPrompt' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\VersionTimeline.tsx
+  5:25  warning  'ChevronRight' is defined but never used  @typescript-eslint/no-unused-vars
+  5:66  warning  'Minus' is defined but never used         @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ide\RightPanel.tsx
+  191:37  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\components\ide\Sidebar.tsx
+  5:3  warning  'FolderKanban' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\ai\chunkGenerator.ts
+  51:11  warning  'e' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\ai\componentGenerator.ts
+  52:50  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\testGenerator.ts
+  21:3   warning  '_code' is defined but never used  @typescript-eslint/no-unused-vars
+  60:38  warning  'f' is defined but never used      @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\validation\schemas.ts
+  180:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  184:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  185:15  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  186:17  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 36 problems (21 errors, 15 warnings)
+

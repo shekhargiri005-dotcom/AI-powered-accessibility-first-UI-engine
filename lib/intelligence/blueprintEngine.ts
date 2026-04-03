@@ -3,7 +3,7 @@
  * The blueprint describes the full intent: layout, style, components, and constraints.
  */
 import { findMatchingLayouts, type LayoutEntry } from './layoutRegistry';
-import { findCompatibleComponents, type ComponentEntry } from './componentRegistry';
+import { findCompatibleComponents } from './componentRegistry';
 import type { IntentClassification } from '../validation/schemas';
 
 export interface UIBlueprint {

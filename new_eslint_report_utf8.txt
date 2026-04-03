@@ -1,0 +1,80 @@
+﻿
+C:\PROJECT\AI-powered accessibility first UI engine\app\api\parse\route.ts
+   7:7   warning  'MAX_INPUT_LENGTH' is assigned a value but never used  @typescript-eslint/no-unused-vars
+  48:11  warning  'sanitizedPrompt' is assigned a value but never used   @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\app\page.tsx
+  274:6  warning  React Hook useCallback has a missing dependency: 'selectedModel'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\ai\cache.ts
+  64:19  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  71:39  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\ai\prompts.ts
+  5:10  warning  'UI_ECOSYSTEM_API_CHEAT_SHEET' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\intelligence\blueprintEngine.ts
+  6:41  warning  'ComponentEntry' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\intelligence\codeValidator.ts
+  113:53  warning  'fileName' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\logger.ts
+   7:13  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   8:31  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  61:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  63:63  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:46  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  65:77  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  67:64  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  69:62  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\lib\testGenerator.ts
+   8:49  warning  'componentCode' is defined but never used  @typescript-eslint/no-unused-vars
+  59:38  warning  'f' is defined but never used              @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\charts\ai-chart.ts
+  1:71  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\charts\components\Charts.tsx
+   4:60  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  14:61  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  18:28  warning  'data' is defined but never used          @typescript-eslint/no-unused-vars
+  18:60  error    Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\dragdrop\components\DragDrop.tsx
+   4:39  warning  'id' is defined but never used      @typescript-eslint/no-unused-vars
+  23:39  warning  'onSort' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\editor\ai-writer.ts
+  1:35  warning  'text' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\icons\components\Icon.tsx
+  4:24  warning  'name' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\layout\ai-layout.ts
+  1:117  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\theming\components\ThemeProvider.tsx
+  23:16  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\theming\components\ThemeProvider.tsx:23:16
+  21 |   useEffect(() => {
+  22 |     const saved = localStorage.getItem('ui-theme');
+> 23 |     if (saved) setTheme(saved);
+     |                ^^^^^^^^ Avoid calling setState() directly within an effect
+  24 |   }, []);
+  25 |
+  26 |   return (  react-hooks/set-state-in-effect
+
+C:\PROJECT\AI-powered accessibility first UI engine\packages\three\components\Scene3D.tsx
+  19:34  warning  'count' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 30 problems (16 errors, 14 warnings)
+

@@ -232,7 +232,7 @@ export default function HomePage() {
         const res = await fetch('/api/classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, hasActiveProject: !!activeProjectId }),
+          body: JSON.stringify({ prompt, hasActiveProject: !!activeProjectId, model: selectedModel }),
         });
         const data = await res.json();
         if (data.success) {
@@ -260,6 +260,7 @@ export default function HomePage() {
           prompt,
           intentType: classification?.intentType ?? 'ui_generation',
           projectContext: output ? { componentName: output.componentName, files: [`${output.componentName}.tsx`] } : undefined,
+          model: selectedModel,
         }),
       });
       const data = await res.json();
@@ -270,7 +271,7 @@ export default function HomePage() {
       setIsThinkingLoading(false);
     }
     setStage('awaiting_confirm');
-  }, [liveClassification, activeProjectId, output]);
+  }, [liveClassification, activeProjectId, output, selectedModel]);
 
   const handleRefineRightPanel = useCallback(async (prompt: string) => {
     await handlePromptSubmit(prompt, output?.mode ?? 'component');

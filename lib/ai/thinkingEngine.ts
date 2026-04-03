@@ -1,9 +1,10 @@
-import OpenAI from 'openai';
+import { DEFAULT_LOCAL_MODEL } from './config';
+import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
 import { findMatchingLayouts } from '../intelligence/layoutRegistry';
 import { selectBlueprint } from '../intelligence/blueprintEngine';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Removed static instance. Using getOpenAIClient inside the engine function.
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
 
@@ -72,6 +73,7 @@ export async function generateThinkingPlan(
   prompt: string,
   intentType: IntentType,
   projectContext?: { componentName?: string; files?: string[] },
+  modelName?: string,
 ): Promise<ThinkingResult> {
   const sanitized = prompt.substring(0, 10000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
 
@@ -89,18 +91,23 @@ export async function generateThinkingPlan(
   const userMessage = `Intent Type: ${intentType}\n\nUser Input:\n"${sanitized}"${contextBlock}${blueprintHint}`;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    // Determine model — prioritize the UI selected model or fall back to system defaults
+    const selectedModel = modelName || process.env.THINKING_MODEL || (process.env.OPENAI_API_KEY ? 'gpt-4o-mini' : DEFAULT_LOCAL_MODEL);
+    const resolvedModel = resolveModelName(selectedModel);
+    const adapter = await getWorkspaceAdapter(resolvedModel);
+
+    const result2 = await adapter.generate({
+      model: resolvedModel,
       messages: [
         { role: 'system', content: THINKING_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
-      response_format: { type: 'json_object' },
+      responseFormat: 'json_object',
       temperature: 0.3,
-      max_tokens: 1200,
+      maxTokens: 1200,
     });
 
-    const raw = response.choices[0]?.message?.content || '';
+    const raw = result2.content;
     if (!raw) return { success: false, error: 'Empty response from thinking engine' };
 
     let parsed: unknown;

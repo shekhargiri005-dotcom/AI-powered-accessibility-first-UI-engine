@@ -10,7 +10,7 @@ export function buildSandpackFiles(
   componentName: string,
 ): SandpackFiles {
   const isMultiFile = typeof componentCode !== 'string';
-  const mainCode = isMultiFile ? componentCode['App.tsx'] || '' : componentCode;
+  const mainCode = isMultiFile ? (componentCode['App.tsx'] as string) || '' : componentCode;
 
   const files: SandpackFiles = {
     '/index.html': {
@@ -137,6 +137,35 @@ module.exports = {
     },
   };
 
+  files['/src/CaptureWrapper.tsx'] = {
+    code: `import React, { useEffect, useRef } from 'react';
+import html2canvas from 'html2canvas';
+
+export default function CaptureWrapper({ children }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleMessage = async (e) => {
+      if (e.data?.type === 'REQUEST_SNAPSHOT') {
+        try {
+          if (!ref.current) return;
+          const canvas = await html2canvas(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
+          const base64 = canvas.toDataURL('image/jpeg', 0.5);
+          window.parent.postMessage({ type: 'SNAPSHOT_RESULT', payload: base64 }, '*');
+        } catch (err) {
+          window.parent.postMessage({ type: 'SNAPSHOT_ERROR', payload: err.message }, '*');
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  return <div ref={ref} className="w-full min-h-screen bg-gray-50 flex flex-col">{children}</div>;
+}`,
+    active: false,
+  };
+
   if (isMultiFile) {
     let hasApp = false;
     for (const [filename, code] of Object.entries(componentCode)) {
@@ -157,14 +186,25 @@ module.exports = {
         const firstKey = keys[0].replace(/^\/+/, '');
         const importName = firstKey.replace(/\.[tj]sx?$/, '');
         files['/src/App.tsx'] = {
-          code: `import React from 'react';\nimport FallbackComponent from './${importName}';\n\nexport default function App() {\n  return <FallbackComponent />;\n}`,
+          code: `import React from 'react';\nimport FallbackComponent from './${importName}';\nimport CaptureWrapper from './CaptureWrapper';\n\nexport default function App() {\n  return <CaptureWrapper><FallbackComponent /></CaptureWrapper>;\n}`,
           active: true
         };
       }
+    } else {
+      // If it has App.tsx, we need to wrap the user's App inside our CaptureWrapper.
+      // But we can just rely on the user's App rendering. 
+      // Actually, to wrap an existing App.tsx, we would need to override index.tsx.
+      // Let's patch index.tsx dynamically.
+      const indexFile = files['/src/index.tsx'] as { code: string };
+      indexFile.code = indexFile.code.replace(
+        '<App />',
+        '<CaptureWrapper><App /></CaptureWrapper>'
+      );
+      indexFile.code = `import CaptureWrapper from './CaptureWrapper';\n` + indexFile.code;
     }
   } else {
     files['/src/App.tsx'] = {
-      code: `import React from 'react';\nimport GeneratedComponent from './${componentName}';\n\nexport default function App() {\n  return (\n    <div className="w-full min-h-screen bg-gray-50 flex items-center justify-center">\n      <GeneratedComponent />\n    </div>\n  );\n}`,
+      code: `import React from 'react';\nimport GeneratedComponent from './${componentName}';\nimport CaptureWrapper from './CaptureWrapper';\n\nexport default function App() {\n  return (\n    <CaptureWrapper>\n      <GeneratedComponent />\n    </CaptureWrapper>\n  );\n}`,
       active: false,
     };
     files[`/src/${componentName}.tsx`] = {
@@ -202,6 +242,7 @@ export const SANDPACK_DEPENDENCIES = {
   '@radix-ui/react-slot': '^1.0.2',
   '@radix-ui/react-dialog': '^1.0.5',
   'cmdk': '^1.0.0',
+  'html2canvas': '^1.4.1',
 } as const;
 
 export function getSandpackDependencies(componentCode: string | Record<string, string>) {
@@ -228,6 +269,7 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
   if (codeString.includes('@radix-ui/react-slot')) deps['@radix-ui/react-slot'] = '^1.0.2';
   if (codeString.includes('@radix-ui/react-dialog')) deps['@radix-ui/react-dialog'] = '^1.0.5';
   if (codeString.includes('cmdk')) deps['cmdk'] = '^1.0.0';
+  deps['html2canvas'] = '^1.4.1'; // Always include for CaptureWrapper
 
   if (codeString.includes('three') || codeString.includes('@react-three')) {
     deps['three'] = '0.164.0';

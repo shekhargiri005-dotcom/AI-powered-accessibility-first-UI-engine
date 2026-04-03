@@ -18,22 +18,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing fields: prompt, intentType' }, { status: 400 });
     }
 
-    const { prompt, intentType, projectContext } = body as {
+    const { prompt, intentType, projectContext, model } = body as {
       prompt: string;
       intentType: IntentType;
       projectContext?: { componentName?: string; files?: string[] };
+      model?: string;
     };
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
+    // In a privacy-first local setup, we allow the thinking engine to fail over 
+    // or use a local provider if the key is missing.
     if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json({ success: false, error: 'OPENAI_API_KEY not configured' }, { status: 500 });
+      reqLogger.warn('OPENAI_API_KEY not configured. Local thinking might be restricted.');
     }
 
-    reqLogger.debug('Generating thinking plan', { intentType });
-    const result = await generateThinkingPlan(prompt, intentType, projectContext);
+    reqLogger.debug('Generating thinking plan', { intentType, model });
+    const result = await generateThinkingPlan(prompt, intentType, projectContext, model);
 
     if (!result.success) {
       reqLogger.warn('Thinking plan generation failed', { error: result.error });

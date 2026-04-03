@@ -1,7 +1,8 @@
-import OpenAI from 'openai';
+import { DEFAULT_LOCAL_MODEL } from './config';
+import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
 import { IntentClassificationSchema, type IntentClassification } from '../validation/schemas';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Dynamic client used inside the function.
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ export interface ClassificationResult {
 export async function classifyIntent(
   userInput: string,
   hasActiveProject: boolean = false,
+  model?: string,
 ): Promise<ClassificationResult> {
   if (!userInput || userInput.trim().length < 2) {
     return { success: false, error: 'Input too short to classify' };
@@ -73,18 +75,22 @@ export async function classifyIntent(
     : '';
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const selectedModel = model || process.env.CLASSIFIER_MODEL || (process.env.OPENAI_API_KEY ? 'gpt-4o-mini' : DEFAULT_LOCAL_MODEL);
+    const resolvedModel = resolveModelName(selectedModel);
+    const adapter = await getWorkspaceAdapter(resolvedModel);
+
+    const adapterResult = await adapter.generate({
+      model: resolvedModel,
       messages: [
         { role: 'system', content: CLASSIFIER_SYSTEM_PROMPT },
         { role: 'user', content: `Classify this input:\n\n"${sanitized}"${contextHint}` },
       ],
-      response_format: { type: 'json_object' },
+      responseFormat: 'json_object',
       temperature: 0.1,
-      max_tokens: 600,
+      maxTokens: 600,
     });
 
-    const raw = response.choices[0]?.message?.content || '';
+    const raw = adapterResult.content;
     if (!raw) return { success: false, error: 'Empty response from classifier' };
 
     let parsed: unknown;

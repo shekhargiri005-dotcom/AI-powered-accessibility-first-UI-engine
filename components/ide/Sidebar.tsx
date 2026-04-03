@@ -6,6 +6,7 @@ import {
   Code, Box, Layers, Settings, ChevronRight, Hash, X
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';
+import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
 
 interface SidebarProps {
   activeProjectId: string | null;
@@ -31,6 +32,7 @@ export default function Sidebar({
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -175,11 +177,20 @@ export default function Sidebar({
               <p className="text-[10px] text-gray-500 truncate">Pro Workspace</p>
             </div>
           </div>
-          <button className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors" aria-label="Settings">
+          <button 
+            onClick={() => setIsSettingsOpen(true)}
+            className="p-2 text-gray-500 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
+            aria-label="Open API Key Settings"
+          >
             <Settings className="w-4 h-4" />
           </button>
         </div>
       </aside>
+
+      <WorkspaceSettingsPanel
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </>
   );
 }

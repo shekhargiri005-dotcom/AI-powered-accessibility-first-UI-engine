@@ -1,4 +1,8 @@
-import OpenAI from 'openai';
+import { getAdapter, resolveModelName } from './adapters/index';
+import { executeToolCalls } from './tools';
+import { DEFAULT_AGENT_TOOLS } from './agentTools';
+import type { Message } from './adapters/base';
+
 import {
   COMPONENT_GENERATOR_SYSTEM_PROMPT,
   APP_MODE_SYSTEM_PROMPT,
@@ -17,7 +21,7 @@ import { validateGeneratedCode } from '../intelligence/codeValidator';
 import { runRepairPipeline } from '../intelligence/repairPipeline';
 import { repairGeneratedCode } from './uiReviewer';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Removed local instantiation - now using getOpenAIClient inside the generator function.
 
 export type GenerationMode = 'component' | 'app' | 'webgl';
 
@@ -30,12 +34,7 @@ export interface GenerationResult {
   repairsApplied?: string[];
 }
 
-function mapModel(req: string): string {
-  if (req.includes('nano') || req.includes('mini')) return 'gpt-4o-mini';
-  if (req === 'gpt-4.1') return 'gpt-4-turbo';
-  if (req.includes('5.4')) return 'gpt-4o';
-  return req || 'gpt-4o';
-}
+// Model name resolution is now handled by adapters/index.ts > resolveModelName
 
 function cleanGeneratedCode(raw: string): string {
   // Try to find a code block first, ignoring any conversational filler.
@@ -94,16 +93,56 @@ export async function generateComponent(
       userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, isMultiSlide) + '\n\n' + intelligenceContext;
     }
 
-    const response = await openai.chat.completions.create({
-      model: mapModel(requestedModel),
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: mode === 'app' || mode === 'webgl' ? 0.6 : 0.4,
-      max_tokens: maxTokens || 5000,
-    });
-    const rawContent = response.choices[0]?.message?.content || '';
+    const resolvedModel = resolveModelName(requestedModel);
+    const adapter = getAdapter(resolvedModel);
+
+    // ─── Agentic Tool Loop ───────────────────────────────────────────────────
+    // The model may call tools (design-system lookup, a11y advisor, etc.)
+    // before producing the final code. We allow up to 3 tool-call rounds.
+    const messages: Message[] = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ];
+
+    let rawContent = '';
+    const MAX_TOOL_ROUNDS = 3;
+
+    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+      const result = await adapter.generate({
+        model: resolvedModel,
+        messages,
+        temperature: mode === 'app' || mode === 'webgl' ? 0.6 : 0.4,
+        maxTokens: maxTokens || 5000,
+        tools: DEFAULT_AGENT_TOOLS,
+        toolChoice: 'auto',
+      });
+
+      if (result.toolCalls && result.toolCalls.length > 0) {
+        // Append the assistant's tool-call request
+        messages.push({ role: 'assistant', content: result.content || '' });
+
+        // Execute all requested tools in parallel
+        const toolResults = await executeToolCalls(result.toolCalls, DEFAULT_AGENT_TOOLS);
+
+        // Append each tool result as a 'user' message (OpenAI-compat: role 'tool')
+        // We stringify it into the user turn for maximum provider compatibility
+        const toolSummary = toolResults
+          .map((r) => `[Tool: ${r.name}]\n${r.content}`)
+          .join('\n\n');
+        messages.push({ role: 'user', content: `Tool results:\n${toolSummary}\n\nNow generate the final React component code.` });
+
+        // Continue to next round with tool results injected
+        continue;
+      }
+
+      // No tool calls — model produced final output
+      rawContent = result.content;
+      break;
+    }
+
+    if (!rawContent) {
+      rawContent = 'export default function PlaceholderComponent() { return <div>Generation failed</div>; }';
+    }
 
     if (!rawContent) {
       return { success: false, error: 'AI returned empty component code' };
