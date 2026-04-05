@@ -906,7 +906,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
               </div>
 
               {/* Runtime list */}
-              {localSources.length > 0 && localSources.map(source => (
+              {localSources.filter(s => s.running).length > 0 && localSources.filter(source => source.running).map(source => (
                 <div key={source.provider} className="space-y-2">
                   <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border cursor-pointer transition-all
                     ${source.running
@@ -959,17 +959,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                   )}
                 </div>
               ))}
-
-              {/* Not running help */}
-              {localFetched && !localLoading && !anyLocalRunning && (
-                <div className="flex items-start gap-2.5 px-4 py-3 rounded-2xl bg-gray-900/60 border border-gray-700/40">
-                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <div className="text-xs text-gray-400 leading-relaxed space-y-1">
-                    <p><span className="font-semibold text-white">Ollama:</span> run <code className="text-lime-400 font-mono text-[10px] bg-lime-900/20 px-1 py-0.5 rounded">ollama serve</code>, then <code className="text-lime-400 font-mono text-[10px] bg-lime-900/20 px-1 py-0.5 rounded">ollama pull &lt;model&gt;</code></p>
-                    <p><span className="font-semibold text-white">LM Studio:</span> open the app and start the local server on port 1234</p>
-                  </div>
-                </div>
-              )}
 
               {/* Local mode temperature (always shown) */}
               <div className="border-t border-gray-800/60 pt-4 space-y-2">
