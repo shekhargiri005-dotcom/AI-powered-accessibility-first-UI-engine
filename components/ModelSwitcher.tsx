@@ -3,7 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronDown, Check, Settings2, Layers } from 'lucide-react';
 
-export type AIModel = 'gpt-5.4-nano' | 'gpt-5.4-mini' | 'gpt-4.1' | 'gpt-5.4' | 'gpt-4o' | 'gpt-4o-mini' | 'deepseek-coder';
+/**
+ * The AIModel type is intentionally open (`string`) so that new models
+ * can be added without requiring a TypeScript union update.
+ * The AI_MODELS map provides the definitive list of known models.
+ */
+export type AIModel = string;
 
 export interface ModelDef {
   id: AIModel;
@@ -23,7 +28,7 @@ export const AI_MODELS: Record<AIModel, ModelDef> = {
   'deepseek-coder': { id: 'deepseek-coder', name: 'DeepSeek 6.7B (Local)', description: 'Ollama-powered local AI', icon: '🦙', maxLines: 800 },
 };
 
-interface ModelSwitcherProps {
+export interface ModelSwitcherProps {
   onModelChange: (model: AIModel) => void;
   onFullAppModeChange: (enabled: boolean) => void;
   onMultiSlideModeChange: (enabled: boolean) => void;
@@ -131,6 +136,7 @@ export default function ModelSwitcher({ onModelChange, onFullAppModeChange, onMu
           onClick={() => setIsOpen(!isOpen)}
           aria-haspopup="listbox"
           aria-expanded={isOpen}
+          aria-label={`Selected model: ${activeModel.name}. Click to change.`}
           className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-gray-900 border border-gray-700/50 rounded-xl hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed group"
         >
           <div className="flex items-center gap-3 truncate">

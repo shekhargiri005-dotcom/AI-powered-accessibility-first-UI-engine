@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import type { GenerationMode } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
-import ModelSwitcher, { type AIModel, AI_MODELS } from '@/components/ModelSwitcher';
+import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
 import type { UIIntent, A11yReport, ThinkingPlan, IntentClassification } from '@/lib/validation/schemas';
 import { Menu } from 'lucide-react';
 import Sidebar from '@/components/ide/Sidebar';
@@ -38,9 +38,29 @@ export default function HomePage() {
   const [pipelineError, setPipelineError] = useState<string | undefined>();
   const [output, setOutput] = useState<GenerationOutput | null>(null);
 
-  const [selectedModel, setSelectedModel] = useState<AIModel>('gpt-5.4-mini');
+  // ─── AI Engine Config ─────────────────────────────────────────────────────
+  const [aiConfig, setAiConfig] = useState<AIEngineConfig | null>(null);
   const [isFullAppMode, setIsFullAppMode] = useState(false);
   const [isMultiSlideMode, setIsMultiSlideMode] = useState(false);
+
+  // Called when the user saves AI Engine Config
+  const handleEngineConfigSaved = useCallback((config: AIEngineConfig) => {
+    setAiConfig(config);
+    setIsFullAppMode(config.fullAppMode);
+    setIsMultiSlideMode(config.multiSlideMode);
+  }, []);
+
+  // Helper: build the AI payload fields from the active config
+  const aiPayload = useCallback(() => {
+    if (!aiConfig) return {};
+    return {
+      model:    aiConfig.model,
+      provider: aiConfig.provider,
+      // Only send the real key (not the masked "••••" stored version)
+      apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
+      baseUrl:  aiConfig.baseUrl,
+    };
+  }, [aiConfig]);
 
   // Layout State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -138,15 +158,21 @@ export default function HomePage() {
     setStage('generating');
     setPipelineStep('generating');
 
+    if (!aiConfig) {
+      setStage('error'); setPipelineStep('error');
+      setPipelineError('No AI model configured. Click "AI Engine Config" in the sidebar to set up your LLM.');
+      return;
+    }
+
     try {
-      const activeModelDef = AI_MODELS[selectedModel];
-      const maxTokens = (activeModelDef.maxLines * 10) + 1000;
+      const maxTokens = 10000;
+      const aiFields  = aiPayload();
 
       if (isFullAppMode && mode === 'app') {
         const manifestRes = await fetch('/api/manifest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intent, model: selectedModel, isMultiSlide: isMultiSlideMode }),
+          body: JSON.stringify({ intent, ...aiFields, isMultiSlide: isMultiSlideMode }),
         });
         const manifestData = await manifestRes.json();
         if (!manifestData.success) throw new Error(manifestData.error || 'Manifest failed');
@@ -157,7 +183,7 @@ export default function HomePage() {
           const chunkRes = await fetch('/api/chunk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ intent, manifest, targetFile: fileReq.filename, model: selectedModel, maxTokens, isMultiSlide: isMultiSlideMode }),
+            body: JSON.stringify({ intent, manifest, targetFile: fileReq.filename, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
           });
           const chunkData = await chunkRes.json();
           if (chunkData.success) generatedFiles[fileReq.filename] = chunkData.code;
@@ -185,7 +211,7 @@ export default function HomePage() {
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent, mode, model: selectedModel, maxTokens, isMultiSlide: isMultiSlideMode }),
+        body: JSON.stringify({ intent, mode, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
       });
       const generateData = await generateRes.json();
       if (!generateData.success) {
@@ -214,7 +240,7 @@ export default function HomePage() {
       setStage('error'); setPipelineStep('error');
       setPipelineError('Network error during generation.');
     }
-  }, [selectedModel, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
+  }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
 
   // ─── Interaction Handlers ─────────────────────────────────────────────────
   const handlePromptSubmit = useCallback(async (prompt: string, mode: GenerationMode) => {
@@ -232,16 +258,14 @@ export default function HomePage() {
         const res = await fetch('/api/classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, hasActiveProject: !!activeProjectId, model: selectedModel }),
+          body: JSON.stringify({ prompt, hasActiveProject: !!activeProjectId, ...aiPayload() }),
         });
         const data = await res.json();
         if (data.success) {
           classification = data.classification;
           setLiveClassification(data.classification);
         } else {
-          // 422 or other classify failure — fallback but show a warning
           console.warn('[classify] API error:', data.error);
-          // Use a safe default so generation can still proceed
           classification = null;
         }
       } catch {
@@ -260,7 +284,7 @@ export default function HomePage() {
           prompt,
           intentType: classification?.intentType ?? 'ui_generation',
           projectContext: output ? { componentName: output.componentName, files: [`${output.componentName}.tsx`] } : undefined,
-          model: selectedModel,
+          ...aiPayload(),
         }),
       });
       const data = await res.json();
@@ -271,7 +295,7 @@ export default function HomePage() {
       setIsThinkingLoading(false);
     }
     setStage('awaiting_confirm');
-  }, [liveClassification, activeProjectId, output, selectedModel]);
+  }, [liveClassification, activeProjectId, output, aiPayload]);
 
   const handleRefineRightPanel = useCallback(async (prompt: string) => {
     await handlePromptSubmit(prompt, output?.mode ?? 'component');
@@ -280,7 +304,7 @@ export default function HomePage() {
   const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
   return (
-    <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
+    <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-y-auto overflow-x-hidden lg:overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-gray-950/80 backdrop-blur-md z-40 border-b border-gray-800/60 flex items-center px-4">
         <button onClick={() => setIsMobileSidebarOpen(true)} className="p-2 text-gray-400 hover:text-white rounded-lg">
@@ -302,23 +326,17 @@ export default function HomePage() {
         }}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        onConfigSaved={handleEngineConfigSaved}
       />
 
       {/* Center AI Work Pane */}
       <div className={`
-        flex-1 flex flex-col min-h-0 min-w-0 relative z-20
+        flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 relative z-20
         ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-b lg:border-b-0 lg:border-r border-gray-800/60' : 'w-full'}
         pt-14 lg:pt-0
       `}>
         <CenterWorkspace
-          headerControls={
-            <ModelSwitcher
-              onModelChange={setSelectedModel}
-              onFullAppModeChange={setIsFullAppMode}
-              onMultiSlideModeChange={setIsMultiSlideMode}
-              disabled={isRunning}
-            />
-          }
+          headerControls={null}
           onPromptSubmit={handlePromptSubmit}
           isLoading={isRunning}
           hasActiveProject={!!activeProjectId}
@@ -366,7 +384,7 @@ export default function HomePage() {
 
       {/* Right Dev Panel */}
       {output && (
-        <div className="flex-1 flex flex-col min-h-0 min-w-0 w-full lg:w-2/3 xl:w-[60%] bg-gray-950 relative z-10">
+        <div className="flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 w-full lg:w-2/3 xl:w-[60%] bg-gray-950 relative z-10">
           <RightPanel
             initialProject={{
               id: activeProjectId || 'current',

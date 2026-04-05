@@ -8,15 +8,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { intent, model, isMultiSlide } = body;
+    const { intent, model, isMultiSlide, provider, apiKey, baseUrl } = body;
+    const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
 
     if (!intent || !model) {
       reqLogger.warn('Missing intent or model parameters');
       return NextResponse.json({ success: false, error: 'Missing intent or model' }, { status: 400 });
     }
 
-    reqLogger.debug('Generating app manifest', { model, isMultiSlide });
-    const manifest = await generateAppManifest(intent, model, isMultiSlide);
+    reqLogger.debug('Generating app manifest', { model, isMultiSlide, provider });
+    const manifest = await generateAppManifest(intent, model, isMultiSlide, provider, effectiveApiKey, baseUrl);
 
     reqLogger.info('Manifest generated successfully', { fileCount: manifest.length });
     reqLogger.end('Request completed successfully');

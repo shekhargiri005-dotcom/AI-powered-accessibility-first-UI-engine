@@ -20,7 +20,7 @@ const SandpackPreview = dynamic(() => import('./SandpackPreview'), {
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ProjectIteration {
+export interface ProjectIteration {
   id: string;
   timestamp: string;
   code: string | Record<string, string>;
@@ -29,7 +29,7 @@ interface ProjectIteration {
   componentName: string;
 }
 
-interface ProjectWorkspaceProps {
+export interface ProjectWorkspaceProps {
   initialProject: ProjectIteration;
   onRefine: (prompt: string) => Promise<void>;
   isRefining: boolean;
@@ -168,6 +168,7 @@ export default function ProjectWorkspace({
         <div className="flex items-center gap-2 bg-gray-950/40 p-1 rounded-xl border border-gray-800">
           <button
             onClick={() => setViewMode('preview')}
+            aria-pressed={viewMode === 'preview'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === 'preview'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -179,6 +180,7 @@ export default function ProjectWorkspace({
           </button>
           <button
             onClick={() => setViewMode('code')}
+            aria-pressed={viewMode === 'code'}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
               viewMode === 'code'
                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
@@ -255,11 +257,13 @@ export default function ProjectWorkspace({
               <div className="flex gap-2">
                 <input
                   type="text"
+                  id="refinement-prompt"
                   value={refinementPrompt}
                   onChange={e => setRefinementPrompt(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleRefineSubmit()}
                   placeholder="Describe what to change… e.g. 'Make the sidebar dark with icons'"
                   disabled={isRefining}
+                  aria-label="Refinement prompt — describe what to change"
                   className="flex-1 px-4 py-2.5 bg-gray-800/60 border border-gray-700/50 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 disabled:opacity-50 transition"
                 />
                 <button

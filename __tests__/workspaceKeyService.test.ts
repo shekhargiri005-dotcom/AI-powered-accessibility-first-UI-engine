@@ -15,13 +15,18 @@ const mockEncryption = {
 jest.doMock('@/lib/prisma', () => ({ prisma: mockPrisma }));
 jest.doMock('@/lib/security/encryption', () => mockEncryption);
 
-describe('WorkspaceKeyService', () => {
-  let getWorkspaceApiKey: any;
-  let getWorkspaceModel: any;
+interface WorkspaceKeyServiceModule {
+  getWorkspaceApiKey: (provider: string, workspaceId?: string) => Promise<string | null>;
+  getWorkspaceModel: (provider: string, workspaceId?: string) => Promise<string | null>;
+}
 
-  beforeEach(() => {
+describe('WorkspaceKeyService', () => {
+  let getWorkspaceApiKey: WorkspaceKeyServiceModule['getWorkspaceApiKey'];
+  let getWorkspaceModel: WorkspaceKeyServiceModule['getWorkspaceModel'];
+
+  beforeEach(async () => {
     jest.resetModules();
-    const service = require('@/lib/security/workspaceKeyService');
+    const service = await import('@/lib/security/workspaceKeyService') as unknown as WorkspaceKeyServiceModule;
     getWorkspaceApiKey = service.getWorkspaceApiKey;
     getWorkspaceModel = service.getWorkspaceModel;
     jest.clearAllMocks();

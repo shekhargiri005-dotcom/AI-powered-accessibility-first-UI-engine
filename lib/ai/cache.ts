@@ -11,6 +11,7 @@
 
 import crypto from 'crypto';
 import type { GenerateOptions, Message } from './adapters/base';
+import { logger } from '../logger';
 
 // ─── Interfaces ────────────────────────────────────────────────────────────────
 
@@ -72,7 +73,7 @@ class UpstashCache implements CacheProvider {
       });
       return this._client;
     } catch (err) {
-      console.warn('[UpstashCache] Failed to initialise Upstash client:', err);
+      logger.warn({ endpoint: 'cache/init', message: '[UpstashCache] Failed to initialise Upstash client', error: err });
       this.initError = true;
       return null;
     }
@@ -112,10 +113,10 @@ export function getCache(): CacheProvider {
     !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (hasUpstash) {
-    console.log('[Cache] Using Upstash Redis');
+    logger.info({ endpoint: 'cache/init', message: '[Cache] Using Upstash Redis' });
     _cacheInstance = new UpstashCache();
   } else {
-    console.log('[Cache] Using in-memory cache (set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN for production Redis)');
+    logger.info({ endpoint: 'cache/init', message: '[Cache] Using in-memory cache (set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN for production Redis)' });
     _cacheInstance = new MemoryCache(200);
   }
 

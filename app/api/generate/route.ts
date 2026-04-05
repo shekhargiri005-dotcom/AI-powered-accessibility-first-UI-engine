@@ -11,7 +11,7 @@ import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation
 import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
 import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
 import { logger } from '@/lib/logger';
-import { getAdapter, getWorkspaceAdapter, resolveModelName, detectProvider } from '@/lib/ai/adapters/index';
+import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
@@ -37,40 +37,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag } = body as {
-      mode?: string; model?: string; maxTokens?: number;
-      isMultiSlide?: boolean; prompt?: string; stream?: boolean;
+    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag, provider, apiKey, baseUrl } = body as {
+      mode?: string; model?: string; maxTokens?: number; provider?: string;
+      isMultiSlide?: boolean; prompt?: string; stream?: boolean; apiKey?: string; baseUrl?: string;
     };
 
-    // ── Early exit: SSE streaming path ──────────────────────────────────────
+    // Sanitise masked key — page.tsx stores '••••' when loaded from localStorage
+    const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
+
+    // ── SSE streaming path ───────────────────────────────────────────────────
     if (streamFlag) {
-      const session = await auth();
-      const userId = session?.user?.id;
-      // Get workspaceId from headers or request body
-      const workspaceId = request.headers.get('x-workspace-id') || (body as any).workspaceId || 'default';
+      const session    = await auth();
+      const userId     = session?.user?.id;
+      const workspaceId = request.headers.get('x-workspace-id') || (body as Record<string, unknown>).workspaceId as string || 'default';
 
-      const resolvedModel = resolveModelName(model ?? 'gpt-4o');
-      // Use workspace-aware adapter (falls back to env vars automatically)
-      const adapter = await getWorkspaceAdapter(resolvedModel, workspaceId, userId);
+      if (!model) {
+        return NextResponse.json({ success: false, error: 'model is required for streaming' }, { status: 400 });
+      }
 
-      // Build a minimal system prompt for streaming (full pipeline runs in non-stream mode)
+      const adapter = await getWorkspaceAdapter(
+        { model, provider, apiKey: effectiveApiKey, baseUrl },
+        workspaceId, userId,
+      );
+
       const systemPrompt = 'You are an expert React/Tailwind UI engineer. Generate a single, complete, accessible React component. Return only raw TSX code, no markdown fences.';
-      const userPrompt = prompt ?? 'Generate a simple hello world UI component.';
+      const userPrompt   = prompt ?? 'Generate a simple hello world UI component.';
 
       const textStream = new ReadableStream<string>({
         async start(controller) {
           try {
             for await (const chunk of adapter.stream({
-              model: resolvedModel,
+              model,
               messages: [
                 { role: 'system', content: systemPrompt },
                 { role: 'user', content: userPrompt },
               ],
               maxTokens: maxTokens ?? 5000,
             })) {
-              if (chunk.delta) {
-                controller.enqueue(chunk.delta);
-              }
+              if (chunk.delta) controller.enqueue(chunk.delta);
               if (chunk.done) break;
             }
           } catch (err) {
@@ -83,7 +87,6 @@ export async function POST(request: NextRequest) {
 
       return createTextStreamResponse({ textStream });
     }
-    // ── End streaming path ──────────────────────────────────────────────────
 
     // Step 0a: Input validation (if prompt is provided alongside intent)
     if (prompt !== undefined) {
@@ -120,7 +123,7 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
-    const isLocalModel = model?.toLowerCase().includes('deepseek') || model?.toLowerCase().includes('ollama');
+    const _isLocalModel = model?.toLowerCase().includes('deepseek') || model?.toLowerCase().includes('ollama');
 
 
     // Step 0: Handle Refinement Context
@@ -148,19 +151,22 @@ export async function POST(request: NextRequest) {
     // Step 0.5: Workspace Auth check for non-streaming
     const session = await auth();
     const userId = session?.user?.id;
-    const workspaceId = request.headers.get('x-workspace-id') || (body as any).workspaceId || 'default';
+    const workspaceId = request.headers.get('x-workspace-id') || (body as Record<string, unknown>).workspaceId as string || 'default';
 
     // Step 1: Generate component/app code
     const generationResult = await generateComponent(
       intent,
       generationMode,
-      model,
+      model ?? '',
       maxTokens,
       isMultiSlide,
       refinementContext,
       undefined,
       workspaceId,
-      userId
+      userId,
+      provider,
+      effectiveApiKey,
+      baseUrl,
     );
     if (!generationResult.success || !generationResult.code) {
       return NextResponse.json(

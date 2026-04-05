@@ -19,7 +19,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
     // Ensure we create a default workspace for new users on signup
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account: _account, profile: _profile }) {
         if (!user.id) return true;
         
         // Check if user has any workspaces
@@ -29,7 +29,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!memberships) {
             // Create a default Personal Workspace for the new user
-            const workspace = await prisma.workspace.create({
+            const _workspace = await prisma.workspace.create({
                 data: {
                     name: `${user.name || 'Personal'}'s Workspace`,
                     slug: `personal-${user.id.slice(0, 8)}`,

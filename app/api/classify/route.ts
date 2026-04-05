@@ -17,22 +17,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing field: prompt' }, { status: 400 });
     }
 
-    const { prompt, hasActiveProject, model } = body as { prompt: string; hasActiveProject?: boolean; model?: string };
+    const { prompt, hasActiveProject, model, provider, apiKey, baseUrl } = body as {
+      prompt: string;
+      hasActiveProject?: boolean;
+      model?: string;
+      provider?: string;
+      apiKey?: string;
+      baseUrl?: string;
+    };
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      reqLogger.warn('OPENAI_API_KEY not configured. Falling back to local classifier if available.');
-    }
+    // Build model config — if user passed all three, use them. Otherwise fall back to env.
+    const modelConfig = model
+      ? { model, provider, apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, baseUrl }
+      : undefined;
 
-    reqLogger.debug('Classifying prompt intent', { hasActiveProject, model });
-    const result = await classifyIntent(prompt, hasActiveProject ?? false, model);
+    reqLogger.debug('Classifying prompt intent', { hasActiveProject, model, provider });
+    const result = await classifyIntent(prompt, hasActiveProject ?? false, modelConfig);
 
     if (!result.success) {
-      reqLogger.warn('Classification failed', { error: result.error });
-      return NextResponse.json({ success: false, error: result.error }, { status: 422 });
+      // 'No model configured' is an expected state before the user sets up AI Engine.
+      // Log as debug, not warn, to avoid console noise on first load.
+      reqLogger.debug('Classification could not run', { error: result.error });
+      // Return a graceful 200 with a default classification so the UI isn't blocked.
+      return NextResponse.json({
+        success: true,
+        classification: {
+          intentType: 'ui_generation',
+          confidence: 0.5,
+          summary: 'Auto-classified — configure an AI provider to enable smart intent detection.',
+          suggestedMode: 'component',
+          needsClarification: false,
+          shouldGenerateCode: true,
+          purpose: 'unknown',
+          visualType: 'unknown',
+          complexity: 'medium',
+          platform: 'responsive',
+          layout: 'single-page',
+          motionLevel: 'subtle',
+          preferredStack: ['react', 'tailwind'],
+        },
+        _fallback: true,
+      });
     }
 
     reqLogger.info('Classification successful', { classificationItem: result.classification });

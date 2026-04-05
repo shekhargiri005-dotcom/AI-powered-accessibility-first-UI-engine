@@ -169,7 +169,7 @@ export default function RightPanel({
               `}
             >
               {t.icon}
-              <span className="hidden xl:inline">{t.label}</span>
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
           <div className="w-px h-4 bg-gray-700 mx-1" />

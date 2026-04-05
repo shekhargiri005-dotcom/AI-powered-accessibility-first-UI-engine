@@ -1,6 +1,7 @@
+/** Generates mock chart data from a natural language description. Replace with real AI call for production. */
 export async function generateChartData(description: string): Promise<Record<string, unknown>[]> {
-  console.log(`Generating chart data for: ${description}`);
-  // Mock AI natural language to chart data
+  // Mock implementation — description drives future AI chart generation
+  void description;
   return [
     { label: 'Jan', value: 30 },
     { label: 'Feb', value: 50 },
@@ -8,3 +9,4 @@ export async function generateChartData(description: string): Promise<Record<str
     { label: 'Apr', value: 40 },
   ];
 }
+

@@ -1,4 +1,6 @@
-import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
+import { getWorkspaceAdapter } from './adapters/index';
+import type { AdapterConfig } from './adapters/index';
+import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { z } from 'zod';
 
 // Dynamic client used inside functions.
@@ -38,12 +40,14 @@ Be highly critical. We want premium, expert-level interfaces, not basic template
 
 export async function reviewGeneratedCode(code: string, intentContext: string): Promise<UIReviewResult> {
   try {
-    const modelName = process.env.REVIEW_MODEL || 'gpt-4o';
-    const resolvedModel = resolveModelName(modelName);
-    const adapter = await getWorkspaceAdapter(resolvedModel);
+    const model  = process.env.REVIEW_MODEL ?? '';
+    const cfg: AdapterConfig = model
+      ? { model }
+      : resolveDefaultAdapter('REVIEW');
+    const adapter = await getWorkspaceAdapter(cfg);
 
     const adapterResult = await adapter.generate({
-      model: resolvedModel,
+      model: cfg.model,
       messages: [
         { role: 'system', content: REVIEWER_SYSTEM_PROMPT },
         { role: 'user', content: `Original Intent Context:\n${intentContext}\n\nGenerated Code to Review:\n\`\`\`tsx\n${code}\n\`\`\`` },
@@ -83,12 +87,14 @@ OUTPUT FORMAT: Return ONLY the raw TSX code for the fixed component. No markdown
 
 export async function repairGeneratedCode(brokenCode: string, repairInstructions: string): Promise<string> {
   try {
-    const modelName = process.env.REPAIR_MODEL || 'gpt-4o';
-    const resolvedModel = resolveModelName(modelName);
-    const adapter = await getWorkspaceAdapter(resolvedModel);
+    const model  = process.env.REPAIR_MODEL ?? '';
+    const cfg: AdapterConfig = model
+      ? { model }
+      : resolveDefaultAdapter('REPAIR');
+    const adapter = await getWorkspaceAdapter(cfg);
 
     const adapterResult = await adapter.generate({
-      model: resolvedModel,
+      model: cfg.model,
       messages: [
         { role: 'system', content: REPAIR_SYSTEM_PROMPT },
         { role: 'user', content: `REPAIR INSTRUCTIONS:\n${repairInstructions}\n\nBROKEN / SUBPAR CODE:\n\`\`\`tsx\n${brokenCode}\n\`\`\`` },
@@ -99,9 +105,14 @@ export async function repairGeneratedCode(brokenCode: string, repairInstructions
 
     const rawContent = adapterResult.content;
     
-    // Clean code
-    const match = rawContent.match(/```(?:tsx?|jsx?|typescript|javascript)?\\s*([\\s\\S]*?)(?:```|$)/i);
-    const cleaned = match && match[1] ? match[1].trim() : rawContent.replace(/^```(?:tsx?|jsx?|typescript|javascript)?\\n?/gim, '').replace(/```\\s*$/gim, '').trim();
+    // Strip markdown code fences if the model wrapped its output in them
+    const match = rawContent.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
+    const cleaned = match && match[1]
+      ? match[1].trim()
+      : rawContent
+          .replace(/^```(?:tsx?|jsx?|typescript|javascript)?\n?/gim, '')
+          .replace(/```\s*$/gim, '')
+          .trim();
 
     return cleaned || brokenCode; // fallback to original if completely empty
   } catch (error) {

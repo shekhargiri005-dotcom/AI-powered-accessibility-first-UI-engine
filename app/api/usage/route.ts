@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import { cacheLife } from 'next/cache';
 
@@ -10,7 +11,7 @@ async function getCachedUsage(workspaceId: string | null, days: number) {
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - days);
 
-  const whereClause: any = {
+  const whereClause: Prisma.UsageLogWhereInput = {
     createdAt: { gte: sinceDate }
   };
 

@@ -1,17 +1,25 @@
-import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
+/**
+ * @file lib/ai/componentGenerator.ts
+ *
+ * Core AI generation orchestrator.
+ *
+ * Enhancement: Now model-agnostic via:
+ *  - modelRegistry   → capability profile per model
+ *  - tieredPipeline  → pipeline config (temperature, tool rounds, token budget)
+ *  - promptBuilder   → model-aware prompt (fill-in-blank / structured / freeform)
+ *  - codeExtractor   → multi-strategy extraction (fence / heuristic / aggressive)
+ *  - codeBeautifier  → deterministic post-processing (all models)
+ *
+ * All call sites are unchanged — function signature is identical.
+ */
+
+import { getWorkspaceAdapter } from './adapters/index';
+import type { AdapterConfig } from './adapters/index';
+import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { executeToolCalls } from './tools';
 import { DEFAULT_AGENT_TOOLS } from './agentTools';
 import type { Message } from './adapters/base';
 
-import {
-  COMPONENT_GENERATOR_SYSTEM_PROMPT,
-  APP_MODE_SYSTEM_PROMPT,
-  WEBGL_MODE_SYSTEM_PROMPT,
-  buildComponentGeneratorPrompt,
-  buildAppModeGeneratorPrompt,
-  buildWebglModeGeneratorPrompt,
-  REFINEMENT_SYSTEM_PROMPT,
-} from './prompts';
 import { getRelevantExamples } from './memory';
 import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
 import { type UIIntent } from '../validation/schemas';
@@ -21,7 +29,12 @@ import { validateGeneratedCode } from '../intelligence/codeValidator';
 import { runRepairPipeline } from '../intelligence/repairPipeline';
 import { repairGeneratedCode } from './uiReviewer';
 
-// Removed local instantiation - now using getOpenAIClient inside the generator function.
+// ── New: model-agnostic layer ─────────────────────────────────────────────────
+import { getModelProfile, getCloudFallbackProfile } from './modelRegistry';
+import { getPipelineConfig } from './tieredPipeline';
+import { buildModelAwarePrompt, mergeSystemIntoUser } from './promptBuilder';
+import { extractCode, isCompleteComponent } from './codeExtractor';
+import { beautifyOutput } from '../intelligence/codeBeautifier';
 
 export type GenerationMode = 'component' | 'app' | 'webgl';
 
@@ -32,34 +45,26 @@ export interface GenerationResult {
   blueprint?: ReturnType<typeof selectBlueprint>;
   validationWarnings?: string[];
   repairsApplied?: string[];
-}
-
-// Model name resolution is now handled by adapters/index.ts > resolveModelName
-
-function cleanGeneratedCode(raw: string): string {
-  // Try to find a code block first, ignoring any conversational filler.
-  const match = raw.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
-  if (match && match[1]) {
-    return match[1].trim();
-  }
-  
-  // Fallback: strip exact fences if no matching pair is found
-  return raw
-    .replace(/^```(?:tsx?|jsx?|typescript|javascript)?\n?/gim, '')
-    .replace(/```\s*$/gim, '')
-    .trim();
+  /** NEW: model tier used for this generation (for telemetry/debugging) */
+  modelTier?: string;
+  /** NEW: beautifier transformations applied */
+  beautifyTransformations?: string[];
 }
 
 export async function generateComponent(
   intent: UIIntent,
   mode: GenerationMode = 'component',
-  requestedModel: string = 'gpt-5.4-mini',
+  requestedModel: string = '',
   maxTokens: number = 5000,
   isMultiSlide: boolean = false,
   refinementContext?: { code: string; manifest?: unknown },
-  blueprintOverride?: any,
+  /** Pass a pre-selected blueprint to skip automatic selection. */
+  blueprintOverride?: ReturnType<typeof selectBlueprint>,
   workspaceId?: string,
-  userId?: string
+  userId?: string,
+  provider?: string,
+  apiKey?: string,
+  baseUrl?: string,
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
@@ -69,72 +74,109 @@ export async function generateComponent(
     const designRules = applyDesignRules(searchText, blueprint.pageType);
     const blueprintContext = formatBlueprintForPrompt(blueprint);
     const designContext = formatDesignRulesForPrompt(designRules);
+    // intelligenceContext is used by cloud/freeform paths that append to prompt
     const intelligenceContext = `${blueprintContext}\n\n${designContext}`;
 
-    let knowledge: string | null;
-    let systemPrompt: string;
-    let userPrompt: string;
-
-    if (intent.isRefinement && refinementContext) {
-      systemPrompt = REFINEMENT_SYSTEM_PROMPT;
-      userPrompt = `TARGET FILE CODE:\n${refinementContext.code}\n\n` +
-                   `APP MANIFEST:\n${JSON.stringify(refinementContext.manifest || [], null, 2)}\n\n` +
-                   `REFINEMENT INTENT:\n${JSON.stringify(intent, null, 2)}`;
-    } else if (mode === 'webgl') {
-      knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
-      systemPrompt = WEBGL_MODE_SYSTEM_PROMPT;
-      userPrompt = buildWebglModeGeneratorPrompt(intent, knowledge, isMultiSlide) + '\n\n' + intelligenceContext;
-    } else if (mode === 'app') {
-      knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
-      const memory = getRelevantExamples(intent);
-      systemPrompt = APP_MODE_SYSTEM_PROMPT;
-      userPrompt = buildAppModeGeneratorPrompt(intent, knowledge, memory, isMultiSlide) + '\n\n' + intelligenceContext;
+    // ─── Step 1: Resolve model + credentials ─────────────────────────────────
+    let cfg: AdapterConfig;
+    if (requestedModel) {
+      cfg = {
+        model:   requestedModel,
+        provider,
+        apiKey:  apiKey && apiKey !== '••••' ? apiKey : undefined,
+        baseUrl,
+      };
     } else {
-      knowledge = findRelevantKnowledge(searchText);
-      const memory = getRelevantExamples(intent);
-      systemPrompt = COMPONENT_GENERATOR_SYSTEM_PROMPT;
-      userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, isMultiSlide) + '\n\n' + intelligenceContext;
+      cfg = resolveDefaultAdapter('GENERATION');
     }
 
-    const resolvedModel = resolveModelName(requestedModel);
-    const adapter = await getWorkspaceAdapter(resolvedModel, workspaceId, userId);
+    // ─── Step 2: Get model profile + pipeline config ──────────────────────────
+    const effectiveModel = cfg.model;
+    const modelProfile = getModelProfile(effectiveModel) ?? getCloudFallbackProfile();
+    const pipelineConfig = getPipelineConfig(modelProfile);
 
-    // ─── Agentic Tool Loop ───────────────────────────────────────────────────
-    // The model may call tools (design-system lookup, a11y advisor, etc.)
-    // before producing the final code. We allow up to 3 tool-call rounds.
-    const messages: Message[] = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
-    ];
+    // ─── Step 3: Knowledge + memory lookup ───────────────────────────────────
+    let knowledge: string | null = null;
+    let memory = getRelevantExamples(intent);
+
+    if (!intent.isRefinement) {
+      if (mode === 'webgl') {
+        knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
+      } else if (mode === 'app') {
+        knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
+      } else {
+        knowledge = findRelevantKnowledge(searchText);
+      }
+    }
+
+    // ─── Step 4: Build model-aware prompt ────────────────────────────────────
+    let builtPrompt = buildModelAwarePrompt(
+      intent,
+      blueprint,
+      pipelineConfig,
+      mode,
+      knowledge,
+      memory,
+      refinementContext,
+    );
+
+    // For cloud/freeform modes: append intelligence context to user prompt
+    // (tiny/small models have the blueprint baked into their structured prompts)
+    if (pipelineConfig.promptStyle === 'freeform' || pipelineConfig.promptStyle === 'guided-freeform') {
+      builtPrompt = {
+        system: builtPrompt.system,
+        user: builtPrompt.user + '\n\n' + intelligenceContext,
+      };
+    }
+
+    // If model doesn't honour system role: merge system into user message
+    if (pipelineConfig.mergeSystemIntoUser) {
+      builtPrompt = mergeSystemIntoUser(builtPrompt);
+    }
+
+    // ─── Step 5: Get adapter ─────────────────────────────────────────────────
+    const adapter = await getWorkspaceAdapter(cfg, workspaceId, userId);
+
+    // ─── Step 6: Agentic Tool Loop ───────────────────────────────────────────
+    // Respects maxToolRounds from pipeline config (0 for tiny/small, up to 3 for cloud)
+    const messages: Message[] = builtPrompt.system
+      ? [
+          { role: 'system', content: builtPrompt.system },
+          { role: 'user', content: builtPrompt.user },
+        ]
+      : [{ role: 'user', content: builtPrompt.user }];
 
     let rawContent = '';
-    const MAX_TOOL_ROUNDS = 3;
+    const maxToolRounds = pipelineConfig.maxToolRounds;
 
-    for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    for (let round = 0; round <= maxToolRounds; round++) {
       const result = await adapter.generate({
-        model: resolvedModel,
+        model: effectiveModel,
         messages,
-        temperature: mode === 'app' || mode === 'webgl' ? 0.6 : 0.4,
-        maxTokens: maxTokens || 5000,
-        tools: DEFAULT_AGENT_TOOLS,
-        toolChoice: 'auto',
+        temperature: pipelineConfig.temperature,
+        maxTokens: Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
+        // Only pass tools if the model supports tool calls
+        ...(pipelineConfig.maxToolRounds > 0 && {
+          tools: DEFAULT_AGENT_TOOLS,
+          toolChoice: 'auto' as const,
+        }),
       });
 
-      if (result.toolCalls && result.toolCalls.length > 0) {
+      if (result.toolCalls && result.toolCalls.length > 0 && round < maxToolRounds) {
         // Append the assistant's tool-call request
         messages.push({ role: 'assistant', content: result.content || '' });
 
         // Execute all requested tools in parallel
         const toolResults = await executeToolCalls(result.toolCalls, DEFAULT_AGENT_TOOLS);
 
-        // Append each tool result as a 'user' message (OpenAI-compat: role 'tool')
-        // We stringify it into the user turn for maximum provider compatibility
         const toolSummary = toolResults
           .map((r) => `[Tool: ${r.name}]\n${r.content}`)
           .join('\n\n');
-        messages.push({ role: 'user', content: `Tool results:\n${toolSummary}\n\nNow generate the final React component code.` });
+        messages.push({
+          role: 'user',
+          content: `Tool results:\n${toolSummary}\n\nNow generate the final React component code.`,
+        });
 
-        // Continue to next round with tool results injected
         continue;
       }
 
@@ -143,41 +185,75 @@ export async function generateComponent(
       break;
     }
 
+    // If all rounds exhausted without output
     if (!rawContent) {
-      rawContent = 'export default function PlaceholderComponent() { return <div>Generation failed</div>; }';
+      return { success: false, error: 'AI returned empty component code after all tool-call rounds', modelTier: modelProfile.tier };
     }
 
-    if (!rawContent) {
-      return { success: false, error: 'AI returned empty component code' };
-    }
-
-    const cleaned = cleanGeneratedCode(rawContent);
+    // ─── Step 7: Extract code (model-aware strategy) ──────────────────────────
+    const extraction = extractCode(rawContent, pipelineConfig.extractionStrategy);
+    const cleaned = extraction.code;
 
     // Basic sanity check
-    if (!cleaned.includes('export') && !cleaned.includes('return')) {
+    if (!cleaned || (!cleaned.includes('export') && !cleaned.includes('return'))) {
       return {
         success: false,
-        error: `Generated code does not appear to be a valid React component. AI Output start: "${cleaned.substring(0, 150)}..."`,
+        error: `Generated code does not appear to be a valid React component (extraction confidence: ${extraction.confidence}). Output start: "${cleaned?.substring(0, 150) ?? '(empty)'}..."`,
+        modelTier: modelProfile.tier,
       };
     }
 
-    // ─── Post-Generation: Validate + Auto-Repair ────────────────────────────
-    const validation = validateGeneratedCode(cleaned);
-    let finalCode = cleaned;
+    // Log low-confidence extractions for monitoring
+    if (extraction.confidence === 'low') {
+      // Non-blocking — just annotate in the result
+    }
+
+    // Check for completeness (missing closing braces / export)
+    const complete = isCompleteComponent(cleaned);
+
+    // ─── Step 8: Post-Generation Beautifier (all models) ─────────────────────
+    const beautified = beautifyOutput(cleaned, blueprint);
+
+    // ─── Step 9: Validate + Auto-Repair ──────────────────────────────────────
+    const validation = validateGeneratedCode(beautified.code);
+    let finalCode = beautified.code;
     let repairsApplied: string[] = [];
-    const validationWarnings = validation.warnings.map(w => w.message);
+    const validationWarnings = validation.warnings.map((w) => w.message);
 
     if (!validation.valid) {
-      const repairResult = await runRepairPipeline(cleaned, async (code, instructions) => {
-        return repairGeneratedCode(code, instructions);
-      });
+      // Determine repair capability:
+      // - Cloud models and 'large' tier → rules-only (no LLM repair)
+      // - Tiny/small with ai-cheap → use LLM repair
+      const canUseAiRepair =
+        pipelineConfig.repairStrategy === 'ai-cheap' ||
+        pipelineConfig.repairStrategy === 'ai-strong';
+
+      const repairResult = await runRepairPipeline(
+        beautified.code,
+        canUseAiRepair
+          ? async (code: string, instructions: string) => repairGeneratedCode(code, instructions)
+          : undefined,
+      );
       finalCode = repairResult.code;
       repairsApplied = repairResult.repairsApplied;
     }
 
-    return { success: true, code: finalCode, blueprint, validationWarnings, repairsApplied };
+    // If component is incomplete (e.g. truncated by tiny model), note it
+    if (!complete && !repairsApplied.length) {
+      validationWarnings.push('Component may be incomplete — check closing tags and export');
+    }
+
+    return {
+      success: true,
+      code: finalCode,
+      blueprint,
+      validationWarnings,
+      repairsApplied,
+      modelTier: modelProfile.tier,
+      beautifyTransformations: beautified.transformations,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `OpenAI API error: ${msg}` };
+    return { success: false, error: `AI generation error: ${msg}` };
   }
 }

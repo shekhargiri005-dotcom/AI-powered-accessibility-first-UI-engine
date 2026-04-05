@@ -2,255 +2,276 @@
  * @file index.ts
  * Adapter factory & registry.
  *
- * This is the single entry‑point for obtaining an AIAdapter instance.
- * Call `getAdapter(modelName)` anywhere — it resolves which provider to use
- * based on the model string and available API keys.
+ * Core principle: NO assumptions. The caller provides provider + model + apiKey.
+ * The engine uses EXACTLY what the user configured. On error → surface it clearly.
+ * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * NEW: Use `getWorkspaceAdapter(model, workspaceId)` to automatically resolve
- * a workspace-specific API key from the database, falling back to env vars.
- *
- * Existing code that calls `getOpenAIClient()` from `../config.ts` continues
- * to work — that function is now a backward‑compat shim that delegates here.
+ * Supported adapters (8 total):
+ *   Cloud:  OpenAIAdapter, AnthropicAdapter, GoogleAdapter, DeepSeekAdapter
+ *           MetaAdapter, MistralAdapter, QwenAdapter, GemmaAdapter
+ *   Local:  OllamaAdapter  (also handles LM Studio via configurable baseUrl)
  */
 
 import type { AIAdapter, ProviderName } from './base';
-import { OpenAIAdapter } from './openai';
-import { OllamaAdapter } from './ollama';
-import { DeepSeekAdapter } from './deepseek';
+import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
-import { GoogleAdapter } from './google';
+import { GoogleAdapter }    from './google';
+import { DeepSeekAdapter }  from './deepseek';
+import { OllamaAdapter }    from './ollama';
+import { MetaAdapter }      from './meta';
+import { MistralAdapter }   from './mistral';
+import { QwenAdapter }      from './qwen';
+import { GemmaAdapter }     from './gemma';
 import { getCache, generateCacheKey } from '../cache';
 
-// ─── Provider Detection ───────────────────────────────────────────────────────
+// ─── OpenAI-compatible provider base URLs ─────────────────────────────────────
+
+const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
+  groq:       'https://api.groq.com/openai/v1',
+  openrouter: 'https://openrouter.ai/api/v1',
+  together:   'https://api.together.xyz/v1',
+  lmstudio:   'http://localhost:1234/v1',
+};
+
+// ─── Provider Detection (fallback only — prefer explicit provider from config) ─
 
 /**
- * Detects which provider a model string belongs to.
- * Rules (first match wins):
- *  - contains "deepseek"         → deepseek
- *  - contains "ollama" or ":"    → ollama  (ollama uses "name:tag" format)
- *  - contains "claude"           → anthropic
- *  - anything else               → openai
+ * Detects provider from model name as a last resort.
+ * Callers should prefer passing explicit provider from user config.
  */
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
-  if (m.includes('deepseek')) return 'deepseek';
-  if (m.includes('claude')) return 'anthropic';
-  if (m.includes('gemini')) return 'google';
-  if (m.includes('gpt-')) return 'openai';
-  // Default to ollama for local/custom models, or if it has the ollama-style colon
-  return 'ollama';
+  if (m.includes('claude'))                return 'anthropic';
+  if (m.includes('gemini'))               return 'google';
+  if (m.includes('gpt-'))                 return 'openai';
+  if (m.includes('deepseek'))             return 'deepseek';
+  if (m.includes('llama') || m.includes('codellama')) return 'ollama'; // treated as local default
+  if (m.includes('mistral') || m.includes('mixtral')) return 'ollama';
+  if (m.includes('qwen'))                 return 'ollama';
+  if (m.includes('gemma'))                return 'ollama';
+  return 'ollama'; // local default when nothing matches
 }
 
-// ─── Canonical Model Name ─────────────────────────────────────────────────────
+/** Pass-through — model names used verbatim as configured by the user. */
+export function resolveModelName(model: string): string { return model; }
 
-/**
- * Maps friendly/UI model names to the exact string the provider API expects.
- */
-export function resolveModelName(model: string): string {
-  const m = model.toLowerCase();
-  if (m.includes('deepseek')) return 'deepseek-coder:6.7b';
-  if (m === 'gpt-4.1') return 'gpt-4-turbo';
-  if (m.includes('5.4') && !m.includes('mini') && !m.includes('nano')) return 'gpt-4o';
-  if (m.includes('nano') || m.includes('mini')) return 'gpt-4o-mini';
-  // Gemini aliases
-  if (m === 'gemini-flash' || m === 'gemini-2.0-flash') return 'gemini-2.0-flash';
-  if (m === 'gemini-flash-lite') return 'gemini-2.0-flash-lite';
-  if (m === 'gemini-pro' || m === 'gemini-1.5-pro') return 'gemini-1.5-pro';
-  // Claude aliases
-  if (m === 'claude-3-5-sonnet') return 'claude-3-5-sonnet-20240620';
-  if (m === 'claude-3-opus') return 'claude-3-opus-20240229';
-  if (m === 'claude-3-sonnet') return 'claude-3-sonnet-20240229';
-  if (m === 'claude-3-haiku') return 'claude-3-haiku-20240307';
-  return model; // pass-through if already canonical
+// ─── Config Shape ─────────────────────────────────────────────────────────────
+
+export interface AdapterConfig {
+  provider?: string;  // explicit provider id from user config
+  model: string;
+  apiKey?: string;    // user-supplied key; sent per-request over HTTPS
+  baseUrl?: string;   // custom endpoint for OpenAI-compat providers
 }
 
-// ─── Adapter Instances (singletons per provider) ──────────────────────────────
-
-let _openaiAdapter: OpenAIAdapter | null = null;
-let _ollamaAdapter: OllamaAdapter | null = null;
-let _deepseekAdapter: DeepSeekAdapter | null = null;
-let _anthropicAdapter: AnthropicAdapter | null = null;
-let _googleAdapter: GoogleAdapter | null = null;
-
-function getOpenAIAdapterInstance(apiKey?: string): OpenAIAdapter {
-  if (!_openaiAdapter) _openaiAdapter = new OpenAIAdapter(apiKey);
-  return _openaiAdapter;
-}
-
-function getOllamaAdapterInstance(): OllamaAdapter {
-  if (!_ollamaAdapter) _ollamaAdapter = new OllamaAdapter();
-  return _ollamaAdapter;
-}
-
-function getDeepSeekAdapterInstance(apiKey?: string): DeepSeekAdapter {
-  if (!_deepseekAdapter) _deepseekAdapter = new DeepSeekAdapter(apiKey);
-  return _deepseekAdapter;
-}
-
-function getAnthropicAdapterInstance(apiKey?: string): AnthropicAdapter {
-  if (!_anthropicAdapter) _anthropicAdapter = new AnthropicAdapter(apiKey);
-  return _anthropicAdapter;
-}
-
-function getGoogleAdapterInstance(apiKey?: string): GoogleAdapter {
-  if (!_googleAdapter) _googleAdapter = new GoogleAdapter(apiKey);
-  return _googleAdapter;
-}
-
-// ─── Caching & Observability Wrapper ──────────────────────────────────────────
+// ─── Metrics wrapper ──────────────────────────────────────────────────────────
 
 import { dispatchMetrics } from '../metrics';
-import { FallbackAdapter } from './fallback';
 
 class CachedAdapter implements AIAdapter {
   constructor(private readonly internal: AIAdapter) {}
 
-  get provider(): ProviderName {
-    return this.internal.provider as ProviderName;
-  }
+  get provider(): ProviderName { return this.internal.provider as ProviderName; }
 
   async generate(options: import('./base').GenerateOptions): Promise<import('./base').GenerateResult> {
-    const key = `gen:${generateCacheKey(options)}`;
-    const cache = getCache();
+    const cache     = getCache();
+    const key       = `gen:${generateCacheKey(options)}`;
     const startTime = Date.now();
 
-    const cachedStr = await cache.get(key);
-    if (cachedStr) {
+    const cached = await cache.get(key);
+    if (cached) {
       try {
-        const parsed = JSON.parse(cachedStr);
-        parsed.usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0, cached: true };
+        const p = JSON.parse(cached);
+        p.usage = { promptTokens: 0, completionTokens: 0, totalTokens: 0, cached: true };
         dispatchMetrics({ provider: this.provider, model: options.model, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: Date.now() - startTime, cached: true });
-        return parsed;
-      } catch {
-        // Fall through
-      }
+        return p;
+      } catch { /* fall through */ }
     }
 
-    const result = await this.internal.generate(options);
+    const result   = await this.internal.generate(options);
     const duration = Date.now() - startTime;
-
-    if (result.content || (result.toolCalls && result.toolCalls.length > 0)) {
-      await cache.set(key, JSON.stringify(result));
-    }
-    
+    if (result.content || result.toolCalls?.length) await cache.set(key, JSON.stringify(result));
     dispatchMetrics({ provider: this.provider, model: options.model, promptTokens: result.usage?.promptTokens ?? 0, completionTokens: result.usage?.completionTokens ?? 0, totalTokens: result.usage?.totalTokens ?? 0, latencyMs: duration, cached: false });
-
     return result;
   }
 
   async *stream(options: import('./base').GenerateOptions): AsyncGenerator<import('./base').StreamChunk, void, unknown> {
-    const key = `stream:${generateCacheKey(options)}`;
-    const cache = getCache();
+    const cache     = getCache();
+    const key       = `stream:${generateCacheKey(options)}`;
     const startTime = Date.now();
 
-    const cachedStr = await cache.get(key);
-    if (cachedStr) {
+    const cached = await cache.get(key);
+    if (cached) {
       try {
-        const chunks = JSON.parse(cachedStr) as import('./base').StreamChunk[];
+        const chunks = JSON.parse(cached) as import('./base').StreamChunk[];
         for (const chunk of chunks) {
           await new Promise(r => setTimeout(r, 10));
           yield { ...chunk, usage: chunk.done ? { promptTokens: 0, completionTokens: 0, totalTokens: 0, cached: true } : undefined };
         }
         dispatchMetrics({ provider: this.provider, model: options.model, promptTokens: 0, completionTokens: 0, totalTokens: 0, latencyMs: Date.now() - startTime, cached: true });
         return;
-      } catch {
-        // Fall through
-      }
+      } catch { /* fall through */ }
     }
 
-    const chunksToCache: import('./base').StreamChunk[] = [];
+    const chunks: import('./base').StreamChunk[] = [];
     let finalUsage: import('./base').GenerateResult['usage'];
-    
     for await (const chunk of this.internal.stream(options)) {
-      chunksToCache.push(chunk);
+      chunks.push(chunk);
       if (chunk.usage) finalUsage = chunk.usage;
       yield chunk;
     }
-
     const duration = Date.now() - startTime;
-    if (chunksToCache.length > 0) {
-      await cache.set(key, JSON.stringify(chunksToCache));
-    }
-    
+    if (chunks.length) await cache.set(key, JSON.stringify(chunks));
     dispatchMetrics({ provider: this.provider, model: options.model, promptTokens: finalUsage?.promptTokens ?? 0, completionTokens: finalUsage?.completionTokens ?? 0, totalTokens: finalUsage?.totalTokens ?? 0, latencyMs: duration, cached: false });
   }
 }
 
-// ─── Public API ───────────────────────────────────────────────────────────────
+// ─── Public Factory ───────────────────────────────────────────────────────────
 
 /**
- * Returns the appropriate AIAdapter for the given model name.
+ * Returns the correct AIAdapter for the given config.
  *
- * @param model  - UI or canonical model name (e.g. "deepseek-coder:6.7b", "gpt-4o")
- * @param apiKey - Optional per-workspace API key override
+ * Rules:
+ *  1. If explicit provider given → use it, no guessing.
+ *  2. If baseUrl given → use OpenAI-compat adapter pointed at that URL.
+ *  3. Known OpenAI-compat providers (groq/openrouter/together/lmstudio) → OpenAIAdapter + baseUrl.
+ *  4. Named adapters (anthropic/google/deepseek/meta/mistral/qwen/gemma/ollama) → specific adapter.
+ *  5. No key + no env var → throw immediately with a clear message.
+ *
+ * No silent fallbacks. No mock adapters.
  */
-export function getAdapter(model?: string, apiKey?: string): AIAdapter {
-  const m = model ?? '';
-  const hasOpenAIKey = !!(apiKey ?? process.env.OPENAI_API_KEY);
-
-  const provider = m ? detectProvider(m) : (hasOpenAIKey ? 'openai' : 'ollama');
-
-  let adapter: AIAdapter;
-
-  switch (provider) {
-    case 'ollama':
-      adapter = getOllamaAdapterInstance();
-      break;
-    case 'deepseek':
-      adapter = getDeepSeekAdapterInstance(apiKey);
-      break;
-    case 'anthropic':
-      if (!apiKey && !process.env.ANTHROPIC_API_KEY) {
-        throw new Error('Anthropic API key is missing. Please configure it in Workspace Settings or set ANTHROPIC_API_KEY in .env.local');
-      }
-      adapter = getAnthropicAdapterInstance(apiKey);
-      break;
-    case 'google':
-      if (!apiKey && !process.env.GOOGLE_API_KEY) {
-         throw new Error('Google API key is missing. Please configure it in Workspace Settings or set GOOGLE_API_KEY in .env.local');
-      }
-      adapter = getGoogleAdapterInstance(apiKey);
-      break;
-    case 'openai':
-    default:
-      if (!hasOpenAIKey) {
-        throw new Error('OpenAI API key is missing. Please configure it in Workspace Settings or set OPENAI_API_KEY in .env.local');
-      }
-      adapter = getOpenAIAdapterInstance(apiKey);
-      break;
+export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIAdapter {
+  let config: AdapterConfig;
+  if (typeof cfg === 'string') {
+    config = { model: cfg, apiKey: legacyKey, provider: detectProvider(cfg) };
+  } else {
+    config = cfg;
   }
 
-  // Always wrap with FallbackAdapter, falling back to Ollama if primary fails
-  const fallbacks = provider !== 'ollama' 
-    ? [getOllamaAdapterInstance()] 
-    : [];
+  const { model, apiKey, baseUrl } = config;
+  const provId = config.provider ?? detectProvider(model);
 
-  return new CachedAdapter(new FallbackAdapter(adapter, fallbacks));
+  // ── 1. Known OpenAI-compatible 3rd-party providers ───────────────────────
+  const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
+  const isCompat  = !!compatUrl && !['openai', 'anthropic', 'google', 'deepseek', 'ollama', 'lmstudio', 'meta', 'mistral', 'qwen', 'gemma'].includes(provId);
+  if (isCompat) {
+    const key = apiKey || process.env.OPENAI_API_KEY;
+    if (!key) throw new Error(`API key required for ${provId}. Configure it in the AI Engine Config panel.`);
+    return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
+  }
+
+  // ── 2. Named adapters ────────────────────────────────────────────────────
+  let adapter: AIAdapter;
+
+  switch (provId) {
+    case 'openai': {
+      const key = apiKey || process.env.OPENAI_API_KEY;
+      if (!key) throw new Error('OpenAI API key required. Add it in the AI Engine Config panel.');
+      adapter = new OpenAIAdapter(key, baseUrl);
+      break;
+    }
+    case 'anthropic': {
+      const key = apiKey || process.env.ANTHROPIC_API_KEY;
+      if (!key) throw new Error('Anthropic API key required. Add it in the AI Engine Config panel.');
+      adapter = new AnthropicAdapter(key);
+      break;
+    }
+    case 'google': {
+      const key = apiKey || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+      if (!key) throw new Error('Google API key required. Add it in the AI Engine Config panel.');
+      adapter = new GoogleAdapter(key);
+      break;
+    }
+    case 'deepseek': {
+      const key = apiKey || process.env.DEEPSEEK_API_KEY;
+      if (!key) throw new Error('DeepSeek API key required. Add it in the AI Engine Config panel.');
+      adapter = new DeepSeekAdapter(key);
+      break;
+    }
+    case 'meta': {
+      const key = apiKey || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
+      if (!key) throw new Error('Meta/Llama requires a Together AI or Groq API key. Add it in the AI Engine Config panel.');
+      adapter = new MetaAdapter(key, baseUrl);
+      break;
+    }
+    case 'mistral': {
+      const key = apiKey || process.env.MISTRAL_API_KEY || process.env.TOGETHER_API_KEY;
+      if (!key) throw new Error('Mistral requires a Mistral AI or Together AI API key. Add it in the AI Engine Config panel.');
+      adapter = new MistralAdapter(key, baseUrl);
+      break;
+    }
+    case 'qwen': {
+      const key = apiKey || process.env.DASHSCOPE_API_KEY || process.env.TOGETHER_API_KEY;
+      if (!key) throw new Error('Qwen requires a DashScope or Together AI API key. Add it in the AI Engine Config panel.');
+      adapter = new QwenAdapter(key, baseUrl);
+      break;
+    }
+    case 'gemma': {
+      const key = apiKey || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
+      if (!key) throw new Error('Gemma requires a Together AI or Groq API key. Add it in the AI Engine Config panel.');
+      adapter = new GemmaAdapter(key, baseUrl);
+      break;
+    }
+    case 'ollama':
+    case 'lmstudio':
+    default: {
+      // Local providers — no key needed
+      const url = baseUrl ?? (provId === 'lmstudio' ? OPENAI_COMPAT_BASE_URLS.lmstudio : undefined);
+      adapter = new OllamaAdapter(url);
+      break;
+    }
+  }
+
+  return new CachedAdapter(adapter);
 }
 
 /**
- * Workspace-aware adapter factory.
- * Looks up a stored API key for the given provider from the database
- * (with TTL caching). Falls back to env vars if no key is stored.
- * 
- * @param model       - Model name (determines provider)
- * @param workspaceId - Workspace identifier (defaults to 'default')
- * @param userId      - Optional user ID for authorization check
+ * Workspace-aware variant.
+ * If the caller provides an explicit apiKey in config, it is used directly.
+ * Otherwise looks up a stored key from the DB (with TTL cache), falling back to env vars.
  */
 export async function getWorkspaceAdapter(
-  model: string,
+  modelOrConfig: string | AdapterConfig,
   workspaceId = 'default',
-  userId?: string
+  userId?: string,
 ): Promise<AIAdapter> {
-  const { getWorkspaceApiKey } = await import('../../security/workspaceKeyService');
-  const provider = detectProvider(model);
+  // Explicit apiKey provided — use it directly, skip DB lookup
+  if (typeof modelOrConfig !== 'string' && modelOrConfig.apiKey && modelOrConfig.apiKey !== 'local') {
+    return getAdapter(modelOrConfig);
+  }
 
-  // Try to get a workspace-specific key; null means fall back to env
-  const workspaceKey = await getWorkspaceApiKey(provider, workspaceId, userId);
+  const model  = typeof modelOrConfig === 'string' ? modelOrConfig : modelOrConfig.model;
+  const provId = typeof modelOrConfig !== 'string'
+    ? (modelOrConfig.provider ?? detectProvider(model))
+    : detectProvider(model);
 
-  // Use workspace key if found, otherwise getAdapter falls back to env vars
-  return getAdapter(model, workspaceKey ?? undefined);
+  try {
+    const { getWorkspaceApiKey } = await import('../../security/workspaceKeyService');
+    const wsKey = await getWorkspaceApiKey(provId as ProviderName, workspaceId, userId);
+    const cfg: AdapterConfig = typeof modelOrConfig === 'string'
+      ? { model, provider: provId, apiKey: wsKey ?? undefined }
+      : { ...modelOrConfig, apiKey: wsKey ?? modelOrConfig.apiKey };
+    return getAdapter(cfg);
+  } catch {
+    // DB unavailable — fall back to env vars (getAdapter throws if those are also missing)
+    const cfg: AdapterConfig = typeof modelOrConfig === 'string'
+      ? { model, provider: provId }
+      : modelOrConfig;
+    return getAdapter(cfg);
+  }
 }
 
-export type { AIAdapter, ProviderName } from './base';
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
+export { OpenAIAdapter }    from './openai';
+export { AnthropicAdapter } from './anthropic';
+export { GoogleAdapter }    from './google';
+export { DeepSeekAdapter }  from './deepseek';
+export { OllamaAdapter }    from './ollama';
+export { MetaAdapter }      from './meta';
+export { MistralAdapter }   from './mistral';
+export { QwenAdapter }      from './qwen';
+export { GemmaAdapter }     from './gemma';
+
+export type { AIAdapter, ProviderName }                                         from './base';
 export type { GenerateOptions, GenerateResult, StreamChunk, Message, MessageRole } from './base';

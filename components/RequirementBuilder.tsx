@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { RequirementBreakdown } from '@/lib/validation/schemas';
 
-interface RequirementBuilderProps {
+export interface RequirementBuilderProps {
   breakdown: RequirementBreakdown;
   onProceedWithRequirements?: (breakdown: RequirementBreakdown) => void;
 }
@@ -70,14 +70,25 @@ const SECTION_CONFIG = [
   },
 ];
 
-export default function RequirementBuilder({ breakdown }: RequirementBuilderProps) {
+export default function RequirementBuilder({ breakdown, onProceedWithRequirements }: RequirementBuilderProps) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
-          Structured Requirement Breakdown
-        </span>
-        <span className="text-[10px] text-gray-500">— validate before generating</span>
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <div>
+          <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
+            Structured Requirement Breakdown
+          </span>
+          <span className="text-[10px] text-gray-500 ml-2">— validate before generating</span>
+        </div>
+        {onProceedWithRequirements && (
+          <button
+            onClick={() => onProceedWithRequirements(breakdown)}
+            className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25 text-[10px] font-bold uppercase tracking-wider transition-colors"
+          >
+            <ArrowRight className="w-3 h-3" />
+            Proceed with this plan
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

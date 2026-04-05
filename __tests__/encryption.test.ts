@@ -12,11 +12,11 @@ describe('Encryption Service', () => {
     process.env = originalEnv;
   });
 
-  it('should encrypt and decrypt correctly with valid 32-byte string key', () => {
+  it('should encrypt and decrypt correctly with valid 32-byte string key', async () => {
     process.env.ENCRYPTION_SECRET = '12345678901234567890123456789012'; // 32 chars
     
-    // Have to dynamically require to catch env var changes
-    const { encryptionService: srv } = require('@/lib/security/encryption');
+    // Dynamic import re-evaluates the module with the new env var in place
+    const { encryptionService: srv } = await import('@/lib/security/encryption');
     
     const plainText = 'my-super-secret-api-key';
     const encrypted = srv.encrypt(plainText);

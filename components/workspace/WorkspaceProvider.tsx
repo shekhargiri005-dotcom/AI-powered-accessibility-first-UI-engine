@@ -27,19 +27,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const refreshWorkspaces = useCallback(async () => {
     try {
       const res = await fetch('/api/workspaces');
+      // Not signed in — workspace features disabled, no error shown
+      if (res.status === 401) { setIsLoading(false); return; }
       const data = await res.json();
       if (data.success) {
         setWorkspaces(data.workspaces);
-        
-        // Default to the first workspace if none is active or active is not in the list
         if (!activeWorkspaceId || !data.workspaces.find((w: Workspace) => w.id === activeWorkspaceId)) {
-          if (data.workspaces.length > 0) {
-            setActiveWorkspaceId(data.workspaces[0].id);
-          }
+          if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id);
         }
       }
-    } catch (err) {
-      console.error('Failed to load workspaces:', err);
+    } catch {
+      // Network error — silently ignore, app still works
     } finally {
       setIsLoading(false);
     }
@@ -47,7 +45,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     refreshWorkspaces();
-  }, []);
+  }, [refreshWorkspaces]);
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null;
 

@@ -1,5 +1,6 @@
-import { DEFAULT_LOCAL_MODEL } from './config';
-import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
+import { getWorkspaceAdapter } from './adapters/index';
+import type { AdapterConfig } from './adapters/index';
+import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { IntentClassificationSchema, type IntentClassification } from '../validation/schemas';
 
 // Dynamic client used inside the function.
@@ -59,10 +60,17 @@ export interface ClassificationResult {
   error?: string;
 }
 
+export interface AICallConfig {
+  model: string;
+  provider?: string;
+  apiKey?: string;
+  baseUrl?: string;
+}
+
 export async function classifyIntent(
   userInput: string,
   hasActiveProject: boolean = false,
-  model?: string,
+  modelConfig?: string | AICallConfig,
 ): Promise<ClassificationResult> {
   if (!userInput || userInput.trim().length < 2) {
     return { success: false, error: 'Input too short to classify' };
@@ -75,12 +83,49 @@ export async function classifyIntent(
     : '';
 
   try {
-    const selectedModel = model || process.env.CLASSIFIER_MODEL || (process.env.OPENAI_API_KEY ? 'gpt-4o-mini' : DEFAULT_LOCAL_MODEL);
-    const resolvedModel = resolveModelName(selectedModel);
-    const adapter = await getWorkspaceAdapter(resolvedModel);
+    // Build adapter config from whatever the caller provides
+    let adapterConfig: AdapterConfig;
+    if (!modelConfig) {
+      // No model configured by user.
+      // If a CLASSIFIER_MODEL env var is set, use it. Otherwise return a
+      // safe default so classify is non-blocking (page.tsx continues anyway).
+      const envModel = process.env.CLASSIFIER_MODEL;
+      if (!envModel) {
+        return {
+          success: true,
+          classification: {
+            intentType: 'ui_generation' as const,
+            confidence: 0.5,
+            summary: 'UI generation request (auto-classified — no model configured)',
+            suggestedMode: 'component' as const,
+            needsClarification: false,
+            clarificationQuestion: undefined,
+            shouldGenerateCode: true,
+            purpose: 'unknown' as const,
+            visualType: 'unknown' as const,
+            complexity: 'medium' as const,
+            platform: 'responsive' as const,
+            layout: 'single-page' as const,
+            motionLevel: 'subtle' as const,
+            preferredStack: ['react', 'tailwind'],
+          },
+        };
+      }
+      adapterConfig = resolveDefaultAdapter('CLASSIFIER');
+    } else if (typeof modelConfig === 'string') {
+      adapterConfig = { model: modelConfig };
+    } else {
+      adapterConfig = {
+        model: modelConfig.model,
+        provider: modelConfig.provider,
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+      };
+    }
 
+    const adapter = await getWorkspaceAdapter(adapterConfig);
     const adapterResult = await adapter.generate({
-      model: resolvedModel,
+      model: adapterConfig.model,
       messages: [
         { role: 'system', content: CLASSIFIER_SYSTEM_PROMPT },
         { role: 'user', content: `Classify this input:\n\n"${sanitized}"${contextHint}` },
@@ -102,8 +147,38 @@ export async function classifyIntent(
 
     const result = IntentClassificationSchema.safeParse(parsed);
     if (!result.success) {
-      console.warn('Classification schema validation failed. Raw JSON:', parsed, 'Errors:', result.error.flatten());
-      return { success: false, error: 'Classification schema validation failed' };
+      // Local models (deepseek-coder, mistral:7b, etc.) sometimes return null for optional
+      // fields. Attempt a coerced re-parse by normalising null → undefined on known fields.
+      const p = parsed as Record<string, unknown>;
+      if (p.clarificationQuestion === null) delete p.clarificationQuestion;
+
+      const retried = IntentClassificationSchema.safeParse(p);
+      if (retried.success) {
+        return { success: true, classification: retried.data };
+      }
+
+      // Still failing — extract whatever valid fields we can, fill the rest with safe defaults
+      const intentRaw = typeof p.intentType === 'string' && ['ui_generation','ui_refinement','product_requirement','ideation','debug_fix','context_clarification'].includes(p.intentType)
+        ? p.intentType as IntentClassification['intentType']
+        : 'ui_generation';
+
+      const recovered = IntentClassificationSchema.parse({
+        intentType:  intentRaw,
+        confidence:  typeof p.confidence === 'number' ? p.confidence : 0.7,
+        summary:     typeof p.summary === 'string' ? p.summary : '',
+        suggestedMode: typeof p.suggestedMode === 'string' ? p.suggestedMode : 'component',
+        needsClarification: false,
+        shouldGenerateCode: typeof p.shouldGenerateCode === 'boolean' ? p.shouldGenerateCode : true,
+        purpose:     typeof p.purpose === 'string' ? p.purpose : 'unknown',
+        visualType:  typeof p.visualType === 'string' ? p.visualType : 'unknown',
+        complexity:  typeof p.complexity === 'string' ? p.complexity : 'medium',
+        platform:    typeof p.platform === 'string' ? p.platform : 'responsive',
+        layout:      typeof p.layout === 'string' ? p.layout : 'single-page',
+        motionLevel: typeof p.motionLevel === 'string' ? p.motionLevel : 'subtle',
+        preferredStack: Array.isArray(p.preferredStack) ? p.preferredStack : ['react', 'tailwind'],
+      });
+
+      return { success: true, classification: recovered };
     }
 
     return { success: true, classification: result.data };

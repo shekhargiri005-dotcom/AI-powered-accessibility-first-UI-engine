@@ -4,8 +4,6 @@ import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 import { logger } from '@/lib/logger';
 
-
-
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/parse');
   reqLogger.info('Received intent parse request');
@@ -29,13 +27,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt, mode, contextId } = body as {
+    const { prompt, mode, contextId, model, provider, apiKey, baseUrl } = body as {
       prompt: string;
       mode: GenerationMode;
       contextId?: string;
+      // User-configured model — forwarded so we honour their Ollama/cloud selection
+      // rather than allowing the env-resolved adapter to silently pick up a
+      // quota-exhausted OPENAI_API_KEY (or any other unintended key).
+      model?: string;
+      provider?: string;
+      apiKey?: string;
+      baseUrl?: string;
     };
 
-    // ─── Input Validation (UI Intelligence Layer) ─────────────────────────────
+    // ─── Input Validation ─────────────────────────────────────────────────────
     const inputCheck = validatePromptInput(prompt);
     if (!inputCheck.valid) {
       reqLogger.warn('Input validation failed', { reason: inputCheck.reason });
@@ -44,17 +49,30 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    // Use sanitized version from input validator
+    // Use the sanitized version — raw prompt was previously being passed instead (bug)
     const sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
 
-    if (!process.env.OPENAI_API_KEY) {
-      reqLogger.warn('OPENAI_API_KEY not configured. Falling back to local parser if available.');
-    }
+    const generationMode: GenerationMode =
+      mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
-    const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
+    // Build caller model config only if the user actually supplied a model.
+    // Passing undefined lets parseIntent fall through to resolveDefaultAdapter.
+    const modelConfig = model
+      ? {
+          model,
+          provider,
+          apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined,
+          baseUrl,
+        }
+      : undefined;
 
-    reqLogger.debug('Parsing intent', { mode: generationMode });
-    const result = await parseIntent(sanitizedPrompt, generationMode, typeof contextId === 'string' ? contextId : undefined);
+    reqLogger.debug('Parsing intent', { mode: generationMode, model: model ?? 'env-resolved' });
+    const result = await parseIntent(
+      sanitizedPrompt,
+      generationMode,
+      typeof contextId === 'string' ? contextId : undefined,
+      modelConfig,
+    );
 
     if (!result.success) {
       reqLogger.warn('Intent parsing failed', { error: result.error });

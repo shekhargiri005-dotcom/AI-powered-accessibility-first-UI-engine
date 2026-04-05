@@ -20,7 +20,7 @@ async function getCachedWorkspaces(userId: string) {
     }
   });
 
-  return memberships.map((m: any) => ({
+  return memberships.map((m) => ({
     id: m.workspace.id,
     name: m.workspace.name,
     slug: m.workspace.slug,

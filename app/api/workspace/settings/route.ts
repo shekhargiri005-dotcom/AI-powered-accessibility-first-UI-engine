@@ -106,9 +106,10 @@ export async function POST(req: Request) {
           maxTokens: 5,
         });
       } catch (err: unknown) {
+        const errObj = err as { error?: { message?: string }; message?: string } | null;
         const msg =
-          (err as any)?.error?.message ||
-          (err as any)?.message ||
+          errObj?.error?.message ??
+          errObj?.message ??
           'The API key appears to be invalid or the provider is unreachable.';
         return NextResponse.json(
           { error: `Key validation failed: ${msg}` },

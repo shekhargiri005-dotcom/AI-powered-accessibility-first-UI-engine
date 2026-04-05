@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Code Validator — pre-preview validation of generated TSX/JSX code.
  * Ensures code is browser-safe and structurally valid before Sandpack.
  */
@@ -110,7 +110,7 @@ const STRUCTURAL_CHECKS: Array<{ test: (code: string) => boolean; code: string; 
 /**
  * Validate a single code string (component TSX/JSX file).
  */
-export function validateGeneratedCode(code: string, fileName = 'component.tsx'): CodeValidationResult {
+export function validateGeneratedCode(code: string, _fileName = 'component.tsx'): CodeValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
 

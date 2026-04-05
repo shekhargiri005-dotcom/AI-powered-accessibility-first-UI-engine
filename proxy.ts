@@ -5,7 +5,7 @@ export const proxy = auth((req) => {
   const isLoggedIn = !!req.auth;
   const isApiRoute = req.nextUrl.pathname.startsWith('/api/');
   const isAuthRoute = req.nextUrl.pathname.startsWith('/api/auth');
-  const isPublicRoute = req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/';
+  const _isPublicRoute = req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/';
 
   // Protect /api/generate and other critical routes
   if (!isLoggedIn && (isApiRoute && !isAuthRoute) && req.nextUrl.pathname.startsWith('/api/generate')) {

@@ -1,5 +1,14 @@
-import type { SandpackFiles } from '@codesandbox/sandpack-react';
+import type { SandpackFiles, SandpackFile } from '@codesandbox/sandpack-react';
 import uiEcosystem from './ui-ecosystem.json';
+
+/**
+ * Narrows a SandpackFiles entry (which can be a string OR a SandpackFile object)
+ * and returns its code string. Returns '' when the value is not a code-bearing object.
+ */
+function resolveFileCode(entry: string | SandpackFile): string {
+  if (typeof entry === 'string') return entry;
+  return entry.code;
+}
 
 /**
  * Builds the Sandpack file tree for live preview.
@@ -191,16 +200,12 @@ export default function CaptureWrapper({ children }) {
         };
       }
     } else {
-      // If it has App.tsx, we need to wrap the user's App inside our CaptureWrapper.
-      // But we can just rely on the user's App rendering. 
-      // Actually, to wrap an existing App.tsx, we would need to override index.tsx.
-      // Let's patch index.tsx dynamically.
-      const indexFile = files['/src/index.tsx'] as { code: string };
-      indexFile.code = indexFile.code.replace(
-        '<App />',
-        '<CaptureWrapper><App /></CaptureWrapper>'
-      );
-      indexFile.code = `import CaptureWrapper from './CaptureWrapper';\n` + indexFile.code;
+      // If it has App.tsx, wrap the user's App inside our CaptureWrapper via index.tsx.
+      const rawIndex = files['/src/index.tsx'];
+      const currentCode = rawIndex !== undefined ? resolveFileCode(rawIndex) : '';
+      const patched = 'import CaptureWrapper from \'./CaptureWrapper\';\n' +
+        currentCode.replace('<App />', '<CaptureWrapper><App /></CaptureWrapper>');
+      files['/src/index.tsx'] = { code: patched, active: false };
     }
   } else {
     files['/src/App.tsx'] = {

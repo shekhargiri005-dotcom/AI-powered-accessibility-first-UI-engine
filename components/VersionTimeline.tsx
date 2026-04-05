@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
 
-interface VersionTimelineProps {
+export interface VersionTimelineProps {
   versions: ProjectVersion[];
   currentVersion: number;
   onSelectVersion: (version: ProjectVersion) => void;
@@ -22,7 +22,10 @@ export default function VersionTimeline({
   isRollingBack = false,
 }: VersionTimelineProps) {
   return (
-    <aside className="w-64 border-r border-gray-700/30 bg-gray-900/20 flex flex-col hidden md:flex">
+    <aside
+      aria-label="Version history timeline"
+      className="w-64 border-r border-gray-700/30 bg-gray-900/20 flex-col hidden md:flex"
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-700/20 flex-shrink-0">
         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
@@ -45,10 +48,17 @@ export default function VersionTimeline({
                 <div className="absolute left-[18px] top-0 w-px h-2 bg-gray-700/50 -translate-y-2" />
               )}
 
-              <button
+              {/* Version card — uses div+tabIndex to avoid button-in-button invalid HTML */}
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectVersion(ver)}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelectVersion(ver); } }}
+                aria-label={`Select version ${ver.version}: ${ver.changeDescription}`}
+                aria-current={isActive ? 'true' : undefined}
                 className={`
-                  w-full text-left p-3 rounded-xl transition-all border group
+                  w-full text-left p-3 rounded-xl transition-all border group cursor-pointer
+                  focus:outline-none focus:ring-2 focus:ring-blue-500/50
                   ${isActive
                     ? 'bg-blue-500/10 border-blue-500/30 ring-1 ring-blue-500/20'
                     : 'border-transparent hover:bg-gray-800/50 hover:border-gray-700/50'
@@ -127,7 +137,7 @@ export default function VersionTimeline({
                     Roll back to v{ver.version}
                   </button>
                 )}
-              </button>
+              </div>
             </div>
           );
         })}

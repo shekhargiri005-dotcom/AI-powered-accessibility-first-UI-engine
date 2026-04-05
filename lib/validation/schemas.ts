@@ -19,7 +19,7 @@ export const IntentClassificationSchema = z.object({
   summary: z.string().catch(''),
   suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
   needsClarification: z.boolean().catch(false),
-  clarificationQuestion: z.string().optional(),
+  clarificationQuestion: z.string().nullish().catch(undefined).transform(v => v ?? undefined),
   shouldGenerateCode: z.boolean().catch(true),
   
   // New: Expert UI Classification

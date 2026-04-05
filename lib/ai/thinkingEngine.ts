@@ -1,5 +1,7 @@
-import { DEFAULT_LOCAL_MODEL } from './config';
-import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
+import { getWorkspaceAdapter } from './adapters/index';
+import type { AdapterConfig } from './adapters/index';
+import type { AICallConfig } from './intentClassifier';
+import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
 import { findMatchingLayouts } from '../intelligence/layoutRegistry';
 import { selectBlueprint } from '../intelligence/blueprintEngine';
@@ -61,6 +63,99 @@ RULES:
 - shouldGenerateCode = true ONLY for: ui_generation, ui_refinement, debug_fix
 - No markdown. JSON only.`;
 
+// ─── JSON Repair Utility ──────────────────────────────────────────────────────
+
+/**
+ * Attempt to repair truncated JSON by closing unclosed braces, brackets, and strings.
+ *
+ * deepseek-coder (and other local models with small maxTokens budgets) often generate
+ * valid JSON that is simply cut off before the final closing characters — e.g.:
+ *   { "summary": "...", "plannedApproach": ["step 1", "step 2
+ *
+ * This function:
+ * 1. Strips any trailing comma before an incomplete value
+ * 2. Closes unclosed string literals
+ * 3. Closes unclosed [ and { pairs in reverse order
+ *
+ * It does NOT attempt to reconstruct missing values — truncated values are left empty.
+ */
+function repairTruncatedJson(raw: string): string {
+  // Remove trailing partial tokens (comma, colon, partial key) before we close
+  let s = raw.trimEnd();
+
+  // Strip trailing comma (last char before whitespace)
+  s = s.replace(/,\s*$/, '');
+
+  // Track open delimiters using a stack
+  const stack: Array<'{' | '['> = [];
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === '\\' && inString) { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === '{') stack.push('{');
+    else if (ch === '[') stack.push('[');
+    else if (ch === '}' || ch === ']') stack.pop();
+  }
+
+  // Close any unclosed string
+  if (inString) s += '"';
+
+  // Close unclosed containers in reverse order
+  while (stack.length > 0) {
+    s += stack.pop() === '{' ? '}' : ']';
+  }
+
+  return s;
+}
+
+// ─── Fallback Plan Builder ───────────────────────────────────────────────────
+
+/**
+ * Build a deterministic fallback ThinkingPlan from the raw prompt and intent.
+ * Used when the AI model fails to produce valid JSON (local models, timeouts).
+ * Never calls an LLM — instant and always succeeds.
+ */
+export function buildFallbackPlan(prompt: string, intentType: IntentType): ThinkingPlan {
+  const blueprint = selectBlueprint(prompt.substring(0, 500));
+  const shouldGenerate = ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType);
+  const executionMode = intentType === 'ui_refinement' ? 'Edit Existing UI' : 'Generate New UI';
+
+  return {
+    detectedIntent: intentType,
+    summary: prompt.substring(0, 200),
+    plannedApproach: [
+      'Analyse the request and identify required UI components',
+      'Select an appropriate layout and visual style',
+      'Generate accessible, production-ready React + Tailwind code',
+      'Run validation and auto-repair if needed',
+    ],
+    affectedScope: ['GeneratedComponent.tsx'],
+    clarificationOpportunities: [],
+    executionMode: executionMode as ThinkingPlan['executionMode'],
+    suggestedMode: 'component',
+    shouldGenerateCode: shouldGenerate,
+    expertReasoning: {
+      purpose: 'General UI Generation',
+      userType: 'Developer',
+      informationDensity: 'Medium',
+      interactionModel: 'Standard Web',
+      visualTone: 'Clean & Modern',
+      motionStrategy: 'Subtle',
+      renderingStrategy: 'React + Tailwind CSS',
+      componentArchitecture: 'Modular functional components',
+      usabilityCheck: 'Maintain visual hierarchy and spacing rhythm',
+    },
+    likelySections: blueprint.structuralSections.length > 0
+      ? blueprint.structuralSections
+      : ['Header', 'Main Content', 'Footer'],
+  };
+}
+
 // ─── Thinking Engine Function ─────────────────────────────────────────────────
 
 export interface ThinkingResult {
@@ -73,7 +168,7 @@ export async function generateThinkingPlan(
   prompt: string,
   intentType: IntentType,
   projectContext?: { componentName?: string; files?: string[] },
-  modelName?: string,
+  modelConfig?: string | AICallConfig,
 ): Promise<ThinkingResult> {
   const sanitized = prompt.substring(0, 10000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
 
@@ -91,13 +186,31 @@ export async function generateThinkingPlan(
   const userMessage = `Intent Type: ${intentType}\n\nUser Input:\n"${sanitized}"${contextBlock}${blueprintHint}`;
 
   try {
-    // Determine model — prioritize the UI selected model or fall back to system defaults
-    const selectedModel = modelName || process.env.THINKING_MODEL || (process.env.OPENAI_API_KEY ? 'gpt-4o-mini' : DEFAULT_LOCAL_MODEL);
-    const resolvedModel = resolveModelName(selectedModel);
-    const adapter = await getWorkspaceAdapter(resolvedModel);
+    // Build adapter config from caller-provided model config
+    let adapterConfig: AdapterConfig;
+    if (!modelConfig) {
+      const envModel = process.env.THINKING_MODEL;
+      if (!envModel) {
+        // No model configured — return a deterministic fallback immediately.
+        // The thinking panel is non-blocking; the user can still proceed.
+        return { success: true, plan: buildFallbackPlan(sanitized, intentType) };
+      }
+      adapterConfig = resolveDefaultAdapter('THINKING');
+    } else if (typeof modelConfig === 'string') {
+      adapterConfig = { model: modelConfig };
+    } else {
+      adapterConfig = {
+        model: modelConfig.model,
+        provider: modelConfig.provider,
+        apiKey: modelConfig.apiKey,
+        baseUrl: modelConfig.baseUrl,
+      };
+    }
+
+    const adapter = await getWorkspaceAdapter(adapterConfig);
 
     const result2 = await adapter.generate({
-      model: resolvedModel,
+      model: adapterConfig.model,
       messages: [
         { role: 'system', content: THINKING_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
@@ -111,10 +224,44 @@ export async function generateThinkingPlan(
     if (!raw) return { success: false, error: 'Empty response from thinking engine' };
 
     let parsed: unknown;
+
+    // ── JSON extraction: 4-stage fallback for local models ─────────────────
+    // Stage 1: direct parse (cloud models return clean JSON)
     try {
       parsed = JSON.parse(raw);
     } catch {
-      return { success: false, error: 'Thinking engine returned malformed JSON' };
+      // Stage 2: extract from markdown fences (deepseek-coder wraps in ```json```)
+      const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+      if (fenceMatch?.[1]) {
+        try { parsed = JSON.parse(fenceMatch[1].trim()); } catch { /* fall through */ }
+      }
+
+      // Stage 3: extract first {...} block
+      if (parsed === undefined) {
+        const braceMatch = raw.match(/\{[\s\S]*\}/);
+        if (braceMatch) {
+          try { parsed = JSON.parse(braceMatch[0]); } catch { /* fall through */ }
+        }
+      }
+
+      // Stage 4: repair truncated JSON — deepseek-coder stops mid-generation before
+      // closing all brackets. Count unclosed delimiters and append them.
+      if (parsed === undefined) {
+        const candidate = raw.includes('{') ? raw.slice(raw.indexOf('{')) : raw;
+        const repaired = repairTruncatedJson(candidate);
+        if (repaired !== candidate) {
+          try { parsed = JSON.parse(repaired); } catch { /* fall through */ }
+        }
+      }
+
+      if (parsed === undefined) {
+        // All stages failed — log raw output for diagnosis
+        console.warn(
+          `[ThinkingEngine] All JSON extraction stages failed for ${adapterConfig.model}. ` +
+          `Raw output (first 500 chars): ${raw.substring(0, 500)}`
+        );
+        return { success: false, error: 'Thinking engine returned malformed JSON' };
+      }
     }
 
     // Handle null requirementBreakdown explicitly
@@ -127,36 +274,8 @@ export async function generateThinkingPlan(
 
     const result = ThinkingPlanSchema.safeParse(parsed);
     if (!result.success) {
-      // Fallback to a safe default plan
-      const fallback: ThinkingPlan = {
-        detectedIntent: intentType,
-        summary: sanitized.substring(0, 200),
-        plannedApproach: [
-          'Analyze the user request in detail',
-          'Identify UI components and layout requirements',
-          'Generate accessible, production-ready React code',
-        ],
-        affectedScope: ['GeneratedComponent.tsx'],
-        clarificationOpportunities: [],
-        executionMode: intentType === 'ui_refinement' ? 'Edit Existing UI' : 'Generate New UI',
-        suggestedMode: 'component',
-        shouldGenerateCode: ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType),
-        expertReasoning: {
-          purpose: 'General UI Generation',
-          userType: 'General User',
-          informationDensity: 'Medium',
-          interactionModel: 'Standard Web',
-          visualTone: 'Clean',
-          motionStrategy: 'Minimal',
-          renderingStrategy: 'Tailwind CSS',
-          componentArchitecture: 'Modular functional components',
-          usabilityCheck: 'Ensure hierarchy and spacing rhythms are maintained'
-        },
-        likelySections: blueprint.structuralSections.length > 0
-          ? blueprint.structuralSections
-          : ['Main Content', 'Header', 'Footer']
-      };
-      return { success: true, plan: fallback };
+      // Schema validation failed — fall back to deterministic plan.
+      return { success: true, plan: buildFallbackPlan(sanitized, intentType) };
     }
 
     return { success: true, plan: result.data };

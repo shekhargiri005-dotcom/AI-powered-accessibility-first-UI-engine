@@ -1,16 +1,27 @@
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
+/** Structured payload for every log entry. */
 interface LogPayload {
-    endpoint: string;
-    requestId?: string;
-    durationMs?: number;
-    error?: unknown;
-    metadata?: Record<string, unknown>;
-    message: string;
+  endpoint: string;
+  requestId?: string;
+  durationMs?: number;
+  error?: unknown;
+  metadata?: Record<string, unknown>;
+  message: string;
+}
+
+/** Structured return type for request-scoped loggers. */
+export interface RequestLogger {
+  requestId: string;
+  info: (message: string, metadata?: Record<string, unknown>) => void;
+  warn: (message: string, metadata?: Record<string, unknown>) => void;
+  error: (message: string, error?: unknown, metadata?: Record<string, unknown>) => void;
+  debug: (message: string, metadata?: Record<string, unknown>) => void;
+  end: (message: string, metadata?: Record<string, unknown>) => void;
 }
 
 class BackendLogger {
-    private formatLog(level: LogLevel, payload: LogPayload) {
+    private formatLog(level: LogLevel, payload: LogPayload): string {
         const timestamp = new Date().toISOString();
         const { endpoint, requestId, durationMs, error, metadata, message } = payload;
 
@@ -51,8 +62,8 @@ class BackendLogger {
         }
     }
 
-    // Create a request-scoped logger wrapper
-    createRequestLogger(endpoint: string) {
+    /** Creates a request-scoped logger with a stable requestId and duration tracking. */
+    createRequestLogger(endpoint: string): RequestLogger {
         const requestId = crypto.randomUUID();
         const startTime = Date.now();
 

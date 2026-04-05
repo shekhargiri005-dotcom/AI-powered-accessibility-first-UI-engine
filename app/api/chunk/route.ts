@@ -8,15 +8,16 @@ export async function POST(request: NextRequest) {
   reqLogger.info('Received chunk generation request');
 
   try {
-    const { intent, manifest, targetFile, model, maxTokens, isMultiSlide } = await request.json();
+    const { intent, manifest, targetFile, model, maxTokens, isMultiSlide, provider, apiKey, baseUrl } = await request.json();
+    const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
 
     if (!intent || !manifest || !targetFile || !model) {
       reqLogger.warn('Missing required parameters', { targetFile, model });
       return NextResponse.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
-    reqLogger.debug('Generating file chunk', { targetFile, model, maxTokens });
-    let code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide);
+    reqLogger.debug('Generating file chunk', { targetFile, model, maxTokens, provider });
+    let code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide, provider, effectiveApiKey, baseUrl);
 
     // Sanitize chunk for Babel compatibility
     code = sanitizeGeneratedCode(code);

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateThinkingPlan } from '@/lib/ai/thinkingEngine';
-import type { IntentType } from '@/lib/validation/schemas';
+import { generateThinkingPlan, buildFallbackPlan } from '@/lib/ai/thinkingEngine';
+import type { IntentType, ThinkingPlan } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
@@ -18,34 +18,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing fields: prompt, intentType' }, { status: 400 });
     }
 
-    const { prompt, intentType, projectContext, model } = body as {
+    const { prompt, intentType, projectContext, model, provider, apiKey, baseUrl } = body as {
       prompt: string;
       intentType: IntentType;
       projectContext?: { componentName?: string; files?: string[] };
       model?: string;
+      provider?: string;
+      apiKey?: string;
+      baseUrl?: string;
     };
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
-    // In a privacy-first local setup, we allow the thinking engine to fail over 
-    // or use a local provider if the key is missing.
-    if (!process.env.OPENAI_API_KEY) {
-      reqLogger.warn('OPENAI_API_KEY not configured. Local thinking might be restricted.');
-    }
+    const modelConfig = model
+      ? { model, provider, apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, baseUrl }
+      : undefined;
 
-    reqLogger.debug('Generating thinking plan', { intentType, model });
-    const result = await generateThinkingPlan(prompt, intentType, projectContext, model);
+    reqLogger.debug('Generating thinking plan', { intentType, model, provider });
+    const result = await generateThinkingPlan(prompt, intentType, projectContext, modelConfig);
 
     if (!result.success) {
-      reqLogger.warn('Thinking plan generation failed', { error: result.error });
-      return NextResponse.json({ success: false, error: result.error }, { status: 422 });
+      // The thinking panel is non-blocking — a 422 was blocking the user's entire generation
+      // flow for 60 seconds then failing visibly. Instead, synthesise a deterministic fallback
+      // plan so the UI always proceeds. _fallback: true lets the client show a subtle notice.
+      reqLogger.warn('Thinking plan generation failed — synthesising fallback', { error: result.error });
+      const fallbackPlan: ThinkingPlan = buildFallbackPlan(prompt, intentType);
+      return NextResponse.json(
+        { success: true, plan: fallbackPlan, _fallback: true, _fallbackReason: result.error },
+        { status: 200 },
+      );
     }
 
     reqLogger.info('Thinking plan generated successfully');
     reqLogger.end('Request completed successfully');
-    return NextResponse.json({ success: true, plan: result.plan });
+    return NextResponse.json({ success: true, plan: result.plan, _fallback: false });
   } catch (error) {
     reqLogger.error('Error during thinking plan generation', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

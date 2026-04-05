@@ -6,7 +6,7 @@ import CodeMirror from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { oneDark } from '@codemirror/theme-one-dark';
 
-interface GeneratedCodeProps {
+export interface GeneratedCodeProps {
   code: string;
   componentName: string;
 }
@@ -14,20 +14,40 @@ interface GeneratedCodeProps {
 export default function GeneratedCode({ code, componentName }: GeneratedCodeProps) {
   const [copied, setCopied] = useState(false);
 
+  // ── Guard: nothing to show yet ──────────────────────────────────────────────
+  if (!code) {
+    return (
+      <section
+        aria-labelledby="generated-code-heading"
+        className="h-full flex flex-col rounded-xl border border-gray-700/50 bg-gray-900/60 backdrop-blur-sm overflow-hidden items-center justify-center p-8 text-center gap-3"
+      >
+        <Code2 className="w-8 h-8 text-gray-600" aria-hidden="true" />
+        <p className="text-sm text-gray-500">No code generated yet.</p>
+      </section>
+    );
+  }
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(code);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback for environments without clipboard API
-      const el = document.createElement('textarea');
-      el.value = code;
-      document.body.appendChild(el);
-      el.select();
-      document.execCommand('copy');
-      document.body.removeChild(el);
-      setCopied(true);
+      // Fallback: programmatic selection (deprecated but widely supported)
+      try {
+        const el = document.createElement('textarea');
+        el.value = code;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.focus();
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        setCopied(true);
+      } catch {
+        // Both methods failed — show a silent no-op; user can manually copy
+      }
+    } finally {
       setTimeout(() => setCopied(false), 2000);
     }
   };

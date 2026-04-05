@@ -1,5 +1,6 @@
-import { DEFAULT_LOCAL_MODEL } from './config';
-import { getWorkspaceAdapter, resolveModelName } from './adapters/index';
+import { getWorkspaceAdapter } from './adapters/index';
+import type { AdapterConfig } from './adapters/index';
+import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import {
   INTENT_PARSER_SYSTEM_PROMPT,
   APP_MODE_INTENT_SYSTEM_PROMPT,
@@ -29,8 +30,14 @@ export interface ParseResult {
 export async function parseIntent(
   userInput: string,
   mode: GenerationMode = 'component',
-  contextId?: string, // Link to persistent project if provided
-  model: string = 'gpt-4o-mini' // Default to mini for parsing speed
+  /** Link to persistent project if provided — enables refinement detection */
+  contextId?: string,
+  /**
+   * Caller-supplied adapter config.
+   * When provided, skips resolveDefaultAdapter entirely — the caller's model/provider/key are used.
+   * When omitted, falls through to INTENT_MODEL env var → any provider env key → local Ollama.
+   */
+  modelConfig?: { model: string; provider?: string; apiKey?: string; baseUrl?: string },
 ): Promise<ParseResult> {
   if (!userInput || userInput.trim().length === 0) {
     return { success: false, error: 'Input cannot be empty' };
@@ -61,12 +68,21 @@ export async function parseIntent(
       userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
     }
 
-    const selectedModel = (model === 'gpt-4o-mini' && !process.env.OPENAI_API_KEY) ? DEFAULT_LOCAL_MODEL : model;
-    const resolvedModel = resolveModelName(selectedModel);
-    const adapter = await getWorkspaceAdapter(resolvedModel);
+    // Resolve model + credentials — priority order:
+    //  1. Caller-supplied modelConfig (user's explicit UI selection — highest priority)
+    //  2. resolveDefaultAdapter checks purpose env var → any provider env key → Ollama
+    let cfg: AdapterConfig;
+    if (modelConfig) {
+      cfg = modelConfig;
+    } else {
+      cfg = resolveDefaultAdapter('INTENT');
+    }
+
+    const adapter = await getWorkspaceAdapter(cfg);
+
 
     const adapterResult = await adapter.generate({
-      model: resolvedModel,
+      model: cfg.model,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -128,6 +144,6 @@ export async function parseIntent(
     return { success: true, intent: validIntent, rawResponse: rawContent };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: `OpenAI API error: ${msg}` };
+    return { success: false, error: `Intent parser error: ${msg}` };
   }
 }

@@ -3,12 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import {
   Plus, Clock, Search, Folders,
-  Code, Box, Layers, Settings, ChevronRight, Hash, X
+  Code, Box, Layers, ChevronRight, Hash, X
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';
 import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
 import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
 import UserNav from '@/components/auth/UserNav';
+import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
 
 interface SidebarProps {
   activeProjectId: string | null;
@@ -16,6 +17,7 @@ interface SidebarProps {
   onNewProject: () => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  onConfigSaved?: (config: AIEngineConfig) => void;
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -29,7 +31,8 @@ export default function Sidebar({
   onSelectProject,
   onNewProject,
   isMobileOpen,
-  onCloseMobile
+  onCloseMobile,
+  onConfigSaved,
 }: SidebarProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
@@ -173,7 +176,7 @@ export default function Sidebar({
 
         {/* Footer / User Settings */}
         <div className="p-3 mt-auto border-t border-gray-800/60 bg-gray-950/80 flex flex-col gap-2 shrink-0">
-          <UserNav />
+          <UserNav onConfigSaved={onConfigSaved} />
         </div>
       </aside>
 

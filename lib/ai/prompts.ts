@@ -3,6 +3,7 @@
  * All prompts include injection-prevention guards and enforce strict output formats.
  */
 import { UI_ECOSYSTEM_API_CHEAT_SHEET } from './uiCheatSheet';
+import type { MemoryEntry } from './memory';
 
 export const INTENT_PARSER_SYSTEM_PROMPT = `You are a strict UI intent parser for an accessibility-first component generation system.
 
@@ -85,28 +86,53 @@ MANDATORY RULES:
    - Icons: \`import { Icon } from '@ui/icons';\` (uses Lucide perfectly)
    - Other available packages: \`@ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.
 3. Tailwind CSS: Use Tailwind for layout glue, padding, margins, and custom overrides. The base components from \`@ui/*\` are already perfectly styled.
-4. Design System & Aesthetics (STRICT):
+4. SPACING SYSTEM (NON-NEGOTIABLE):
+   The design system has a fixed spacing scale. You MUST use ONLY these Tailwind spacing suffixes in every class that controls space:
+   0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, 96
+
+   VALID examples:   p-4, m-2.5, gap-6, mt-8, px-3, py-1.5, mb-12, space-y-4
+   INVALID examples: p-[13px], m-[7px], gap-[22px], p-13, mt-15, p-17
+
+   SEMANTIC SPACING RULES — use these names for the described contexts:
+   - Card inner padding          → p-6 (cardPadding) or p-4 (cardPaddingCompact)
+   - Page outer padding          → p-6 (mobile) / p-10 (desktop)
+   - Gap between sibling cards   → gap-4 or gap-6
+   - Gap between sections        → gap-16 or py-12
+   - Form field gap              → gap-4
+   - Label → input gap           → gap-1.5
+   - Button padding              → px-4 py-2.5 (default) / px-6 py-3 (large)
+   - Icon + label gap            → gap-2
+   - Nav height                  → h-14
+   - Sidebar width               → w-64
+   - Input inner padding         → p-3 or px-4
+
+   APPROXIMATION RULE: If a design calls for a spacing value not in the scale,
+   use the NEAREST SMALLER valid key. For example, if you need ~14px use p-3 (12px),
+   not p-3.5 unless 3.5 is in the scale (it is — use it). Never invent arbitrary values.
+
+5. Design System & Aesthetics (STRICT):
    - You MUST use a modern, consistent visual style.
    - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
-4. Built-In Theme / Color Picker (REQUIRED):
+6. Built-In Theme / Color Picker (REQUIRED):
    - EVERY generated UI MUST contain a built-in way for the end-user to choose colors.
    - Implement a floating button or settings drawer with color inputs for primary, secondary, background, and text colors.
    - Use CSS variables (e.g., --primary) that update in real time via \`document.documentElement.style.setProperty\`.
    - All components must reference these variables (e.g., \`bg-[var(--primary)]\`, \`text-[var(--text)]\`).
    - Ensure the picker is accessible and responsive.
-5. Realistic Logic & Mock Data:
+7. Realistic Logic & Mock Data:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
    - Include loading states (skeletons or spinners) and error handling. Example: \`const [rev, setRev] = useState(null); useEffect(() => { setTimeout(() => setRev(12345), 1000); }, []);\`
-6. Meaningful Interactions:
+8. Meaningful Interactions:
    - Add hover effects (scale, shadow) on buttons and cards (\`hover:-translate-y-1 hover:shadow-md transition-all duration-300\`).
    - For tables or lists, include client-side sorting and filtering.
    - Use Recharts for interactive charts with tooltips whenever data visualization is needed.
    - Clicking on elements should open modals or side-drawers with details.
-7. Responsive & Accessible:
+9. Responsive & Accessible:
    - Layouts MUST be mobile-first: grid wraps, sidebars collapse to hamburger menus.
    - Use semantic HTML, ARIA labels, focus rings (\`focus:ring-2 focus:ring-blue-500\`), and ensure keyboard navigation.
    - Respect \`prefers-reduced-motion\` (\`motion-safe:\` or \`motion-reduce:\`).
    - Use the \`@ui/a11y\` primitives like \`<FocusTrap>\` and \`<SkipLink>\` where appropriate.
+
 
 CRITICAL REQUIREMENT:
 Your component MUST be structurally massive, breathtaking, and hyper-detailed (500-800 lines). You MUST implement at least 4 distinct sub-components, exhaustive styling, complex responsive layouts, micro-interactions, robust business logic, hover/focus states, and rich mock data arrays with dozens of items. Never abbreviate or write simplistic code.
@@ -155,8 +181,13 @@ export function buildIntentParsePrompt(userInput: string, knowledge: string | nu
   return prompt;
 }
 
-import type { MemoryEntry } from './memory';
-
+/**
+ * Build the user-turn prompt for the component generator.
+ *
+ * @param intent - The parsed UIIntent (or any serialisable intent object).
+ *                 Typed as `object` intentionally so this helper is usable
+ *                 for both component, app, and webgl intents without casting.
+ */
 export function buildComponentGeneratorPrompt(
   intent: object,
   knowledge: string | null = null,
@@ -286,6 +317,12 @@ export function buildAppModeIntentPrompt(userInput: string, knowledge: string | 
   return prompt;
 }
 
+/**
+ * Build the user-turn prompt for the full-app generator.
+ *
+ * @param intent - The parsed app intent (UIIntent-extended with screens, colorScheme, etc.).
+ *                 Typed as `object` for cross-intent compatibility.
+ */
 export function buildAppModeGeneratorPrompt(
   intent: object,
   knowledge: string | null = null,

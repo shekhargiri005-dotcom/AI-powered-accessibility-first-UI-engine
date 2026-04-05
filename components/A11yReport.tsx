@@ -4,7 +4,7 @@ import React from 'react';
 import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench } from 'lucide-react';
 import type { A11yReport, A11yViolation } from '@/lib/validation/schemas';
 
-interface A11yReportProps {
+export interface A11yReportProps {
   report: A11yReport & { appliedFixes?: string[] };
 }
 
