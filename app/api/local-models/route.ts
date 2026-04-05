@@ -1,6 +1,4 @@
-import { NextResponse } from 'next/server';
-
-export const dynamic = 'force-dynamic';
+import { NextRequest, NextResponse } from 'next/server';
 
 const LOCAL_RUNTIMES = [
   {
@@ -34,13 +32,17 @@ interface DetectedSource {
   models: DetectedModel[];
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // Reading req.url opts this route out of static generation gracefully
+  const _forceDynamic = req.url; 
+  
   const sources: DetectedSource[] = [];
 
   for (const runtime of LOCAL_RUNTIMES) {
     try {
       const res = await fetch(`${runtime.baseUrl}${runtime.tagsEndpoint}`, {
         signal: AbortSignal.timeout(2000),
+        cache: 'no-store',
       });
 
       if (!res.ok) {
