@@ -2,15 +2,19 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Eye, Code, GitCommit, ScrollText, Sparkles, AlertCircle, Maximize2, X
+  Eye, Code, GitCommit, ScrollText, Sparkles, AlertCircle, Maximize2, X,
+  TrendingUp, TrendingDown, Minus, Activity,
 } from 'lucide-react';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
+import type { FeedbackMeta } from '@/components/FeedbackBar';
+import type { FeedbackStats } from '@/lib/ai/feedbackStore';
 import VersionTimeline from '@/components/VersionTimeline';
 import GeneratedCode from '@/components/GeneratedCode';
 import A11yReportComponent from '@/components/A11yReport';
 import TestOutput from '@/components/TestOutput';
 import IntentBadge from '@/components/IntentBadge';
+import FeedbackBar from '@/components/FeedbackBar';
 import dynamic from 'next/dynamic';
 
 const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
@@ -25,93 +29,139 @@ const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
   ),
 });
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 interface RightPanelProps {
   initialProject: {
-    id: string;
-    timestamp: string;
-    code: string | Record<string, string>;
-    intent: UIIntent;
-    a11yReport: A11yReport;
-    componentName: string;
-    tests?: { rtl: string; playwright: string };
+    id:             string;
+    timestamp:      string;
+    code:           string | Record<string, string>;
+    intent:         UIIntent;
+    a11yReport:     A11yReport;
+    componentName:  string;
+    tests?:         { rtl: string; playwright: string };
   };
-  onRefine: (prompt: string) => Promise<void>;
-  isRefining: boolean;
-  projectId?: string | null;
+  onRefine:    (prompt: string) => Promise<void>;
+  isRefining:  boolean;
+  projectId?:  string | null;
+  /** Feedback metadata from the last generation — enables the FeedbackBar */
+  feedbackMeta?: FeedbackMeta | null;
 }
 
 type TabId = 'preview' | 'code' | 'versions' | 'metrics';
+
+// ─── Success Rate Badge ───────────────────────────────────────────────────────
+
+function SuccessRateBadge({ rate }: { rate: number }) {
+  const pct = Math.round(rate * 100);
+  if (pct >= 70) return (
+    <span className="flex items-center gap-1 text-emerald-400 text-xs font-semibold">
+      <TrendingUp className="w-3 h-3" /> {pct}%
+    </span>
+  );
+  if (pct >= 40) return (
+    <span className="flex items-center gap-1 text-amber-400 text-xs font-semibold">
+      <Minus className="w-3 h-3" /> {pct}%
+    </span>
+  );
+  return (
+    <span className="flex items-center gap-1 text-red-400 text-xs font-semibold">
+      <TrendingDown className="w-3 h-3" /> {pct}%
+    </span>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RightPanel({
   initialProject,
   onRefine,
   isRefining,
   projectId,
+  feedbackMeta,
 }: RightPanelProps) {
-  const [activeTab, setActiveTab] = useState<TabId>('preview');
-  const [versions, setVersions] = useState<ProjectVersion[]>([
-    {
-      version: 1,
-      timestamp: initialProject.timestamp,
-      code: initialProject.code,
-      intent: initialProject.intent,
-      a11yReport: initialProject.a11yReport,
-      changeDescription: 'Initial generation',
-    },
-  ]);
-  const [currentVersion, setCurrentVersion] = useState(1);
-  const [isRollingBack, setIsRollingBack] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeTab,       setActiveTab]       = useState<TabId>('preview');
+  const [versions,        setVersions]        = useState<ProjectVersion[]>([{
+    version:           1,
+    timestamp:         initialProject.timestamp,
+    code:              initialProject.code,
+    intent:            initialProject.intent,
+    a11yReport:        initialProject.a11yReport,
+    changeDescription: 'Initial generation',
+  }]);
+  const [currentVersion,  setCurrentVersion]  = useState(1);
+  const [isRollingBack,   setIsRollingBack]   = useState(false);
+  const [isFullscreen,    setIsFullscreen]    = useState(false);
   const [refinementPrompt, setRefinementPrompt] = useState('');
 
-  const activeV = versions.find(v => v.version === currentVersion) ?? versions[versions.length - 1];
+  /** Auto-captured code edit from Sandpack — bubbles up to FeedbackBar */
+  const [editedCode, setEditedCode] = useState<string | undefined>(undefined);
 
-  // Sync new project
+  /** Aggregated feedback stats fetched lazily when user opens Metrics tab */
+  const [feedbackStats,    setFeedbackStats]    = useState<FeedbackStats | null>(null);
+  const [statsLoading,     setStatsLoading]     = useState(false);
+
+  const activeV = versions.find((v) => v.version === currentVersion) ?? versions[versions.length - 1];
+
+  // Reset on new project
   useEffect(() => {
     if (initialProject.id !== (versions[0]?.intent?.componentName ?? '')) {
       setVersions([{
-        version: 1,
-        timestamp: initialProject.timestamp,
-        code: initialProject.code,
-        intent: initialProject.intent,
-        a11yReport: initialProject.a11yReport,
+        version: 1, timestamp: initialProject.timestamp, code: initialProject.code,
+        intent: initialProject.intent, a11yReport: initialProject.a11yReport,
         changeDescription: 'Initial generation',
       }]);
       setCurrentVersion(1);
       setActiveTab('preview');
+      setEditedCode(undefined);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProject.id]);
 
-  // Sync new refining updates
+  // Sync refinement updates as new versions
   useEffect(() => {
     if (!isRefining) {
       const exists = versions.some(
-        v => v.timestamp === initialProject.timestamp && v.code === initialProject.code,
+        (v) => v.timestamp === initialProject.timestamp && v.code === initialProject.code,
       );
       if (!exists && versions.length > 0) {
         const newVer: ProjectVersion = {
-          version: versions.length + 1,
-          timestamp: initialProject.timestamp,
-          code: initialProject.code,
-          intent: initialProject.intent,
-          a11yReport: initialProject.a11yReport,
+          version:           versions.length + 1,
+          timestamp:         initialProject.timestamp,
+          code:              initialProject.code,
+          intent:            initialProject.intent,
+          a11yReport:        initialProject.a11yReport,
           changeDescription: initialProject.intent.description || 'Refined version',
         };
-        setVersions(prev => [...prev, newVer]);
+        setVersions((prev) => [...prev, newVer]);
         setCurrentVersion(newVer.version);
+        setEditedCode(undefined);
       }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProject.timestamp, isRefining]);
 
+  // Fetch feedback stats when Metrics tab is opened and meta is available
+  useEffect(() => {
+    if (activeTab !== 'metrics' || !feedbackMeta || feedbackStats) return;
+    setStatsLoading(true);
+    fetch(
+      `/api/feedback?model=${encodeURIComponent(feedbackMeta.model)}&intentType=${encodeURIComponent(feedbackMeta.intentType)}`,
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) setFeedbackStats(data.stats ?? null);
+      })
+      .catch(() => { /* non-fatal */ })
+      .finally(() => setStatsLoading(false));
+  }, [activeTab, feedbackMeta, feedbackStats]);
+
   const handleRollback = useCallback(async (version: number) => {
     if (!projectId) { setCurrentVersion(version); return; }
     setIsRollingBack(true);
     try {
-      const res = await fetch(`/api/projects/${projectId}/rollback`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res  = await fetch(`/api/projects/${projectId}/rollback`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ version }),
       });
       const data = await res.json();
@@ -125,10 +175,10 @@ export default function RightPanel({
   }, [projectId]);
 
   const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-    { id: 'preview', label: 'Preview', icon: <Eye className="w-3.5 h-3.5" /> },
-    { id: 'code', label: 'Code', icon: <Code className="w-3.5 h-3.5" /> },
-    { id: 'versions', label: 'History', icon: <GitCommit className="w-3.5 h-3.5" /> },
-    { id: 'metrics', label: 'Metrics', icon: <ScrollText className="w-3.5 h-3.5" /> },
+    { id: 'preview',  label: 'Preview',  icon: <Eye className="w-3.5 h-3.5" /> },
+    { id: 'code',     label: 'Code',     icon: <Code className="w-3.5 h-3.5" /> },
+    { id: 'versions', label: 'History',  icon: <GitCommit className="w-3.5 h-3.5" /> },
+    { id: 'metrics',  label: 'Metrics',  icon: <ScrollText className="w-3.5 h-3.5" /> },
   ];
 
   const handleRefineSubmit = () => {
@@ -142,7 +192,7 @@ export default function RightPanel({
       flex flex-col flex-1 min-h-0 bg-gray-950 border-t lg:border-t-0 lg:border-l border-gray-800/60 z-20
       ${isFullscreen ? 'fixed inset-0 lg:left-72 z-50' : 'relative w-full'}
     `}>
-      {/* Top Header */}
+      {/* ── Top Header ───────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gray-950/80 backdrop-blur-md border-b border-gray-800/60">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
@@ -156,14 +206,14 @@ export default function RightPanel({
         </div>
 
         <div className="flex items-center gap-1.5 p-1 bg-gray-900/50 rounded-lg border border-gray-800">
-          {TABS.map(t => (
+          {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`
                 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
-                ${activeTab === t.id 
-                  ? 'bg-blue-600/20 text-blue-400 shadow-sm border border-blue-500/30' 
+                ${activeTab === t.id
+                  ? 'bg-blue-600/20 text-blue-400 shadow-sm border border-blue-500/30'
                   : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800 border border-transparent'
                 }
               `}
@@ -173,7 +223,7 @@ export default function RightPanel({
             </button>
           ))}
           <div className="w-px h-4 bg-gray-700 mx-1" />
-          <button 
+          <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-800 transition"
             title="Toggle fullscreen"
@@ -183,27 +233,43 @@ export default function RightPanel({
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/20">
+      {/* ── Main Content Area ─────────────────────────────────────────────── */}
+      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/20 flex flex-col">
+
+        {/* Preview Tab */}
         {activeTab === 'preview' && (
-          <div className="absolute inset-0 z-0">
-            <SandpackPreview 
-              key={`preview-${activeV.timestamp}-${currentVersion}`}
-              code={activeV.code as string | Record<string, string>} 
-              componentName={activeV.intent.componentName} 
-            />
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 relative min-h-0">
+              <SandpackPreview
+                key={`preview-${activeV.timestamp}-${currentVersion}`}
+                code={activeV.code as string | Record<string, string>}
+                componentName={activeV.intent.componentName}
+                onCodeChange={setEditedCode}
+              />
+            </div>
+
+            {/* FeedbackBar — below preview, above refinement bar */}
+            {feedbackMeta && (
+              <FeedbackBar
+                {...feedbackMeta}
+                autoDetectedEdit={editedCode}
+                onFeedbackSubmitted={() => setEditedCode(undefined)}
+              />
+            )}
           </div>
         )}
 
+        {/* Code Tab */}
         {activeTab === 'code' && (
           <div className="absolute inset-0 overflow-y-auto z-10 bg-gray-950 pb-24">
-            <GeneratedCode 
-              code={typeof activeV.code === 'string' ? activeV.code : JSON.stringify(activeV.code, null, 2)} 
-              componentName={activeV.intent.componentName} 
+            <GeneratedCode
+              code={typeof activeV.code === 'string' ? activeV.code : JSON.stringify(activeV.code, null, 2)}
+              componentName={activeV.intent.componentName}
             />
           </div>
         )}
 
+        {/* Versions Tab */}
         {activeTab === 'versions' && (
           <div className="absolute inset-0 overflow-hidden flex bg-gray-950/50">
             <div className="w-full max-w-sm border-r border-gray-800/60 bg-gray-900/30 overflow-y-auto custom-scrollbar">
@@ -227,8 +293,11 @@ export default function RightPanel({
           </div>
         )}
 
+        {/* Metrics Tab */}
         {activeTab === 'metrics' && (
-          <div className="absolute inset-0 overflow-y-auto bg-gray-950 p-6 space-y-6 pb-24 custom-scrollbar">
+          <div className="absolute inset-0 overflow-y-auto bg-gray-950 p-6 space-y-8 pb-24 custom-scrollbar">
+
+            {/* A11y Report */}
             {activeV.a11yReport && (
               <div>
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3 flex items-center gap-2">
@@ -237,32 +306,111 @@ export default function RightPanel({
                 <A11yReportComponent report={activeV.a11yReport} />
               </div>
             )}
+
+            {/* Test Output */}
             {initialProject.tests && (
-              <div className="mt-8">
+              <div>
                 <TestOutput tests={initialProject.tests} componentName={initialProject.componentName} />
               </div>
             )}
+
+            {/* ── Generation Intelligence (Feedback Stats) ───────────────── */}
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-4 flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5" /> Generation Intelligence
+              </h3>
+
+              {!feedbackMeta ? (
+                <p className="text-xs text-gray-600 italic">
+                  Complete a generation to see model performance stats.
+                </p>
+              ) : statsLoading ? (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <div className="w-3.5 h-3.5 border border-gray-600 border-t-white rounded-full animate-spin" />
+                  Loading stats…
+                </div>
+              ) : !feedbackStats ? (
+                <div className="rounded-xl border border-gray-800 bg-gray-900/30 p-5 text-center space-y-1">
+                  <p className="text-xs text-gray-400 font-medium">No feedback data yet</p>
+                  <p className="text-[10px] text-gray-600">
+                    Rate this generation using the feedback bar in the Preview tab.
+                    After a few samples the engine will start learning.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Header row */}
+                  <div className="flex items-start justify-between rounded-xl border border-gray-800 bg-gray-900/40 px-4 py-3">
+                    <div>
+                      <p className="text-xs font-semibold text-gray-200 mb-0.5">
+                        {feedbackMeta.model}
+                      </p>
+                      <p className="text-[10px] text-gray-500 capitalize">
+                        {feedbackMeta.intentType} components · {feedbackStats.total} sample{feedbackStats.total !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <SuccessRateBadge rate={feedbackStats.successRate} />
+                  </div>
+
+                  {/* Signal breakdown */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: '👍 Approved',  value: feedbackStats.thumbsUp,   color: 'text-emerald-400' },
+                      { label: '👎 Rejected',  value: feedbackStats.thumbsDown,  color: 'text-red-400'     },
+                      { label: '✏️ Corrected', value: feedbackStats.corrected,   color: 'text-blue-400'    },
+                      { label: '🗑️ Discarded', value: feedbackStats.discarded,   color: 'text-gray-500'    },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} className="rounded-lg border border-gray-800 bg-gray-900/30 px-3 py-2.5">
+                        <p className="text-[10px] text-gray-500 mb-0.5">{label}</p>
+                        <p className={`text-lg font-bold ${color}`}>{value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Quality scores */}
+                  <div className="rounded-xl border border-gray-800 bg-gray-900/30 px-4 py-3 space-y-2.5">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600">Avg quality scores</p>
+                    {[
+                      { label: 'A11y score',     value: feedbackStats.avgA11yScore,     suffix: '/100' },
+                      { label: 'Critique score', value: feedbackStats.avgCritiqueScore, suffix: '/100' },
+                      { label: 'Latency',        value: Math.round(feedbackStats.avgLatencyMs / 1000), suffix: 's' },
+                    ].map(({ label, value, suffix }) => (
+                      <div key={label} className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">{label}</span>
+                        <span className="text-xs font-semibold text-gray-300 font-mono">
+                          {value}{suffix}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-[10px] text-gray-700 text-right">
+                    Updated {new Date(feedbackStats.lastUpdated).toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Global Refining Overlay */}
+        {/* Refining overlay */}
         {isRefining && (
           <div className="absolute inset-0 z-50 bg-gray-950/80 backdrop-blur-md flex items-center justify-center">
-             <div className="flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-gray-900 border border-gray-800 shadow-2xl">
-                <div className="relative">
-                  <div className="w-20 h-20 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin" />
-                  <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-400 animate-pulse" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white tracking-tight mb-1">Evolving UI</h3>
-                  <p className="text-sm text-gray-400">Applying intelligent targeted patches...</p>
-                </div>
+            <div className="flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-gray-900 border border-gray-800 shadow-2xl">
+              <div className="relative">
+                <div className="w-20 h-20 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin" />
+                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-400 animate-pulse" />
               </div>
+              <div>
+                <h3 className="text-xl font-bold text-white tracking-tight mb-1">Evolving UI</h3>
+                <p className="text-sm text-gray-400">Applying intelligent targeted patches...</p>
+              </div>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Persistent Bottom Editing Bar */}
+      {/* ── Persistent Bottom Editing Bar ─────────────────────────────────── */}
       <div className="flex-shrink-0 p-4 bg-gray-950 border-t border-gray-800/80 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
         <div className="flex items-center gap-3 w-full bg-gray-900/60 p-2 rounded-2xl border border-gray-700/50 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-500/50 transition-all">
           <input
