@@ -375,22 +375,68 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     setLocalSources([]);
     setSelectedLocalSource(null);
     setSelectedLocalModel(null);
+    
+    let activeSources: LocalSource[] = [];
+
     try {
-      // Append ?t=... to prevent Browser HTTP caching of the previous faulty Next.js route.
+      // 1. First attempt Next.js backend detection (Works if Next is run natively on host)
       const res  = await fetch('/api/local-models?t=' + Date.now());
       const data = await res.json() as { anyRunning: boolean; sources: LocalSource[] };
-      setLocalSources(data.sources ?? []);
-      const first = (data.sources ?? []).find(s => s.running);
-      if (first) {
-        setSelectedLocalSource(first);
-        setSelectedLocalModel(first.models[0] ?? null);
-      }
+      activeSources = data.sources || [];
     } catch {
-      setLocalSources([]);
-    } finally {
-      setLocalLoading(false);
-      setLocalFetched(true);
+      activeSources = [];
     }
+
+    // 2. Direct Browser fallback: Bypasses Docker/WSL Network boundaries
+    // If backend found nothing, the Next.js process might be in an isolated container. 
+    // We can ping Ollama natively from the host's actual browser!
+    if (!activeSources.some(s => s.running)) {
+      try {
+        const directRes = await fetch('http://127.0.0.1:11434/api/tags');
+        if (directRes.ok) {
+           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           const data = await directRes.json() as any;
+           // eslint-disable-next-line @typescript-eslint/no-explicit-any
+           const models = (data.models || []).map((m: any) => {
+              const rawName = m.name || m.id || 'unknown';
+              const [base, tag] = rawName.split(':');
+              const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              
+              let t = 0.6;
+              const n = rawName.toLowerCase();
+              if (n.includes('coder') || n.includes('code')) t = 0.3;
+              else if (n.includes('instruct') || n.includes('chat')) t = 0.5;
+
+              return {
+                 id: rawName,
+                 label: tag ? `${pretty} (${tag})` : pretty,
+                 size: m.size ? `${(m.size / 1073741824).toFixed(1)} GB` : undefined,
+                 temperature: t
+              };
+           });
+           
+           activeSources = [{
+             name: 'Ollama',
+             provider: 'ollama',
+             v1BaseUrl: 'http://127.0.0.1:11434/v1',
+             running: true,
+             models
+           }];
+        }
+      } catch {
+        // Direct browser ping failed (CORS or genuinely offline)
+      }
+    }
+
+    setLocalSources(activeSources);
+    const first = activeSources.find(s => s.running);
+    if (first) {
+      setSelectedLocalSource(first);
+      setSelectedLocalModel(first.models[0] ?? null);
+    }
+
+    setLocalLoading(false);
+    setLocalFetched(true);
   }, []);
 
   const handleModeSwitch = (m: PanelMode) => {
