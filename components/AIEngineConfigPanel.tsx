@@ -376,7 +376,8 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     setSelectedLocalSource(null);
     setSelectedLocalModel(null);
     try {
-      const res  = await fetch('/api/local-models');
+      // Append ?t=... to prevent Browser HTTP caching of the previous faulty Next.js route.
+      const res  = await fetch('/api/local-models?t=' + Date.now());
       const data = await res.json() as { anyRunning: boolean; sources: LocalSource[] };
       setLocalSources(data.sources ?? []);
       const first = (data.sources ?? []).find(s => s.running);
