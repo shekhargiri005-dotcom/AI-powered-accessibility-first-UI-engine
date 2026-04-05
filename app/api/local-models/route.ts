@@ -9,11 +9,25 @@ const LOCAL_RUNTIMES = [
     v1BaseUrl: 'http://127.0.0.1:11434/v1',
   },
   {
+    name: 'Ollama (localhost)',
+    provider: 'ollama',
+    baseUrl: 'http://localhost:11434',
+    tagsEndpoint: '/api/tags',
+    v1BaseUrl: 'http://localhost:11434/v1',
+  },
+  {
     name: 'LM Studio',
     provider: 'lmstudio',
     baseUrl: 'http://127.0.0.1:1234',
     tagsEndpoint: '/v1/models',
     v1BaseUrl: 'http://127.0.0.1:1234/v1',
+  },
+  {
+    name: 'LM Studio (localhost)',
+    provider: 'lmstudio',
+    baseUrl: 'http://localhost:1234',
+    tagsEndpoint: '/v1/models',
+    v1BaseUrl: 'http://localhost:1234/v1',
   },
 ];
 
@@ -40,12 +54,14 @@ export async function GET(req: NextRequest) {
 
   for (const runtime of LOCAL_RUNTIMES) {
     try {
+      console.log(`[local-models] Attempting to connect to ${runtime.name} at ${runtime.baseUrl}${runtime.tagsEndpoint}`);
       const res = await fetch(`${runtime.baseUrl}${runtime.tagsEndpoint}`, {
-        signal: AbortSignal.timeout(2000),
+        signal: AbortSignal.timeout(3000), // Increased timeout slightly
         cache: 'no-store',
       });
 
       if (!res.ok) {
+        console.warn(`[local-models] ${runtime.name} returned status ${res.status}`);
         sources.push({ ...runtime, running: false, models: [] });
         continue;
       }
@@ -68,7 +84,8 @@ export async function GET(req: NextRequest) {
       });
 
       sources.push({ ...runtime, running: true, models });
-    } catch {
+    } catch (err: unknown) {
+      console.warn(`[local-models] Failed to reach ${runtime.name}:`, err instanceof Error ? err.message : String(err));
       sources.push({ ...runtime, running: false, models: [] });
     }
   }
