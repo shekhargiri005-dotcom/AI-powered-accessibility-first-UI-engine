@@ -113,8 +113,17 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: '',
     docsUrl: 'https://lmstudio.ai',
   },
+  huggingface: {
+    id: 'huggingface', name: 'Hugging Face',
+    color: 'from-amber-400 to-yellow-600', accent: 'text-amber-400', icon: '🤗',
+    baseUrl: 'https://api-inference.huggingface.co/v1',
+    modelHint: 'meta-llama/Meta-Llama-3-8B-Instruct',
+    keyLabel: 'Hugging Face Token',
+    keyHint: 'hf_… — get one at huggingface.co/settings/tokens',
+    docsUrl: 'https://huggingface.co/settings/tokens',
+  },
   custom: {
-    id: 'custom', name: 'Custom / Other',
+    id: 'custom', name: 'Advanced / Custom Server',
     color: 'from-gray-500 to-gray-600', accent: 'text-gray-400', icon: '⚙',
     modelHint: 'Enter exact model name as expected by your API',
     keyLabel: 'API Key',
@@ -125,7 +134,7 @@ const PROVIDERS: Record<string, ProviderInfo> = {
 
 // Provider order for the picker (local providers handled separately via tabs)
 const CLOUD_PROVIDER_ORDER = [
-  'openai', 'anthropic', 'google', 'groq', 'deepseek', 'mistral', 'openrouter', 'together', 'custom',
+  'openai', 'anthropic', 'google', 'groq', 'deepseek', 'mistral', 'openrouter', 'together', 'huggingface', 'custom',
 ];
 
 // Models to suggest per provider (pulled from MODEL_REGISTRY)
@@ -138,6 +147,7 @@ const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
   mistral:    ['mistral-large-latest'],
   openrouter: [],   // Too many — free text only
   together:   [],   // Too many — free text only
+  huggingface:['meta-llama/Meta-Llama-3-8B-Instruct'],
   custom:     [],
 };
 
@@ -148,12 +158,13 @@ const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
 function detectFromKey(key: string): ProviderInfo | null {
   const k = key.trim();
   if (!k) return null;
-  if (k.startsWith('sk-ant-'))                  return PROVIDERS.anthropic;
-  if (k.startsWith('AIzaSy'))                   return PROVIDERS.google;
-  if (k.startsWith('gsk_'))                     return PROVIDERS.groq;
-  if (k.startsWith('sk-or-'))                   return PROVIDERS.openrouter;
+  if (k.startsWith('sk-ant-'))                   return PROVIDERS.anthropic;
+  if (k.startsWith('AIzaSy'))                    return PROVIDERS.google;
+  if (k.startsWith('gsk_'))                      return PROVIDERS.groq;
+  if (k.startsWith('sk-or-'))                    return PROVIDERS.openrouter;
+  if (k.startsWith('hf_'))                       return PROVIDERS.huggingface;
   if (k.startsWith('sk-') || k.startsWith('sk-proj-')) return PROVIDERS.openai;
-  if (k.length >= 32 && /^[a-f0-9]+$/i.test(k)) return PROVIDERS.together;
+  if (k.length >= 32 && /^[a-f0-9]+$/i.test(k))  return PROVIDERS.together;
   return PROVIDERS.custom;
 }
 
