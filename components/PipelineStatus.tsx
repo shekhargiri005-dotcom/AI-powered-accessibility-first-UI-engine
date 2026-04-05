@@ -1,9 +1,10 @@
 'use client';
 
 import React from 'react';
+import { signIn } from 'next-auth/react';
 import {
   CheckCircle, Loader2, AlertCircle,
-  Brain, Code2, ShieldCheck, TestTube, Eye, Zap,
+  Brain, Code2, ShieldCheck, TestTube, Eye, Zap, Lock, LogIn,
 } from 'lucide-react';
 
 export type PipelineStep =
@@ -162,15 +163,56 @@ export default function PipelineStatus({ currentStep, errorMessage }: PipelineSt
       </div>
 
       {/* Error message */}
-      {currentStep === 'error' && errorMessage && (
-        <div
-          className="mt-4 p-3 rounded-lg bg-red-950/50 border border-red-500/30 flex items-start gap-2"
-          role="alert"
-        >
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-300">{errorMessage}</p>
-        </div>
-      )}
+      {currentStep === 'error' && errorMessage && (() => {
+        const isUnauthorized =
+          errorMessage.toLowerCase().includes('unauthorized') ||
+          errorMessage.toLowerCase().includes('please log in') ||
+          errorMessage.toLowerCase().includes('log in');
+
+        if (isUnauthorized) {
+          return (
+            <div
+              className="mt-4 p-4 rounded-xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-3"
+              role="alert"
+            >
+              <div className="p-1.5 rounded-lg bg-amber-500/15 shrink-0">
+                <Lock className="w-4 h-4 text-amber-400" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-amber-300 mb-0.5">Session Expired</p>
+                <p className="text-xs text-amber-400/70 leading-relaxed">
+                  Your session has ended. Sign in again to continue generating components.
+                </p>
+              </div>
+              <button
+                onClick={() => signIn()}
+                className="
+                  shrink-0 flex items-center gap-1.5 px-3 py-1.5
+                  bg-amber-500/20 hover:bg-amber-500/30
+                  border border-amber-500/30 hover:border-amber-500/50
+                  text-amber-300 hover:text-amber-200
+                  text-xs font-semibold rounded-lg
+                  transition-all duration-200 active:scale-95
+                "
+                aria-label="Sign in to resume pipeline"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign In
+              </button>
+            </div>
+          );
+        }
+
+        return (
+          <div
+            className="mt-4 p-3 rounded-lg bg-red-950/50 border border-red-500/30 flex items-start gap-2"
+            role="alert"
+          >
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-300">{errorMessage}</p>
+          </div>
+        );
+      })()}
     </div>
   );
 }

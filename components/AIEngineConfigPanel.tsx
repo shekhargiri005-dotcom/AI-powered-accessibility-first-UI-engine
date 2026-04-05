@@ -122,8 +122,36 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'hf_… — get one at huggingface.co/settings/tokens',
     docsUrl: 'https://huggingface.co/settings/tokens',
   },
+  // ── Dedicated adapter slots ──────────────────────────────────────────────
+  meta: {
+    id: 'meta', name: 'Meta / Llama',
+    color: 'from-blue-600 to-indigo-600', accent: 'text-blue-400', icon: '🦙',
+    baseUrl: 'https://api.together.xyz/v1',
+    modelHint: 'meta-llama/Llama-3.3-70B-Instruct, Llama-3.1-8B…',
+    keyLabel: 'Together AI or Groq API Key',
+    keyHint: 'Get one at api.together.ai or console.groq.com/keys',
+    docsUrl: 'https://api.together.ai/settings/api-keys',
+  },
+  qwen: {
+    id: 'qwen', name: 'Qwen (DashScope)',
+    color: 'from-violet-500 to-purple-600', accent: 'text-violet-400', icon: '🔮',
+    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    modelHint: 'qwen-turbo, qwen-plus, qwen-coder-turbo…',
+    keyLabel: 'DashScope API Key',
+    keyHint: 'Get one at dashscope.aliyun.com',
+    docsUrl: 'https://dashscope.aliyun.com/',
+  },
+  gemma: {
+    id: 'gemma', name: 'Gemma (Google)',
+    color: 'from-sky-400 to-cyan-500', accent: 'text-sky-400', icon: '💎',
+    baseUrl: 'https://api.together.xyz/v1',
+    modelHint: 'google/gemma-2-27b-it, google/gemma-2-9b-it…',
+    keyLabel: 'Together AI or Groq API Key',
+    keyHint: 'Get one at api.together.ai or console.groq.com/keys',
+    docsUrl: 'https://api.together.ai/settings/api-keys',
+  },
   custom: {
-    id: 'custom', name: 'Advanced / Custom Server',
+    id: 'custom', name: 'Advanced / Custom',
     color: 'from-gray-500 to-gray-600', accent: 'text-gray-400', icon: '⚙',
     modelHint: 'Enter exact model name as expected by your API',
     keyLabel: 'API Key',
@@ -133,22 +161,43 @@ const PROVIDERS: Record<string, ProviderInfo> = {
 };
 
 // Provider order for the picker (local providers handled separately via tabs)
+// Row 1: major cloud · Row 2: open-model hosts · Row 3: adapter-specific · Row 4: utilities
 const CLOUD_PROVIDER_ORDER = [
-  'openai', 'anthropic', 'google', 'groq', 'deepseek', 'mistral', 'openrouter', 'together', 'huggingface', 'custom',
+  // Major cloud APIs
+  'openai', 'anthropic', 'google', 'deepseek',
+  // Dedicated adapter providers
+  'mistral', 'meta', 'qwen', 'gemma',
+  // Aggregators / fast inference
+  'groq', 'openrouter', 'together', 'huggingface',
+  // Catch-all
+  'custom',
 ];
 
-// Models to suggest per provider (pulled from MODEL_REGISTRY)
+// ── All 24 models across 9 adapters ──────────────────────────────────────────
 const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
-  openai:     ['gpt-4o', 'gpt-4o-mini'],
-  anthropic:  ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'],
-  google:     ['gemini-2.0-flash', 'gemini-1.5-pro'],
-  groq:       ['llama-3.3-70b-versatile'],
-  deepseek:   ['deepseek-chat'],
-  mistral:    ['mistral-large-latest'],
-  openrouter: [],   // Too many — free text only
-  together:   [],   // Too many — free text only
-  huggingface:['meta-llama/Meta-Llama-3-8B-Instruct'],
-  custom:     [],
+  // ── OpenAI (4 models) ───────────────────────────────────────────────────
+  openai:      ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini'],
+  // ── Anthropic (4 models) ────────────────────────────────────────────────
+  anthropic:   ['claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
+  // ── Google Gemini (3 models) ─────────────────────────────────────────────
+  google:      ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+  // ── DeepSeek (2 models) ─────────────────────────────────────────────────
+  deepseek:    ['deepseek-chat', 'deepseek-coder'],
+  // ── Mistral AI (3 models) ───────────────────────────────────────────────
+  mistral:     ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
+  // ── Meta / Llama (3 models via Together) ────────────────────────────────
+  meta:        ['meta-llama/Llama-3.3-70B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct', 'meta-llama/Llama-3.2-3B-Instruct'],
+  // ── Qwen / DashScope (3 models) ─────────────────────────────────────────
+  qwen:        ['qwen-turbo', 'qwen-plus', 'qwen-coder-turbo'],
+  // ── Gemma / Google (2 models via Together/Groq) ─────────────────────────
+  gemma:       ['google/gemma-2-27b-it', 'google/gemma-2-9b-it'],
+  // ── Groq fast inference (3 models) ──────────────────────────────────────
+  groq:        ['llama-3.3-70b-versatile', 'gemma2-9b-it', 'mixtral-8x7b-32768'],
+  // ── Aggregators — curated picks (free text also supported) ───────────────
+  openrouter:  ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
+  together:    ['meta-llama/Llama-3.3-70B-Instruct', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'Qwen/Qwen2.5-Coder-32B-Instruct'],
+  huggingface: ['meta-llama/Meta-Llama-3-8B-Instruct'],
+  custom:      [],
 };
 
 /**
