@@ -29,12 +29,15 @@ export class OpenAIAdapter implements AIAdapter {
       ? toOpenAIToolChoice(options.toolChoice)
       : undefined;
 
+    const isAggregator = this.client.baseURL.includes('openrouter.ai') || this.client.baseURL.includes('together.xyz');
+    
     const response = await this.client.chat.completions.create({
       model: options.model,
       messages: options.messages,
       temperature: options.temperature ?? 0.4,
       max_tokens: options.maxTokens ?? 5000,
-      ...(options.responseFormat
+      // Aggregators often proxy to models that crash when given OpenAI-specific JSON mode flags.
+      ...((options.responseFormat && !isAggregator)
         ? { response_format: { type: options.responseFormat } }
         : {}),
       ...(toolDefs?.length ? { tools: toolDefs } : {}),
