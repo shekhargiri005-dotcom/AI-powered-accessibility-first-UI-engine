@@ -116,7 +116,7 @@ const PROVIDERS: Record<string, ProviderInfo> = {
   huggingface: {
     id: 'huggingface', name: 'Hugging Face',
     color: 'from-amber-400 to-yellow-600', accent: 'text-amber-400', icon: '🤗',
-    baseUrl: 'https://api-inference.huggingface.co/v1',
+    baseUrl: 'https://router.huggingface.co/v1',
     modelHint: 'meta-llama/Meta-Llama-3-8B-Instruct',
     keyLabel: 'Hugging Face Token',
     keyHint: 'hf_… — get one at huggingface.co/settings/tokens',
