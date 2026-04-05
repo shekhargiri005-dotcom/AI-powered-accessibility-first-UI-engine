@@ -71,16 +71,27 @@ export const encryptionService = {
   }
 };
 
-// Validate key at startup (if not skipping validation for builds)
-if (process.env.NODE_ENV !== "test" && !process.env.SKIP_ENV_VALIDATION) {
+// ─── Startup Validation ───────────────────────────────────────────────────────
+// Validate the key is present and correctly sized at module load time.
+//
+// IMPORTANT: We do NOT call process.exit(1) here.
+// Next.js imports every server module during the build's "Collecting page data"
+// phase — a process.exit() at that point kills the entire Vercel build even
+// though the secret isn't needed until a real request arrives.
+//
+// Instead we warn loudly. The actual encrypt() / decrypt() calls will throw at
+// request time if the secret is still missing, returning a safe 500 to the client.
+if (process.env.NODE_ENV !== 'test' && !process.env.SKIP_ENV_VALIDATION) {
   try {
     getSecretKey();
   } catch (err) {
-    if (process.env.NODE_ENV === "production") {
-      console.error("CRITICAL:", err instanceof Error ? err.message : String(err));
-      process.exit(1);
-    } else {
-      console.warn("WARNING:", err instanceof Error ? err.message : String(err));
-    }
+    const msg = err instanceof Error ? err.message : String(err);
+    // Use CRITICAL prefix so it's visible in build/server logs
+    console.error(`CRITICAL (non-fatal at build): ${msg}`);
+    console.error(
+      'Set ENCRYPTION_SECRET to a 32-byte value in your deployment environment.\n' +
+      'Generate one with: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'base64\'))"'
+    );
+    // Do NOT process.exit() — let the build succeed; requests will fail-safe at runtime.
   }
 }
