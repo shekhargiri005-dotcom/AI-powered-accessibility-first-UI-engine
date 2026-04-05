@@ -953,7 +953,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
 
               {/* Runtime list */}
               {localSources.filter(s => s.running).length > 0 && localSources.filter(source => source.running).map(source => (
-                <div key={source.provider} className="space-y-2">
+                <div key={source.name} className="space-y-2">
                   <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border cursor-pointer transition-all
                     ${source.running
                       ? selectedLocalSource?.provider === source.provider
