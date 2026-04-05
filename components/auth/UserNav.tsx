@@ -8,9 +8,10 @@ import AIEngineConfigPanel, { type AIEngineConfig } from '@/components/AIEngineC
 
 interface UserNavProps {
   onConfigSaved?: (config: AIEngineConfig) => void;
+  onDeactivated?: () => void;
 }
 
-export default function UserNav({ onConfigSaved }: UserNavProps) {
+export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) {
   const { data: session, status } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -32,12 +33,12 @@ export default function UserNav({ onConfigSaved }: UserNavProps) {
             bg-gradient-to-r from-indigo-600/80 to-blue-600/80 hover:from-indigo-500/80 hover:to-blue-500/80
             text-white font-semibold text-sm transition-all duration-200 border border-indigo-500/30
             shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/20 active:scale-[0.98] group"
-          aria-label="Open AI Engine Configuration"
+          aria-label="Open Generation Engine Setup"
         >
           <div className="p-1 rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
             <Cpu className="w-3.5 h-3.5" />
           </div>
-          <span>AI Engine Config</span>
+          <span>Generation Engine</span>
           <Settings2 className="w-3.5 h-3.5 ml-auto opacity-60 group-hover:opacity-100 group-hover:rotate-45 transition-all duration-300" />
         </button>
 
@@ -47,6 +48,10 @@ export default function UserNav({ onConfigSaved }: UserNavProps) {
           onSaved={(config) => {
             setIsConfigOpen(false);
             onConfigSaved?.(config);
+          }}
+          onDeactivated={() => {
+            setIsConfigOpen(false);
+            onDeactivated?.();
           }}
         />
       </>
@@ -108,7 +113,7 @@ export default function UserNav({ onConfigSaved }: UserNavProps) {
                 className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-gray-200 rounded-lg transition-colors group"
               >
                 <Cpu className="w-4 h-4 text-indigo-400 group-hover:text-indigo-300 transition-colors" />
-                AI Engine Config
+                Generation Engine
               </button>
               <button className="w-full flex items-center gap-2.5 px-2.5 py-2 text-sm text-gray-400 hover:bg-gray-800 hover:text-gray-200 rounded-lg transition-colors group">
                 <UserIcon className="w-4 h-4 text-gray-500 group-hover:text-gray-400 transition-colors" />
@@ -134,6 +139,10 @@ export default function UserNav({ onConfigSaved }: UserNavProps) {
         onSaved={(config) => {
           setIsConfigOpen(false);
           onConfigSaved?.(config);
+        }}
+        onDeactivated={() => {
+          setIsConfigOpen(false);
+          onDeactivated?.();
         }}
       />
     </div>

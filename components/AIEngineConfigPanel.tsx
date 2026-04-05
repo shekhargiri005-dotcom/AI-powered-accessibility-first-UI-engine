@@ -4,8 +4,10 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   X, Eye, EyeOff, Thermometer, CheckCircle, AlertCircle,
   Loader2, Settings2, Layers, RefreshCw, Wifi, WifiOff,
-  Cpu, KeyRound, Zap, Globe, HardDrive,
+  Cpu, KeyRound, Zap, Globe, HardDrive, ChevronDown,
+  ChevronRight, FlaskConical, Sparkles,
 } from 'lucide-react';
+import { MODEL_REGISTRY } from '@/lib/ai/modelRegistry';
 
 // ─── Provider Detection From API Key ─────────────────────────────────────────
 
@@ -18,6 +20,8 @@ export interface ProviderInfo {
   baseUrl?: string;    // Only set for OpenAI-compatible 3rd-parties
   modelHint: string;   // Placeholder for the model text input
   docsUrl: string;
+  keyLabel: string;    // Human-readable label for the API key field
+  keyHint: string;     // Placeholder for the key input
   noKey?: boolean;     // true for local providers
 }
 
@@ -25,47 +29,79 @@ const PROVIDERS: Record<string, ProviderInfo> = {
   openai: {
     id: 'openai', name: 'OpenAI',
     color: 'from-emerald-500 to-teal-500', accent: 'text-emerald-400', icon: '⬡',
-    modelHint: 'e.g. gpt-4o, gpt-4-turbo, gpt-3.5-turbo',
+    modelHint: 'gpt-4o, gpt-4o-mini, gpt-4-turbo…',
+    keyLabel: 'OpenAI API Key',
+    keyHint: 'sk-proj-… — get one at platform.openai.com/api-keys',
     docsUrl: 'https://platform.openai.com/api-keys',
   },
   anthropic: {
     id: 'anthropic', name: 'Anthropic',
     color: 'from-amber-500 to-orange-500', accent: 'text-amber-400', icon: '◎',
-    modelHint: 'e.g. claude-3-5-sonnet-20241022, claude-3-haiku-20240307',
+    modelHint: 'claude-3-5-sonnet-20241022, claude-3-haiku-20240307…',
+    keyLabel: 'Anthropic API Key',
+    keyHint: 'sk-ant-… — get one at console.anthropic.com/keys',
     docsUrl: 'https://console.anthropic.com/keys',
   },
   google: {
     id: 'google', name: 'Google Gemini',
     color: 'from-blue-400 to-red-400', accent: 'text-blue-400', icon: '✦',
-    modelHint: 'e.g. gemini-2.0-flash, gemini-1.5-pro, gemini-1.5-flash',
+    modelHint: 'gemini-2.0-flash, gemini-1.5-pro…',
+    keyLabel: 'Google AI API Key',
+    keyHint: 'AIzaSy… — get one at aistudio.google.com/apikey',
     docsUrl: 'https://aistudio.google.com/apikey',
   },
   groq: {
     id: 'groq', name: 'Groq',
     color: 'from-orange-500 to-red-500', accent: 'text-orange-400', icon: '⚡',
     baseUrl: 'https://api.groq.com/openai/v1',
-    modelHint: 'e.g. llama-3.3-70b-versatile, mixtral-8x7b-32768, gemma2-9b-it',
+    modelHint: 'llama-3.3-70b-versatile, mixtral-8x7b-32768…',
+    keyLabel: 'Groq API Key',
+    keyHint: 'gsk_… — get one at console.groq.com/keys',
     docsUrl: 'https://console.groq.com/keys',
   },
   openrouter: {
     id: 'openrouter', name: 'OpenRouter',
     color: 'from-violet-500 to-purple-600', accent: 'text-violet-400', icon: '◉',
     baseUrl: 'https://openrouter.ai/api/v1',
-    modelHint: 'e.g. openai/gpt-4o, anthropic/claude-3.5-sonnet, meta-llama/llama-3-70b',
+    modelHint: 'openai/gpt-4o, anthropic/claude-3.5-sonnet…',
+    keyLabel: 'OpenRouter API Key',
+    keyHint: 'sk-or-… — get one at openrouter.ai/keys',
     docsUrl: 'https://openrouter.ai/keys',
   },
   together: {
     id: 'together', name: 'Together AI',
     color: 'from-cyan-500 to-blue-600', accent: 'text-cyan-400', icon: '◆',
     baseUrl: 'https://api.together.xyz/v1',
-    modelHint: 'e.g. meta-llama/Llama-3-70b-chat-hf, mistralai/Mixtral-8x7B-Instruct-v0.1',
+    modelHint: 'meta-llama/Llama-3-70b-chat-hf, mistralai/Mixtral-8x7B…',
+    keyLabel: 'Together AI API Key',
+    keyHint: 'Get one at api.together.ai/settings/api-keys',
     docsUrl: 'https://api.together.ai/settings/api-keys',
+  },
+  deepseek: {
+    id: 'deepseek', name: 'DeepSeek',
+    color: 'from-sky-500 to-indigo-500', accent: 'text-sky-400', icon: '🔭',
+    baseUrl: 'https://api.deepseek.com/v1',
+    modelHint: 'deepseek-chat, deepseek-coder…',
+    keyLabel: 'DeepSeek API Key',
+    keyHint: 'Get one at platform.deepseek.com/api_keys',
+    docsUrl: 'https://platform.deepseek.com/api_keys',
+  },
+  mistral: {
+    id: 'mistral', name: 'Mistral AI',
+    color: 'from-fuchsia-500 to-pink-600', accent: 'text-fuchsia-400', icon: '🌊',
+    baseUrl: 'https://api.mistral.ai/v1',
+    modelHint: 'mistral-large-latest, mistral-medium…',
+    keyLabel: 'Mistral API Key',
+    keyHint: 'Get one at console.mistral.ai/api-keys',
+    docsUrl: 'https://console.mistral.ai/api-keys',
   },
   ollama: {
     id: 'ollama', name: 'Ollama (Local)',
     color: 'from-lime-500 to-green-600', accent: 'text-lime-400', icon: '🦙',
     noKey: true,
     modelHint: '',
+    keyLabel: '',
+    keyHint: '',
     docsUrl: 'https://ollama.com/library',
   },
   lmstudio: {
@@ -73,14 +109,36 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     color: 'from-teal-500 to-cyan-600', accent: 'text-teal-400', icon: '🖥️',
     noKey: true,
     modelHint: '',
+    keyLabel: '',
+    keyHint: '',
     docsUrl: 'https://lmstudio.ai',
   },
   custom: {
     id: 'custom', name: 'Custom / Other',
     color: 'from-gray-500 to-gray-600', accent: 'text-gray-400', icon: '⚙',
     modelHint: 'Enter exact model name as expected by your API',
+    keyLabel: 'API Key',
+    keyHint: 'Enter your API key — used to generate UI components',
     docsUrl: 'https://openai.com/api/',
   },
+};
+
+// Provider order for the picker (local providers handled separately via tabs)
+const CLOUD_PROVIDER_ORDER = [
+  'openai', 'anthropic', 'google', 'groq', 'deepseek', 'mistral', 'openrouter', 'together', 'custom',
+];
+
+// Models to suggest per provider (pulled from MODEL_REGISTRY)
+const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
+  openai:     ['gpt-4o', 'gpt-4o-mini'],
+  anthropic:  ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307'],
+  google:     ['gemini-2.0-flash', 'gemini-1.5-pro'],
+  groq:       ['llama-3.3-70b-versatile'],
+  deepseek:   ['deepseek-chat'],
+  mistral:    ['mistral-large-latest'],
+  openrouter: [],   // Too many — free text only
+  together:   [],   // Too many — free text only
+  custom:     [],
 };
 
 /**
@@ -90,12 +148,11 @@ const PROVIDERS: Record<string, ProviderInfo> = {
 function detectFromKey(key: string): ProviderInfo | null {
   const k = key.trim();
   if (!k) return null;
-  if (k.startsWith('sk-ant-'))                 return PROVIDERS.anthropic;
-  if (k.startsWith('AIzaSy'))                  return PROVIDERS.google;
-  if (k.startsWith('gsk_'))                    return PROVIDERS.groq;
-  if (k.startsWith('sk-or-'))                  return PROVIDERS.openrouter;
+  if (k.startsWith('sk-ant-'))                  return PROVIDERS.anthropic;
+  if (k.startsWith('AIzaSy'))                   return PROVIDERS.google;
+  if (k.startsWith('gsk_'))                     return PROVIDERS.groq;
+  if (k.startsWith('sk-or-'))                   return PROVIDERS.openrouter;
   if (k.startsWith('sk-') || k.startsWith('sk-proj-')) return PROVIDERS.openai;
-  // Together AI keys are long alphanumeric, no sk- prefix
   if (k.length >= 32 && /^[a-f0-9]+$/i.test(k)) return PROVIDERS.together;
   return PROVIDERS.custom;
 }
@@ -167,26 +224,61 @@ function SectionLabel({ icon: Icon, children }: { icon: React.FC<{ className?: s
   );
 }
 
+// Step indicator pill
+function StepPill({
+  step, label, active, done, onClick,
+}: { step: number; label: string; active: boolean; done: boolean; onClick?: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={!done && !active}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold transition-all
+        ${active
+          ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+          : done
+            ? 'text-gray-400 hover:text-gray-200 cursor-pointer border border-transparent hover:border-gray-700'
+            : 'text-gray-600 cursor-default border border-transparent'
+        }`}
+    >
+      <span className={`w-4 h-4 flex items-center justify-center rounded-full text-[9px] font-black
+        ${active ? 'bg-blue-500 text-white' : done ? 'bg-gray-700 text-gray-300' : 'bg-gray-800 text-gray-600'}`}>
+        {done && !active ? <CheckCircle className="w-3 h-3" /> : step}
+      </span>
+      {label}
+    </button>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSaved: (config: AIEngineConfig) => void;
+  onDeactivated?: () => void;
 }
 
 type PanelMode = 'cloud' | 'local';
+type CloudStep = 1 | 2 | 3;
 
-export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props) {
+export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeactivated }: Props) {
   const [mode, setMode]                   = useState<PanelMode>('cloud');
 
-  // Cloud mode state
+  // Cloud mode — 3-step wizard state
+  const [cloudStep, setCloudStep]         = useState<CloudStep>(1);
+  const [selectedProviderId, setSelectedProviderId] = useState<string>('openai');
   const [apiKey, setApiKey]               = useState('');
   const [showKey, setShowKey]             = useState(false);
-  const [detectedProvider, setDetected]   = useState<ProviderInfo | null>(null);
+  const [keyDetectedProvider, setKeyDetectedProvider] = useState<ProviderInfo | null>(null);
   const [customBaseUrl, setCustomBaseUrl] = useState('');
-  const [modelInput, setModelInput]       = useState('');
+  // Model selection — either a registry pick or custom text
+  const [selectedModelId, setSelectedModelId]   = useState<string>('');
+  const [customModelText, setCustomModelText]   = useState('');
+  const [useCustomModel, setUseCustomModel]     = useState(false);
   const [temperature, setTemperature]     = useState(0.6);
+  const [advancedOpen, setAdvancedOpen]   = useState(false);
+  const [testingConn, setTestingConn]     = useState(false);
+  const [connStatus, setConnStatus]       = useState<'idle' | 'ok' | 'fail'>('idle');
 
   // Local mode state
   const [localSources, setLocalSources]   = useState<LocalSource[]>([]);
@@ -203,8 +295,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
   const [error, setError]                 = useState('');
 
   // ── Session-persistent "engine is working" state ─────────────────────────
-  // Survives panel close/re-open within the same browser tab.
-  // Cleared automatically when the tab/window is closed (sessionStorage).
   const [sessionActive, setSessionActive] = useState(() => {
     if (typeof window === 'undefined') return false;
     return sessionStorage.getItem('uiEngine_active') === '1';
@@ -212,19 +302,44 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
 
   const keyInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Detect provider as user types ──────────────────────────────────────────
+  // Derived
+  const provider = PROVIDERS[selectedProviderId] ?? PROVIDERS.custom;
+  const suggestedModels = PROVIDER_SUGGESTED_MODELS[selectedProviderId] ?? [];
+  const isLocal  = mode === 'local';
+  const anyLocalRunning = localSources.some(s => s.running);
+
+  // The final model value
+  const effectiveModel = useCustomModel ? customModelText.trim() : selectedModelId;
+
+  // ── When provider changes, reset model selection ────────────────────────
+  useEffect(() => {
+    setSelectedModelId(suggestedModels[0] ?? '');
+    setCustomModelText('');
+    setUseCustomModel(suggestedModels.length === 0);
+    setConnStatus('idle');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProviderId]);
+
+  // ── Detect provider from key as user types (secondary shortcut) ─────────
   useEffect(() => {
     const p = detectFromKey(apiKey);
-    setDetected(p);
+    setKeyDetectedProvider(p);
+    // Auto-jump provider selector if confident detection
+    if (p && p.id !== 'custom' && p.id !== selectedProviderId) {
+      setSelectedProviderId(p.id);
+    }
     if (p && p.id !== 'custom') setCustomBaseUrl(p.baseUrl ?? '');
+    setConnStatus('idle');
     setError('');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 
-  // ── Restore from localStorage ───────────────────────────────────────────────
+  // ── Restore from localStorage ───────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     setSaved(false);
     setError('');
+    setCloudStep(1);
 
     const stored = loadAIEngineConfig();
     if (stored) {
@@ -233,9 +348,12 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
         fetchLocalModels();
       } else {
         setMode('cloud');
-        // Don't pre-fill API key (security), but restore everything else
-        setModelInput(stored.model);
-        setTemperature(stored.temperature);
+        if (stored.provider && PROVIDERS[stored.provider]) {
+          setSelectedProviderId(stored.provider);
+        }
+        setCustomModelText(stored.model ?? '');
+        setUseCustomModel(true);
+        setTemperature(stored.temperature ?? 0.6);
         setCustomBaseUrl(stored.baseUrl ?? '');
       }
       setFullAppMode(stored.fullAppMode ?? false);
@@ -243,7 +361,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
     }
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Escape key ──────────────────────────────────────────────────────────────
+  // ── Escape key ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -251,7 +369,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
     return () => window.removeEventListener('keydown', h);
   }, [isOpen, onClose]);
 
-  // ── Fetch local models ──────────────────────────────────────────────────────
+  // ── Fetch local models ─────────────────────────────────────────────────
   const fetchLocalModels = useCallback(async () => {
     setLocalLoading(true);
     setLocalSources([]);
@@ -261,7 +379,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
       const res  = await fetch('/api/local-models');
       const data = await res.json() as { anyRunning: boolean; sources: LocalSource[] };
       setLocalSources(data.sources ?? []);
-      // Auto-select the first running source + first model
       const first = (data.sources ?? []).find(s => s.running);
       if (first) {
         setSelectedLocalSource(first);
@@ -278,20 +395,51 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
   const handleModeSwitch = (m: PanelMode) => {
     setMode(m);
     setError('');
+    setCloudStep(1);
     if (m === 'local' && !localFetched) fetchLocalModels();
   };
 
-  // ── Save ────────────────────────────────────────────────────────────────────
+  // ── Test Connection ─────────────────────────────────────────────────────
+  const handleTestConnection = async () => {
+    if (!apiKey.trim()) { setError('Add your API key to test the connection.'); return; }
+    setTestingConn(true);
+    setConnStatus('idle');
+    try {
+      // Attempt a minimal list models / models endpoint as a health check
+      const base = customBaseUrl.trim() || provider.baseUrl || 'https://api.openai.com/v1';
+      const res = await fetch(`${base}/models`, {
+        headers: { Authorization: `Bearer ${apiKey.trim()}` },
+      });
+      setConnStatus(res.ok ? 'ok' : 'fail');
+    } catch {
+      setConnStatus('fail');
+    } finally {
+      setTestingConn(false);
+    }
+  };
+
+  // ── Save ────────────────────────────────────────────────────────────────
   const handleSave = async () => {
     setError('');
 
     if (mode === 'cloud') {
-      if (!apiKey.trim()) { setError('Paste your API key above.'); return; }
-      if (!modelInput.trim()) { setError('Enter the model name exactly as the provider expects.'); return; }
+      if (!apiKey.trim()) {
+        setError(`Add your ${provider.name} API key to continue.`);
+        setCloudStep(2);
+        return;
+      }
+      if (!effectiveModel) {
+        setError('Choose a generation model or enter a custom one.');
+        setCloudStep(3);
+        return;
+      }
     } else {
       if (!selectedLocalSource) { setError('No local runtime selected.'); return; }
       if (!selectedLocalModel) { setError('Select a model from the list.'); return; }
-      if (!selectedLocalSource.running) { setError(`${selectedLocalSource.name} is not running. Start it and refresh.`); return; }
+      if (!selectedLocalSource.running) {
+        setError(`${selectedLocalSource.name} is not running. Start it and refresh.`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -300,13 +448,12 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
     let config: AIEngineConfig;
 
     if (mode === 'cloud') {
-      const prov = detectedProvider ?? PROVIDERS.custom;
       config = {
-        provider: prov.id,
-        providerName: prov.name,
-        model: modelInput.trim(),
+        provider: provider.id,
+        providerName: provider.name,
+        model: effectiveModel,
         apiKey: apiKey.trim(),
-        baseUrl: customBaseUrl.trim() || prov.baseUrl,
+        baseUrl: customBaseUrl.trim() || provider.baseUrl,
         temperature,
         fullAppMode,
         multiSlideMode,
@@ -327,11 +474,9 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
     }
 
     try {
-      // Persist config but mask the raw key
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, apiKey: config.isLocal ? 'local' : '••••' }));
       localStorage.setItem('uiEngine_fullAppMode', String(fullAppMode));
       localStorage.setItem('uiEngine_multiSlideMode', String(multiSlideMode));
-      // Mark engine as active for this browser session
       sessionStorage.setItem('uiEngine_active', '1');
       setSessionActive(true);
       setSaved(true);
@@ -344,11 +489,31 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
     }
   };
 
-  const provider = detectedProvider ?? PROVIDERS.custom;
-  const isLocal  = mode === 'local';
-  const anyLocalRunning = localSources.some(s => s.running);
+  // ── Deactivate (stop the engine) ──────────────────────────────────────────
+  const handleDeactivate = () => {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem('uiEngine_fullAppMode');
+      localStorage.removeItem('uiEngine_multiSlideMode');
+      sessionStorage.removeItem('uiEngine_active');
+    } catch { /* ignore */ }
+    // Reset all local state
+    setSessionActive(false);
+    setSaved(false);
+    setApiKey('');
+    setConnStatus('idle');
+    setSelectedLocalSource(null);
+    setSelectedLocalModel(null);
+    setError('');
+    setCloudStep(1);
+    onDeactivated?.();
+    onClose();
+  };
 
   if (!isOpen) return null;
+
+  // ── Determine gradient for top bar / header icon ─────────────────────────
+  const headerGradient = isLocal ? 'from-lime-500 to-green-600' : provider.color;
 
   return (
     <>
@@ -357,32 +522,32 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
 
       {/* Panel */}
       <div
-        role="dialog" aria-modal="true" aria-labelledby="aec-title"
-        className="fixed z-50 bottom-0 left-0 w-full sm:w-[520px] max-h-[94vh] flex flex-col
+        role="dialog" aria-modal="true" aria-labelledby="ges-title"
+        className="fixed z-50 bottom-0 left-0 w-full sm:w-[440px] max-h-[94vh] flex flex-col
           bg-gray-950 border border-gray-800/80 rounded-t-3xl sm:rounded-3xl
           sm:bottom-6 sm:left-4 shadow-2xl shadow-black/80
           animate-in slide-in-from-bottom-6 duration-300"
       >
-        {/* Top colour bar — changes with detected provider */}
-        <div className={`h-1 w-full bg-gradient-to-r ${isLocal ? 'from-lime-500 to-green-600' : provider.color} rounded-t-3xl sm:rounded-t-3xl flex-shrink-0`} />
+        {/* Top colour bar */}
+        <div className={`h-1 w-full bg-gradient-to-r ${headerGradient} rounded-t-3xl sm:rounded-t-3xl flex-shrink-0`} />
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-gray-800/60 flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-xl bg-gradient-to-br ${isLocal ? 'from-lime-500 to-green-600' : provider.color} bg-opacity-20 border border-white/5 shadow-lg`}>
-              <Settings2 className="w-4 h-4 text-white" />
+            <div className={`p-2 rounded-xl bg-gradient-to-br ${headerGradient} bg-opacity-20 border border-white/5 shadow-lg`}>
+              <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h2 id="aec-title" className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                AI Engine Config
+              <h2 id="ges-title" className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                Generation Engine Setup
                 {sessionActive && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Working
+                    Active
                   </span>
                 )}
               </h2>
-              <p className="text-[10px] text-gray-500 mt-0.5">API key · model · generation settings</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">Powers prompt-to-UI generation and refinement</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800 transition-colors" aria-label="Close">
@@ -399,7 +564,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
                 ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
                 : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}
           >
-            <Globe className="w-3.5 h-3.5" /> Cloud / API Key
+            <Globe className="w-3.5 h-3.5" /> Cloud / API
           </button>
           <button
             onClick={() => handleModeSwitch('local')}
@@ -415,97 +580,298 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0">
 
-          {/* ══ CLOUD MODE ══════════════════════════════════════════════════ */}
+          {/* ══ CLOUD MODE ════════════════════════════════════════════════════ */}
           {mode === 'cloud' && (
             <>
-              <div className="space-y-4">
-                <SectionLabel icon={KeyRound}>API Key</SectionLabel>
+              {/* 3-step progress pills */}
+              <div className="flex items-center gap-1 flex-wrap">
+                <StepPill step={1} label="Provider"    active={cloudStep === 1} done={cloudStep > 1} onClick={() => setCloudStep(1)} />
+                <ChevronRight className="w-3 h-3 text-gray-700 flex-shrink-0" />
+                <StepPill step={2} label="Credentials" active={cloudStep === 2} done={cloudStep > 2} onClick={() => cloudStep > 2 && setCloudStep(2)} />
+                <ChevronRight className="w-3 h-3 text-gray-700 flex-shrink-0" />
+                <StepPill step={3} label="Model"       active={cloudStep === 3} done={false} />
+              </div>
 
-                {/* Key input */}
-                <div className="space-y-1.5">
-                  <div className="relative group">
-                    <input
-                      ref={keyInputRef}
-                      id="aec-apikey"
-                      type={showKey ? 'text' : 'password'}
-                      value={apiKey}
-                      onChange={e => setApiKey(e.target.value)}
-                      placeholder="Paste your API key here…"
-                      autoComplete="off" spellCheck={false}
-                      className="w-full px-4 py-3 pr-12 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
-                        placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40
-                        focus:border-blue-500/40 group-hover:border-gray-600 transition-all"
-                    />
-                    <button
-                      type="button" onClick={() => setShowKey(v => !v)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-300 rounded-lg transition-colors"
-                      aria-label={showKey ? 'Hide key' : 'Show key'}
-                    >
-                      {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+              {/* ─ Step 1: Pick Provider ─────────────────────────────────── */}
+              {cloudStep === 1 && (
+                <div className="space-y-3">
+                  <SectionLabel icon={Globe}>Step 1 — Pick your Generation Provider</SectionLabel>
+                  <div className="grid grid-cols-3 gap-2">
+                    {CLOUD_PROVIDER_ORDER.map(pid => {
+                      const p = PROVIDERS[pid];
+                      const isSelected = selectedProviderId === pid;
+                      return (
+                        <button
+                          key={pid}
+                          onClick={() => { setSelectedProviderId(pid); setError(''); }}
+                          className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-2xl border text-center transition-all
+                            ${isSelected
+                              ? `bg-gradient-to-b ${p.color} bg-opacity-10 border-white/20 shadow-md`
+                              : 'bg-gray-900/60 border-gray-700/40 hover:border-gray-600 hover:bg-gray-800/60'
+                            }`}
+                        >
+                          <span className="text-lg leading-none">{p.icon}</span>
+                          <span className={`text-[10px] font-semibold leading-tight ${isSelected ? 'text-white' : 'text-gray-400'}`}>
+                            {p.name}
+                          </span>
+                          {isSelected && (
+                            <CheckCircle className="w-3 h-3 text-white/70" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <button
+                    onClick={() => setCloudStep(2)}
+                    className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
+                  >
+                    Continue with {provider.name} →
+                  </button>
+                </div>
+              )}
+
+              {/* ─ Step 2: API Credentials ──────────────────────────────── */}
+              {cloudStep === 2 && (
+                <div className="space-y-4">
+                  <SectionLabel icon={KeyRound}>Step 2 — Enter API Credentials</SectionLabel>
+
+                  {/* Provider recap chip */}
+                  <button
+                    onClick={() => setCloudStep(1)}
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-700/40 bg-gray-900/60 text-xs font-semibold ${provider.accent} hover:border-gray-600 transition-all`}
+                  >
+                    <span>{provider.icon}</span>
+                    {provider.name}
+                    <span className="text-gray-600 font-normal">— change</span>
+                  </button>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-semibold text-gray-500">{provider.keyLabel}</label>
+                    <div className="relative group">
+                      <input
+                        ref={keyInputRef}
+                        id="ges-apikey"
+                        type={showKey ? 'text' : 'password'}
+                        value={apiKey}
+                        onChange={e => setApiKey(e.target.value)}
+                        placeholder={provider.keyHint}
+                        autoComplete="off" spellCheck={false}
+                        className="w-full px-4 py-3 pr-12 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
+                          placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                          focus:border-blue-500/40 group-hover:border-gray-600 transition-all"
+                      />
+                      <button
+                        type="button" onClick={() => setShowKey(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-500 hover:text-gray-300 rounded-lg transition-colors"
+                        aria-label={showKey ? 'Hide key' : 'Show key'}
+                      >
+                        {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {/* Key-detected provider auto-match badge */}
+                    {apiKey.trim() && keyDetectedProvider && keyDetectedProvider.id !== selectedProviderId && (
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-xl border bg-amber-900/20 border-amber-500/30">
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span className="text-[10px] text-amber-300">
+                          Key looks like <strong>{keyDetectedProvider.name}</strong> — auto-switched provider.
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Connection test */}
+                    {apiKey.trim() && (
+                      <div className="flex items-center gap-2 mt-1">
+                        <button
+                          onClick={handleTestConnection}
+                          disabled={testingConn}
+                          className="inline-flex items-center gap-1.5 text-[10px] text-gray-500 hover:text-gray-300 transition-colors disabled:opacity-50"
+                        >
+                          {testingConn
+                            ? <Loader2 className="w-3 h-3 animate-spin" />
+                            : <FlaskConical className="w-3 h-3" />}
+                          {testingConn ? 'Testing connection…' : '▸ Test connection'}
+                        </button>
+                        {connStatus === 'ok' && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle className="w-3 h-3" />Connected</span>}
+                        {connStatus === 'fail' && <span className="text-[10px] text-red-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" />Check key / network</span>}
+                      </div>
+                    )}
+
+                    <p className="text-[10px] text-gray-600">
+                      Key travels over HTTPS per-request only — never stored on our servers.
+                      <a href={provider.docsUrl} target="_blank" rel="noopener noreferrer" className="ml-1 text-gray-500 hover:text-gray-300 transition-colors">Get a key ↗</a>
+                    </p>
                   </div>
 
-                  {/* Detected provider badge */}
-                  {apiKey.trim() && (
-                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all
-                      ${detectedProvider ? 'bg-gray-900/60 border-gray-700/40' : 'bg-red-900/20 border-red-500/30'}`}>
-                      <span className="text-base">{detectedProvider?.icon ?? '⚠️'}</span>
-                      <span className={`text-xs font-semibold ${detectedProvider?.accent ?? 'text-red-400'}`}>
-                        {detectedProvider?.name ?? 'Unrecognized key pattern — use Custom below'}
-                      </span>
-                      {detectedProvider && (
-                        <a href={detectedProvider.docsUrl} target="_blank" rel="noopener noreferrer"
-                          className="ml-auto text-[9px] text-gray-600 hover:text-gray-400 transition-colors">
-                          docs ↗
-                        </a>
-                      )}
+                  {/* Custom base URL for custom provider */}
+                  {selectedProviderId === 'custom' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-gray-500">API Base URL (OpenAI-compatible endpoint)</label>
+                      <input
+                        id="ges-baseurl"
+                        type="url"
+                        value={customBaseUrl}
+                        onChange={e => setCustomBaseUrl(e.target.value)}
+                        placeholder="https://your-api-endpoint.com/v1"
+                        className="w-full px-4 py-3 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
+                          placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
+                      />
                     </div>
                   )}
 
-                  <p className="text-[10px] text-gray-600">
-                    Key travels over HTTPS per-request only — never stored on our servers.
-                  </p>
+                  <button
+                    onClick={() => { if (apiKey.trim()) { setCloudStep(3); setError(''); } else { setError(`Add your ${provider.name} API key to continue.`); } }}
+                    className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
+                  >
+                    Continue →
+                  </button>
                 </div>
+              )}
 
-                {/* Custom base URL — revealed when Custom provider selected */}
-                {detectedProvider?.id === 'custom' && (
+              {/* ─ Step 3: Choose Generation Model ─────────────────────── */}
+              {cloudStep === 3 && (
+                <div className="space-y-4">
+                  <SectionLabel icon={Zap}>Step 3 — Choose Generation Model</SectionLabel>
+                  <p className="text-[10px] text-gray-500">The model that powers your prompt-to-UI pipeline.</p>
+
+                  {/* Suggested model pills */}
+                  {suggestedModels.length > 0 && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-semibold text-gray-500">Recommended Models</label>
+                      <div className="space-y-1.5">
+                        {suggestedModels.map(mId => {
+                          const profile = MODEL_REGISTRY[mId];
+                          const isSelected = !useCustomModel && selectedModelId === mId;
+                          return (
+                            <button
+                              key={mId}
+                              onClick={() => { setSelectedModelId(mId); setUseCustomModel(false); setError(''); }}
+                              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-left transition-all border
+                                ${isSelected
+                                  ? `bg-gradient-to-r ${provider.color} bg-opacity-15 border-white/20 text-white`
+                                  : 'bg-gray-900/60 border-gray-700/40 text-gray-300 hover:border-gray-600 hover:text-white'}`}
+                            >
+                              <span className="font-mono text-xs flex-1">{mId}</span>
+                              {profile && (
+                                <span className="text-[9px] text-gray-500 shrink-0">{profile.displayName}</span>
+                              )}
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white/70 shrink-0" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Custom model input */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-semibold text-gray-500">
-                      API Base URL (OpenAI-compatible endpoint)
-                    </label>
-                    <input
-                      type="url"
-                      value={customBaseUrl}
-                      onChange={e => setCustomBaseUrl(e.target.value)}
-                      placeholder="https://your-api-endpoint.com/v1"
-                      className="w-full px-4 py-3 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
-                        placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
-                    />
+                    <button
+                      onClick={() => setUseCustomModel(v => !v)}
+                      className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
+                    >
+                      <ChevronDown className={`w-3 h-3 transition-transform ${useCustomModel ? 'rotate-0' : '-rotate-90'}`} />
+                      {useCustomModel ? 'Using a custom model' : 'Use a different model…'}
+                    </button>
+                    {useCustomModel && (
+                      <input
+                        id="ges-model"
+                        type="text"
+                        value={customModelText}
+                        onChange={e => setCustomModelText(e.target.value)}
+                        placeholder={provider.modelHint || 'Enter exact model name…'}
+                        className="w-full px-4 py-3 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
+                          placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                          focus:border-blue-500/40 hover:border-gray-600 transition-all"
+                      />
+                    )}
+                    <p className="text-[10px] text-gray-600">
+                      Any model works — including future ones. Enter it exactly as the provider expects.
+                    </p>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* Model name input */}
-              <div className="space-y-1.5">
-                <SectionLabel icon={Zap}>Model</SectionLabel>
-                <input
-                  id="aec-model"
-                  type="text"
-                  value={modelInput}
-                  onChange={e => setModelInput(e.target.value)}
-                  placeholder={detectedProvider?.modelHint || 'Enter exact model name…'}
-                  className="w-full px-4 py-3 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
-                    placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40
-                    focus:border-blue-500/40 hover:border-gray-600 transition-all"
-                />
-                <p className="text-[10px] text-gray-600">
-                  Enter the model name exactly as the provider API expects it. Any model works — including future ones.
-                </p>
-              </div>
+              {/* ── Advanced Settings (collapsed) ──────────────────────── */}
+              {cloudStep === 3 && (
+                <div className="border-t border-gray-800/60 pt-3">
+                  <button
+                    onClick={() => setAdvancedOpen(v => !v)}
+                    className="flex items-center gap-2 text-[10px] font-semibold text-gray-500 hover:text-gray-300 transition-colors w-full text-left"
+                  >
+                    <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${advancedOpen ? 'rotate-0' : '-rotate-90'}`} />
+                    ▸ Advanced Settings
+                  </button>
+
+                  {advancedOpen && (
+                    <div className="mt-3 space-y-4">
+                      {/* Temperature */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label htmlFor="ges-temp" className="text-[10px] font-semibold text-gray-500 flex items-center gap-1.5">
+                            <Thermometer className="w-3 h-3" /> Temperature
+                          </label>
+                          <span className={`text-sm font-bold tabular-nums ${provider.accent}`}>
+                            {temperature.toFixed(2)}
+                          </span>
+                        </div>
+                        <input
+                          id="ges-temp" type="range" min={0} max={1} step={0.05}
+                          value={temperature}
+                          onChange={e => setTemperature(parseFloat(e.target.value))}
+                          className="w-full h-1.5 appearance-none rounded-full bg-gray-800 cursor-pointer
+                            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                            [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                            [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+                          style={{
+                            background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${temperature * 100}%, #1f2937 ${temperature * 100}%, #1f2937 100%)`
+                          }}
+                        />
+                        <div className="flex justify-between">
+                          <span className="text-[9px] text-gray-600">0.0 — Deterministic</span>
+                          <span className="text-[9px] text-gray-600">1.0 — Creative</span>
+                        </div>
+                      </div>
+
+                      {/* Generation toggles */}
+                      <div className="space-y-2">
+                        <SectionLabel icon={Layers}>Generation Settings</SectionLabel>
+
+                        <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <Settings2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                              <p className="text-sm font-semibold text-white">Full App Mode</p>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">Chunking</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                              Bypasses token limits — generates a file manifest then builds each file separately.
+                            </p>
+                          </div>
+                          <Toggle id="gen-full-app" checked={fullAppMode} onChange={setFullAppMode} colorOn="bg-violet-600" />
+                        </div>
+
+                        <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                              <p className="text-sm font-semibold text-white">Multi-slide Mode</p>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Paginated</span>
+                            </div>
+                            <p className="text-[10px] text-gray-500 leading-relaxed">
+                              AI outputs a multi-view / multi-slide architecture instead of a single static component.
+                            </p>
+                          </div>
+                          <Toggle id="gen-multi-slide" checked={multiSlideMode} onChange={setMultiSlide} colorOn="bg-emerald-600" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
 
-          {/* ══ LOCAL MODE ══════════════════════════════════════════════════ */}
+          {/* ══ LOCAL MODE ════════════════════════════════════════════════════ */}
           {mode === 'local' && (
             <div className="space-y-4">
               <SectionLabel icon={Cpu}>Detected Local Runtimes</SectionLabel>
@@ -566,7 +932,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
                     )}
                   </div>
 
-                  {/* Show models for selected (running) source */}
                   {selectedLocalSource?.provider === source.provider && source.running && source.models.length > 0 && (
                     <div className="ml-2 space-y-1 max-h-44 overflow-y-auto">
                       {source.models.map(m => (
@@ -604,76 +969,76 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
                   </div>
                 </div>
               )}
+
+              {/* Local mode temperature (always shown) */}
+              <div className="border-t border-gray-800/60 pt-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="ges-temp-local" className="text-[10px] font-semibold text-gray-500 flex items-center gap-1.5">
+                    <Thermometer className="w-3 h-3" /> Temperature
+                  </label>
+                  <span className="text-sm font-bold tabular-nums text-lime-400">
+                    {(selectedLocalModel ? selectedLocalModel.temperature : temperature).toFixed(2)}
+                  </span>
+                </div>
+                <input
+                  id="ges-temp-local" type="range" min={0} max={1} step={0.05}
+                  value={selectedLocalModel ? selectedLocalModel.temperature : temperature}
+                  onChange={e => {
+                    const v = parseFloat(e.target.value);
+                    if (selectedLocalModel) {
+                      setSelectedLocalModel({ ...selectedLocalModel, temperature: v });
+                    } else {
+                      setTemperature(v);
+                    }
+                  }}
+                  className="w-full h-1.5 appearance-none rounded-full bg-gray-800 cursor-pointer
+                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
+                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
+                    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right, #84cc16 0%, #84cc16 ${(selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 ${(selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 100%)`
+                  }}
+                />
+                <div className="flex justify-between">
+                  <span className="text-[9px] text-gray-600">0.0 — Deterministic</span>
+                  <span className="text-[9px] text-gray-600">1.0 — Creative</span>
+                </div>
+              </div>
+
+              {/* Generation toggles for local */}
+              <div className="border-t border-gray-800/60 pt-4 space-y-3">
+                <SectionLabel icon={Layers}>Generation Settings</SectionLabel>
+
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Settings2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                      <p className="text-sm font-semibold text-white">Full App Mode</p>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">Chunking</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      Bypasses token limits — generates a file manifest then builds each file separately.
+                    </p>
+                  </div>
+                  <Toggle id="gen-full-app-local" checked={fullAppMode} onChange={setFullAppMode} colorOn="bg-violet-600" />
+                </div>
+
+                <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <p className="text-sm font-semibold text-white">Multi-slide Mode</p>
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Paginated</span>
+                    </div>
+                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                      AI outputs a multi-view / multi-slide architecture instead of a single static component.
+                    </p>
+                  </div>
+                  <Toggle id="gen-multi-slide-local" checked={multiSlideMode} onChange={setMultiSlide} colorOn="bg-emerald-600" />
+                </div>
+              </div>
             </div>
           )}
-
-          {/* ── Temperature ── (shared) */}
-          <div className="border-t border-gray-800/60 pt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <label htmlFor="aec-temp" className="text-[10px] font-semibold text-gray-500 flex items-center gap-1.5">
-                <Thermometer className="w-3 h-3" /> Temperature
-              </label>
-              <span className={`text-sm font-bold tabular-nums ${isLocal ? 'text-lime-400' : provider.accent}`}>
-                {(isLocal && selectedLocalModel ? selectedLocalModel.temperature : temperature).toFixed(2)}
-              </span>
-            </div>
-            <input
-              id="aec-temp" type="range" min={0} max={1} step={0.05}
-              value={isLocal && selectedLocalModel ? selectedLocalModel.temperature : temperature}
-              onChange={e => {
-                const v = parseFloat(e.target.value);
-                if (isLocal && selectedLocalModel) {
-                  setSelectedLocalModel({ ...selectedLocalModel, temperature: v });
-                } else {
-                  setTemperature(v);
-                }
-              }}
-              className="w-full h-1.5 appearance-none rounded-full bg-gray-800 cursor-pointer
-                [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, #6366f1 0%, #6366f1 ${(isLocal && selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 ${(isLocal && selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 100%)`
-              }}
-            />
-            <div className="flex justify-between">
-              <span className="text-[9px] text-gray-600">0.0 — Deterministic</span>
-              <span className="text-[9px] text-gray-600">1.0 — Creative</span>
-            </div>
-          </div>
-
-          {/* ── Generation Settings ── */}
-          <div className="border-t border-gray-800/60 pt-4 space-y-3">
-            <SectionLabel icon={Layers}>Generation Settings</SectionLabel>
-
-            <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Settings2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                  <p className="text-sm font-semibold text-white">Full App Mode</p>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">Chunking</span>
-                </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed">
-                  Bypasses token limits — generates a file manifest then builds each file separately.
-                </p>
-              </div>
-              <Toggle id="gen-full-app" checked={fullAppMode} onChange={setFullAppMode} colorOn="bg-violet-600" />
-            </div>
-
-            <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <p className="text-sm font-semibold text-white">Multi-slide Mode</p>
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Paginated</span>
-                </div>
-                <p className="text-[10px] text-gray-500 leading-relaxed">
-                  AI outputs a multi-view / multi-slide architecture instead of a single static component.
-                </p>
-              </div>
-              <Toggle id="gen-multi-slide" checked={multiSlideMode} onChange={setMultiSlide} colorOn="bg-emerald-600" />
-            </div>
-          </div>
 
           {/* Error */}
           {error && (
@@ -685,33 +1050,49 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved }: Props)
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800/60 flex items-center gap-3 bg-gray-950/60 backdrop-blur">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-2xl border border-gray-700/60 text-gray-400 hover:text-white hover:bg-gray-800 text-sm font-semibold transition-all"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving || saved}
-            className={`flex-[2] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-lg active:scale-[0.98] disabled:cursor-not-allowed
-              ${saved
-                ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                : sessionActive && !saving
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90'
-                  : isLocal
-                    ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white hover:opacity-90'
-                    : `bg-gradient-to-r ${provider.color} text-white hover:opacity-90`
-              }`}
-          >
-            {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            {saved  && <CheckCircle className="w-4 h-4" />}
-            {!saving && !saved && sessionActive && (
-              <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
-            )}
-            {saving ? 'Saving…' : saved ? 'Saved! Starting…' : sessionActive ? 'Working — Update Config' : 'Save & Start'}
-          </button>
+        <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800/60 bg-gray-950/60 backdrop-blur space-y-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              disabled={saving || saved}
+              className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-lg active:scale-[0.98] disabled:cursor-not-allowed
+                ${saved
+                  ? 'bg-emerald-600 text-white shadow-emerald-500/20'
+                  : sessionActive && !saving
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90'
+                    : isLocal
+                      ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white hover:opacity-90'
+                      : `bg-gradient-to-r ${provider.color} text-white hover:opacity-90`
+                }`}
+            >
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saved  && <CheckCircle className="w-4 h-4" />}
+              {!saving && !saved && sessionActive && (
+                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+              )}
+              {saving
+                ? 'Saving…'
+                : saved
+                  ? 'Saved! Starting…'
+                  : sessionActive
+                    ? 'Engine Active — Update'
+                    : 'Activate Generation Engine'}
+            </button>
+          </div>
+
+          {/* Deactivate — only shown when an engine session is active */}
+          {sessionActive && (
+            <button
+              id="ges-deactivate"
+              onClick={handleDeactivate}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-2xl text-xs font-semibold
+                text-red-400 border border-red-500/20 hover:bg-red-500/10 hover:border-red-500/40
+                hover:text-red-300 transition-all"
+            >
+              <WifiOff className="w-3.5 h-3.5" />
+              Stop &amp; Deactivate Engine
+            </button>
+          )}
         </div>
       </div>
     </>

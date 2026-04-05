@@ -70,6 +70,7 @@ model Workspace {
   members      WorkspaceMember[]
   settings     WorkspaceSettings[]
   usageLogs    UsageLog[]
+  feedbacks    GenerationFeedback[]
 }
 
 enum WorkspaceRole {
@@ -120,4 +121,32 @@ model UsageLog {
   createdAt        DateTime @default(now())
 
   workspace        Workspace? @relation(fields: [workspaceId], references: [id])
+}
+
+// ─── FEEDBACK LOOP ────────────────────────────────────────────────────────────
+
+enum FeedbackSignal {
+  thumbs_up
+  thumbs_down
+  corrected
+  discarded
+}
+
+model GenerationFeedback {
+  id             String         @id @default(cuid())
+  generationId   String                        // MemoryEntry.id from history.json
+  workspaceId    String?
+  provider       String
+  model          String
+  intentType     String                        // e.g. "dashboard", "landing_page"
+  promptHash     String                        // first 16 chars of sha256(prompt)
+  signal         FeedbackSignal
+  correctionNote String?        @db.Text       // free-text description of what was wrong
+  correctedCode  String?        @db.Text       // the version user saved / Sandpack edit
+  a11yScore      Int            @default(0)
+  critiqueScore  Int            @default(0)
+  latencyMs      Int            @default(0)
+  createdAt      DateTime       @default(now())
+
+  workspace      Workspace?     @relation(fields: [workspaceId], references: [id])
 }

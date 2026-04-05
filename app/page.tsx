@@ -5,6 +5,7 @@ import type { GenerationMode } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
 import type { UIIntent, A11yReport, ThinkingPlan, IntentClassification } from '@/lib/validation/schemas';
+import type { FeedbackMeta } from '@/components/FeedbackBar';
 import { Menu } from 'lucide-react';
 import Sidebar from '@/components/ide/Sidebar';
 import CenterWorkspace from '@/components/ide/CenterWorkspace';
@@ -32,6 +33,16 @@ type Stage =
   | 'complete'
   | 'error';
 
+// ─── Prompt Hash (Web Crypto, client-side) ───────────────────────────────────
+async function hashPromptClient(prompt: string): Promise<string> {
+  const encoder    = new TextEncoder();
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(prompt));
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 16);
+}
+
 export default function HomePage() {
   const [stage, setStage] = useState<Stage>('idle');
   const [pipelineStep, setPipelineStep] = useState<PipelineStep>('idle');
@@ -50,6 +61,14 @@ export default function HomePage() {
     setIsMultiSlideMode(config.multiSlideMode);
   }, []);
 
+  // Called when the user clicks "Stop & Deactivate Engine"
+  const handleEngineDeactivated = useCallback(() => {
+    setAiConfig(null);
+    setGenerationMeta(null);
+    setIsFullAppMode(false);
+    setIsMultiSlideMode(false);
+  }, []);
+
   // Helper: build the AI payload fields from the active config
   const aiPayload = useCallback(() => {
     if (!aiConfig) return {};
@@ -61,6 +80,9 @@ export default function HomePage() {
       baseUrl:  aiConfig.baseUrl,
     };
   }, [aiConfig]);
+
+  /** Feedback metadata for the most recent generation — drives FeedbackBar in RightPanel */
+  const [generationMeta, setGenerationMeta] = useState<FeedbackMeta | null>(null);
 
   // Layout State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -139,7 +161,7 @@ export default function HomePage() {
       const parseRes = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode, contextId: activeProjectId || undefined }),
+        body: JSON.stringify({ prompt, mode, contextId: activeProjectId || undefined, ...aiPayload() }),
       });
       const parseData = await parseRes.json();
       if (!parseData.success) {
@@ -208,11 +230,13 @@ export default function HomePage() {
         return;
       }
 
+      const t0 = Date.now();
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ intent, mode, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
       });
+      const latencyMs   = Date.now() - t0;
       const generateData = await generateRes.json();
       if (!generateData.success) {
         setStage('error'); setPipelineStep('error');
@@ -235,6 +259,21 @@ export default function HomePage() {
       };
       setOutput(newOutput);
       setStage('complete');
+
+      // Record generation metadata for the FeedbackBar (fire-and-forget hash)
+      hashPromptClient(prompt).then((promptHash) => {
+        setGenerationMeta({
+          generationId:  generateData.generationId ?? '',
+          model:         aiConfig!.model,
+          provider:      aiConfig!.provider ?? 'custom',
+          intentType:    (intent.componentType ?? 'component').toLowerCase(),
+          promptHash,
+          a11yScore:     generateData.a11yReport?.score ?? 0,
+          critiqueScore: (generateData.critique as { score?: number } | null)?.score ?? 0,
+          latencyMs,
+        });
+      }).catch(() => { /* non-fatal */ });
+
       await persistProject(intent.componentName, mode as 'component' | 'app' | 'webgl', generateData.code, intent, generateData.a11yReport);
     } catch {
       setStage('error'); setPipelineStep('error');
@@ -323,10 +362,12 @@ export default function HomePage() {
           setStage('idle');
           setPipelineStep('idle');
           setThinkingPlan(null);
+          setGenerationMeta(null);
         }}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         onConfigSaved={handleEngineConfigSaved}
+        onDeactivated={handleEngineDeactivated}
       />
 
       {/* Center AI Work Pane */}
@@ -398,6 +439,7 @@ export default function HomePage() {
             onRefine={handleRefineRightPanel}
             isRefining={isRunning}
             projectId={activeProjectId}
+            feedbackMeta={generationMeta}
           />
         </div>
       )}

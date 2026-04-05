@@ -28,24 +28,32 @@ function ensureMemoryFile() {
   }
 }
 
+/**
+ * Save a successful generation to local history.
+ *
+ * @param preGeneratedId  Optional pre-generated UUID — pass this when the caller
+ *                        needs to know the ID before the async save completes
+ *                        (e.g. to include in the API response for feedback correlation).
+ * @returns               The id of the created entry.
+ */
 export function saveGeneration(
-  intent: UIIntent, 
-  code: string | Record<string, string>, 
+  intent: UIIntent,
+  code: string | Record<string, string>,
   a11yScore: number,
   manifest?: FileManifestItem[],
-  parentId?: string
-): void {
+  parentId?: string,
+  preGeneratedId?: string,
+): string {
   try {
     ensureMemoryFile();
     const data = fs.readFileSync(MEMORY_FILE_PATH, 'utf-8');
     const history: MemoryEntry[] = JSON.parse(data);
 
-    // Create new entry
     const entry: MemoryEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      componentType: intent.componentType.toLowerCase(),
-      componentName: intent.componentName,
+      id:             preGeneratedId ?? crypto.randomUUID(),
+      timestamp:      new Date().toISOString(),
+      componentType:  intent.componentType.toLowerCase(),
+      componentName:  intent.componentName,
       intent,
       code,
       manifest,
@@ -53,12 +61,13 @@ export function saveGeneration(
       parentId,
     };
 
-    // Keep the last 500 successful generations — disk reads are trivial at this size
+    // Keep the last 500 successful generations
     const updatedHistory = [entry, ...history].slice(0, 500);
-
     fs.writeFileSync(MEMORY_FILE_PATH, JSON.stringify(updatedHistory, null, 2));
+    return entry.id;
   } catch (error) {
     console.error('Failed to save memory:', error);
+    return preGeneratedId ?? '';
   }
 }
 

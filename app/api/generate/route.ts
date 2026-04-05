@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createTextStreamResponse } from 'ai';
+import crypto from 'crypto';
 import { generateComponent } from '@/lib/ai/componentGenerator';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
@@ -243,7 +244,9 @@ export async function POST(request: NextRequest) {
 
     const { finalCode, finalReport, appliedFixes } = a11yResult;
 
-    // Step 6: Save to memory (async)
+    // Step 6: Save to memory (async) — use a pre-generated ID so we can
+    // return it in the response for feedback correlation.
+    const genId = crypto.randomUUID();
     if (generationMode === 'app' || (generationMode === 'component' && finalReport.passed && finalReport.score >= 80)) {
       setTimeout(() => {
         saveGeneration(
@@ -251,7 +254,8 @@ export async function POST(request: NextRequest) {
           finalCode,
           finalReport.score,
           undefined,
-          intent.previousProjectId
+          intent.previousProjectId,
+          genId,
         );
       }, 0);
     }
@@ -280,6 +284,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       code: resolvedCode,
+      generationId: genId,
       a11yReport: {
         ...finalReport,
         appliedFixes,
@@ -288,9 +293,10 @@ export async function POST(request: NextRequest) {
       tests,
       mode: generationMode,
       generatorMeta: {
-        blueprint: generationResult.blueprint,
+        blueprint:          generationResult.blueprint,
         validationWarnings: generationResult.validationWarnings,
-        repairsApplied: [...(generationResult.repairsApplied ?? []), ...resolverPatchLog],
+        repairsApplied:     [...(generationResult.repairsApplied ?? []), ...resolverPatchLog],
+        feedbackEnriched:   generationResult.feedbackEnriched ?? false,
       },
     });
   } catch (error) {

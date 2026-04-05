@@ -1,21 +1,56 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   SandpackProvider,
   SandpackLayout,
   SandpackPreview as SandpackPreviewPanel,
+  SandpackCodeEditor,
+  useSandpack,
 } from '@codesandbox/sandpack-react';
 import { buildSandpackFiles, getSandpackDependencies } from '@/lib/sandbox/sandpackConfig';
-import { Eye, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Eye, AlertTriangle, RefreshCw, Code2, X } from 'lucide-react';
 
 interface SandpackPreviewProps {
   code: string | Record<string, string>;
   componentName: string;
+  /** Called when the user edits code in the inline editor — used for feedback auto-capture */
+  onCodeChange?: (newCode: string) => void;
+}
+
+// ─── Sandpack Change Observer ─────────────────────────────────────────────────
+// Must live inside SandpackProvider so it can call useSandpack().
+// Fires onCodeChange whenever the active file's code differs from its initial state.
+
+interface ObserverProps {
+  activeFile:   string;
+  initialCode:  string;
+  onCodeChange: (code: string) => void;
+}
+
+function SandpackChangeObserver({ activeFile, initialCode, onCodeChange }: ObserverProps) {
+  const { sandpack }    = useSandpack();
+  const lastEmittedRef  = useRef<string>(initialCode);
+
+  const currentCode = sandpack.files[activeFile]?.code ?? '';
+
+  useEffect(() => {
+    if (
+      currentCode !== lastEmittedRef.current &&
+      currentCode.trim().length > 50
+    ) {
+      lastEmittedRef.current = currentCode;
+      onCodeChange(currentCode);
+    }
+  }, [currentCode, onCodeChange]);
+
+  return null;
 }
 
 // ─── Error Boundary ───────────────────────────────────────────────────────────
+
 interface EBState { hasError: boolean; errorMsg: string }
+
 class PreviewErrorBoundary extends React.Component<
   { children: React.ReactNode; componentName: string },
   EBState
@@ -49,10 +84,24 @@ class PreviewErrorBoundary extends React.Component<
   }
 }
 
-// ─── Sandpack Preview Component ───────────────────────────────────────────────
-export default function SandpackPreviewComponent({ code, componentName }: SandpackPreviewProps) {
-  const files = buildSandpackFiles(code, componentName);
-  const dynamicDeps = getSandpackDependencies(code);
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function SandpackPreviewComponent({
+  code,
+  componentName,
+  onCodeChange,
+}: SandpackPreviewProps) {
+  const [editMode, setEditMode] = useState(false);
+
+  const files        = buildSandpackFiles(code, componentName);
+  const dynamicDeps  = getSandpackDependencies(code);
+  const activeFile   = typeof code === 'string'
+    ? `/src/${componentName}.tsx`
+    : '/src/App.tsx';
+  const activeFileEntry = files[activeFile];
+  const initialCode     = typeof activeFileEntry === 'string'
+    ? activeFileEntry
+    : (activeFileEntry?.code ?? (typeof code === 'string' ? code : ''));
 
   return (
     <section
@@ -66,37 +115,80 @@ export default function SandpackPreviewComponent({ code, componentName }: Sandpa
           Live Preview
         </h3>
         <span className="text-xs text-gray-500 ml-auto">Powered by Vite &amp; Sandpack</span>
+
+        {/* Edit mode toggle — reveals inline code editor for direct edits + auto-capture */}
+        <button
+          onClick={() => setEditMode((v) => !v)}
+          title={editMode ? 'Close editor' : 'Edit code inline (changes auto-captured)'}
+          className={`ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all
+            ${editMode
+              ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25'
+              : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600 hover:bg-gray-800'
+            }`}
+        >
+          {editMode ? <X className="w-3 h-3" /> : <Code2 className="w-3 h-3" />}
+          {editMode ? 'Close editor' : 'Edit'}
+        </button>
       </div>
 
-      {/* Preview fills all remaining height */}
-      <div className="flex-1 min-h-0 relative">
+      {/* Preview (+ optional editor) fills remaining height */}
+      <div className="flex-1 min-h-0 relative flex flex-col">
         <PreviewErrorBoundary componentName={componentName}>
           <SandpackProvider
-            key={componentName}
+            key={`${componentName}-${editMode}`}
             template="vite-react-ts"
             theme="dark"
             files={files}
             customSetup={{ dependencies: dynamicDeps }}
             options={{
               visibleFiles: Object.keys(files) as string[],
-              activeFile: typeof code === 'string' ? `/src/${componentName}.tsx` : '/src/App.tsx',
+              activeFile,
             }}
           >
+            {/* Invisible observer — detects file changes from the editor */}
+            {onCodeChange && (
+              <SandpackChangeObserver
+                activeFile={activeFile}
+                initialCode={initialCode}
+                onCodeChange={onCodeChange}
+              />
+            )}
+
             <SandpackLayout
               style={{
-                position: 'absolute',
-                inset: 0,
-                border: 'none',
+                position: editMode ? 'relative' : 'absolute',
+                inset:    editMode ? undefined : 0,
+                flex:     1,
+                border:   'none',
                 borderRadius: 0,
-                background: 'transparent',
+                background:   'transparent',
+                display:  'flex',
+                flexDirection: 'column',
               }}
             >
+              {/* Code editor — shown only in edit mode */}
+              {editMode && (
+                <SandpackCodeEditor
+                  showTabs
+                  showLineNumbers
+                  style={{
+                    height:     '40%',
+                    borderBottom: '1px solid rgba(75,85,99,0.4)',
+                    fontSize:   13,
+                  }}
+                />
+              )}
+
               <SandpackPreviewPanel
                 showNavigator={true}
                 showRestartButton={true}
                 showRefreshButton={true}
                 showOpenInCodeSandbox={false}
-                style={{ height: '100%', width: '100%', flex: 1 }}
+                style={{
+                  height:    editMode ? '60%' : '100%',
+                  width:     '100%',
+                  flex:      editMode ? undefined : 1,
+                }}
               />
             </SandpackLayout>
           </SandpackProvider>

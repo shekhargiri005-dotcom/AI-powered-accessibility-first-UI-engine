@@ -35,6 +35,7 @@ import { getPipelineConfig } from './tieredPipeline';
 import { buildModelAwarePrompt, mergeSystemIntoUser } from './promptBuilder';
 import { extractCode, isCompleteComponent } from './codeExtractor';
 import { beautifyOutput } from '../intelligence/codeBeautifier';
+import { enrichPromptWithFeedback } from './feedbackProcessor';
 
 export type GenerationMode = 'component' | 'app' | 'webgl';
 
@@ -45,10 +46,12 @@ export interface GenerationResult {
   blueprint?: ReturnType<typeof selectBlueprint>;
   validationWarnings?: string[];
   repairsApplied?: string[];
-  /** NEW: model tier used for this generation (for telemetry/debugging) */
+  /** Model tier used for this generation (for telemetry/debugging) */
   modelTier?: string;
-  /** NEW: beautifier transformations applied */
+  /** Beautifier transformations applied */
   beautifyTransformations?: string[];
+  /** True when feedback history enriched the system prompt */
+  feedbackEnriched?: boolean;
 }
 
 export async function generateComponent(
@@ -109,6 +112,11 @@ export async function generateComponent(
       }
     }
 
+    // ─── Step 3.5: Feedback enrichment ───────────────────────────────────────
+    // Reads the local stats cache (zero network) and injects corrective guidance
+    // and/or approved example snippets into the system prompt when applicable.
+    const feedbackEnrichment = enrichPromptWithFeedback(intent, effectiveModel);
+
     // ─── Step 4: Build model-aware prompt ────────────────────────────────────
     let builtPrompt = buildModelAwarePrompt(
       intent,
@@ -126,6 +134,14 @@ export async function generateComponent(
       builtPrompt = {
         system: builtPrompt.system,
         user: builtPrompt.user + '\n\n' + intelligenceContext,
+      };
+    }
+
+    // Inject feedback enrichment into system prompt (after main prompt is built)
+    if (feedbackEnrichment.systemPromptAppend) {
+      builtPrompt = {
+        ...builtPrompt,
+        system: ((builtPrompt.system ?? '') + '\n\n' + feedbackEnrichment.systemPromptAppend).trimStart(),
       };
     }
 
@@ -251,6 +267,7 @@ export async function generateComponent(
       repairsApplied,
       modelTier: modelProfile.tier,
       beautifyTransformations: beautified.transformations,
+      feedbackEnriched: !!feedbackEnrichment.systemPromptAppend,
     };
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
