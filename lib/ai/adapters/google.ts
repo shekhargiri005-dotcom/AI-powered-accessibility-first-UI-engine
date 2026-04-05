@@ -41,9 +41,7 @@ export class GoogleAdapter implements AIAdapter {
       messages: options.messages,
       temperature: options.temperature ?? 0.4,
       max_tokens: options.maxTokens ?? 5000,
-      ...(options.responseFormat
-        ? { response_format: { type: options.responseFormat } }
-        : {}),
+      // Google's proxy throws 400 if response_format is passed
       ...(toolDefs?.length ? { tools: toolDefs } : {}),
       ...(toolChoice ? { tool_choice: toolChoice } : {}),
       stream: false,
