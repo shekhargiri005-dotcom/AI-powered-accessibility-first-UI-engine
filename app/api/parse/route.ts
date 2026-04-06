@@ -4,6 +4,8 @@ import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 import { logger } from '@/lib/logger';
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/parse');
   reqLogger.info('Received intent parse request');

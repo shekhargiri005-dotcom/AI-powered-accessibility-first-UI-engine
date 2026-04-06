@@ -15,6 +15,8 @@ import { logger } from '@/lib/logger';
 import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/generate');
   reqLogger.info('Received UI generation request');
@@ -173,6 +175,10 @@ export async function POST(request: NextRequest) {
       baseUrl,
     );
     if (!generationResult.success || !generationResult.code) {
+      reqLogger.error(
+        'Generation Result Error', 
+        new Error(generationResult.error || 'Unknown generation error')
+      );
       return NextResponse.json(
         { success: false, error: generationResult.error },
         { status: 422 }

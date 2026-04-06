@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 
 interface Workspace {
   id: string;
@@ -20,11 +21,19 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
+  const { status } = useSession();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshWorkspaces = useCallback(async () => {
+    if (status !== 'authenticated') {
+      if (status === 'unauthenticated') {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     try {
       const res = await fetch('/api/workspaces');
       // Not signed in — workspace features disabled, no error shown
@@ -41,7 +50,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspaceId]);
+  }, [activeWorkspaceId, status]);
 
   useEffect(() => {
     refreshWorkspaces();

@@ -23,10 +23,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email    = credentials?.email    as string | undefined;
         const password = credentials?.password as string | undefined;
 
-        if (!email || !password) return null;
+        if (!email || !password) {
+          console.error('[auth debug] Missing email or password');
+          return null;
+        }
 
         // ── Owner-only gate ────────────────────────────────────────────────
         if (email.toLowerCase().trim() !== OWNER_EMAIL.toLowerCase().trim()) {
+          console.error(`[auth debug] Email mismatch. Received: "${email}", Expected: "${OWNER_EMAIL}"`);
           return null;
         }
 
@@ -37,7 +41,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         const valid = await bcrypt.compare(password, OWNER_PASSWORD_HASH);
-        if (!valid) return null;
+        if (!valid) {
+          console.error('[auth debug] Password mismatch');
+          return null;
+        }
 
         return {
           id:    'owner',

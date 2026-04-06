@@ -11,11 +11,11 @@
  *   OWNER_PASSWORD_HASH="$2b$12$..."
  */
 
-const bcrypt  = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const readline = require('readline');
 
 const rl = readline.createInterface({
-  input:  process.stdin,
+  input: process.stdin,
   output: process.stdout,
   terminal: true,
 });
@@ -72,7 +72,7 @@ async function main() {
   console.log('  ╚══════════════════════════════════════════════╝');
   console.log('');
 
-  const password  = await askPassword('  Enter your desired password: ');
+  const password = await askPassword('  Enter your desired password:');
   const password2 = await askPassword('  Confirm password:            ');
 
   if (password !== password2) {

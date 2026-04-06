@@ -3,6 +3,8 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { cacheLife } from 'next/cache';
 
+export const dynamic = 'force-dynamic';
+
 async function getCachedWorkspaces(userId: string) {
   'use cache';
   cacheLife('minutes');

@@ -17,9 +17,15 @@ export class OpenAIAdapter implements AIAdapter {
   private client: OpenAI;
 
   constructor(apiKey?: string, baseURL?: string) {
+    let finalBaseUrl = baseURL;
+    // Auto-migrate away from deprecated Hugging Face endpoints
+    if (finalBaseUrl?.includes('api-inference.huggingface.co')) {
+      finalBaseUrl = 'https://router.huggingface.co/hf-inference/v1';
+    }
+
     this.client = new OpenAI({
       apiKey: apiKey ?? process.env.OPENAI_API_KEY,
-      ...(baseURL ? { baseURL } : {}),
+      ...(finalBaseUrl ? { baseURL: finalBaseUrl } : {}),
     });
   }
 
@@ -30,18 +36,31 @@ export class OpenAIAdapter implements AIAdapter {
       : undefined;
 
     const isAggregator = this.client.baseURL.includes('openrouter.ai') || this.client.baseURL.includes('together.xyz');
+    const isHuggingFace = this.client.baseURL.includes('huggingface.co');
+    
+    // Some aggregators/endpoints (like HuggingFace TGI) crash with 422 Unprocessable Entity 
+    // if OpenAI-specific parameters (like tools or response_format) are provided
+    // but not natively supported by the underlying model's template.
+    const safeResponseFormat = (options.responseFormat && !isAggregator && !isHuggingFace)
+      ? { response_format: { type: options.responseFormat } }
+      : {};
+
+    const safeTools = (toolDefs?.length && !isHuggingFace) 
+      ? { tools: toolDefs } 
+      : {};
+
+    const safeToolChoice = (toolChoice && !isHuggingFace) 
+      ? { tool_choice: toolChoice } 
+      : {};
     
     const response = await this.client.chat.completions.create({
       model: options.model,
       messages: options.messages,
       temperature: options.temperature ?? 0.4,
       max_tokens: options.maxTokens ?? 5000,
-      // Aggregators often proxy to models that crash when given OpenAI-specific JSON mode flags.
-      ...((options.responseFormat && !isAggregator)
-        ? { response_format: { type: options.responseFormat } }
-        : {}),
-      ...(toolDefs?.length ? { tools: toolDefs } : {}),
-      ...(toolChoice ? { tool_choice: toolChoice } : {}),
+      ...safeResponseFormat,
+      ...safeTools,
+      ...safeToolChoice,
       stream: false,
     });
 
@@ -69,12 +88,17 @@ export class OpenAIAdapter implements AIAdapter {
   async *stream(options: GenerateOptions): AsyncGenerator<StreamChunk, void, unknown> {
     const toolDefs = options.tools?.map(toOpenAIToolDefinition);
 
+    const isHuggingFace = this.client.baseURL.includes('huggingface.co');
+    const safeTools = (toolDefs?.length && !isHuggingFace) 
+      ? { tools: toolDefs } 
+      : {};
+
     const stream = await this.client.chat.completions.create({
       model: options.model,
       messages: options.messages,
       temperature: options.temperature ?? 0.4,
       max_tokens: options.maxTokens ?? 5000,
-      ...(toolDefs?.length ? { tools: toolDefs } : {}),
+      ...safeTools,
       stream: true,
       stream_options: { include_usage: true },
     });

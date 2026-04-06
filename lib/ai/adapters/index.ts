@@ -31,6 +31,7 @@ const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
   openrouter: 'https://openrouter.ai/api/v1',
   together:   'https://api.together.xyz/v1',
   lmstudio:   'http://localhost:1234/v1',
+  huggingface:'https://router.huggingface.co/hf-inference/v1',
 };
 
 // ─── Provider Detection (fallback only — prefer explicit provider from config) ─

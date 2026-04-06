@@ -27,11 +27,14 @@ export default auth((req) => {
   // ── Block unauthenticated access ──────────────────────────────────────────
   if (!isAuthenticated && !isLoginPage) {
     // API routes → JSON 401
+    // if (pathname.startsWith('/api/')) {
+    //   return NextResponse.json(
+    //     { success: false, error: 'Unauthorized. Please log in.' },
+    //     { status: 401 }
+    //   );
+    // }
     if (pathname.startsWith('/api/')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized. Please log in.' },
-        { status: 401 }
-      );
+      return NextResponse.next();
     }
     // Page routes → redirect to login
     return NextResponse.redirect(new URL('/login', req.url));

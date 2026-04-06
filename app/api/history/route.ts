@@ -3,6 +3,8 @@ import fs from 'fs';
 import path from 'path';
 import { getProjectById } from '@/lib/ai/memory';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
