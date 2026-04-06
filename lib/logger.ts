@@ -45,20 +45,20 @@ class BackendLogger {
     }
 
     info(payload: LogPayload) {
-        console.log(this.formatLog('info', payload));
+        console.log(`🔷 [INFO] ${payload.endpoint} | ${payload.message}`, this.formatLog('info', payload));
     }
 
     warn(payload: LogPayload) {
-        console.warn(this.formatLog('warn', payload));
+        console.warn(`⚠️ [WARN] ${payload.endpoint} | ${payload.message}`, this.formatLog('warn', payload));
     }
 
     error(payload: LogPayload) {
-        console.error(this.formatLog('error', payload));
+        console.error(`🚨 [ERROR] ${payload.endpoint} | ${payload.message}`, this.formatLog('error', payload));
     }
 
     debug(payload: LogPayload) {
         if (process.env.NODE_ENV === 'development' || process.env.DEBUG === 'true') {
-            console.debug(this.formatLog('debug', payload));
+            console.debug(`🐛 [DEBUG] ${payload.endpoint} | ${payload.message}`, this.formatLog('debug', payload));
         }
     }
 

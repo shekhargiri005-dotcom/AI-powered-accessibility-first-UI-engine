@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
       const textStream = new ReadableStream<string>({
         async start(controller) {
           try {
+            reqLogger.info('Starting streaming generation', { model, provider });
             for await (const chunk of adapter.stream({
               model,
               messages: [
@@ -78,7 +79,9 @@ export async function POST(request: NextRequest) {
               if (chunk.delta) controller.enqueue(chunk.delta);
               if (chunk.done) break;
             }
+            reqLogger.info('Streaming generation completed successfully');
           } catch (err) {
+            reqLogger.error('Stream generation failed', err);
             controller.enqueue(`\n[Stream Error: ${err instanceof Error ? err.message : 'Unknown'}]`);
           } finally {
             controller.close();
