@@ -77,16 +77,14 @@ export async function POST(request: NextRequest) {
     );
 
     if (!result.success) {
-      reqLogger.warn('Intent parsing failed', { error: result.error });
-      if (result.rawResponse) {
-        try {
-          require('fs').writeFileSync('last_malformed_parse.txt', result.rawResponse);
-        } catch (e) {
-          reqLogger.error('Failed to write rawResponse to disk', e);
-        }
-      }
+      reqLogger.warn('Intent parsing failed', {
+        error: result.error,
+        // Log raw AI response (truncated) for debugging — Vercel filesystem is read-only
+        // so we cannot write to disk. Use Vercel log drains to capture full responses.
+        rawPreview: result.rawResponse ? result.rawResponse.slice(0, 500) : undefined,
+      });
       return NextResponse.json(
-        { success: false, error: result.error, rawResponse: result.rawResponse },
+        { success: false, error: result.error },
         { status: 422 }
       );
     }
