@@ -18,7 +18,6 @@ import type { AdapterConfig } from './adapters/index';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { executeToolCalls } from './tools';
 import { DEFAULT_AGENT_TOOLS } from './agentTools';
-import type { Message } from './adapters/base';
 
 import { getRelevantExamples } from './memory';
 import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
@@ -154,11 +153,21 @@ export async function generateComponent(
     const adapter = await getWorkspaceAdapter(cfg, workspaceId, userId);
 
     // ─── Step 6: Agentic Tool Loop ───────────────────────────────────────────
-    // Respects maxToolRounds from pipeline config (0 for tiny/small, up to 3 for cloud)
-    const messages: Message[] = builtPrompt.system
+    // Respects maxToolRounds from pipeline config (0 for tiny/small, up to 3 for cloud).
+    //
+    // OpenAI tool-call protocol (strict — violating causes 400 no-body):
+    //   1. User sends messages + tools array
+    //   2. Model responds with assistant message containing `tool_calls`
+    //   3. Client must append:
+    //       a. The assistant message WITH the raw tool_calls array intact
+    //       b. One { role:'tool', tool_call_id, content } per call
+    //   4. Client calls generate() again — model produces final text
+    //
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const messages: any[] = builtPrompt.system
       ? [
           { role: 'system', content: builtPrompt.system },
-          { role: 'user', content: builtPrompt.user },
+          { role: 'user',   content: builtPrompt.user   },
         ]
       : [{ role: 'user', content: builtPrompt.user }];
 
@@ -167,31 +176,45 @@ export async function generateComponent(
 
     for (let round = 0; round <= maxToolRounds; round++) {
       const result = await adapter.generate({
-        model: effectiveModel,
+        model:       effectiveModel,
         messages,
         temperature: pipelineConfig.temperature,
-        maxTokens: Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
+        maxTokens:   Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
         // Only pass tools if the model supports tool calls
         ...(pipelineConfig.maxToolRounds > 0 && {
-          tools: DEFAULT_AGENT_TOOLS,
+          tools:      DEFAULT_AGENT_TOOLS,
           toolChoice: 'auto' as const,
         }),
       });
 
       if (result.toolCalls && result.toolCalls.length > 0 && round < maxToolRounds) {
-        // Append the assistant's tool-call request
-        messages.push({ role: 'assistant', content: result.content || '' });
+        // 1. Append assistant message — MUST include the raw tool_calls array.
+        //    Without it the next API call returns 400 (no body).
+        messages.push({
+          role:       'assistant',
+          content:    result.content || null,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          tool_calls: result.toolCalls.map((tc: any) => ({
+            id:       tc.id,
+            type:     'function',
+            function: {
+              name:      tc.name,
+              arguments: JSON.stringify(tc.arguments ?? {}),
+            },
+          })),
+        });
 
-        // Execute all requested tools in parallel
+        // 2. Execute all requested tools in parallel
         const toolResults = await executeToolCalls(result.toolCalls, DEFAULT_AGENT_TOOLS);
 
-        const toolSummary = toolResults
-          .map((r) => `[Tool: ${r.name}]\n${r.content}`)
-          .join('\n\n');
-        messages.push({
-          role: 'user',
-          content: `Tool results:\n${toolSummary}\n\nNow generate the final React component code.`,
-        });
+        // 3. Append one role:'tool' message per call (NOT role:'user')
+        for (const tr of toolResults) {
+          messages.push({
+            role:         'tool',
+            tool_call_id: tr.tool_call_id,
+            content:      tr.content,
+          });
+        }
 
         continue;
       }
