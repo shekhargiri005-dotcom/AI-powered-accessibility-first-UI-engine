@@ -129,14 +129,24 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
-    // Detect local/Ollama models — skip expensive review/repair LLM calls for them
+    // Detect local/Ollama models — skip expensive review/repair LLM calls for them.
+    // IMPORTANT: do NOT treat missing `provider` as local — cloud models often don't
+    // set an explicit provider string. Only flag as local when we have strong signals.
     const isLocalModel = (
-      !provider ||
       provider === 'ollama' ||
       provider === 'lmstudio' ||
       baseUrl?.includes('localhost') ||
       baseUrl?.includes('127.0.0.1') ||
-      (!process.env.REVIEW_MODEL && !process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GOOGLE_API_KEY)
+      // Final fallback: no cloud keys configured anywhere — assume local environment
+      (
+        !provider &&
+        !process.env.OPENAI_API_KEY &&
+        !process.env.ANTHROPIC_API_KEY &&
+        !process.env.GOOGLE_API_KEY &&
+        !process.env.DEEPSEEK_API_KEY &&
+        !process.env.GROQ_API_KEY &&
+        !process.env.TOGETHER_API_KEY
+      )
     );
 
 

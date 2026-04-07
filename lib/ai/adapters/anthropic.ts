@@ -1,78 +1,189 @@
 /**
  * @file anthropic.ts
- * Anthropic (Claude) adapter stub.
- * Currently implemented using the OpenAI-compat shim layer.
- * When @anthropic-ai/sdk is added as a dependency, replace the client below.
+ *
+ * Anthropic (Claude) adapter — calls the NATIVE Anthropic REST API (/v1/messages).
+ *
+ * Anthropic does NOT have a /chat/completions endpoint. Using the OpenAI SDK shim
+ * pointed at api.anthropic.com causes an immediate 400 (no body) because the route
+ * simply does not exist. This adapter uses direct fetch() against the native API.
  *
  * To activate: set ANTHROPIC_API_KEY in .env.local
+ * Supported models: claude-3-5-sonnet-*, claude-3-opus-*, claude-3-haiku-*, etc.
  */
 
-import OpenAI from 'openai';
-import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
+import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk, Message } from './base';
+
+// ─── Anthropic API shape ─────────────────────────────────────────────────────
+
+interface AnthropicMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface AnthropicResponse {
+  content: Array<{ type: string; text: string }>;
+  usage?: { input_tokens: number; output_tokens: number };
+}
+
+interface AnthropicStreamEvent {
+  type: string;
+  delta?: { type: string; text?: string };
+  usage?: { output_tokens: number };
+  message?: { usage: { input_tokens: number } };
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function toAnthropicMessages(messages: Message[]): {
+  system: string | undefined;
+  messages: AnthropicMessage[];
+} {
+  let system: string | undefined;
+  const converted: AnthropicMessage[] = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system') {
+      system = msg.content;
+    } else {
+      converted.push({ role: msg.role as 'user' | 'assistant', content: msg.content });
+    }
+  }
+
+  return { system, messages: converted };
+}
+
+const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
+const ANTHROPIC_VERSION = '2023-06-01';
+
+function buildHeaders(apiKey: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': ANTHROPIC_VERSION,
+  };
+}
+
+// ─── Adapter ─────────────────────────────────────────────────────────────────
 
 export class AnthropicAdapter implements AIAdapter {
   readonly provider = 'anthropic';
-  private client: OpenAI;
+  private readonly apiKey: string;
 
   constructor(apiKey?: string) {
-    this.client = new OpenAI({
-      apiKey: apiKey ?? process.env.ANTHROPIC_API_KEY ?? 'placeholder',
-      // Anthropic does not have a true OpenAI-compat endpoint, so we cannot
-      // use it without the native SDK.  This stub is structured so that when
-      // @anthropic-ai/sdk is installed, you can swap in the real client below.
-      baseURL: 'https://api.anthropic.com/v1', // NOTE: swap when SDK is added
-    });
+    this.apiKey = apiKey ?? process.env.ANTHROPIC_API_KEY ?? '';
+  }
+
+  private getKey(): string {
+    if (!this.apiKey) {
+      throw new Error(
+        'AnthropicAdapter: ANTHROPIC_API_KEY is not set. ' +
+        'Add your Anthropic API key in the AI Engine Config panel or set ANTHROPIC_API_KEY in your environment.',
+      );
+    }
+    return this.apiKey;
   }
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error(
-        'AnthropicAdapter: ANTHROPIC_API_KEY is not set. ' +
-        'Install @anthropic-ai/sdk and provide a key to use Claude.'
-      );
-    }
+    const key = this.getKey();
+    const { system, messages } = toAnthropicMessages(options.messages);
 
-    const response = await this.client.chat.completions.create({
+    const body: Record<string, unknown> = {
       model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.4,
+      messages,
       max_tokens: options.maxTokens ?? 5000,
-      stream: false,
+      temperature: options.temperature ?? 0.4,
+    };
+    if (system) body.system = system;
+
+    const res = await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: buildHeaders(key),
+      body: JSON.stringify(body),
     });
 
-    const choice = response.choices[0];
-    const usage = response.usage;
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`AnthropicAdapter: API error HTTP ${res.status}${errText ? ` — ${errText.slice(0, 200)}` : ' (no body)'}`);
+    }
+
+    const data = await res.json() as AnthropicResponse;
+    const textBlock = data.content?.find((b) => b.type === 'text');
+    const content = textBlock?.text ?? '';
+    const usage = data.usage;
 
     return {
-      content: choice?.message?.content ?? '',
+      content,
       usage: usage
         ? {
-            promptTokens: usage.prompt_tokens,
-            completionTokens: usage.completion_tokens,
-            totalTokens: usage.total_tokens,
+            promptTokens: usage.input_tokens,
+            completionTokens: usage.output_tokens,
+            totalTokens: usage.input_tokens + usage.output_tokens,
           }
         : undefined,
-      raw: response,
+      raw: data,
     };
   }
 
   async *stream(options: GenerateOptions): AsyncGenerator<StreamChunk, void, unknown> {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('AnthropicAdapter: ANTHROPIC_API_KEY is not set.');
-    }
+    const key = this.getKey();
+    const { system, messages } = toAnthropicMessages(options.messages);
 
-    const stream = await this.client.chat.completions.create({
+    const body: Record<string, unknown> = {
       model: options.model,
-      messages: options.messages,
-      temperature: options.temperature ?? 0.4,
+      messages,
       max_tokens: options.maxTokens ?? 5000,
+      temperature: options.temperature ?? 0.4,
       stream: true,
+    };
+    if (system) body.system = system;
+
+    const res = await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: buildHeaders(key),
+      body: JSON.stringify(body),
     });
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices[0]?.delta?.content ?? '';
-      const isDone = chunk.choices[0]?.finish_reason != null;
-      yield { delta, done: isDone };
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`AnthropicAdapter stream: API error HTTP ${res.status}${errText ? ` — ${errText.slice(0, 200)}` : ' (no body)'}`);
     }
+
+    if (!res.body) throw new Error('AnthropicAdapter: stream response has no body');
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr || jsonStr === '[DONE]') continue;
+
+          let event: AnthropicStreamEvent;
+          try { event = JSON.parse(jsonStr) as AnthropicStreamEvent; } catch { continue; }
+
+          if (event.type === 'content_block_delta' && event.delta?.text) {
+            yield { delta: event.delta.text, done: false };
+          } else if (event.type === 'message_stop') {
+            yield { delta: '', done: true };
+            return;
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    yield { delta: '', done: true };
   }
 }
+
