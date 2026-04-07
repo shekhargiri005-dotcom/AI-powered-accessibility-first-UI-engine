@@ -127,7 +127,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     mergeSystemIntoUser: false,
     temperature: 0.25,
     maxOutputTokens: 4500,
-    maxToolRounds: 1,
+    maxToolRounds: 0,  // tools disabled globally — causes 400 on unknown/proxy endpoints
     useJsonMode: false,
     useStreaming: true,
     extractionStrategy: 'fence',
@@ -144,7 +144,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     mergeSystemIntoUser: false,
     temperature: 0.4,
     maxOutputTokens: 6000,
-    maxToolRounds: 2,
+    maxToolRounds: 0,  // tools disabled globally — causes 400 on unknown/proxy endpoints
     useJsonMode: false,
     useStreaming: true,
     extractionStrategy: 'fence',
@@ -161,7 +161,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     mergeSystemIntoUser: false,
     temperature: 0.55,
     maxOutputTokens: 8000,
-    maxToolRounds: 3,
+    maxToolRounds: 0,        // tools disabled globally — causes silent 400 on proxy/unknown endpoints
     useJsonMode: false,      // overridden per-model below
     useStreaming: true,
     extractionStrategy: 'fence',
