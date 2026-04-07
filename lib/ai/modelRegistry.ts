@@ -603,6 +603,82 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     timeoutMs: 90000,
   },
 
+  // ── OpenAI Reasoning Models (o1 / o3 series) ─────────────────────────────
+  // IMPORTANT: These models reject temperature, max_tokens, and response_format.
+  // The OpenAI adapter detects them via isReasoningModel() and adjusts params.
+
+  'o3-mini': {
+    id: 'o3-mini',
+    displayName: 'o3-mini',
+    provider: 'openai',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 65536,
+    idealTemperature: 1.0,  // reasoning models default; adapter omits this param
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,  // tool calls work differently — disable to avoid 400s
+    supportsJsonMode: false,   // response_format not supported — adapter strips it
+    streamingReliable: true,
+    strengths: ['strongest reasoning', 'excellent code planning', 'very large context'],
+    weaknesses: ['no temperature control', 'no response_format', 'higher cost'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 10000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 120000,
+    notes: 'Uses max_completion_tokens instead of max_tokens. Adapter auto-detects and adjusts.',
+  },
+
+  'o1': {
+    id: 'o1',
+    displayName: 'o1',
+    provider: 'openai',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 32768,
+    idealTemperature: 1.0,
+    supportsSystemPrompt: false,  // o1 does not support a system role
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['advanced multi-step reasoning', 'complex code analysis'],
+    weaknesses: ['no system prompt', 'no temperature control', 'slow'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 10000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 180000,
+    notes: 'No system prompt support — merge into user message. Uses max_completion_tokens.',
+  },
+
+  'o1-mini': {
+    id: 'o1-mini',
+    displayName: 'o1-mini',
+    provider: 'openai',
+    tier: 'cloud',
+    contextWindow: 128000,
+    maxOutputTokens: 65536,
+    idealTemperature: 1.0,
+    supportsSystemPrompt: false,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['fast reasoning', 'cheaper than o1', 'strong code tasks'],
+    weaknesses: ['no system prompt', 'no temperature control'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 8000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 120000,
+    notes: 'No system prompt — merge into user. Uses max_completion_tokens.',
+  },
+
   // ─── Modern Claude model aliases (3.7 / 4.x naming) ─────────────────────
   // These are the models shown in the UI picker. Must be registered here so the
   // pipeline picks up supportsToolCalls:false instead of falling back to

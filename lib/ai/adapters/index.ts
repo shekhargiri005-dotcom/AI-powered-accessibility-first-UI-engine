@@ -44,7 +44,8 @@ export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
   if (m.includes('claude'))                return 'anthropic';
   if (m.includes('gemini'))               return 'google';
-  if (m.includes('gpt-'))                 return 'openai';
+  if (m.includes('gpt-'))                return 'openai';
+  if (/^o[13][\w.-]*$|^o1-/.test(m))    return 'openai';  // o1, o3-mini, o3, o1-mini, o1-preview
   if (m.includes('deepseek'))             return 'deepseek';
   if (m.includes('llama') || m.includes('codellama')) return 'ollama'; // treated as local default
   if (m.includes('mistral') || m.includes('mixtral')) return 'ollama';
