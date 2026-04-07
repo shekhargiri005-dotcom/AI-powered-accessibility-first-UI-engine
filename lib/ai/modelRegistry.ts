@@ -603,6 +603,57 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     timeoutMs: 90000,
   },
 
+  // ─── Modern Claude model aliases (3.7 / 4.x naming) ─────────────────────
+  // These are the models shown in the UI picker. Must be registered here so the
+  // pipeline picks up supportsToolCalls:false instead of falling back to
+  // getCloudFallbackProfile() → gpt-4o-mini → supportsToolCalls:true.
+
+  'claude-sonnet-4-5': {
+    id: 'claude-sonnet-4-5',
+    displayName: 'Claude Sonnet 4.5',
+    provider: 'anthropic',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 8192,
+    idealTemperature: 0.6,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['latest Claude model', 'best design instincts', 'accessibility-aware'],
+    weaknesses: ['no JSON mode'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 10000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 90000,
+  },
+
+  'claude-3-7-sonnet-20250219': {
+    id: 'claude-3-7-sonnet-20250219',
+    displayName: 'Claude 3.7 Sonnet',
+    provider: 'anthropic',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 8192,
+    idealTemperature: 0.6,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['excellent code generation', 'strong design aesthetics'],
+    weaknesses: ['no JSON mode'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 10000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 90000,
+  },
+
   'claude-3-5-sonnet-20241022': {
     id: 'claude-3-5-sonnet-20241022',
     displayName: 'Claude 3.5 Sonnet',
