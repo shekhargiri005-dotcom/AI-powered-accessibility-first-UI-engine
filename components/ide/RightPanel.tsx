@@ -80,6 +80,43 @@ function SuccessRateBadge({ rate }: { rate: number }) {
   );
 }
 
+// ─── html2canvas capture helper ─────────────────────────────────────────────
+// Uses the postMessage protocol that CaptureWrapper (injected into every
+// Sandpack preview) already implements. Returns null on timeout / error.
+async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener('message', handler);
+      resolve(null);
+    }, timeoutMs);
+
+    function handler(e: MessageEvent) {
+      if (e.data?.type === 'SNAPSHOT_RESULT') {
+        clearTimeout(timer);
+        window.removeEventListener('message', handler);
+        resolve(e.data.payload as string);
+      } else if (e.data?.type === 'SNAPSHOT_ERROR') {
+        clearTimeout(timer);
+        window.removeEventListener('message', handler);
+        resolve(null);
+      }
+    }
+
+    window.addEventListener('message', handler);
+
+    const iframe = document.querySelector<HTMLIFrameElement>(
+      'iframe[title="Sandpack Preview"], iframe[class*="sandpack"], .sp-preview-frame',
+    );
+    if (!iframe?.contentWindow) {
+      clearTimeout(timer);
+      window.removeEventListener('message', handler);
+      resolve(null);
+      return;
+    }
+    iframe.contentWindow.postMessage({ type: 'REQUEST_SNAPSHOT' }, '*');
+  });
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function RightPanel({
@@ -199,11 +236,28 @@ export default function RightPanel({
     setFinalRoundCodeReplaced(false);
 
     try {
-      // Step 1: Get screenshot from Playwright
-      let imageDataUrl: string;
-      const allowedForScreenshot = iframeSrc.startsWith('http');
+      // ── Step 1: Capture screenshot ──────────────────────────────────────
+      // Sandpack nodebox preview always runs in a local iframe (blob/about:blank).
+      // SandpackScreenshotObserver passes the sentinel '.../_sandpack_preview'.
+      // We cannot Playwright-screenshot the Vercel host itself (allowlist blocks it).
+      // Solution: use html2canvas via the CaptureWrapper postMessage protocol.
+      const isSandpackPreview =
+        iframeSrc.endsWith('/_sandpack_preview') ||
+        iframeSrc.includes('localhost') ||
+        !iframeSrc.startsWith('http');
 
-      if (allowedForScreenshot) {
+      let imageDataUrl: string;
+
+      if (isSandpackPreview) {
+        const snapshot = await captureViaPostMessage();
+        if (!snapshot) {
+          setFinalRoundStatus('skipped');
+          setFinalRoundError('html2canvas capture timed out — Final Round skipped.');
+          return;
+        }
+        imageDataUrl = snapshot;
+      } else {
+        // Genuine external URL — use Playwright server-side capture
         const ssRes = await fetch('/api/screenshot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,11 +270,6 @@ export default function RightPanel({
           return;
         }
         imageDataUrl = ssData.dataUrl;
-      } else {
-        // Sandpack preview is a local blob — cannot screenshot cross-origin
-        setFinalRoundStatus('skipped');
-        setFinalRoundError('Sandpack preview runs in a local iframe. Final Round requires a cloud or external URL.');
-        return;
       }
 
       // Step 2: Call Final Round critic with screenshot + code + same model
