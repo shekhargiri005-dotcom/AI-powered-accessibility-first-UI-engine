@@ -321,7 +321,12 @@ export async function generateComponent(
       feedbackEnriched: !!feedbackEnrichment.systemPromptAppend,
     };
   } catch (error) {
-    const msg = error instanceof Error ? error.message : 'Unknown error';
+    // Log the ORIGINAL error with its full stack here so Vercel logs show the real call site.
+    // Without this, the stack is discarded and reqLogger.error(new Error(...)) in the route
+    // creates a NEW Error whose stack points only at the logging call — not the actual throw.
+    const originalStack = error instanceof Error ? error.stack : String(error);
+    const msg           = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[componentGenerator] Fatal error — original stack:\n', originalStack);
     return { success: false, error: `AI generation error: ${msg}` };
   }
 }

@@ -193,10 +193,10 @@ export async function POST(request: NextRequest) {
       baseUrl,
     );
     if (!generationResult.success || !generationResult.code) {
-      reqLogger.error(
-        'Generation Result Error', 
-        new Error(generationResult.error || 'Unknown generation error')
-      );
+      // Pass the error string directly — the real stack is already logged inside
+      // componentGenerator via console.error. Creating new Error() here produces a
+      // misleading trace pointing at THIS line, not the actual failure site.
+      reqLogger.error('Generation Result Error', { error: generationResult.error });
       return NextResponse.json(
         { success: false, error: generationResult.error },
         { status: 422 }
