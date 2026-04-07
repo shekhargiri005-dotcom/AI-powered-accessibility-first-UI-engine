@@ -193,10 +193,10 @@ export async function POST(request: NextRequest) {
       baseUrl,
     );
     if (!generationResult.success || !generationResult.code) {
-      // Pass the error string directly — the real stack is already logged inside
-      // componentGenerator via console.error. Creating new Error() here produces a
-      // misleading trace pointing at THIS line, not the actual failure site.
-      reqLogger.error('Generation Result Error', { error: generationResult.error });
+      // Pass the error string as the second arg (error?: unknown).
+      // The logger does String(error) for non-Error values, so a string is correct.
+      // Wrapping in {error:...} caused String({...}) = "[object Object]" in Vercel logs.
+      reqLogger.error('Generation Result Error', generationResult.error ?? 'Unknown generation error');
       return NextResponse.json(
         { success: false, error: generationResult.error },
         { status: 422 }

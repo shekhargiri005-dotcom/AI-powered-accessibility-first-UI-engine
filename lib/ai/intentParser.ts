@@ -119,11 +119,28 @@ export async function parseIntent(
     if (jsonMatch) {
       cleanedRaw = jsonMatch[1].trim();
     } else {
-      // 3. Fallback: find outer-most JSON brackets
-      const firstCurly = noThinkBlock.indexOf('{');
-      const lastCurly = noThinkBlock.lastIndexOf('}');
-      if (firstCurly !== -1 && lastCurly !== -1 && lastCurly > firstCurly) {
-        cleanedRaw = noThinkBlock.substring(firstCurly, lastCurly + 1);
+      // 3. Fallback: walk forward from the first '{' counting bracket depth.
+      //    lastIndexOf('}') is NOT safe — trailing text like "handles {screens}" would
+      //    return the wrong closing brace and produce malformed JSON.
+      const start = noThinkBlock.indexOf('{');
+      if (start !== -1) {
+        let depth = 0;
+        let inString = false;
+        let escape = false;
+        let end = -1;
+        for (let i = start; i < noThinkBlock.length; i++) {
+          const ch = noThinkBlock[i];
+          if (escape)             { escape = false; continue; }
+          if (ch === '\\' && inString) { escape = true;  continue; }
+          if (ch === '"')         { inString = !inString; continue; }
+          if (inString)           continue;
+          if (ch === '{')         depth++;
+          else if (ch === '}') {
+            depth--;
+            if (depth === 0) { end = i; break; }
+          }
+        }
+        if (end !== -1) cleanedRaw = noThinkBlock.substring(start, end + 1);
       }
     }
 
