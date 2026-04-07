@@ -94,10 +94,20 @@ export class AnthropicAdapter implements AIAdapter {
       ? ((rawSystem ?? '') + '\n\nIMPORTANT: Return ONLY valid JSON. No markdown fences, no explanations, no prose.').trimStart()
       : rawSystem;
 
+    // Anthropic per-model hard output limits. Requests exceeding these return HTTP 400.
+    //   claude-3-opus-*              →  4096
+    //   claude-3-haiku-*             →  4096
+    //   claude-3[-5]-sonnet-* / claude-*-4-*  →  8192
+    // Cap defensively so older Claude 3 models don't silently 400.
+    const anthropicTokenCap =
+      options.model.toLowerCase().includes('opus')  ? 4096 :
+      options.model.toLowerCase().includes('haiku') ? 4096 :
+      8192;
+
     const body: Record<string, unknown> = {
       model: options.model,
       messages,
-      max_tokens: options.maxTokens ?? 5000,
+      max_tokens: Math.min(options.maxTokens ?? 5000, anthropicTokenCap),
       temperature: options.temperature ?? 0.4,
     };
     if (system) body.system = system;

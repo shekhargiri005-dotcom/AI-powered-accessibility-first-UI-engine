@@ -193,10 +193,13 @@ export async function POST(request: NextRequest) {
       baseUrl,
     );
     if (!generationResult.success || !generationResult.code) {
-      // Pass the error string as the second arg (error?: unknown).
-      // The logger does String(error) for non-Error values, so a string is correct.
-      // Wrapping in {error:...} caused String({...}) = "[object Object]" in Vercel logs.
-      reqLogger.error('Generation Result Error', generationResult.error ?? 'Unknown generation error');
+      // Include model+provider in log so we can diagnose which provider caused the failure
+      // without needing to parse the error string itself.
+      reqLogger.error(
+        'Generation Result Error',
+        generationResult.error ?? 'Unknown generation error',
+        { model: model ?? '[env-default]', provider: provider ?? '[env-default]' },
+      );
       return NextResponse.json(
         { success: false, error: generationResult.error },
         { status: 422 }
