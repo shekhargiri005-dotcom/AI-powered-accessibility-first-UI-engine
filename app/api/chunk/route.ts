@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required parameters' }, { status: 400 });
     }
 
-    reqLogger.debug('Generating file chunk', { targetFile, model, maxTokens, provider });
+    reqLogger.info('Starting chunk generation', { targetFile, model, provider, hasApiKey: !!effectiveApiKey, hasBaseUrl: !!baseUrl });
     let code = await generateFileChunk(intent, manifest, targetFile, model, maxTokens, isMultiSlide, provider, effectiveApiKey, baseUrl);
 
     // Sanitize chunk for Babel compatibility
@@ -34,7 +34,11 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, code, safetyWarnings: safetyCheck.issues.length ? safetyCheck.issues : undefined });
   } catch (error) {
-    reqLogger.error('Chunk generation failed', error);
-    return NextResponse.json({ success: false, error: 'Chunk generation failed' }, { status: 500 });
+    const msg = error instanceof Error ? error.message : String(error);
+    reqLogger.error('Chunk generation failed', error, {
+      errorMessage: msg,
+      isOpenAIError: msg.includes('status code') && !msg.includes('AnthropicAdapter'),
+    });
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
