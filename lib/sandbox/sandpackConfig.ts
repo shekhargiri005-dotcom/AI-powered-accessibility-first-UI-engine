@@ -1,5 +1,6 @@
 import type { SandpackFiles, SandpackFile } from '@codesandbox/sandpack-react';
 import uiEcosystem from './ui-ecosystem.json';
+import { sanitizeAllImports } from './importSanitizer';
 
 /**
  * Narrows a SandpackFiles entry (which can be a string OR a SandpackFile object)
@@ -18,8 +19,10 @@ export function buildSandpackFiles(
   componentCode: string | Record<string, string>,
   componentName: string,
 ): SandpackFiles {
-  const isMultiFile = typeof componentCode !== 'string';
-  const mainCode = isMultiFile ? (componentCode['App.tsx'] as string) || '' : componentCode;
+  // Strip / stub any imports that can't resolve in the Sandpack environment
+  const safeCode = sanitizeAllImports(componentCode);
+  const isMultiFile = typeof safeCode !== 'string';
+  const mainCode = isMultiFile ? (safeCode['App.tsx'] as string) || '' : safeCode;
 
   const files: SandpackFiles = {
     '/index.html': {
@@ -177,7 +180,7 @@ export default function CaptureWrapper({ children }) {
 
   if (isMultiFile) {
     let hasApp = false;
-    for (const [filename, code] of Object.entries(componentCode)) {
+    for (const [filename, code] of Object.entries(safeCode as Record<string, string>)) {
       const cleanName = filename.replace(/^\/+/, '');
       if (cleanName === 'App.tsx' || cleanName === 'App.jsx') hasApp = true;
       files[`/src/${cleanName}`] = { code: typeof code === 'string' ? code : '', active: cleanName === 'App.tsx' };
@@ -185,7 +188,7 @@ export default function CaptureWrapper({ children }) {
 
     // Safety fallback: Sandpack crashes if activeFile '/src/App.tsx' does not exist
     if (!hasApp) {
-      const keys = Object.keys(componentCode);
+      const keys = Object.keys(safeCode as Record<string, string>);
       if (keys.length === 0) {
         files['/src/App.tsx'] = {
           code: `import React from 'react';\nexport default function App() {\n  return <div className="p-8 text-red-500 font-mono text-center">Generation Error: The AI failed to yield any file chunks. Try again.</div>;\n}`,
@@ -217,6 +220,43 @@ export default function CaptureWrapper({ children }) {
       active: true,
     };
   }
+
+  // ── Inject Vite alias config so @ui/* packages resolve at runtime ──────────
+  // Vite 4 does NOT read tsconfig "paths" aliases — only vite.config.ts aliases work.
+  // The files exist in the virtual FS (injected below from ui-ecosystem.json),
+  // but without this config Vite throws "Failed to resolve import @ui/core".
+  files['/vite.config.ts'] = {
+    code: `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@ui/core':            '/packages/core/index.ts',
+      '@ui/layout':          '/packages/layout/index.ts',
+      '@ui/icons':           '/packages/icons/index.ts',
+      '@ui/a11y':            '/packages/a11y/index.ts',
+      '@ui/charts':          '/packages/charts/index.ts',
+      '@ui/forms':           '/packages/forms/index.ts',
+      '@ui/motion':          '/packages/motion/index.ts',
+      '@ui/theming':         '/packages/theming/index.ts',
+      '@ui/three':           '/packages/three/index.ts',
+      '@ui/tokens':          '/packages/tokens/index.ts',
+      '@ui/typography':      '/packages/typography/index.ts',
+      '@ui/dragdrop':        '/packages/dragdrop/index.ts',
+      '@ui/editor':          '/packages/editor/index.ts',
+      '@ui/command-palette': '/packages/command-palette/index.ts',
+      '@ui/utils':           '/packages/utils',
+      // Next.js-style @/ alias used by some generated code
+      '@/lib/utils':         '/packages/utils/cn.ts',
+      '@/components/ui':     '/packages/core/components',
+    },
+  },
+});
+`,
+    active: false,
+  };
 
   // Inject the entire @ui ecosystem into the Sandpack virtual filesystem
   Object.entries(uiEcosystem as Record<string, string>).forEach(([filepath, code]) => {

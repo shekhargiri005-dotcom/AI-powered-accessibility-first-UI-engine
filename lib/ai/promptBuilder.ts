@@ -58,14 +58,17 @@ export interface BuiltPrompt {
  * These are the only imports the model is allowed to use.
  */
 const LOCKED_IMPORTS = `import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Input, Modal, Badge } from '@ui/core';
+import { Button, Card, Input, Modal } from '@ui/core';
 import { Grid, Stack, Container } from '@ui/layout';
 import { Icon } from '@ui/icons';
 import { Motion } from '@ui/motion';
-import { cn } from '@/lib/utils';
+import { cn } from '@ui/utils/cn';
 
 // TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*
-// DO NOT import any other packages. Use ONLY the above imports.`.trim();
+// ALLOWED PACKAGES: @ui/core, @ui/layout, @ui/icons, @ui/motion, @ui/theming, @ui/typography,
+//   @ui/charts, @ui/forms, @ui/a11y, @ui/dragdrop, @ui/editor, @ui/command-palette
+//   lucide-react, framer-motion, recharts, react-router-dom
+// DO NOT import packages not in the list above. They do not exist in the sandbox.`.trim();
 
 // ─── Fill-in-Blank Template (tiny models) ────────────────────────────────────
 
