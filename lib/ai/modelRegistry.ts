@@ -400,6 +400,88 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     timeoutMs: 90000,
   },
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // HuggingFace Inference API — Meta Llama 3 (8K context window, TOTAL limit)
+  // maxOutputTokens is conservative: generation prompts consume 4000-5000
+  // input tokens, leaving only ~2048-3000 for output.
+  // Requesting more triggers HTTP 400 from HuggingFace (context overflow).
+  // ──────────────────────────────────────────────────────────────────────────
+
+  'meta-llama/Meta-Llama-3-8B-Instruct': {
+    id: 'meta-llama/Meta-Llama-3-8B-Instruct',
+    displayName: 'Llama 3 8B Instruct (HuggingFace)',
+    provider: 'huggingface',
+    tier: 'small',
+    contextWindow: 8192,
+    maxOutputTokens: 2048, // 8K total − ~5K input = ~3K available; use 2K conservatively
+    idealTemperature: 0.25,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: false,
+    strengths: ['strong instruction following', 'solid React knowledge', 'free via HuggingFace'],
+    weaknesses: [
+      '8K context fills quickly with full generation prompts',
+      'no tool call support',
+      'rate limited on free tier',
+    ],
+    promptStrategy: 'guided-freeform',
+    maxBlueprintTokens: 800, // keep prompts SHORT — context is the binding constraint
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 45000,
+    notes: 'Total context 8192. Input prompt must stay < 5K to leave room for output.',
+  },
+
+  'meta-llama/Llama-3.1-8B-Instruct': {
+    id: 'meta-llama/Llama-3.1-8B-Instruct',
+    displayName: 'Llama 3.1 8B Instruct (HuggingFace)',
+    provider: 'huggingface',
+    tier: 'small',
+    contextWindow: 131072, // Llama 3.1 extended context
+    maxOutputTokens: 3000,
+    idealTemperature: 0.25,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: false,
+    strengths: ['128K context', 'strong instruction following', 'solid React knowledge'],
+    weaknesses: ['HuggingFace free tier may enforce lower limits', 'rate limited'],
+    promptStrategy: 'guided-freeform',
+    maxBlueprintTokens: 2000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 60000,
+  },
+
+  'meta-llama/Meta-Llama-3-70B-Instruct': {
+    id: 'meta-llama/Meta-Llama-3-70B-Instruct',
+    displayName: 'Llama 3 70B Instruct (HuggingFace)',
+    provider: 'huggingface',
+    tier: 'large',
+    contextWindow: 8192,
+    maxOutputTokens: 2048, // same 8K total context constraint
+    idealTemperature: 0.4,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: false,
+    strengths: ['near-cloud quality', 'strong React/design knowledge'],
+    weaknesses: ['8K total context — generation prompts eat most of the budget', 'slow via HuggingFace'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 1000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 90000,
+    notes: 'Same 8K context as 8B — keep prompts short.',
+  },
+
   // ══════════════════════════════════════════════════════════════════════════
   // MEDIUM  (10B – 34B parameters)
   // Strategy: guided freeform — style guidelines + design rules, some freedom
@@ -982,6 +1064,18 @@ export function getModelProfile(modelId: string): ModelCapabilityProfile | null 
   if (lower.includes('claude')) {
     return {
       ...MODEL_REGISTRY['claude-3-5-sonnet-20241022'],
+      id: modelId,
+      displayName: modelId,
+    };
+  }
+
+  // HuggingFace Meta Llama fallback: any unregistered meta-llama/* model is treated
+  // as small-tier with a conservative 2048-token output cap to avoid context overflow.
+  // HuggingFace models have strict total context limits; requesting 5000+ output tokens
+  // when the prompt already uses 3000-5000 tokens causes HTTP 400.
+  if (lower.includes('meta-llama/') || lower.includes('llama-3')) {
+    return {
+      ...MODEL_REGISTRY['meta-llama/Meta-Llama-3-8B-Instruct'],
       id: modelId,
       displayName: modelId,
     };

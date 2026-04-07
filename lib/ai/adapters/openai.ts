@@ -98,9 +98,17 @@ export class OpenAIAdapter implements AIAdapter {
 
     // Reasoning models: use max_completion_tokens, omit temperature entirely.
     // Standard models: use max_tokens + temperature as normal.
+    // HuggingFace: cap max_tokens at 4096 — models have 8K TOTAL context windows;
+    // generation prompts alone consume 3K-5K input tokens, leaving little room for output.
+    // Registered HF models already get the right cap via pipelineConfig.maxOutputTokens
+    // (e.g. Llama 3 8B → 2048). This 4096 cap is a safety net for unregistered models.
+    const effectiveMaxTokens = isHuggingFace
+      ? Math.min(options.maxTokens ?? 2048, 4096)
+      : (options.maxTokens ?? 5000);
+
     const tokenAndTemp = isReasoning
       ? { max_completion_tokens: options.maxTokens ?? 5000 }
-      : { max_tokens: options.maxTokens ?? 5000, temperature: options.temperature ?? 0.4 };
+      : { max_tokens: effectiveMaxTokens, temperature: options.temperature ?? 0.4 };
 
 
     const response = await this.client.chat.completions.create({
