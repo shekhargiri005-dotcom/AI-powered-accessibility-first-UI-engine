@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { prisma } from '@/lib/prisma';
 import type { UIIntent, A11yReport } from '../validation/schemas';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -35,167 +34,207 @@ export interface ProjectSummary {
   latestDescription: string;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── DB row → domain type ─────────────────────────────────────────────────────
 
-const PROJECTS_DIR = path.join(process.cwd(), 'data', 'projects');
+type DbVersion = {
+  version: number;
+  timestamp: Date;
+  code: string;
+  intent: unknown;
+  a11yReport: unknown;
+  changeDescription: string;
+  linesChanged: number;
+};
 
-function ensureProjectsDir() {
-  if (!fs.existsSync(PROJECTS_DIR)) {
-    fs.mkdirSync(PROJECTS_DIR, { recursive: true });
-  }
+type DbProject = {
+  id: string;
+  name: string;
+  componentType: string;
+  createdAt: Date;
+  updatedAt: Date;
+  currentVersion: number;
+  versions: DbVersion[];
+};
+
+function parseCode(raw: string): string | Record<string, string> {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+  } catch { /* not JSON — plain string */ }
+  return raw;
 }
 
-function projectFilePath(id: string) {
-  return path.join(PROJECTS_DIR, `${id}.json`);
+function toProject(row: DbProject): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    componentType: row.componentType as 'component' | 'app' | 'webgl',
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+    currentVersion: row.currentVersion,
+    versions: row.versions.map((v) => ({
+      version: v.version,
+      timestamp: v.timestamp.toISOString(),
+      code: parseCode(v.code),
+      intent: v.intent as UIIntent,
+      a11yReport: v.a11yReport as A11yReport,
+      changeDescription: v.changeDescription,
+      linesChanged: v.linesChanged,
+    })),
+  };
 }
 
-// ─── CRUD Operations ──────────────────────────────────────────────────────────
+const VERSION_INCLUDE = { versions: { orderBy: { version: 'asc' as const } } };
 
-export function createProject(
+// ─── CRUD Operations (all async — Prisma replaces filesystem) ─────────────────
+
+export async function createProject(
   id: string,
   name: string,
   componentType: 'component' | 'app' | 'webgl',
   code: string | Record<string, string>,
   intent: UIIntent,
   a11yReport: A11yReport,
-): Project {
-  ensureProjectsDir();
+): Promise<Project> {
+  const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
+  const linesChanged = typeof code === 'string' ? code.split('\n').length : 0;
 
-  const now = new Date().toISOString();
-  const project: Project = {
-    id,
-    name,
-    componentType,
-    createdAt: now,
-    updatedAt: now,
-    currentVersion: 1,
-    versions: [
-      {
-        version: 1,
-        timestamp: now,
-        code,
-        intent,
-        a11yReport,
-        changeDescription: 'Initial generation',
-        linesChanged: typeof code === 'string' ? code.split('\n').length : 0,
+  const row = await prisma.project.create({
+    data: {
+      id,
+      name,
+      componentType,
+      currentVersion: 1,
+      versions: {
+        create: {
+          version: 1,
+          code: codeStr,
+          intent: intent as object,
+          a11yReport: a11yReport as object,
+          changeDescription: 'Initial generation',
+          linesChanged,
+        },
       },
-    ],
-  };
-
-  fs.writeFileSync(projectFilePath(id), JSON.stringify(project, null, 2), 'utf-8');
-  return project;
+    },
+    include: VERSION_INCLUDE,
+  });
+  return toProject(row as DbProject);
 }
 
-export function saveVersion(
+export async function saveVersion(
   id: string,
   code: string | Record<string, string>,
   intent: UIIntent,
   a11yReport: A11yReport,
   changeDescription: string,
-): Project | null {
-  ensureProjectsDir();
-  const filePath = projectFilePath(id);
-  if (!fs.existsSync(filePath)) return null;
+): Promise<Project | null> {
+  const existing = await prisma.project.findUnique({
+    where: { id },
+    include: VERSION_INCLUDE,
+  });
+  if (!existing) return null;
 
-  const project: Project = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  const newVersionNumber = project.currentVersion + 1;
-  const now = new Date().toISOString();
-
-  // Estimate lines changed
-  const prevCode = project.versions[project.versions.length - 1]?.code;
-  const prevLines = typeof prevCode === 'string' ? prevCode.split('\n').length : 0;
+  const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
+  const lastVersion = existing.versions[existing.versions.length - 1];
+  const prevLines = (lastVersion?.code ?? '').split('\n').length;
   const newLines = typeof code === 'string' ? code.split('\n').length : 0;
   const linesChanged = Math.abs(newLines - prevLines);
+  const newVersionNumber = existing.currentVersion + 1;
 
-  project.versions.push({
-    version: newVersionNumber,
-    timestamp: now,
-    code,
-    intent,
-    a11yReport,
-    changeDescription,
-    linesChanged,
+  const row = await prisma.project.update({
+    where: { id },
+    data: {
+      currentVersion: newVersionNumber,
+      versions: {
+        create: {
+          version: newVersionNumber,
+          code: codeStr,
+          intent: intent as object,
+          a11yReport: a11yReport as object,
+          changeDescription,
+          linesChanged,
+        },
+      },
+    },
+    include: VERSION_INCLUDE,
   });
-  project.currentVersion = newVersionNumber;
-  project.updatedAt = now;
-
-  fs.writeFileSync(filePath, JSON.stringify(project, null, 2), 'utf-8');
-  return project;
+  return toProject(row as DbProject);
 }
 
-export function getProject(id: string): Project | null {
-  ensureProjectsDir();
-  const filePath = projectFilePath(id);
-  if (!fs.existsSync(filePath)) return null;
+export async function getProject(id: string): Promise<Project | null> {
   try {
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+    const row = await prisma.project.findUnique({
+      where: { id },
+      include: VERSION_INCLUDE,
+    });
+    return row ? toProject(row as DbProject) : null;
   } catch {
     return null;
   }
 }
 
-export function listProjects(): ProjectSummary[] {
-  ensureProjectsDir();
+export async function listProjects(): Promise<ProjectSummary[]> {
   try {
-    const files = fs.readdirSync(PROJECTS_DIR).filter(f => f.endsWith('.json'));
-    return files
-      .map(file => {
-        try {
-          const project: Project = JSON.parse(
-            fs.readFileSync(path.join(PROJECTS_DIR, file), 'utf-8'),
-          );
-          const latest = project.versions[project.versions.length - 1];
-          return {
-            id: project.id,
-            name: project.name,
-            componentType: project.componentType,
-            createdAt: project.createdAt,
-            updatedAt: project.updatedAt,
-            currentVersion: project.currentVersion,
-            versionCount: project.versions.length,
-            latestDescription: latest?.changeDescription || '',
-          } satisfies ProjectSummary;
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => new Date(b!.updatedAt).getTime() - new Date(a!.updatedAt).getTime()) as ProjectSummary[];
+    const rows = await prisma.project.findMany({
+      include: {
+        versions: { orderBy: { version: 'desc' }, take: 1 },
+        _count: { select: { versions: true } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+    return rows.map((p) => ({
+      id: p.id,
+      name: p.name,
+      componentType: p.componentType,
+      createdAt: p.createdAt.toISOString(),
+      updatedAt: p.updatedAt.toISOString(),
+      currentVersion: p.currentVersion,
+      versionCount: p._count.versions,
+      latestDescription: p.versions[0]?.changeDescription ?? '',
+    }));
   } catch {
     return [];
   }
 }
 
-export function rollbackToVersion(id: string, targetVersion: number): Project | null {
-  ensureProjectsDir();
-  const filePath = projectFilePath(id);
-  if (!fs.existsSync(filePath)) return null;
-
-  const project: Project = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-  const versionEntry = project.versions.find(v => v.version === targetVersion);
-  if (!versionEntry) return null;
-
-  const now = new Date().toISOString();
-  // Add a new version that is a copy of the rollback target
-  const newVersionNumber = project.currentVersion + 1;
-  project.versions.push({
-    ...versionEntry,
-    version: newVersionNumber,
-    timestamp: now,
-    changeDescription: `Rolled back to v${targetVersion}`,
-    linesChanged: 0,
+export async function rollbackToVersion(id: string, targetVersion: number): Promise<Project | null> {
+  const existing = await prisma.project.findUnique({
+    where: { id },
+    include: VERSION_INCLUDE,
   });
-  project.currentVersion = newVersionNumber;
-  project.updatedAt = now;
+  if (!existing) return null;
 
-  fs.writeFileSync(filePath, JSON.stringify(project, null, 2), 'utf-8');
-  return project;
+  const target = existing.versions.find((v) => v.version === targetVersion);
+  if (!target) return null;
+
+  const newVersionNumber = existing.currentVersion + 1;
+  const row = await prisma.project.update({
+    where: { id },
+    data: {
+      currentVersion: newVersionNumber,
+      versions: {
+        create: {
+          version: newVersionNumber,
+          code: target.code,
+          intent: target.intent as object,
+          a11yReport: target.a11yReport as object,
+          changeDescription: `Rolled back to v${targetVersion}`,
+          linesChanged: 0,
+        },
+      },
+    },
+    include: VERSION_INCLUDE,
+  });
+  return toProject(row as DbProject);
 }
 
-export function deleteProject(id: string): boolean {
-  ensureProjectsDir();
-  const filePath = projectFilePath(id);
-  if (!fs.existsSync(filePath)) return false;
-  fs.unlinkSync(filePath);
-  return true;
+export async function deleteProject(id: string): Promise<boolean> {
+  try {
+    await prisma.project.delete({ where: { id } });
+    return true;
+  } catch {
+    return false;
+  }
 }

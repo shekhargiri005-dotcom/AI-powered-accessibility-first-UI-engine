@@ -13,7 +13,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ success: false, error: 'Missing field: version (number)' }, { status: 400 });
   }
 
-  const project = rollbackToVersion(id, version);
+  const project = await rollbackToVersion(id, version);
   if (!project) {
     return NextResponse.json({ success: false, error: 'Project or version not found' }, { status: 404 });
   }

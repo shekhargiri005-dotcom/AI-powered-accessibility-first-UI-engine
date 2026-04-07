@@ -4,15 +4,13 @@ import {
 } from '@/lib/projects/projectStore';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 
-
-
 // GET /api/projects — list all projects
 export async function GET() {
-  const projects = listProjects();
+  const projects = await listProjects();
   return NextResponse.json({ success: true, projects });
 }
 
-// POST /api/projects — create new or save version
+// POST /api/projects — create new or upsert a version
 export async function POST(request: NextRequest) {
   try {
     let body: unknown;
@@ -35,17 +33,28 @@ export async function POST(request: NextRequest) {
     };
 
     if (!id || !code || !intent) {
-      return NextResponse.json({ success: false, error: 'Missing required fields: id, code, intent' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'Missing required fields: id, code, intent' },
+        { status: 400 },
+      );
     }
 
     let project;
     if (isNewProject) {
-      project = createProject(id, name || intent.componentName, componentType || 'component', code, intent, a11yReport);
+      project = await createProject(
+        id, name || intent.componentName,
+        componentType || 'component',
+        code, intent, a11yReport,
+      );
     } else {
-      project = saveVersion(id, code, intent, a11yReport, changeDescription || 'Refinement');
+      project = await saveVersion(id, code, intent, a11yReport, changeDescription || 'Refinement');
       if (!project) {
-        // Project doesn't exist yet — create it
-        project = createProject(id, name || intent.componentName, componentType || 'component', code, intent, a11yReport);
+        // Project not found — create it (handles edge-case of first-time save without isNewProject flag)
+        project = await createProject(
+          id, name || intent.componentName,
+          componentType || 'component',
+          code, intent, a11yReport,
+        );
       }
     }
 
@@ -61,6 +70,6 @@ export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   if (!id) return NextResponse.json({ success: false, error: 'Missing id' }, { status: 400 });
-  const deleted = deleteProject(id);
+  const deleted = await deleteProject(id);
   return NextResponse.json({ success: deleted });
 }

@@ -69,6 +69,7 @@ model Workspace {
 
   members      WorkspaceMember[]
   settings     WorkspaceSettings[]
+  projects     Project[]
   usageLogs    UsageLog[]
   feedbacks    GenerationFeedback[]
 }
@@ -149,4 +150,35 @@ model GenerationFeedback {
   createdAt      DateTime       @default(now())
 
   workspace      Workspace?     @relation(fields: [workspaceId], references: [id])
+}
+
+// ─── PROJECT PERSISTENCE (replaces read-only filesystem JSON store) ───────────
+
+model Project {
+  id             String           @id
+  name           String
+  componentType  String           @default("component")
+  workspaceId    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  currentVersion Int              @default(1)
+
+  versions   ProjectVersion[]
+  workspace  Workspace?       @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+}
+
+model ProjectVersion {
+  id                String   @id @default(cuid())
+  projectId         String
+  version           Int
+  timestamp         DateTime @default(now())
+  code              String   @db.Text
+  intent            Json
+  a11yReport        Json
+  changeDescription String   @default("")
+  linesChanged      Int      @default(0)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, version])
 }

@@ -71,6 +71,18 @@ export async function POST(request: NextRequest) {
     const base = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'workspace';
     const slug = `${base}-${Date.now().toString(36)}`;
 
+    // The credentials provider returns id:'owner' — ensure the User row exists in DB
+    // before creating the FK-dependent WorkspaceMember.
+    await prisma.user.upsert({
+      where: { id: session.user.id },
+      create: {
+        id: session.user.id,
+        email: session.user.email ?? undefined,
+        name: session.user.name ?? 'Owner',
+      },
+      update: {},
+    });
+
     // Atomic create: workspace + OWNER membership in one transaction
     const workspace = await prisma.workspace.create({
       data: {
