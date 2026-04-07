@@ -336,9 +336,25 @@ export default function HomePage() {
     setStage('awaiting_confirm');
   }, [liveClassification, activeProjectId, output, aiPayload]);
 
-  const handleRefineRightPanel = useCallback(async (prompt: string) => {
-    await handlePromptSubmit(prompt, output?.mode ?? 'component');
-  }, [handlePromptSubmit, output?.mode]);
+  // Direct refinement: skips classify/think/awaiting_confirm and immediately
+  // runs the generation pipeline in the context of the current active project.
+  // This keeps the user in the same workspace (same activeProjectId, output stays
+  // visible) and shows the 'Evolving UI' overlay in RightPanel instead of the
+  // ThinkingPanel. Only called from the RightPanel bottom refine bar.
+  const handleDirectRefine = useCallback(async (prompt: string) => {
+    if (!aiConfig) {
+      setPipelineError('No AI model configured. Click "AI Engine Config" in the sidebar to set up your LLM.');
+      setStage('error');
+      setPipelineStep('error');
+      return;
+    }
+    setPendingPrompt(prompt);
+    setPendingMode(output?.mode ?? 'component');
+    setPipelineError(undefined);
+    setThinkingPlan(null);
+    // NOTE: do NOT clear output — RightPanel must remain visible with the overlay
+    await runGenerationPipeline(prompt, output?.mode ?? 'component');
+  }, [aiConfig, output?.mode, runGenerationPipeline]);
 
   const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
@@ -436,7 +452,7 @@ export default function HomePage() {
               componentName: output.componentName,
               tests: output.tests
             }}
-            onRefine={handleRefineRightPanel}
+            onRefine={handleDirectRefine}
             isRefining={isRunning}
             projectId={activeProjectId}
             feedbackMeta={generationMeta}

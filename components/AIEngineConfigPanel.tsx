@@ -331,10 +331,16 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   const [showKey, setShowKey]             = useState(false);
   const [keyDetectedProvider, setKeyDetectedProvider] = useState<ProviderInfo | null>(null);
   const [customBaseUrl, setCustomBaseUrl] = useState('');
-  // Model selection — either a registry pick or custom text
+  // Model selection
   const [selectedModelId, setSelectedModelId]   = useState<string>('');
   const [customModelText, setCustomModelText]   = useState('');
   const [useCustomModel, setUseCustomModel]     = useState(false);
+  // Dynamic model fetching
+  const [fetchedModels,    setFetchedModels]    = useState<{ id: string; name: string; contextWindow?: number; isFeatured?: boolean }[]>([]);
+  const [modelsFetching,   setModelsFetching]   = useState(false);
+  const [modelsFetched,    setModelsFetched]    = useState(false);
+  const [modelsFetchError, setModelsFetchError] = useState('');
+  const [modelSearch,      setModelSearch]      = useState('');
   const [temperature, setTemperature]     = useState(0.6);
   const [advancedOpen, setAdvancedOpen]   = useState(false);
   const [testingConn, setTestingConn]     = useState(false);
@@ -371,11 +377,15 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   // The final model value
   const effectiveModel = useCustomModel ? customModelText.trim() : selectedModelId;
 
-  // ── When provider changes, reset model selection ────────────────────────
+  // ── When provider changes, reset model + fetch state ────────────────────
   useEffect(() => {
-    setSelectedModelId(suggestedModels[0] ?? '');
+    setSelectedModelId('');
     setCustomModelText('');
-    setUseCustomModel(suggestedModels.length === 0);
+    setUseCustomModel(false);
+    setFetchedModels([]);
+    setModelsFetched(false);
+    setModelsFetchError('');
+    setModelSearch('');
     setConnStatus('idle');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedProviderId]);
@@ -506,13 +516,46 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     if (m === 'local' && !localFetched) fetchLocalModels();
   };
 
+  // ── Fetch Models from provider API ─────────────────────────────────────
+  const fetchModels = useCallback(async () => {
+    if (modelsFetching) return;
+    const key = provider.noKey ? 'local' : apiKey.trim();
+    if (!key && !provider.noKey) {
+      setModelsFetchError('Enter your API key first, then fetch models.');
+      return;
+    }
+    setModelsFetching(true);
+    setModelsFetchError('');
+    setFetchedModels([]);
+    try {
+      const params = new URLSearchParams({ provider: selectedProviderId });
+      if (key && key !== 'local') params.set('apiKey', key);
+      if (customBaseUrl.trim()) params.set('baseUrl', customBaseUrl.trim());
+      else if (provider.baseUrl) params.set('baseUrl', provider.baseUrl);
+      const res  = await fetch(`/api/models?${params}`);
+      const data = await res.json();
+      if (data.success && data.models?.length) {
+        setFetchedModels(data.models);
+        setModelsFetched(true);
+        // Auto-select the first featured model
+        const firstFeatured = data.models.find((m: { isFeatured?: boolean; id: string }) => m.isFeatured);
+        if (firstFeatured && !selectedModelId) setSelectedModelId(firstFeatured.id);
+      } else {
+        setModelsFetchError(data.error ?? 'No models returned.');
+      }
+    } catch (err) {
+      setModelsFetchError(err instanceof Error ? err.message : 'Failed to fetch models.');
+    } finally {
+      setModelsFetching(false);
+    }
+  }, [provider, apiKey, selectedProviderId, customBaseUrl, modelsFetching, selectedModelId]);
+
   // ── Test Connection ─────────────────────────────────────────────────────
   const handleTestConnection = async () => {
     if (!apiKey.trim()) { setError('Add your API key to test the connection.'); return; }
     setTestingConn(true);
     setConnStatus('idle');
     try {
-      // Attempt a minimal list models / models endpoint as a health check
       const base = customBaseUrl.trim() || provider.baseUrl || 'https://api.openai.com/v1';
       const res = await fetch(`${base}/models`, {
         headers: { Authorization: `Bearer ${apiKey.trim()}` },
@@ -827,7 +870,18 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                   )}
 
                   <button
-                    onClick={() => { if (apiKey.trim()) { setCloudStep(3); setError(''); } else { setError(`Add your ${provider.name} API key to continue.`); } }}
+                    onClick={() => {
+                      if (apiKey.trim() || provider.noKey) {
+                        setCloudStep(3);
+                        setError('');
+                        // Auto-fetch models when transitioning to step 3
+                        if (!modelsFetched && !modelsFetching) {
+                          setTimeout(fetchModels, 100);
+                        }
+                      } else {
+                        setError(`Add your ${provider.name} API key to continue.`);
+                      }
+                    }}
                     className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
                   >
                     Continue →
@@ -835,64 +889,125 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                 </div>
               )}
 
-              {/* ─ Step 3: Choose Generation Model ─────────────────────── */}
               {cloudStep === 3 && (
                 <div className="space-y-4">
-                  <SectionLabel icon={Zap}>Step 3 — Choose Generation Model</SectionLabel>
-                  <p className="text-[10px] text-gray-500">The model that powers your prompt-to-UI pipeline.</p>
+                  <div className="flex items-center justify-between">
+                    <SectionLabel icon={Zap}>Step 3 — Choose Generation Model</SectionLabel>
+                    {modelsFetched && (
+                      <span className="text-[10px] text-gray-500">
+                        {fetchedModels.length} models available
+                      </span>
+                    )}
+                  </div>
 
-                  {/* Suggested model pills */}
-                  {suggestedModels.length > 0 && (
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-semibold text-gray-500">Recommended Models</label>
-                      <div className="space-y-1.5">
-                        {suggestedModels.map(mId => {
-                          const profile = MODEL_REGISTRY[mId];
-                          const isSelected = !useCustomModel && selectedModelId === mId;
-                          return (
-                            <button
-                              key={mId}
-                              onClick={() => { setSelectedModelId(mId); setUseCustomModel(false); setError(''); }}
-                              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-left transition-all border
-                                ${isSelected
-                                  ? `bg-gradient-to-r ${provider.color} bg-opacity-15 border-white/20 text-white`
-                                  : 'bg-gray-900/60 border-gray-700/40 text-gray-300 hover:border-gray-600 hover:text-white'}`}
-                            >
-                              <span className="font-mono text-xs flex-1">{mId}</span>
-                              {profile && (
-                                <span className="text-[9px] text-gray-500 shrink-0">{profile.displayName}</span>
-                              )}
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white/70 shrink-0" />}
-                            </button>
-                          );
-                        })}
-                      </div>
+                  {/* Fetch models button / status */}
+                  {!modelsFetched && (
+                    <div className="space-y-2">
+                      <button
+                        id="fetch-models-btn"
+                        onClick={fetchModels}
+                        disabled={modelsFetching}
+                        className={`w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 disabled:opacity-60 transition-all shadow-md`}
+                      >
+                        {modelsFetching
+                          ? <><Loader2 className="w-4 h-4 animate-spin" /> Fetching models…</>
+                          : <><RefreshCw className="w-4 h-4" /> Fetch Available Models</>}
+                      </button>
+                      {modelsFetchError && (
+                        <p className="text-[10px] text-red-400 px-1">{modelsFetchError}</p>
+                      )}
+                      <p className="text-[10px] text-gray-600 text-center">
+                        Your key is sent over HTTPS to query {provider.name}'s model list — never stored.
+                      </p>
                     </div>
                   )}
 
-                  {/* Custom model input */}
-                  <div className="space-y-1.5">
+                  {/* Live model list (searchable) */}
+                  {modelsFetched && fetchedModels.length > 0 && (
+                    <div className="space-y-2">
+                      {/* Search bar */}
+                      {fetchedModels.length > 6 && (
+                        <div className="relative">
+                          <input
+                            id="model-search"
+                            type="text"
+                            value={modelSearch}
+                            onChange={(e) => setModelSearch(e.target.value)}
+                            placeholder="Search models…"
+                            className="w-full px-3 py-2 pl-8 bg-gray-900 border border-gray-700/60 rounded-xl text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500/40 transition-all"
+                          />
+                          <Cpu className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
+                        </div>
+                      )}
+
+                      {/* Model list */}
+                      <div className="max-h-[220px] overflow-y-auto space-y-1 pr-0.5 rounded-xl">
+                        {fetchedModels
+                          .filter((m) => !modelSearch || m.id.toLowerCase().includes(modelSearch.toLowerCase()) || m.name.toLowerCase().includes(modelSearch.toLowerCase()))
+                          .map((m) => {
+                            const isSelected = !useCustomModel && selectedModelId === m.id;
+                            return (
+                              <button
+                                key={m.id}
+                                onClick={() => { setSelectedModelId(m.id); setUseCustomModel(false); setError(''); }}
+                                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-left transition-all border
+                                  ${isSelected
+                                    ? `bg-gradient-to-r ${provider.color} bg-opacity-20 border-white/20 text-white shadow-md`
+                                    : 'bg-gray-900/60 border-gray-800/60 text-gray-300 hover:border-gray-600 hover:text-white hover:bg-gray-800/60'}`}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5">
+                                    {m.isFeatured && <span className="text-amber-400 text-[9px] font-black">★</span>}
+                                    <span className="font-mono text-[11px] truncate">{m.id}</span>
+                                  </div>
+                                  {m.name !== m.id && (
+                                    <span className="text-[10px] text-gray-500 truncate block">{m.name}</span>
+                                  )}
+                                </div>
+                                {m.contextWindow && (
+                                  <span className="text-[9px] text-gray-600 shrink-0 font-mono">
+                                    {m.contextWindow >= 1000 ? `${Math.round(m.contextWindow / 1000)}K ctx` : `${m.contextWindow} ctx`}
+                                  </span>
+                                )}
+                                {isSelected && <CheckCircle className="w-3.5 h-3.5 text-white/70 shrink-0" />}
+                              </button>
+                            );
+                          })}
+                      </div>
+
+                      {/* Refetch button */}
+                      <button
+                        onClick={() => { setModelsFetched(false); setFetchedModels([]); setModelSearch(''); }}
+                        className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex items-center gap-1"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Refresh list
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Custom / advanced override */}
+                  <div className="pt-1 border-t border-gray-800/60 space-y-1.5">
                     <button
-                      onClick={() => setUseCustomModel(v => !v)}
+                      onClick={() => setUseCustomModel((v) => !v)}
                       className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex items-center gap-1"
                     >
                       <ChevronDown className={`w-3 h-3 transition-transform ${useCustomModel ? 'rotate-0' : '-rotate-90'}`} />
-                      {useCustomModel ? 'Using a custom model' : 'Use a different model…'}
+                      {useCustomModel ? 'Using a custom model ID' : 'Enter model ID manually…'}
                     </button>
                     {useCustomModel && (
                       <input
                         id="ges-model"
                         type="text"
                         value={customModelText}
-                        onChange={e => setCustomModelText(e.target.value)}
-                        placeholder={provider.modelHint || 'Enter exact model name…'}
+                        onChange={(e) => setCustomModelText(e.target.value)}
+                        placeholder={provider.modelHint || 'Enter exact model ID…'}
                         className="w-full px-4 py-3 bg-gray-900 border border-gray-700/60 rounded-2xl text-sm text-white
                           placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40
                           focus:border-blue-500/40 hover:border-gray-600 transition-all"
                       />
                     )}
                     <p className="text-[10px] text-gray-600">
-                      Any model works — including future ones. Enter it exactly as the provider expects.
+                      Any model works — including future ones. Use the exact ID your provider expects.
                     </p>
                   </div>
                 </div>

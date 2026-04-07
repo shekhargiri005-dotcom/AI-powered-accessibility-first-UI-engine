@@ -3,9 +3,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 
-interface Workspace {
+export interface Workspace {
   id: string;
   name: string;
+  slug?: string;
   role: string;
 }
 
@@ -15,48 +16,88 @@ interface WorkspaceContextType {
   activeWorkspace: Workspace | null;
   setActiveWorkspaceId: (id: string) => void;
   isLoading: boolean;
+  isCreating: boolean;
   refreshWorkspaces: () => Promise<void>;
+  createWorkspace: (name: string) => Promise<Workspace | null>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCreating, setIsCreating] = useState(false);
 
+  // ── Create a new workspace ────────────────────────────────────────────────
+  const createWorkspace = useCallback(async (name: string): Promise<Workspace | null> => {
+    setIsCreating(true);
+    try {
+      const res = await fetch('/api/workspaces', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        console.error('[WorkspaceProvider] create failed:', data.error);
+        return null;
+      }
+      const newWs: Workspace = data.workspace;
+      setWorkspaces((prev) => [...prev, newWs]);
+      setActiveWorkspaceId(newWs.id);
+      return newWs;
+    } catch (err) {
+      console.error('[WorkspaceProvider] create error:', err);
+      return null;
+    } finally {
+      setIsCreating(false);
+    }
+  }, []);
+
+  // ── Fetch workspaces (and auto-provision if none exist) ───────────────────
   const refreshWorkspaces = useCallback(async () => {
     if (status !== 'authenticated') {
-      if (status === 'unauthenticated') {
-        setIsLoading(false);
-      }
+      if (status === 'unauthenticated') setIsLoading(false);
       return;
     }
 
     try {
       const res = await fetch('/api/workspaces');
-      // Not signed in — workspace features disabled, no error shown
       if (res.status === 401) { setIsLoading(false); return; }
       const data = await res.json();
+
       if (data.success) {
-        setWorkspaces(data.workspaces);
-        if (!activeWorkspaceId || !data.workspaces.find((w: Workspace) => w.id === activeWorkspaceId)) {
-          if (data.workspaces.length > 0) setActiveWorkspaceId(data.workspaces[0].id);
+        const fetched: Workspace[] = data.workspaces ?? [];
+
+        // Auto-provision: first login with zero workspaces → create "My Workspace"
+        if (fetched.length === 0 && session?.user?.id) {
+          const newWs = await createWorkspace('My Workspace');
+          if (newWs) return; // createWorkspace already set the state
         }
+
+        setWorkspaces(fetched);
+        // Preserve the previously-selected workspace if it still exists;
+        // otherwise fall back to the first one.
+        setActiveWorkspaceId((prev) => {
+          if (prev && fetched.find((w) => w.id === prev)) return prev;
+          return fetched[0]?.id ?? null;
+        });
       }
     } catch {
-      // Network error — silently ignore, app still works
+      // Network error — app still works without workspaces
     } finally {
       setIsLoading(false);
     }
-  }, [activeWorkspaceId, status]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, session?.user?.id]);
 
   useEffect(() => {
     refreshWorkspaces();
   }, [refreshWorkspaces]);
 
-  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId) || null;
+  const activeWorkspace = workspaces.find((w) => w.id === activeWorkspaceId) ?? null;
 
   return (
     <WorkspaceContext.Provider value={{
@@ -65,7 +106,9 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       activeWorkspace,
       setActiveWorkspaceId,
       isLoading,
-      refreshWorkspaces
+      isCreating,
+      refreshWorkspaces,
+      createWorkspace,
     }}>
       {children}
     </WorkspaceContext.Provider>
