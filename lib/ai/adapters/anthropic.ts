@@ -85,7 +85,14 @@ export class AnthropicAdapter implements AIAdapter {
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {
     const key = this.getKey();
-    const { system, messages } = toAnthropicMessages(options.messages);
+    const { system: rawSystem, messages } = toAnthropicMessages(options.messages);
+
+    // Anthropic does not support response_format. When JSON mode is requested,
+    // append the instruction to the system prompt instead.
+    const needsJsonMode = options.responseFormat === 'json_object';
+    const system = needsJsonMode
+      ? ((rawSystem ?? '') + '\n\nIMPORTANT: Return ONLY valid JSON. No markdown fences, no explanations, no prose.').trimStart()
+      : rawSystem;
 
     const body: Record<string, unknown> = {
       model: options.model,
