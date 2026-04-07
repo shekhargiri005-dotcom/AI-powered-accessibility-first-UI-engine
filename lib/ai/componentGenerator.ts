@@ -94,7 +94,10 @@ export async function generateComponent(
 
     // ─── Step 2: Get model profile + pipeline config ──────────────────────────
     const effectiveModel = cfg.model;
-    const modelProfile = getModelProfile(effectiveModel) ?? getCloudFallbackProfile();
+    // Track whether the profile is EXPLICIT (registered) vs fallback.
+    // Tools must never be passed to unregistered/unknown models — they may silently 400.
+    const explicitProfile = getModelProfile(effectiveModel);
+    const modelProfile = explicitProfile ?? getCloudFallbackProfile();
     const pipelineConfig = getPipelineConfig(modelProfile);
 
     // ─── Step 3: Knowledge + memory lookup ───────────────────────────────────
@@ -174,22 +177,47 @@ export async function generateComponent(
     let rawContent = '';
     const maxToolRounds = pipelineConfig.maxToolRounds;
 
-    for (let round = 0; round <= maxToolRounds; round++) {
-      const result = await adapter.generate({
-        model:       effectiveModel,
-        messages,
-        temperature: pipelineConfig.temperature,
-        maxTokens:   Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
-        // Only pass tools if the model supports tool calls
-        ...(pipelineConfig.maxToolRounds > 0 && {
-          tools:      DEFAULT_AGENT_TOOLS,
-          toolChoice: 'auto' as const,
-        }),
-      });
+    // Only inject tools when the model has an explicit registry entry with supportsToolCalls:true.
+    // Fallback/unknown models must NOT receive tools — they may silently reject them (400 no body).
+    let toolsEnabled = explicitProfile !== null && maxToolRounds > 0;
 
-      if (result.toolCalls && result.toolCalls.length > 0 && round < maxToolRounds) {
-        // 1. Append assistant message — MUST include the raw tool_calls array.
-        //    Without it the next API call returns 400 (no body).
+    for (let round = 0; round <= maxToolRounds; round++) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let result: any;
+      try {
+        result = await adapter.generate({
+          model:       effectiveModel,
+          messages,
+          temperature: pipelineConfig.temperature,
+          maxTokens:   Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
+          ...(toolsEnabled && {
+            tools:      DEFAULT_AGENT_TOOLS,
+            toolChoice: 'auto' as const,
+          }),
+        });
+      } catch (genErr: unknown) {
+        const errMsg = genErr instanceof Error ? genErr.message : String(genErr);
+        // If tools were injected and caused a 400, retry once without tools
+        // then disable tools for all remaining rounds (self-healing fallback).
+        if (toolsEnabled && errMsg.includes('400')) {
+          console.warn(
+            `[componentGenerator] Tool-call 400 on ${effectiveModel} (round ${round}). ` +
+            'Retrying without tools and disabling for remaining rounds.'
+          );
+          toolsEnabled = false;
+          result = await adapter.generate({
+            model:       effectiveModel,
+            messages,
+            temperature: pipelineConfig.temperature,
+            maxTokens:   Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
+          });
+        } else {
+          throw genErr;
+        }
+      }
+
+      if (toolsEnabled && result.toolCalls && result.toolCalls.length > 0 && round < maxToolRounds) {
+        // 1. Append assistant message WITH the raw tool_calls array intact (protocol requirement).
         messages.push({
           role:       'assistant',
           content:    result.content || null,
@@ -207,7 +235,7 @@ export async function generateComponent(
         // 2. Execute all requested tools in parallel
         const toolResults = await executeToolCalls(result.toolCalls, DEFAULT_AGENT_TOOLS);
 
-        // 3. Append one role:'tool' message per call (NOT role:'user')
+        // 3. One role:'tool' message per call (NOT role:'user' — that causes 400)
         for (const tr of toolResults) {
           messages.push({
             role:         'tool',
