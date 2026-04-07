@@ -81,19 +81,18 @@ export class OpenAIAdapter implements AIAdapter {
       }
     }
 
-    // Some aggregators/endpoints (like HuggingFace TGI) crash with 422 Unprocessable Entity
-    // if OpenAI-specific parameters (like tools or response_format) are provided
-    // but not natively supported by the underlying model's template.
-    // Reasoning models also do not support response_format.
+    // response_format: skip for reasoning models, aggregators, and HuggingFace
     const safeResponseFormat = (options.responseFormat && !isAggregator && !isHuggingFace && !isReasoning)
       ? { response_format: { type: options.responseFormat } }
       : {};
 
-    const safeTools = (toolDefs?.length && !isHuggingFace)
+    // tools / tool_choice: skip for reasoning models, aggregators, and HuggingFace.
+    // Aggregators (OpenRouter, Together.ai) may silently reject or misroute tool schemas.
+    const safeTools = (toolDefs?.length && !isHuggingFace && !isAggregator && !isReasoning)
       ? { tools: toolDefs }
       : {};
 
-    const safeToolChoice = (toolChoice && !isHuggingFace)
+    const safeToolChoice = (toolChoice && !isHuggingFace && !isAggregator && !isReasoning)
       ? { tool_choice: toolChoice }
       : {};
 
@@ -102,6 +101,7 @@ export class OpenAIAdapter implements AIAdapter {
     const tokenAndTemp = isReasoning
       ? { max_completion_tokens: options.maxTokens ?? 5000 }
       : { max_tokens: options.maxTokens ?? 5000, temperature: options.temperature ?? 0.4 };
+
 
     const response = await this.client.chat.completions.create({
       model: options.model,
