@@ -12,6 +12,84 @@ function resolveFileCode(entry: string | SandpackFile): string {
 }
 
 /**
+ * Resolve a relative import within the Sandpack virtual FS.
+ * e.g. dir='/src', importPath='./Feed' → '/src/Feed'
+ */
+function resolveFsPath(dir: string, importPath: string): string {
+  const parts = (dir + '/' + importPath).split('/');
+  const result: string[] = [];
+  for (const part of parts) {
+    if (part === '..') result.pop();
+    else if (part !== '.') result.push(part);
+  }
+  return result.join('/');
+}
+
+/**
+ * Scan all /src/* files for relative imports.
+ * For any import that has no corresponding file in the virtual FS,
+ * inject a minimal stub component so Vite does not crash with
+ * "Failed to resolve import './Feed' from src/App.tsx".
+ */
+function injectMissingFileStubs(files: SandpackFiles): void {
+  const RELATIVE_IMPORT_RE = /from\s+['"](\.[^'"]+)['"]/g;
+  const mounted = new Set(Object.keys(files));
+
+  // Snapshot keys so we don't iterate over stubs we are about to add
+  const srcFiles = Object.keys(files).filter((p) => p.startsWith('/src/'));
+
+  for (const filepath of srcFiles) {
+    const entry = files[filepath];
+    if (!entry) continue;
+    const code = resolveFileCode(typeof entry === 'string' ? entry : (entry as SandpackFile));
+    const dir = filepath.substring(0, filepath.lastIndexOf('/'));
+
+    RELATIVE_IMPORT_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = RELATIVE_IMPORT_RE.exec(code)) !== null) {
+      const importPath = match[1];
+      // Strip trailing extension from the specifier so we can try multiple
+      const resolved = resolveFsPath(dir, importPath).replace(/\.[tj]sx?$/, '');
+
+      const candidates = [
+        resolved + '.tsx',
+        resolved + '.ts',
+        resolved + '.jsx',
+        resolved + '.js',
+        resolved + '/index.tsx',
+        resolved + '/index.ts',
+      ];
+
+      if (candidates.some((c) => mounted.has(c))) continue;
+
+      // Derive a PascalCase name from the import specifier
+      const raw = importPath.split('/').pop()?.replace(/\.[tj]sx?$/, '') ?? 'Stub';
+      const compName = raw.charAt(0).toUpperCase() + raw.slice(1);
+      const stubPath = resolved + '.tsx';
+
+      files[stubPath] = {
+        code: [
+          `import React from 'react';`,
+          ``,
+          `// Auto-stub: the AI imported this file but did not produce its contents.`,
+          `export default function ${compName}() {`,
+          `  return (`,
+          `    <div className="p-6 bg-gray-900/50 border border-gray-700/60 rounded-xl`,
+          `      flex items-center justify-center min-h-[120px]">`,
+          `      <p className="font-mono text-sm text-gray-400">[{compName} — placeholder]</p>`,
+          `    </div>`,
+          `  );`,
+          `}`,
+        ].join('\n'),
+        active: false,
+      };
+      mounted.add(stubPath);
+    }
+  }
+}
+
+
+/**
  * Builds the Sandpack file tree for live preview.
  * Injects the generated component and bootstraps it in App.tsx using Vite structure.
  */
@@ -220,6 +298,10 @@ export default function CaptureWrapper({ children }) {
       active: true,
     };
   }
+
+  // ── Stub any relative imports that reference files not in the virtual FS ─────
+  // Prevents: "Failed to resolve import './Feed' from src/App.tsx"
+  injectMissingFileStubs(files);
 
   // ── Inject Vite alias config so @ui/* packages resolve at runtime ──────────
   // Vite 4 does NOT read tsconfig "paths" aliases — only vite.config.ts aliases work.
