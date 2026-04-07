@@ -612,7 +612,7 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     maxOutputTokens: 8192,
     idealTemperature: 0.6,
     supportsSystemPrompt: true,
-    supportsToolCalls: true,
+    supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
     supportsJsonMode: false,
     streamingReliable: true,
     strengths: [
@@ -640,7 +640,7 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     maxOutputTokens: 4096,
     idealTemperature: 0.5,
     supportsSystemPrompt: true,
-    supportsToolCalls: true,
+    supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
     supportsJsonMode: false,
     streamingReliable: true,
     strengths: ['fastest Anthropic model', 'very cheap', 'great for repair and review tasks'],
@@ -652,6 +652,53 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
     timeoutMs: 30000,
+  },
+
+  // claude-3-5-haiku and claude-3-opus aliases
+  'claude-3-5-haiku-20241022': {
+    id: 'claude-3-5-haiku-20241022',
+    displayName: 'Claude 3.5 Haiku',
+    provider: 'anthropic',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 8192,
+    idealTemperature: 0.5,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['fast', 'cheap', 'great code quality for cost'],
+    weaknesses: ['less creative than Sonnet'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 8000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 45000,
+  },
+
+  'claude-3-opus-20240229': {
+    id: 'claude-3-opus-20240229',
+    displayName: 'Claude 3 Opus',
+    provider: 'anthropic',
+    tier: 'cloud',
+    contextWindow: 200000,
+    maxOutputTokens: 4096,
+    idealTemperature: 0.6,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['strongest reasoning', 'best long-form output'],
+    weaknesses: ['expensive', 'slower than Sonnet'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 10000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 120000,
   },
 
   'gemini-1.5-pro': {
@@ -801,6 +848,17 @@ export function getModelProfile(modelId: string): ModelCapabilityProfile | null 
 
   const partial = Object.keys(MODEL_REGISTRY).find(k => lower.includes(k.toLowerCase()));
   if (partial) return MODEL_REGISTRY[partial];
+
+  // Provider-aware fallback for unregistered models:
+  // Claude models must NOT inherit GPT-4o's supportsToolCalls:true since the
+  // AnthropicAdapter uses the native /v1/messages API which has a different tool schema.
+  if (lower.includes('claude')) {
+    return {
+      ...MODEL_REGISTRY['claude-3-5-sonnet-20241022'],
+      id: modelId,
+      displayName: modelId,
+    };
+  }
 
   return null;
 }
