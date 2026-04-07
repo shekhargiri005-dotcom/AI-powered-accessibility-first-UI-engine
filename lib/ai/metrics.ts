@@ -34,8 +34,8 @@ export interface MetricPayload {
  * response path. All errors are swallowed and logged at warn level.
  */
 export function dispatchMetrics(payload: MetricPayload): void {
-  // Schedule asynchronously so the response path is never delayed
-  setTimeout(async () => {
+  // Execute asynchronously so the response path is not delayed
+  Promise.resolve().then(async () => {
     const costUsd = payload.cached
       ? 0
       : costEstimateUsd(payload.model, payload.promptTokens, payload.completionTokens);
@@ -74,7 +74,6 @@ export function dispatchMetrics(payload: MetricPayload): void {
           latencyMs: payload.latencyMs,
           costUsd,
           cached: payload.cached,
-          // workspaceId column is optional in the schema
           ...(payload.workspaceId ? { workspaceId: payload.workspaceId } : {}),
         },
       });
@@ -85,5 +84,5 @@ export function dispatchMetrics(payload: MetricPayload): void {
         error: err,
       });
     }
-  }, 0);
+  }).catch(() => { /* silence outer unhandled rejections */ });
 }

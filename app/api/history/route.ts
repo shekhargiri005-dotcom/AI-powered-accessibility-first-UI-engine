@@ -3,12 +3,13 @@ import fs from 'fs';
 import path from 'path';
 import { getProjectById } from '@/lib/ai/memory';
 
-export const dynamic = 'force-dynamic';
+
 
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
 
     if (id) {
       const project = getProjectById(id);

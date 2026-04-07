@@ -440,6 +440,12 @@ export default function HomePage() {
             isRefining={isRunning}
             projectId={activeProjectId}
             feedbackMeta={generationMeta}
+            aiConfig={aiConfig ? {
+              model:    aiConfig.model,
+              provider: aiConfig.provider,
+              apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
+              baseUrl:  aiConfig.baseUrl,
+            } : null}
           />
         </div>
       )}

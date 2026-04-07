@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -16,6 +16,13 @@ interface SandpackPreviewProps {
   componentName: string;
   /** Called when the user edits code in the inline editor — used for feedback auto-capture */
   onCodeChange?: (newCode: string) => void;
+  /**
+   * Called once after the preview has settled (~2s after mount).
+   * Receives the iframe element's src URL so the caller can POST it to
+   * /api/screenshot for a Playwright server-side capture.
+   * Only fires once per generation (keyed on componentName + code identity).
+   */
+  onReadyForScreenshot?: (iframeSrc: string) => void;
 }
 
 // ─── Sandpack Change Observer ─────────────────────────────────────────────────
@@ -43,6 +50,54 @@ function SandpackChangeObserver({ activeFile, initialCode, onCodeChange }: Obser
       onCodeChange(currentCode);
     }
   }, [currentCode, onCodeChange]);
+
+  return null;
+}
+
+// ─── Screenshot Ready Observer ────────────────────────────────────────────────
+// Fires onReadyForScreenshot once after the preview iframe settles.
+// Reads the iframe src from the DOM so the parent can POST it to /api/screenshot.
+
+interface ScreenshotObserverProps {
+  onReadyForScreenshot: (iframeSrc: string) => void;
+}
+
+function SandpackScreenshotObserver({ onReadyForScreenshot }: ScreenshotObserverProps) {
+  const { sandpack } = useSandpack();
+  const firedRef = useRef(false);
+
+  // Listen for when the preview iframe transitions from loading to running
+  const status = sandpack.status;
+
+  useEffect(() => {
+    if (firedRef.current) return;
+    if (status !== 'running' && status !== 'done') return;
+
+    // Wait for the UI to fully settle before capturing
+    const timer = setTimeout(() => {
+      if (firedRef.current) return;
+
+      // Find the Sandpack preview iframe in the DOM
+      const iframe = document.querySelector<HTMLIFrameElement>(
+        'iframe[title="Sandpack Preview"], iframe[class*="sandpack"], .sp-preview-frame'
+      );
+
+      const iframeSrc = iframe?.src ?? '';
+      const hasExternalSrc = iframeSrc.startsWith('http') && iframeSrc !== 'about:blank';
+
+      if (hasExternalSrc) {
+        firedRef.current = true;
+        onReadyForScreenshot(iframeSrc);
+      } else if (iframe) {
+        // iframe exists but src is local blob/about:blank — use a flag URL
+        // The screenshot API will handle this case by using the app's own preview URL
+        firedRef.current = true;
+        onReadyForScreenshot(window.location.origin + '/_sandpack_preview');
+      }
+    }, 2500);
+
+    return () => clearTimeout(timer);
+  }, [status, onReadyForScreenshot]);
 
   return null;
 }
@@ -90,7 +145,14 @@ export default function SandpackPreviewComponent({
   code,
   componentName,
   onCodeChange,
+  onReadyForScreenshot,
 }: SandpackPreviewProps) {
+  // Stable callback ref so the screenshot observer doesn't re-fire on re-renders
+  const screenshotCallbackRef = useRef(onReadyForScreenshot);
+  useEffect(() => { screenshotCallbackRef.current = onReadyForScreenshot; }, [onReadyForScreenshot]);
+  const stableScreenshotCb = useCallback((src: string) => {
+    screenshotCallbackRef.current?.(src);
+  }, []);
   const [editMode, setEditMode] = useState(false);
 
   const files        = buildSandpackFiles(code, componentName);
@@ -152,6 +214,11 @@ export default function SandpackPreviewComponent({
                 initialCode={initialCode}
                 onCodeChange={onCodeChange}
               />
+            )}
+
+            {/* Screenshot observer — fires once after preview settles for Final Round */}
+            {onReadyForScreenshot && (
+              <SandpackScreenshotObserver onReadyForScreenshot={stableScreenshotCb} />
             )}
 
             <SandpackLayout

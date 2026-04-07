@@ -4,7 +4,7 @@ import {
 } from '@/lib/projects/projectStore';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 
-export const dynamic = 'force-dynamic';
+
 
 // GET /api/projects — list all projects
 export async function GET() {

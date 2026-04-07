@@ -78,8 +78,15 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       reqLogger.warn('Intent parsing failed', { error: result.error });
+      if (result.rawResponse) {
+        try {
+          require('fs').writeFileSync('last_malformed_parse.txt', result.rawResponse);
+        } catch (e) {
+          reqLogger.error('Failed to write rawResponse to disk', e);
+        }
+      }
       return NextResponse.json(
-        { success: false, error: result.error },
+        { success: false, error: result.error, rawResponse: result.rawResponse },
         { status: 422 }
       );
     }

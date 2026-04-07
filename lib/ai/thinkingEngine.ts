@@ -2,6 +2,7 @@ import { getWorkspaceAdapter } from './adapters/index';
 import type { AdapterConfig } from './adapters/index';
 import type { AICallConfig } from './intentClassifier';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
+import { getModelProfile } from './modelRegistry';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
 import { findMatchingLayouts } from '../intelligence/layoutRegistry';
 import { selectBlueprint } from '../intelligence/blueprintEngine';
@@ -209,13 +210,17 @@ export async function generateThinkingPlan(
 
     const adapter = await getWorkspaceAdapter(adapterConfig);
 
+    // Gate JSON mode on model capability (same as intentParser)
+    const modelProfile = getModelProfile(adapterConfig.model);
+    const useJsonMode = modelProfile?.supportsJsonMode !== false;
+
     const result2 = await adapter.generate({
       model: adapterConfig.model,
       messages: [
         { role: 'system', content: THINKING_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
       ],
-      responseFormat: 'json_object',
+      ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
       temperature: 0.3,
       maxTokens: 1200,
     });

@@ -15,7 +15,7 @@ import { logger } from '@/lib/logger';
 import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/generate');
@@ -129,7 +129,15 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
 
-    const _isLocalModel = model?.toLowerCase().includes('deepseek') || model?.toLowerCase().includes('ollama');
+    // Detect local/Ollama models — skip expensive review/repair LLM calls for them
+    const isLocalModel = (
+      !provider ||
+      provider === 'ollama' ||
+      provider === 'lmstudio' ||
+      baseUrl?.includes('localhost') ||
+      baseUrl?.includes('127.0.0.1') ||
+      (!process.env.REVIEW_MODEL && !process.env.OPENAI_API_KEY && !process.env.ANTHROPIC_API_KEY && !process.env.GOOGLE_API_KEY)
+    );
 
 
     // Step 0: Handle Refinement Context
@@ -188,27 +196,30 @@ export async function POST(request: NextRequest) {
     const code = generationResult.code;
 
     // Step 1.5: UI Expert Critique & Repair Agent
+    // Skipped for local/Ollama models — review would queue a 2nd+ slow local inference call.
+    // Only runs when a fast cloud model (REVIEW_MODEL env var or a configured cloud key) is available.
     let finalSourceCode = code;
     let critiqueData: unknown;
-    try {
-      const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
+    if (!isLocalModel) {
+      try {
+        const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
+        critiqueData = reviewResult;
 
-      critiqueData = reviewResult;
-
-      if (!reviewResult.passed && reviewResult.repairInstructions) {
-        reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
-        const repairedCode = await repairGeneratedCode(finalSourceCode, reviewResult.repairInstructions);
-
-        // Ensure repair didn't return garbage
-        if (repairedCode && repairedCode.length > 200) {
-          reqLogger.info('Repair success. UI improved by agent.');
-          finalSourceCode = repairedCode;
+        if (!reviewResult.passed && reviewResult.repairInstructions) {
+          reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
+          const repairedCode = await repairGeneratedCode(finalSourceCode, reviewResult.repairInstructions);
+          if (repairedCode && repairedCode.length > 200) {
+            reqLogger.info('Repair success. UI improved by agent.');
+            finalSourceCode = repairedCode;
+          }
+        } else {
+          reqLogger.info('Critique passed', { score: reviewResult.score });
         }
-      } else {
-        reqLogger.info('Critique passed', { score: reviewResult.score });
+      } catch (e) {
+        reqLogger.warn('UI Reviewer failed, proceeding with original code', { error: e });
       }
-    } catch (e) {
-      reqLogger.warn('UI Reviewer failed, proceeding with original code', { error: e });
+    } else {
+      reqLogger.info('Skipping review/repair — local model detected, no fast cloud reviewer available');
     }
 
     // Step 1.6: Sanitize — flatten multi-line template literals that break Sandpack's Babel parser

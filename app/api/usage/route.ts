@@ -4,7 +4,7 @@ import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import { cacheLife } from 'next/cache';
 
-export const dynamic = 'force-dynamic';
+
 
 async function getCachedUsage(workspaceId: string | null, days: number) {
   'use cache';

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Eye, Code, GitCommit, ScrollText, Sparkles, AlertCircle, Maximize2, X,
   TrendingUp, TrendingDown, Minus, Activity,
@@ -9,12 +9,14 @@ import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
 import type { FeedbackMeta } from '@/components/FeedbackBar';
 import type { FeedbackStats } from '@/lib/ai/feedbackStore';
+import type { FinalRoundStatus, FinalRoundResult } from '@/lib/ai/finalRoundCritic';
 import VersionTimeline from '@/components/VersionTimeline';
 import GeneratedCode from '@/components/GeneratedCode';
 import A11yReportComponent from '@/components/A11yReport';
 import TestOutput from '@/components/TestOutput';
 import IntentBadge from '@/components/IntentBadge';
 import FeedbackBar from '@/components/FeedbackBar';
+import FinalRoundPanel from '@/components/FinalRoundPanel';
 import dynamic from 'next/dynamic';
 
 const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
@@ -46,6 +48,13 @@ interface RightPanelProps {
   projectId?:  string | null;
   /** Feedback metadata from the last generation — enables the FeedbackBar */
   feedbackMeta?: FeedbackMeta | null;
+  /** AI config passed through so Final Round can call the same model */
+  aiConfig?: {
+    model: string;
+    provider?: string;
+    apiKey?: string;
+    baseUrl?: string;
+  } | null;
 }
 
 type TabId = 'preview' | 'code' | 'versions' | 'metrics';
@@ -79,6 +88,7 @@ export default function RightPanel({
   isRefining,
   projectId,
   feedbackMeta,
+  aiConfig,
 }: RightPanelProps) {
   const [activeTab,       setActiveTab]       = useState<TabId>('preview');
   const [versions,        setVersions]        = useState<ProjectVersion[]>([{
@@ -101,7 +111,25 @@ export default function RightPanel({
   const [feedbackStats,    setFeedbackStats]    = useState<FeedbackStats | null>(null);
   const [statsLoading,     setStatsLoading]     = useState(false);
 
+  // ─── Final Round state ─────────────────────────────────────────────────
+  const [finalRoundStatus, setFinalRoundStatus] = useState<FinalRoundStatus>('idle');
+  const [finalRoundResult, setFinalRoundResult] = useState<FinalRoundResult | undefined>(undefined);
+  const [finalRoundError,  setFinalRoundError]  = useState<string | undefined>(undefined);
+  const [finalRoundCodeReplaced, setFinalRoundCodeReplaced] = useState(false);
+  /** Tracks which generation has had Final Round run (prevents double-firing) */
+  const finalRoundFiredForRef = useRef<string>('');
+
   const activeV = versions.find((v) => v.version === currentVersion) ?? versions[versions.length - 1];
+
+  // Reset Final Round when a new project/generation comes in
+  useEffect(() => {
+    setFinalRoundStatus('idle');
+    setFinalRoundResult(undefined);
+    setFinalRoundError(undefined);
+    setFinalRoundCodeReplaced(false);
+    finalRoundFiredForRef.current = '';
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProject.id, initialProject.timestamp]);
 
   // Reset on new project
   useEffect(() => {
@@ -155,6 +183,106 @@ export default function RightPanel({
       .catch(() => { /* non-fatal */ })
       .finally(() => setStatsLoading(false));
   }, [activeTab, feedbackMeta, feedbackStats]);
+
+  // ─── Final Round handler ─────────────────────────────────────────────────
+  const handleScreenshotReady = useCallback(async (iframeSrc: string) => {
+    // Guard: only run once per generation, requires model config
+    const generationKey = activeV.timestamp + activeV.version;
+    if (finalRoundFiredForRef.current === generationKey) return;
+    if (!aiConfig?.model) return;
+    if (isRefining) return;
+
+    finalRoundFiredForRef.current = generationKey;
+    setFinalRoundStatus('running');
+    setFinalRoundResult(undefined);
+    setFinalRoundError(undefined);
+    setFinalRoundCodeReplaced(false);
+
+    try {
+      // Step 1: Get screenshot from Playwright
+      let imageDataUrl: string;
+      const allowedForScreenshot = iframeSrc.startsWith('http');
+
+      if (allowedForScreenshot) {
+        const ssRes = await fetch('/api/screenshot', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: iframeSrc, delayMs: 2000, viewportWidth: 1280, viewportHeight: 800 }),
+        });
+        const ssData = await ssRes.json() as { success: boolean; dataUrl?: string; error?: string };
+        if (!ssData.success || !ssData.dataUrl) {
+          setFinalRoundStatus('skipped');
+          setFinalRoundError(ssData.error ?? 'Screenshot failed — Final Round skipped.');
+          return;
+        }
+        imageDataUrl = ssData.dataUrl;
+      } else {
+        // Sandpack preview is a local blob — cannot screenshot cross-origin
+        setFinalRoundStatus('skipped');
+        setFinalRoundError('Sandpack preview runs in a local iframe. Final Round requires a cloud or external URL.');
+        return;
+      }
+
+      // Step 2: Call Final Round critic with screenshot + code + same model
+      const currentCode = activeV.code;
+      const sanitizedApiKey = aiConfig.apiKey && aiConfig.apiKey !== '\u2022\u2022\u2022\u2022' ? aiConfig.apiKey : undefined;
+
+      const frRes = await fetch('/api/final-round', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageDataUrl,
+          code: currentCode,
+          model: aiConfig.model,
+          provider: aiConfig.provider,
+          apiKey: sanitizedApiKey,
+          baseUrl: aiConfig.baseUrl,
+        }),
+      });
+      const frData = await frRes.json() as {
+        success: boolean;
+        status: FinalRoundStatus;
+        result?: FinalRoundResult;
+        error?: string;
+      };
+
+      if (!frData.success) {
+        setFinalRoundStatus('error');
+        setFinalRoundError(frData.error);
+        return;
+      }
+
+      setFinalRoundStatus(frData.status);
+      setFinalRoundResult(frData.result);
+
+      // Step 3: If the AI designer sent back repaired code, apply it
+      if (
+        frData.status === 'fixed' &&
+        frData.result?.suggestedCode &&
+        frData.result.suggestedCode.length > 150
+      ) {
+        const repairedCode = frData.result.suggestedCode;
+        // Append a new version with the AI Designer's improvements
+        setVersions((prev) => [
+          ...prev,
+          {
+            version: prev.length + 1,
+            timestamp: new Date().toISOString(),
+            code: repairedCode,
+            intent: activeV.intent,
+            a11yReport: activeV.a11yReport,
+            changeDescription: '\u2728 Final Round: AI Designer elevation',
+          },
+        ]);
+        setCurrentVersion((prev) => prev + 1);
+        setFinalRoundCodeReplaced(true);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setFinalRoundStatus('error');
+      setFinalRoundError(`Final Round error: ${msg}`);
+    }
+  }, [aiConfig, activeV, isRefining]);
 
   const handleRollback = useCallback(async (version: number) => {
     if (!projectId) { setCurrentVersion(version); return; }
@@ -245,6 +373,16 @@ export default function RightPanel({
                 code={activeV.code as string | Record<string, string>}
                 componentName={activeV.intent.componentName}
                 onCodeChange={setEditedCode}
+                onReadyForScreenshot={aiConfig ? handleScreenshotReady : undefined}
+              />
+
+              {/* ✨ Holy Grail: Final Round Panel — floats in bottom-right of preview */}
+              <FinalRoundPanel
+                status={finalRoundStatus}
+                result={finalRoundResult}
+                codeWasReplaced={finalRoundCodeReplaced}
+                errorMessage={finalRoundError}
+                onDismiss={() => setFinalRoundStatus('idle')}
               />
             </div>
 
