@@ -34,11 +34,17 @@ function isReasoningModel(model: string): boolean {
 export class OpenAIAdapter implements AIAdapter {
   readonly provider = 'openai';
   private client: OpenAI;
+  /** The effective base URL used for this client instance — stored at construction. */
+  private readonly effectiveBaseURL: string;
+  /** True when routing through an aggregator (OpenRouter, Together.ai). */
+  private readonly isAggregator: boolean;
+  /** True when routing through Hugging Face Inference API. */
+  private readonly isHuggingFace: boolean;
 
   constructor(apiKey?: string, baseURL?: string) {
-    let finalBaseUrl = baseURL;
+    let finalBaseUrl = baseURL ?? '';
     // Auto-migrate away from deprecated Hugging Face endpoints
-    if (finalBaseUrl?.includes('api-inference.huggingface.co')) {
+    if (finalBaseUrl.includes('api-inference.huggingface.co')) {
       finalBaseUrl = 'https://router.huggingface.co/hf-inference/v1';
     }
 
@@ -46,6 +52,11 @@ export class OpenAIAdapter implements AIAdapter {
       apiKey: apiKey ?? process.env.OPENAI_API_KEY,
       ...(finalBaseUrl ? { baseURL: finalBaseUrl } : {}),
     });
+
+    // Cache flags once — never read this.client.baseURL at call time
+    this.effectiveBaseURL = finalBaseUrl;
+    this.isAggregator     = finalBaseUrl.includes('openrouter.ai') || finalBaseUrl.includes('together.xyz');
+    this.isHuggingFace    = finalBaseUrl.includes('huggingface.co');
   }
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {
@@ -54,8 +65,8 @@ export class OpenAIAdapter implements AIAdapter {
       ? toOpenAIToolChoice(options.toolChoice)
       : undefined;
 
-    const isAggregator = this.client.baseURL.includes('openrouter.ai') || this.client.baseURL.includes('together.xyz');
-    const isHuggingFace = this.client.baseURL.includes('huggingface.co');
+    const isAggregator = this.isAggregator;
+    const isHuggingFace = this.isHuggingFace;
     const isReasoning   = isReasoningModel(options.model);
 
     // o1 (full) and o1-preview do NOT support the `system` role at all.
@@ -144,7 +155,7 @@ export class OpenAIAdapter implements AIAdapter {
 
   async *stream(options: GenerateOptions): AsyncGenerator<StreamChunk, void, unknown> {
     const toolDefs      = options.tools?.map(toOpenAIToolDefinition);
-    const isHuggingFace = this.client.baseURL.includes('huggingface.co');
+    const isHuggingFace = this.isHuggingFace;
     const isReasoning   = isReasoningModel(options.model);
 
     // o1 / o1-preview: no system role support — merge into first user message

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Repair Pipeline — auto-repairs common generation failures before preview.
  * Applies rule-based patches first, then falls back to AI repair if needed.
  */
@@ -112,15 +112,112 @@ const RULE_BASED_REPAIRS: RepairFn[] = [
   },
 ];
 
+
+// ─── Hallucinated Import Repairs ──────────────────────────────────────────────
+// Replaces libraries the model commonly hallucinates with available alternatives.
+
+const HALLUCINATED_IMPORT_REPAIRS: RepairFn[] = [
+  // Three.js / R3F → comment out (no replacement available in Sandpack)
+  (code) => {
+    const hasThree = code.includes("'three'") || code.includes('"three"') ||
+                     code.includes('@react-three/');
+    if (!hasThree) return { code, applied: false, description: '' };
+    const result = code
+      .replace(/import\s+[^;]+from\s+['"]three['"];?\n?/g, '// [REPAIRED] Removed three.js — use framer-motion for depth\n')
+      .replace(/import\s+[^;]+from\s+['"]@react-three\/fiber['"];?\n?/g, '// [REPAIRED] Removed @react-three/fiber — use framer-motion\n')
+      .replace(/import\s+[^;]+from\s+['"]@react-three\/drei['"];?\n?/g, '// [REPAIRED] Removed @react-three/drei — use framer-motion\n');
+    return { code: result, applied: result !== code, description: 'Removed Three.js / @react-three/* (not available — use framer-motion)' };
+  },
+
+  // react-spring → framer-motion
+  (code) => {
+    const has = code.includes('react-spring') || code.includes('@react-spring');
+    if (!has) return { code, applied: false, description: '' };
+    const result = code
+      .replace(/import\s+[^;]+from\s+['"]react-spring['"];?\n?/g, "import { motion, useSpring, useTransform } from 'framer-motion'; // [REPAIRED]\n")
+      .replace(/import\s+[^;]+from\s+['"]@react-spring\/[^'"]+['"];?\n?/g, '// [REPAIRED] Removed @react-spring/* — use framer-motion\n');
+    return { code: result, applied: result !== code, description: 'Replaced react-spring with framer-motion' };
+  },
+
+  // GSAP → comment out
+  (code) => {
+    const has = code.includes("'gsap'") || code.includes('"gsap"') || code.includes('@gsap/');
+    if (!has) return { code, applied: false, description: '' };
+    const result = code
+      .replace(/import\s+[^;]+from\s+['"]gsap['"];?\n?/g, '// [REPAIRED] Removed gsap — use framer-motion\n')
+      .replace(/import\s+[^;]+from\s+['"]@gsap\/[^'"]+['"];?\n?/g, '// [REPAIRED] Removed @gsap/* — use framer-motion\n');
+    return { code: result, applied: result !== code, description: 'Removed GSAP (not available — use framer-motion)' };
+  },
+
+  // lottie-react → comment out
+  (code) => {
+    if (!code.includes('lottie-react')) return { code, applied: false, description: '' };
+    const result = code.replace(/import\s+[^;]+from\s+['"]lottie-react['"];?\n?/g, '// [REPAIRED] Removed lottie-react — not available\n');
+    return { code: result, applied: result !== code, description: 'Removed lottie-react (not available)' };
+  },
+
+  // @mui/* → comment out
+  (code) => {
+    if (!code.includes('@mui/')) return { code, applied: false, description: '' };
+    const result = code.replace(/import\s+[^;]+from\s+['"]@mui\/[^'"]+['"];?\n?/g, '// [REPAIRED] Removed @mui/* — use Tailwind CSS\n');
+    return { code: result, applied: result !== code, description: 'Removed @mui/* (not available — use Tailwind CSS)' };
+  },
+
+  // antd → comment out
+  (code) => {
+    if (!code.includes("'antd'") && !code.includes('"antd"')) return { code, applied: false, description: '' };
+    const result = code.replace(/import\s+[^;]+from\s+['"]antd['"];?\n?/g, '// [REPAIRED] Removed antd — use Tailwind CSS\n');
+    return { code: result, applied: result !== code, description: 'Removed antd (not available — use Tailwind CSS)' };
+  },
+
+  // @chakra-ui/* → comment out
+  (code) => {
+    if (!code.includes('@chakra-ui/')) return { code, applied: false, description: '' };
+    const result = code.replace(/import\s+[^;]+from\s+['"]@chakra-ui\/[^'"]+['"];?\n?/g, '// [REPAIRED] Removed @chakra-ui/* — use Tailwind CSS\n');
+    return { code: result, applied: result !== code, description: 'Removed @chakra-ui/* (not available — use Tailwind CSS)' };
+  },
+];
+
+// ─── Accessibility Quick Repairs ──────────────────────────────────────────────
+// Deterministic a11y fixes that require no AI reasoning.
+
+const A11Y_QUICK_REPAIRS: RepairFn[] = [
+  // 1. Add alt="" to <img> missing alt attribute
+  (code) => {
+    const before = code;
+    const result = code.replace(/<img\b(?![^>]*\balt=)([^>]*)(\/?>)/g, (_match, attrs: string, close: string) => {
+      return `<img${attrs} alt=""${close === '/>' ? ' />' : '>'}`;
+    });
+    return { code: result, applied: result !== before, description: 'Added alt="" to <img> elements missing alt (WCAG 1.1.1)' };
+  },
+
+  // 2. Add role="button" + tabIndex={0} to <div onClick> without keyboard support
+  (code) => {
+    const before = code;
+    const result = code.replace(/<div\b([^>]*\bonClick\b[^>]*)>/g, (_match, attrs: string) => {
+      if (attrs.includes('role=') || attrs.includes('tabIndex') || attrs.includes('tabindex')) return _match;
+      return `<div${attrs} role="button" tabIndex={0}>`;
+    });
+    return { code: result, applied: result !== before, description: 'Added role="button" tabIndex={0} to <div onClick> (WCAG 2.1.1)' };
+  },
+];
+
 /**
  * Apply all rule-based repairs to a code string.
+ * Order: core rules → hallucination repairs → a11y quick repairs.
  * Returns the repaired code and a log of applied repairs.
  */
 export function applyRuleBasedRepairs(code: string): { code: string; repairsApplied: string[] } {
   let current = code;
   const repairsApplied: string[] = [];
 
-  for (const repairFn of RULE_BASED_REPAIRS) {
+  const allRepairs = [
+    ...RULE_BASED_REPAIRS,
+    ...HALLUCINATED_IMPORT_REPAIRS,
+    ...A11Y_QUICK_REPAIRS,
+  ];
+
+  for (const repairFn of allRepairs) {
     const result = repairFn(current);
     if (result.applied) {
       current = result.code;
@@ -130,6 +227,7 @@ export function applyRuleBasedRepairs(code: string): { code: string; repairsAppl
 
   return { code: current, repairsApplied };
 }
+
 
 /**
  * Full repair pipeline:

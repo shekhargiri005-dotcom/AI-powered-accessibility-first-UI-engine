@@ -3,7 +3,7 @@ import {
   UIIntentSchema, 
   A11yReportSchema,
   AppIntentSchema,
-  WebGLIntentSchema
+  DepthUIIntentSchema
 } from '@/lib/validation/schemas';
 
 describe('Zod Schemas', () => {
@@ -91,10 +91,10 @@ describe('Zod Schemas', () => {
     });
   });
 
-  describe('WebGLIntentSchema', () => {
+  describe('DepthUIIntentSchema', () => {
     it('should extend UIIntentSchema correctly', () => {
         const data = {
-            componentType: 'webgl',
+            componentType: 'depth_ui',
             componentName: 'MyScene',
             description: 'A test scene',
             fields: [],
@@ -103,15 +103,17 @@ describe('Zod Schemas', () => {
             theme: { variant: 'primary', size: 'md' },
             a11yRequired: [],
             semanticElements: [],
-            webglType: 'canvas',
-            sceneElements: [],
-            colorScheme: { primary: '#000', background: '#fff', ambientLight: '#fff', directionalLight: '#fff' },
-            uiOverlay: [],
-            cameraSetup: { position: [0, 0, 10], fov: 60 }
+            depthSpec: {
+                generationMode: 'depth_ui',
+                visualPriority: 'startup',
+                motionDesign: { motionStyle: 'premium', parallaxEnabled: true, parallaxType: 'soft_depth', intensity: 'low', allowedZones: [], forbiddenZones: [], reducedMotionFallback: true, mobileReduction: true, performanceMode: 'safe' },
+                parallax: { enabled: true, style: 'subtle', pageScope: 'section-based', intensity: 'low', motionTrigger: 'scroll', allowedRegions: [], forbiddenRegions: [], depthLayers: 2, mobileBehavior: 'reduce', reducedMotionSupport: true, performanceMode: 'safe' }
+            },
+            colorScheme: { primary: '#000', background: '#fff', surface: '#111', text: '#fff' }
         };
-        const parsed = WebGLIntentSchema.parse(data);
-        expect(parsed.componentType).toBe('webgl');
-        expect(parsed.cameraSetup.fov).toBe(60);
+        const parsed = DepthUIIntentSchema.parse(data);
+        expect(parsed.componentType).toBe('depth_ui');
+        expect(parsed.depthSpec?.motionDesign.motionStyle).toBe('premium');
     });
   });
 });

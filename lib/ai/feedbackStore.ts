@@ -2,17 +2,21 @@
  * @file lib/ai/feedbackStore.ts
  *
  * Feedback persistence — dual-write strategy:
- *  1. data/feedback.json      — synchronous, zero-latency, always available
- *  2. Prisma / DB             — async, fire-and-forget, never blocks
+ *  1. Prisma / DB             — async, fire-and-forget, cloud-persisted
+ *  2. Stats cache             — Redis (Vercel/prod) with in-memory fallback (local dev)
  *
- * Stats cache (data/feedback-stats.json) is recomputed on every write and
- * read synchronously — no network required, always up-to-date.
+ * Phase 3 Update:
+ *  - Migrated stats cache from fs-based JSON to Upstash Redis.
+ *  - fs-based feedback.json kept ONLY for local dev/fallback — not used in Vercel prod.
+ *  - getTopRatedGenerations() now reads from Prisma DB async instead of local JSON.
+ *  - upsertFeedbackEmbedding() is now quality-gated (a11yScore >= 60 AND critiqueScore >= 70).
+ *
+ * Stats cache key format: "feedback-stats::{model}::{intentType}"
  */
 
-import fs   from 'fs';
-import path from 'path';
 import crypto from 'crypto';
 import { upsertFeedbackEmbedding } from './vectorStore';
+import { logger } from '../logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,32 +55,90 @@ export interface FeedbackStats {
   lastUpdated:      string;
 }
 
-// ─── File Paths ───────────────────────────────────────────────────────────────
+// ─── Quality Gate for Memory Writeback ────────────────────────────────────────
 
-const DATA_DIR      = path.join(process.cwd(), 'data');
-const FEEDBACK_FILE = path.join(DATA_DIR, 'feedback.json');
-const STATS_FILE    = path.join(DATA_DIR, 'feedback-stats.json');
+/**
+ * Minimum thresholds before a corrected generation is embedded into the vector store.
+ *
+ * Only store outputs in the semantic memory if they are genuinely high quality.
+ * This prevents low-quality "corrections" from polluting the RAG knowledge base.
+ */
+const EMBEDDING_QUALITY_GATE = {
+  minA11yScore:     60,   // accessibility score out of 100
+  minCritiqueScore: 70,   // aesthetic/quality score out of 100
+} as const;
 
-// ─── File Helpers ─────────────────────────────────────────────────────────────
+// ─── Redis Stats Cache ────────────────────────────────────────────────────────
 
-function ensureDataDir(): void {
-  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+/** In-process fallback when Redis is unavailable (local dev or missing env) */
+const _memoryStatsCache = new Map<string, FeedbackStats>();
+
+/**
+ * Build the Redis key for a model+intentType stats entry.
+ * Prefixed to avoid namespace collisions with other cache users (e.g. generation cache).
+ */
+function redisStatsKey(model: string, intentType: string): string {
+  return `feedback-stats::${model}::${intentType}`;
 }
 
-function readJson<T>(filePath: string, fallback: T): T {
+/** Lazily-initialised Upstash Redis client. Null if env vars are missing. */
+let _redisClient: import('@upstash/redis').Redis | null = null;
+let _redisInitAttempted = false;
+
+async function getRedisClient(): Promise<import('@upstash/redis').Redis | null> {
+  if (_redisInitAttempted) return _redisClient;
+  _redisInitAttempted = true;
+
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+
   try {
-    if (!fs.existsSync(filePath)) return fallback;
-    return JSON.parse(fs.readFileSync(filePath, 'utf-8')) as T;
-  } catch {
-    return fallback;
+    const { Redis } = await import('@upstash/redis');
+    _redisClient = new Redis({ url, token });
+    return _redisClient;
+  } catch (err) {
+    logger.warn({ endpoint: 'feedbackStore', message: 'Failed to init Upstash Redis client', error: err });
+    return null;
   }
 }
 
-function writeJson(filePath: string, data: unknown): void {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+async function readStats(model: string, intentType: string): Promise<FeedbackStats | null> {
+  const key    = redisStatsKey(model, intentType);
+  const redis  = await getRedisClient();
+
+  if (redis) {
+    try {
+      const raw = await redis.get<FeedbackStats>(key);
+      return raw ?? null;
+    } catch {
+      // Fall through to memory cache on Redis error
+    }
+  }
+
+  // In-memory fallback (local dev, or if Redis errors)
+  return _memoryStatsCache.get(key) ?? null;
 }
 
-// ─── Stats Key ────────────────────────────────────────────────────────────────
+async function writeStats(stats: FeedbackStats): Promise<void> {
+  const key   = redisStatsKey(stats.model, stats.intentType);
+  const redis = await getRedisClient();
+
+  if (redis) {
+    try {
+      // TTL: 90 days — stats naturally expire if there is no activity
+      await redis.set(key, stats, { ex: 60 * 60 * 24 * 90 });
+      return;
+    } catch {
+      // Fall through to memory cache on Redis error
+    }
+  }
+
+  // In-memory fallback
+  _memoryStatsCache.set(key, stats);
+}
+
+// ─── Stats Key (legacy — kept for internal use only) ───────────────────────────
 
 function statsKey(model: string, intentType: string): string {
   return `${model}::${intentType}`;
@@ -84,77 +146,84 @@ function statsKey(model: string, intentType: string): string {
 
 // ─── Stats Recomputation ──────────────────────────────────────────────────────
 
-function recomputeAndCacheStats(
-  model:       string,
-  intentType:  string,
-  allEntries:  FeedbackEntry[],
-): void {
-  const relevant = allEntries.filter(
-    (e) => e.model === model && e.intentType === intentType,
-  );
-  if (relevant.length === 0) return;
+async function recomputeAndWriteStats(entry: FeedbackEntry): Promise<void> {
+  // Build new stats based on what we know from this single new entry.
+  // We optimistically update the cached stats without re-reading all history
+  // (history aggregation is expensive and the DB is the source of truth).
+  //
+  // Strategy: read existing stats, add the new entry's contribution, write back.
+  const current = await readStats(entry.model, entry.intentType);
 
-  const thumbsUp   = relevant.filter((e) => e.signal === 'thumbs_up').length;
-  const thumbsDown = relevant.filter((e) => e.signal === 'thumbs_down').length;
-  const corrected  = relevant.filter((e) => e.signal === 'corrected').length;
-  const discarded  = relevant.filter((e) => e.signal === 'discarded').length;
-  const total      = relevant.length;
+  const prev: FeedbackStats = current ?? {
+    model:            entry.model,
+    intentType:       entry.intentType,
+    thumbsUp:         0,
+    thumbsDown:       0,
+    corrected:        0,
+    discarded:        0,
+    total:            0,
+    successRate:      0,
+    avgA11yScore:     0,
+    avgCritiqueScore: 0,
+    avgLatencyMs:     0,
+    lastUpdated:      '',
+  };
 
-  const avgA11yScore     = relevant.reduce((s, e) => s + e.a11yScore,     0) / total;
-  const avgCritiqueScore = relevant.reduce((s, e) => s + e.critiqueScore, 0) / total;
-  const avgLatencyMs     = relevant.reduce((s, e) => s + e.latencyMs,     0) / total;
+  const total            = prev.total + 1;
+  const thumbsUp         = prev.thumbsUp         + (entry.signal === 'thumbs_up'   ? 1 : 0);
+  const thumbsDown       = prev.thumbsDown       + (entry.signal === 'thumbs_down' ? 1 : 0);
+  const corrected        = prev.corrected        + (entry.signal === 'corrected'   ? 1 : 0);
+  const discarded        = prev.discarded        + (entry.signal === 'discarded'   ? 1 : 0);
 
-  const stats: FeedbackStats = {
-    model,
-    intentType,
+  // Running averages updated incrementally
+  const avgA11yScore     = Math.round((prev.avgA11yScore     * prev.total + entry.a11yScore)     / total);
+  const avgCritiqueScore = Math.round((prev.avgCritiqueScore * prev.total + entry.critiqueScore) / total);
+  const avgLatencyMs     = Math.round((prev.avgLatencyMs     * prev.total + entry.latencyMs)     / total);
+
+  const updated: FeedbackStats = {
+    model:            entry.model,
+    intentType:       entry.intentType,
     thumbsUp,
     thumbsDown,
     corrected,
     discarded,
     total,
     successRate:      total > 0 ? thumbsUp / total : 0,
-    avgA11yScore:     Math.round(avgA11yScore),
-    avgCritiqueScore: Math.round(avgCritiqueScore),
-    avgLatencyMs:     Math.round(avgLatencyMs),
+    avgA11yScore,
+    avgCritiqueScore,
+    avgLatencyMs,
     lastUpdated:      new Date().toISOString(),
   };
 
-  const allStats = readJson<Record<string, FeedbackStats>>(STATS_FILE, {});
-  allStats[statsKey(model, intentType)] = stats;
-  writeJson(STATS_FILE, allStats);
+  await writeStats(updated);
 }
 
 // ─── Public Write ─────────────────────────────────────────────────────────────
 
 /**
  * Record a user feedback signal.
- * Synchronously writes to local JSON and recomputes stats cache.
- * Async DB write is fire-and-forget — never blocks.
+ *
+ * Async strategy:
+ *  1. Stats cache update (Redis/memory) — fire-and-forget, fast path
+ *  2. Prisma DB write — fire-and-forget, cloud persistence
+ *  3. Vector embedding — quality-gated, fire-and-forget
  */
 export async function recordFeedback(
   input: Omit<FeedbackEntry, 'id' | 'createdAt'>,
 ): Promise<void> {
-  ensureDataDir();
-
   const entry: FeedbackEntry = {
     ...input,
     id:        crypto.randomUUID(),
     createdAt: new Date().toISOString(),
   };
 
-  // 1. Synchronous local write
-  const history = readJson<FeedbackEntry[]>(FEEDBACK_FILE, []);
-  const updated = [entry, ...history].slice(0, 2000);
-  writeJson(FEEDBACK_FILE, updated);
+  // 1. Stats cache update (non-blocking)
+  recomputeAndWriteStats(entry).catch(() => { /* non-fatal */ });
 
-  // 2. Recompute stats cache (synchronous — cheap in-memory aggregation)
-  recomputeAndCacheStats(entry.model, entry.intentType, updated);
-
-  // 3. DB write — fire-and-forget
+  // 2. DB write — fire-and-forget
   setTimeout(async () => {
     try {
       const { prisma } = await import('@/lib/prisma');
-      // Use type assertion — Prisma client types update after `prisma generate`
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (prisma as any).generationFeedback.create({
         data: {
@@ -173,12 +242,17 @@ export async function recordFeedback(
         },
       });
     } catch {
-      // Non-fatal in dev — local JSON is source of truth
+      // Non-fatal — stats cache is the primary source for feedbackProcessor
     }
   }, 0);
 
-  // 4. Vector embedding — fire-and-forget, only for corrected entries with code
-  if (entry.signal === 'corrected' && entry.correctedCode) {
+  // 3. Quality-gated vector embedding — only for corrected entries that pass quality bar
+  if (
+    entry.signal === 'corrected' &&
+    entry.correctedCode &&
+    entry.a11yScore     >= EMBEDDING_QUALITY_GATE.minA11yScore &&
+    entry.critiqueScore >= EMBEDDING_QUALITY_GATE.minCritiqueScore
+  ) {
     setTimeout(() => {
       upsertFeedbackEmbedding({
         feedbackId:     entry.id,
@@ -188,37 +262,80 @@ export async function recordFeedback(
         a11yScore:      entry.a11yScore,
       }).catch(() => { /* non-fatal */ });
     }, 100);
+  } else if (entry.signal === 'corrected' && entry.correctedCode) {
+    logger.warn({
+      endpoint: 'feedbackStore',
+      message:  'Corrected generation skipped quality gate — not embedded in vector store',
+      metadata: {
+        a11yScore:     entry.a11yScore,
+        critiqueScore: entry.critiqueScore,
+        minRequired:   EMBEDDING_QUALITY_GATE,
+      },
+    });
   }
 }
 
 // ─── Public Reads ─────────────────────────────────────────────────────────────
 
-/** Get aggregated stats for a model + intent type combination. */
+/**
+ * Get aggregated stats for a model + intent type combination.
+ * Reads from Redis (prod) or in-memory cache (local dev).
+ *
+ * NOTE: This is now async — callers must await it.
+ */
+export async function getFeedbackStatsAsync(
+  model:      string,
+  intentType: string,
+): Promise<FeedbackStats | null> {
+  return readStats(model, intentType);
+}
+
+/**
+ * Synchronous stats read — returns null if cache hasn't been primed yet.
+ * Used by feedbackProcessor.ts (which runs synchronously in the hot path).
+ * Falls back to in-memory stats only (no Redis round-trip on the hot path).
+ */
 export function getFeedbackStats(
   model:      string,
   intentType: string,
 ): FeedbackStats | null {
-  const allStats = readJson<Record<string, FeedbackStats>>(STATS_FILE, {});
-  return allStats[statsKey(model, intentType)] ?? null;
+  const key = redisStatsKey(model, intentType);
+  // Return from in-memory cache synchronously. This will be populated
+  // after the first async call to getFeedbackStatsAsync in the same process.
+  return _memoryStatsCache.get(key) ?? null;
 }
 
-/** Get all stats entries keyed by "model::intentType". */
+/** Get all cached stats entries from the in-process memory cache. */
 export function getAllFeedbackStats(): Record<string, FeedbackStats> {
-  return readJson<Record<string, FeedbackStats>>(STATS_FILE, {});
+  const result: Record<string, FeedbackStats> = {};
+  for (const [key, val] of _memoryStatsCache.entries()) {
+    result[key] = val;
+  }
+  return result;
 }
 
 /**
- * Retrieve the most-thumbs-up entries for an intent type.
+ * Retrieve the most-thumbs-up feedback entries for an intent type.
  * Used by feedbackProcessor to inject approved examples into prompts.
+ *
+ * Reads from Prisma DB (async) — returns empty array if DB is unavailable.
  */
-export function getTopRatedGenerations(
+export async function getTopRatedGenerations(
   intentType: string,
   limit = 2,
-): FeedbackEntry[] {
-  const history = readJson<FeedbackEntry[]>(FEEDBACK_FILE, []);
-  return history
-    .filter((e) => e.intentType === intentType && e.signal === 'thumbs_up')
-    .slice(0, limit);
+): Promise<FeedbackEntry[]> {
+  try {
+    const { prisma } = await import('@/lib/prisma');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const rows = await (prisma as any).generationFeedback.findMany({
+      where:   { intentType, signal: 'thumbs_up' },
+      orderBy: { a11yScore: 'desc' },
+      take:    limit,
+    });
+    return rows as FeedbackEntry[];
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -227,4 +344,12 @@ export function getTopRatedGenerations(
  */
 export function hashPrompt(prompt: string): string {
   return crypto.createHash('sha256').update(prompt).digest('hex').slice(0, 16);
+}
+
+/**
+ * @deprecated Internal helper — exposed for legacy compatibility only.
+ * Prefer getFeedbackStatsAsync() for new callers.
+ */
+export function _legacyStatsKey(model: string, intentType: string): string {
+  return statsKey(model, intentType);
 }

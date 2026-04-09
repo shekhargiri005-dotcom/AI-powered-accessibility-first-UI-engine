@@ -5,7 +5,7 @@ import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock, Sparkles } f
 import IntentBadge from './IntentBadge';
 import type { IntentClassification } from '@/lib/validation/schemas';
 
-export type GenerationMode = 'component' | 'app' | 'webgl';
+export type GenerationMode = 'component' | 'app' | 'depth_ui';
 
 interface SpeechRecognitionEvent {
   resultIndex: number;
@@ -283,21 +283,21 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           </button>
           <button
             type="button"
-            onClick={() => setMode('webgl')}
-            aria-pressed={mode === 'webgl'}
+            onClick={() => setMode('depth_ui')}
+            aria-pressed={mode === 'depth_ui'}
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 focus:ring-offset-gray-800
               disabled:opacity-50 disabled:cursor-not-allowed
-              ${mode === 'webgl'
+              ${mode === 'depth_ui'
                 ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white shadow-md shadow-cyan-500/25'
                 : 'text-gray-400 hover:text-white'
               }
             `}
           >
-            <span role="img" aria-hidden="true" className="text-[14px] leading-none">🧊</span>
-            3D WebGL
+            <span role="img" aria-hidden="true" className="text-[14px] leading-none">✨</span>
+            Depth UI
             <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-semibold">NEW</span>
           </button>
         </div>
@@ -315,15 +315,15 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             </p>
           </div>
         )}
-        {mode === 'webgl' && (
+        {mode === 'depth_ui' && (
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" aria-hidden="true">
-              <polygon points="12 2 2 7 12 12 22 7 12 2" />
-              <polyline points="2 17 12 22 22 17" />
-              <polyline points="2 12 12 17 22 12" />
+              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+              <line x1="12" y1="22.08" x2="12" y2="12" />
             </svg>
             <p className="text-xs text-cyan-300 leading-relaxed">
-              <span className="font-semibold text-cyan-200">3D WebGL Mode:</span> Generates interactive 3D scenes using React Three Fiber. Try: <span className="italic">&quot;Build a 3D portfolio landing page with floating rotating cubes&quot;</span>.
+              <span className="font-semibold text-cyan-200">Depth UI Mode:</span> Generates visually rich, premium interfaces with functional floating elements, smooth parallax, and depth-layers. Try: <span className="italic">&quot;Build a startup hero layout with floating UI cards&quot;</span>.
             </p>
           </div>
         )}
@@ -335,7 +335,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           bg-[#212121] backdrop-blur-md border border-[#303030] 
           ${isFocused ? 'ring-1 ring-white/10 shadow-2xl' : 'hover:border-[#404040] shadow-xl'}
           ${mode === 'app' ? 'ring-1 ring-violet-500/20' : ''}
-          ${mode === 'webgl' ? 'ring-1 ring-cyan-500/20' : ''}
+          ${mode === 'depth_ui' ? 'ring-1 ring-cyan-500/20' : ''}
           rounded-2xl overflow-hidden
         `}>
           
@@ -454,12 +454,12 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                 className={`
                   flex items-center justify-center px-4 py-1.5 rounded-lg
                   transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121]
-                  ${mode === 'app' ? 'focus:ring-violet-500' : mode === 'webgl' ? 'focus:ring-cyan-500' : 'focus:ring-white'}
+                  ${mode === 'app' ? 'focus:ring-violet-500' : mode === 'depth_ui' ? 'focus:ring-cyan-500' : 'focus:ring-white'}
                   ${isLoading || !isPromptValid
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
                     : mode === 'app'
                       ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 shadow-md shadow-violet-500/25 font-medium text-sm'
-                      : mode === 'webgl'
+                      : mode === 'depth_ui'
                         ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-400 shadow-md shadow-cyan-500/25 font-medium text-sm'
                         : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
                   }
@@ -469,7 +469,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
                   <>
-                    <span className="mr-1.5">{mode === 'app' ? 'Build App' : mode === 'webgl' ? 'Build 3D' : 'Generate'}</span>
+                    <span className="mr-1.5">{mode === 'app' ? 'Build App' : mode === 'depth_ui' ? 'Depth UI' : 'Generate'}</span>
                     <Send className="w-3.5 h-3.5 block" aria-hidden="true" />
                   </>
                 )}

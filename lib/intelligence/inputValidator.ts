@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Input Validator — validates user prompts before sending to the AI pipeline.
  * Catches empty, nonsensical, or structurally invalid requests early.
  */
@@ -117,7 +117,7 @@ export function validatePromptInput(prompt: unknown): InputValidationResult {
 }
 
 export function validateGenerationMode(mode: unknown): { valid: boolean; reason?: string } {
-  const validModes = ['component', 'app', 'webgl'];
+  const validModes = ['component', 'app', 'depth_ui'];
   if (!mode || !validModes.includes(String(mode))) {
     return { valid: false, reason: `Invalid generation mode "${mode}". Must be one of: ${validModes.join(', ')}` };
   }

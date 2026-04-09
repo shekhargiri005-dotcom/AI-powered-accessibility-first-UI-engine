@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     } = body as {
       id: string;
       name: string;
-      componentType: 'component' | 'app' | 'webgl';
+      componentType: 'component' | 'app' | 'depth_ui';
       code: string | Record<string, string>;
       intent: UIIntent;
       a11yReport: A11yReport;

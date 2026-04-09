@@ -88,7 +88,17 @@ export interface AIAdapter {
 
 // ─── Provider Registry ────────────────────────────────────────────────────────
 
-export type ProviderName = 'openai' | 'ollama' | 'anthropic' | 'deepseek' | 'google' | 'mock';
+export type ProviderName =
+  | 'openai'
+  | 'ollama'
+  | 'anthropic'
+  | 'deepseek'
+  | 'google'
+  | 'mistral'
+  | 'meta'
+  | 'qwen'
+  | 'gemma'
+  | 'mock';
 
 // ─── Per-Provider Pricing ─────────────────────────────────────────────────────
 

@@ -190,11 +190,14 @@ model ProjectVersion {
 
 model ComponentEmbedding {
   id          String   @id @default(cuid())
-  /// Matches KNOWLEDGE_BASE item id (e.g. "dashboard", "app-trello")
+  /// Matches knowledge chunk id, e.g. "registry:Sidebar", "template:dashboard", "blueprint:landing-page"
   knowledgeId String   @unique
   name        String
   keywords    String[]
   guidelines  String   @db.Text
+  /// Source tag — enables filtered retrieval by knowledge domain.
+  /// Values: 'template' | 'registry' | 'blueprint' | 'motion' | 'feedback' | 'repair'
+  source      String   @default("template")
   /// vector(768) — stored via raw SQL; Prisma treats as Unsupported
   embedding   Unsupported("vector(768)")?
   createdAt   DateTime @default(now())

@@ -100,7 +100,7 @@ export default function HomePage() {
   // ─── Shared Persistence ───────────────────────────────────────────────────
   const persistProject = useCallback(async (
     name: string,
-    componentType: 'component' | 'app' | 'webgl',
+    componentType: 'component' | 'app' | 'depth_ui',
     code: string | Record<string, string>,
     intent: UIIntent,
     a11yReport: A11yReport,
@@ -274,7 +274,7 @@ export default function HomePage() {
         });
       }).catch(() => { /* non-fatal */ });
 
-      await persistProject(intent.componentName, mode as 'component' | 'app' | 'webgl', generateData.code, intent, generateData.a11yReport);
+      await persistProject(intent.componentName, mode as 'component' | 'app' | 'depth_ui', generateData.code, intent, generateData.a11yReport);
     } catch {
       setStage('error'); setPipelineStep('error');
       setPipelineError('Network error during generation.');

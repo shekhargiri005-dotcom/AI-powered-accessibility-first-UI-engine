@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
 
     const generationMode: GenerationMode =
-      mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
+      mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
 
     // Build caller model config only if the user actually supplied a model.
     // Passing undefined lets parseIntent fall through to resolveDefaultAdapter.

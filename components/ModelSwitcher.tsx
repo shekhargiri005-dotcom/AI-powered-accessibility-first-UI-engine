@@ -223,7 +223,7 @@ export default function ModelSwitcher({ onModelChange, onFullAppModeChange, onMu
             
             {/* Tooltip */}
             <div className="absolute bottom-full right-0 mb-2 w-56 p-2 bg-gray-800 text-[11px] leading-tight text-gray-300 rounded shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
-              Instructs the AI to structuralize outputs as a multi-slide/multi-view architectural experience rather than a single static block. For WebGL, orchestrates camera physics with HTML navigation overlays.
+              Instructs the AI to structuralize outputs as a multi-slide/multi-view architectural experience rather than a single static block. For Depth UI, orchestrates layered animations, floating cards, and parallax.
             </div>
           </div>
           

@@ -50,7 +50,7 @@ function getSql() {
  */
 export async function embedText(text: string): Promise<number[] | null> {
   if (!GOOGLE_API_KEY) {
-    logger.warn('[vectorStore] GOOGLE_API_KEY not set — skipping embedding');
+    logger.warn({ endpoint: 'vectorStore', message: 'GOOGLE_API_KEY not set — skipping embedding' });
     return null;
   }
 
@@ -66,7 +66,7 @@ export async function embedText(text: string): Promise<number[] | null> {
 
     if (!res.ok) {
       const errText = await res.text();
-      logger.warn('[vectorStore] Embedding API error', { status: res.status, body: errText });
+      logger.warn({ endpoint: 'vectorStore', message: 'Embedding API error', metadata: { status: res.status, body: errText } });
       return null;
     }
 
@@ -74,14 +74,14 @@ export async function embedText(text: string): Promise<number[] | null> {
     const values = data?.embedding?.values;
 
     if (!Array.isArray(values) || values.length !== EMBEDDING_DIMS) {
-      logger.warn('[vectorStore] Unexpected embedding shape', { length: values?.length });
+      logger.warn({ endpoint: 'vectorStore', message: 'Unexpected embedding shape', metadata: { length: values?.length } });
       return null;
     }
 
     return values;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn('[vectorStore] embedText failed', { error: msg });
+    logger.warn({ endpoint: 'vectorStore', message: 'embedText failed', error: msg });
     return null;
   }
 }
@@ -101,6 +101,8 @@ export interface ComponentEmbeddingInput {
   name:        string;
   keywords:    string[];
   guidelines:  string;
+  /** Knowledge domain tag. Default: 'template'. */
+  source?:     'template' | 'registry' | 'blueprint' | 'motion' | 'feedback' | 'repair';
 }
 
 /**
@@ -115,27 +117,29 @@ export async function upsertComponentEmbedding(item: ComponentEmbeddingInput): P
   const embedding   = await embedText(textToEmbed);
   if (!embedding)   return false;
 
-  const sql = getSql();
-  const id  = crypto.randomUUID();
-  const vec = toVectorLiteral(embedding);
+  const sql    = getSql();
+  const id     = crypto.randomUUID();
+  const vec    = toVectorLiteral(embedding);
+  const source = item.source ?? 'template';
 
   try {
     await sql`
       INSERT INTO "ComponentEmbedding"
-        ("id", "knowledgeId", "name", "keywords", "guidelines", "embedding", "updatedAt")
+        ("id", "knowledgeId", "name", "keywords", "guidelines", "source", "embedding", "updatedAt")
       VALUES
-        (${id}, ${item.knowledgeId}, ${item.name}, ${item.keywords}, ${item.guidelines}, ${vec}::vector, now())
+        (${id}, ${item.knowledgeId}, ${item.name}, ${item.keywords}, ${item.guidelines}, ${source}, ${vec}::vector, now())
       ON CONFLICT ("knowledgeId") DO UPDATE SET
         "name"      = EXCLUDED."name",
         "keywords"  = EXCLUDED."keywords",
         "guidelines"= EXCLUDED."guidelines",
+        "source"    = EXCLUDED."source",
         "embedding" = EXCLUDED."embedding",
         "updatedAt" = now()
     `;
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn('[vectorStore] upsertComponentEmbedding failed', { knowledgeId: item.knowledgeId, error: msg });
+    logger.warn({ endpoint: 'vectorStore', message: 'upsertComponentEmbedding failed', metadata: { knowledgeId: item.knowledgeId }, error: msg });
     return false;
   }
 }
@@ -144,6 +148,8 @@ export interface SimilarComponent {
   knowledgeId: string;
   name:        string;
   guidelines:  string;
+  /** Knowledge domain tag: 'template' | 'registry' | 'blueprint' | 'motion' | etc. */
+  source:      string;
   similarity:  number;
 }
 
@@ -172,6 +178,7 @@ export async function searchComponents(
         "knowledgeId",
         "name",
         "guidelines",
+        "source",
         1 - ("embedding" <=> ${vec}::vector) AS similarity
       FROM "ComponentEmbedding"
       WHERE "embedding" IS NOT NULL
@@ -184,11 +191,63 @@ export async function searchComponents(
       knowledgeId: r.knowledgeId as string,
       name:        r.name        as string,
       guidelines:  r.guidelines  as string,
+      source:      (r.source     as string) ?? 'template',
       similarity:  Number(r.similarity),
     }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn('[vectorStore] searchComponents failed', { error: msg });
+    logger.warn({ endpoint: 'vectorStore', message: 'searchComponents failed', error: msg });
+    return [];
+  }
+}
+
+/**
+ * Source-filtered cosine similarity search.
+ * Restricts results to a specific knowledge domain (e.g. 'registry', 'blueprint').
+ *
+ * @param query   The user prompt / intent description
+ * @param source  The knowledge domain to search within
+ * @param topK    How many results to return (default 3)
+ * @param threshold  Minimum similarity score 0–1 (default 0.50)
+ */
+export async function searchComponentsBySource(
+  query:     string,
+  source:    'template' | 'registry' | 'blueprint' | 'motion' | 'feedback' | 'repair',
+  topK      = 3,
+  threshold = 0.50,
+): Promise<SimilarComponent[]> {
+  const embedding = await embedText(query);
+  if (!embedding) return [];
+
+  const sql = getSql();
+  const vec = toVectorLiteral(embedding);
+
+  try {
+    const rows = await sql`
+      SELECT
+        "knowledgeId",
+        "name",
+        "guidelines",
+        "source",
+        1 - ("embedding" <=> ${vec}::vector) AS similarity
+      FROM "ComponentEmbedding"
+      WHERE "embedding" IS NOT NULL
+        AND "source" = ${source}
+        AND 1 - ("embedding" <=> ${vec}::vector) >= ${threshold}
+      ORDER BY similarity DESC
+      LIMIT ${topK}
+    `;
+
+    return rows.map((r) => ({
+      knowledgeId: r.knowledgeId as string,
+      name:        r.name        as string,
+      guidelines:  r.guidelines  as string,
+      source:      (r.source     as string) ?? source,
+      similarity:  Number(r.similarity),
+    }));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.warn({ endpoint: 'vectorStore', message: 'searchComponentsBySource failed', metadata: { source }, error: msg });
     return [];
   }
 }
@@ -243,7 +302,7 @@ export async function upsertFeedbackEmbedding(input: FeedbackEmbeddingInput): Pr
     return true;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn('[vectorStore] upsertFeedbackEmbedding failed', { feedbackId: input.feedbackId, error: msg });
+    logger.warn({ endpoint: 'vectorStore', message: 'upsertFeedbackEmbedding failed', metadata: { feedbackId: input.feedbackId }, error: msg });
     return false;
   }
 }
@@ -302,7 +361,7 @@ export async function searchFeedback(
     }));
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    logger.warn('[vectorStore] searchFeedback failed', { error: msg });
+    logger.warn({ endpoint: 'vectorStore', message: 'searchFeedback failed', error: msg });
     return [];
   }
 }

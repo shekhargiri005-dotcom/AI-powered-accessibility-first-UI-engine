@@ -5,21 +5,21 @@ import { getModelProfile } from './modelRegistry';
 import {
   INTENT_PARSER_SYSTEM_PROMPT,
   APP_MODE_INTENT_SYSTEM_PROMPT,
-  WEBGL_MODE_INTENT_SYSTEM_PROMPT,
+  DEPTH_UI_INTENT_SYSTEM_PROMPT,
   buildIntentParsePrompt,
   buildAppModeIntentPrompt,
-  buildWebglModeIntentPrompt,
+  buildDepthUIModeIntentPrompt,
 } from './prompts';
 import {
   findRelevantKnowledgeSemantic,
   findAppTemplateSemantic,
-  findWebglTemplateSemantic,
+  findDepthUITemplateSemantic,
   findRelevantFeedback,
 } from './semanticKnowledgeBase';
 import { 
   UIIntentSchema, 
   AppIntentSchema, 
-  WebGLIntentSchema, 
+  DepthUIIntentSchema, 
   type UIIntent 
 } from '../validation/schemas';
 import type { GenerationMode } from './componentGenerator';
@@ -57,10 +57,10 @@ export async function parseIntent(
     let userPrompt: string;
 
     // ── Semantic knowledge retrieval (falls back to keyword matching internally) ──
-    if (mode === 'webgl') {
-      knowledge = await findWebglTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
-      systemPrompt = WEBGL_MODE_INTENT_SYSTEM_PROMPT;
-      userPrompt = buildWebglModeIntentPrompt(userInput, knowledge);
+    if (mode === 'depth_ui') {
+      knowledge = await findDepthUITemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
+      systemPrompt = DEPTH_UI_INTENT_SYSTEM_PROMPT;
+      userPrompt = buildDepthUIModeIntentPrompt(userInput, knowledge);
     } else if (mode === 'app') {
       knowledge = await findAppTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
       systemPrompt = APP_MODE_INTENT_SYSTEM_PROMPT;
@@ -172,14 +172,14 @@ export async function parseIntent(
     }
 
     // Select schema based on mode
-    const schema = mode === 'app' ? AppIntentSchema : mode === 'webgl' ? WebGLIntentSchema : UIIntentSchema;
+    const schema = mode === 'app' ? AppIntentSchema : mode === 'depth_ui' ? DepthUIIntentSchema : UIIntentSchema;
 
     // Validate against Zod schema
     const validation = schema.safeParse(parsed);
     if (!validation.success) {
       return {
         success: false,
-        error: `Schema validation failed: ${validation.error.issues.map(i => i.message).join(', ')}`,
+        error: `Schema validation failed: ${validation.error.issues.map((i: any) => i.message).join(', ')}`,
         rawResponse: rawContent,
       };
     }
@@ -188,7 +188,7 @@ export async function parseIntent(
     if (validIntent.componentName) {
       validIntent.componentName = validIntent.componentName
         .split(/[^a-zA-Z0-9]+/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
         .join('');
       if (!/^[a-zA-Z]/.test(validIntent.componentName)) {
         validIntent.componentName = 'C' + validIntent.componentName;

@@ -129,7 +129,7 @@ export default function CenterWorkspace({
                   "Build a modern SaaS dashboard",
                   "Create a dark-mode portfolio",
                   "Design a crypto trading hero",
-                  "Make an interactive WebGL scene"
+                  "Generate a visually rich Depth UI landing page"
                 ].map(sug => (
                   <button
                     key={sug}

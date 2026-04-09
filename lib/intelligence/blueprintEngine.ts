@@ -14,7 +14,7 @@ export interface UIBlueprint {
   requiredComponents: string[];
   suggestedComponents: string[];
   animationDensity: 'none' | 'subtle' | 'moderate' | 'high' | 'cinematic';
-  threeDRequired: boolean;
+  depthUIRequired: boolean;
   physicsRequired: boolean;
   previewSafetyConstraints: string[];
   assemblyRules: string[];
@@ -22,6 +22,7 @@ export interface UIBlueprint {
   responsiveStrategy: string;
   motionLibrary: string | null;
   complexityLevel: string;
+  complexity?: string;
   bestPracticeNotes: string[];
 }
 
@@ -33,7 +34,7 @@ const DEFAULT_BLUEPRINT: UIBlueprint = {
   requiredComponents: ['HeroSection', 'AnimatedButton'],
   suggestedComponents: ['FeatureGrid', 'FAQAccordion'],
   animationDensity: 'subtle',
-  threeDRequired: false,
+  depthUIRequired: false,
   physicsRequired: false,
   previewSafetyConstraints: [
     'No Node.js-only APIs',
@@ -75,7 +76,7 @@ function resolveVisualStyle(prompt: string, classification?: Partial<IntentClass
   if (p.includes('playful') || p.includes('fun') || p.includes('colorful')) return 'playful';
   if (p.includes('editorial') || p.includes('magazine')) return 'editorial';
   if (classification?.visualType === 'aesthetic-motion') return 'animated';
-  if (classification?.visualType === '3d-component' || classification?.visualType === 'full-3d') return 'futuristic';
+  if (classification?.visualType === '3d-component' || classification?.visualType === 'full-3d' || classification?.visualType === 'depth-ui') return 'futuristic';
   return 'minimal';
 }
 
@@ -88,7 +89,7 @@ function resolveAnimationDensity(prompt: string, layout?: LayoutEntry): UIBluepr
   return layout?.animationSuitability ?? 'subtle';
 }
 
-function resolveAssemblyRules(layout: LayoutEntry, is3D: boolean, hasMotion: boolean): string[] {
+function resolveAssemblyRules(layout: LayoutEntry, isDepthUI: boolean, hasMotion: boolean): string[] {
   const rules = [
     'Use export default for the main component',
     "Import ALL UI primitives (Button, Card, Modal, Input) from '@ui/core'",
@@ -98,10 +99,10 @@ function resolveAssemblyRules(layout: LayoutEntry, is3D: boolean, hasMotion: boo
     'Use Tailwind CSS classes for layout glue and specific overrides',
     'Ensure proper semantic HTML elements',
   ];
-  if (is3D) {
-    rules.push('Import from @react-three/fiber and @react-three/drei');
-    rules.push('Wrap 3D content in a Canvas with absolute positioning');
-    rules.push('Layer HTML UI over canvas with z-index and pointer-events');
+  if (isDepthUI) {
+    rules.push('Use framer-motion extensively for layered parallax effects');
+    rules.push('Implement multiple CSS layers with varying z-index');
+    rules.push('Avoid traditional 3D/WebGL rendering, use CSS transforms instead');
   }
   if (hasMotion) {
     rules.push('Import the <Motion> component from @ui/motion for all animations');
@@ -128,7 +129,7 @@ export function selectBlueprint(
   if (!primaryLayout) return DEFAULT_BLUEPRINT;
 
   const visualStyle = resolveVisualStyle(prompt, classification);
-  const is3D = primaryLayout.threeDSuitability || prompt.toLowerCase().includes('3d') || prompt.toLowerCase().includes('three.js') || prompt.toLowerCase().includes('webgl');
+  const isDepthUI = primaryLayout.depthUISuitability || prompt.toLowerCase().includes('depth') || prompt.toLowerCase().includes('parallax') || prompt.toLowerCase().includes('layer');
   const hasMotion = ['moderate', 'high', 'cinematic'].includes(primaryLayout.animationSuitability) || prompt.toLowerCase().includes('animated') || prompt.toLowerCase().includes('motion');
   const animationDensity = resolveAnimationDensity(prompt, primaryLayout);
   const isPhysics = primaryLayout.physicsSuitability || prompt.toLowerCase().includes('physics') || prompt.toLowerCase().includes('spring');
@@ -143,7 +144,7 @@ export function selectBlueprint(
     'No dynamic requires',
     'Use browser-safe APIs only',
   ];
-  if (is3D) previewConstraints.push('WebGL canvas must use absolute positioning within a relative parent');
+  if (isDepthUI) previewConstraints.push('Depth UI layers must not break stacking contexts that obscure interactive elements');
   if (hasMotion) previewConstraints.push('Framer-motion variants must be defined as constants outside render');
 
   const bestPracticeNotes = [
@@ -162,13 +163,13 @@ export function selectBlueprint(
     requiredComponents: required,
     suggestedComponents: suggested,
     animationDensity,
-    threeDRequired: is3D,
+    depthUIRequired: isDepthUI,
     physicsRequired: isPhysics,
     previewSafetyConstraints: previewConstraints,
-    assemblyRules: resolveAssemblyRules(primaryLayout, is3D, hasMotion),
+    assemblyRules: resolveAssemblyRules(primaryLayout, isDepthUI, hasMotion),
     structuralSections: primaryLayout.structure,
     responsiveStrategy: 'Mobile-first with Tailwind responsive prefixes (sm: md: lg: xl:)',
-    motionLibrary: hasMotion ? (is3D ? '@react-three/fiber' : 'framer-motion') : null,
+    motionLibrary: hasMotion ? 'framer-motion' : null,
     complexityLevel: primaryLayout.complexity,
     bestPracticeNotes,
   };
@@ -185,7 +186,7 @@ Layout: ${blueprint.layoutName} (${blueprint.layoutId})
 Visual Style: ${blueprint.visualStyle}
 Complexity: ${blueprint.complexityLevel}
 Animation Density: ${blueprint.animationDensity}
-3D Required: ${blueprint.threeDRequired}
+Depth UI Required: ${blueprint.depthUIRequired}
 Physics Required: ${blueprint.physicsRequired}
 Motion Library: ${blueprint.motionLibrary ?? 'none'}
 

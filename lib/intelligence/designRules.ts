@@ -1,6 +1,9 @@
-﻿/**
+/**
  * Design Rules — heuristics layer that helps the engine reason like a UI expert.
- * Encodes design decisions: when to use sidebar vs top-nav, when 3D is appropriate, etc.
+ * Encodes design decisions: when to use sidebar vs top-nav, when Depth UI is appropriate, etc.
+ *
+ * Phase 2 Update: Replaced `use3D` with `useDepthUI`.
+ * 3D/WebGL is no longer a valid generation mode. Depth UI (Framer Motion parallax) replaces it.
  */
 
 export interface DesignDecision {
@@ -12,7 +15,8 @@ export interface DesignDecision {
 export interface DesignRulesResult {
   navigationStyle: 'sidebar' | 'top-nav' | 'bottom-nav' | 'none';
   layoutComplexity: 'minimal' | 'standard' | 'rich' | 'immersive';
-  use3D: boolean;
+  /** True when the engine has determined Depth UI (parallax/layered motion) is appropriate. */
+  useDepthUI: boolean;
   useMotion: boolean;
   usePhysics: boolean;
   useGlassmorphism: boolean;
@@ -44,10 +48,14 @@ const DESIGN_HEURISTICS = {
     triggers: ['mobile app', 'social', 'feed', 'messaging'],
     rule: 'Use bottom navigation for mobile-primary social/media apps',
   },
-  use3D: {
-    triggers: ['3d', 'webgl', 'three.js', 'product showcase', 'portfolio 3d', 'immersive'],
-    antiTriggers: ['simple', 'form', 'table', 'settings', 'auth', 'admin'],
-    rule: '3D is appropriate for hero sections, product showcases, and portfolio sites. Avoid for data-dense or utility UIs.',
+  useDepthUI: {
+    triggers: [
+      'depth', 'parallax', 'layered', 'floating', 'immersive', 'cinematic',
+      'scroll story', 'depth ui', 'premium hero', 'startup', 'ai product',
+      'product showcase', 'portfolio', 'hero section',
+    ],
+    antiTriggers: ['simple', 'form', 'table', 'settings', 'auth', 'admin', 'dashboard', 'data-heavy'],
+    rule: 'Depth UI (scroll-linked parallax, CSS layers, Framer Motion) is best for landing pages, hero sections, and storytelling layouts. Avoid for data-dense or utility UIs.',
   },
   usePhysics: {
     triggers: ['physics', 'spring', 'elastic', 'draggable', 'playful', 'particle'],
@@ -107,15 +115,25 @@ export function applyDesignRules(prompt: string, pageType?: string): DesignRules
     decisions.push({ category: 'Navigation', decision: 'Use Top navigation', rationale: DESIGN_HEURISTICS.useTopNav.rule });
   }
 
-  // 3D
-  const use3D = matchesTriggers(combined, DESIGN_HEURISTICS.use3D.triggers) && !matchesAntiTriggers(combined, DESIGN_HEURISTICS.use3D.antiTriggers);
-  if (use3D) {
-    decisions.push({ category: '3D', decision: 'Include 3D scene', rationale: DESIGN_HEURISTICS.use3D.rule });
-    warnings.push('3D content requires @react-three/fiber and @react-three/drei — ensure Sandpack has these dependencies');
+  // Depth UI (replaces 3D — uses Framer Motion, CSS transforms, scroll-linked parallax)
+  const useDepthUI =
+    matchesTriggers(combined, DESIGN_HEURISTICS.useDepthUI.triggers) &&
+    !matchesAntiTriggers(combined, DESIGN_HEURISTICS.useDepthUI.antiTriggers);
+  if (useDepthUI) {
+    decisions.push({
+      category: 'Depth UI',
+      decision: 'Enable Depth UI parallax layers',
+      rationale: DESIGN_HEURISTICS.useDepthUI.rule,
+    });
+    warnings.push(
+      'Depth UI activates Framer Motion scroll-linked parallax. Ensure prefers-reduced-motion fallbacks are included.',
+    );
   }
 
   // Physics
-  const usePhysics = matchesTriggers(combined, DESIGN_HEURISTICS.usePhysics.triggers) && !matchesAntiTriggers(combined, DESIGN_HEURISTICS.usePhysics.antiTriggers);
+  const usePhysics =
+    matchesTriggers(combined, DESIGN_HEURISTICS.usePhysics.triggers) &&
+    !matchesAntiTriggers(combined, DESIGN_HEURISTICS.usePhysics.antiTriggers);
   if (usePhysics) {
     decisions.push({ category: 'Physics', decision: 'Apply physics-based interactions', rationale: DESIGN_HEURISTICS.usePhysics.rule });
   }
@@ -127,22 +145,27 @@ export function applyDesignRules(prompt: string, pageType?: string): DesignRules
   }
 
   // Glassmorphism
-  const useGlassmorphism = matchesTriggers(combined, DESIGN_HEURISTICS.useGlassmorphism.triggers) && !matchesAntiTriggers(combined, DESIGN_HEURISTICS.useGlassmorphism.antiTriggers);
+  const useGlassmorphism =
+    matchesTriggers(combined, DESIGN_HEURISTICS.useGlassmorphism.triggers) &&
+    !matchesAntiTriggers(combined, DESIGN_HEURISTICS.useGlassmorphism.antiTriggers);
   if (useGlassmorphism) {
     decisions.push({ category: 'Visual', decision: 'Apply glassmorphism aesthetic', rationale: DESIGN_HEURISTICS.useGlassmorphism.rule });
     warnings.push('Glassmorphism with backdrop-blur may be performance-intensive — wrap in transform layer');
   }
 
   // Accessibility
-  const prioritizeAccessibility = matchesTriggers(combined, DESIGN_HEURISTICS.accessibilityFirst.triggers) || combined.includes('accessibility') || combined.includes('wcag');
+  const prioritizeAccessibility =
+    matchesTriggers(combined, DESIGN_HEURISTICS.accessibilityFirst.triggers) ||
+    combined.includes('accessibility') ||
+    combined.includes('wcag');
   if (prioritizeAccessibility) {
     decisions.push({ category: 'Accessibility', decision: 'Accessibility-first mode', rationale: DESIGN_HEURISTICS.accessibilityFirst.rule });
   }
 
   // Performance
   const prioritizePerformance = matchesTriggers(combined, DESIGN_HEURISTICS.performanceFirst.triggers);
-  if (prioritizePerformance && use3D) {
-    warnings.push('Performance-first and 3D are conflicting goals — simplify the 3D scene');
+  if (prioritizePerformance && useDepthUI) {
+    warnings.push('Performance-first and Depth UI are potentially conflicting — use soft_depth archetype and minimize layer count');
   }
 
   // Content density
@@ -162,21 +185,28 @@ export function applyDesignRules(prompt: string, pageType?: string): DesignRules
   else if (combined.includes('compact') || combined.includes('admin') || combined.includes('data table')) typographyScale = 'compact';
 
   // Layout complexity
+  // Depth UI → immersive (same effect as 3D had, correct semantic now aligned to depth)
   let layoutComplexity: DesignRulesResult['layoutComplexity'] = 'standard';
-  if (use3D || usePhysics) layoutComplexity = 'immersive';
+  if (useDepthUI || usePhysics) layoutComplexity = 'immersive';
   else if (useMotion || useGlassmorphism) layoutComplexity = 'rich';
   else if (combined.includes('simple') || combined.includes('minimal')) layoutComplexity = 'minimal';
 
-  // Animation strategy
+  // Animation strategy (aligned to Depth UI, not WebGL/3D)
   let animationStrategy = 'Subtle microinteractions on hover and focus';
-  if (layoutComplexity === 'immersive') animationStrategy = 'Cinematic entrance animations with 3D transitions';
-  else if (layoutComplexity === 'rich') animationStrategy = 'Smooth page entrance with stagger reveals using framer-motion';
-  else if (layoutComplexity === 'minimal') animationStrategy = 'Minimal CSS transitions, no JavaScript animation';
+  if (layoutComplexity === 'immersive') {
+    animationStrategy = useDepthUI
+      ? 'Cinematic scroll-linked parallax with Framer Motion depth layers and atmospheric backgrounds'
+      : 'Physics-driven spring animations with gestural drag interactions';
+  } else if (layoutComplexity === 'rich') {
+    animationStrategy = 'Smooth page entrance with stagger reveals using framer-motion';
+  } else if (layoutComplexity === 'minimal') {
+    animationStrategy = 'Minimal CSS transitions, no JavaScript animation';
+  }
 
   return {
     navigationStyle,
     layoutComplexity,
-    use3D,
+    useDepthUI,
     useMotion,
     usePhysics,
     useGlassmorphism,
@@ -202,7 +232,7 @@ Spacing Rhythm: ${rules.spacingRhythm}
 Typography Scale: ${rules.typographyScale}
 Animation Strategy: ${rules.animationStrategy}
 Use Motion: ${rules.useMotion}
-Use 3D: ${rules.use3D}
+Depth UI Mode: ${rules.useDepthUI}
 Use Glassmorphism: ${rules.useGlassmorphism}
 Accessibility Priority: ${rules.prioritizeAccessibility}
 

@@ -20,8 +20,9 @@ import { executeToolCalls } from './tools';
 import { DEFAULT_AGENT_TOOLS } from './agentTools';
 
 import { getRelevantExamples } from './memory';
-import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
-import { type UIIntent } from '../validation/schemas';
+import { buildSemanticContext } from './semanticKnowledgeBase';
+import { type UIIntent, type DepthUIModePreset } from '../validation/schemas';
+import { evaluateDepthExperience } from '../intelligence/depthEngine';
 import { selectBlueprint, formatBlueprintForPrompt } from '../intelligence/blueprintEngine';
 import { applyDesignRules, formatDesignRulesForPrompt } from '../intelligence/designRules';
 import { validateGeneratedCode } from '../intelligence/codeValidator';
@@ -35,8 +36,10 @@ import { buildModelAwarePrompt, mergeSystemIntoUser } from './promptBuilder';
 import { extractCode, isCompleteComponent } from './codeExtractor';
 import { beautifyOutput } from '../intelligence/codeBeautifier';
 import { enrichPromptWithFeedback } from './feedbackProcessor';
+import { resolveStyleDNA, formatStyleDNAForPrompt } from '../intelligence/styleDNA';
+import { buildUXStateContract } from '../intelligence/uxStateEngine';
 
-export type GenerationMode = 'component' | 'app' | 'webgl';
+export type GenerationMode = 'component' | 'app' | 'depth_ui';
 
 export interface GenerationResult {
   success: boolean;
@@ -101,17 +104,22 @@ export async function generateComponent(
     const pipelineConfig = getPipelineConfig(modelProfile);
 
     // ─── Step 3: Knowledge + memory lookup ───────────────────────────────────
+    // Phase 4: buildSemanticContext() runs all 5 sources in parallel:
+    //  template | registry | blueprint | motion (depth_ui only) | feedback
+    // Returns a single merged context block with graceful per-source fallbacks.
     let knowledge: string | null = null;
-    let memory = await getRelevantExamples(intent);
+    const memory = await getRelevantExamples(intent);
 
     if (!intent.isRefinement) {
-      if (mode === 'webgl') {
-        knowledge = findWebglTemplate(searchText) ?? findRelevantKnowledge(searchText);
-      } else if (mode === 'app') {
-        knowledge = findAppTemplate(searchText) ?? findRelevantKnowledge(searchText);
-      } else {
-        knowledge = findRelevantKnowledge(searchText);
-      }
+      const semanticContext = await buildSemanticContext(searchText, mode);
+      knowledge = semanticContext || null;
+    }
+
+    // ─── Step 3.2: Depth UI Engine Evaluation ────────────────────────────────
+    if (mode === 'depth_ui') {
+      const depthSpec: DepthUIModePreset = evaluateDepthExperience(intent, blueprint);
+      // Inject into intent so promptBuilder can see it
+      (intent as any).depthSpec = depthSpec;
     }
 
     // ─── Step 3.5: Feedback enrichment ───────────────────────────────────────
@@ -145,6 +153,23 @@ export async function generateComponent(
         ...builtPrompt,
         system: ((builtPrompt.system ?? '') + '\n\n' + feedbackEnrichment.systemPromptAppend).trimStart(),
       };
+    }
+
+    // ─── Step 4.5: Style DNA + UX State Contract (component / depth_ui only) ──────
+    // Injects a deterministic visual fingerprint and interaction-state contract
+    // into the system prompt. Skip for app mode (has its own design system).
+    if (mode === 'component' || mode === 'depth_ui') {
+      const dna            = resolveStyleDNA(intent.description, blueprint.pageType, mode);
+      const dnaBlock       = formatStyleDNAForPrompt(dna);
+      const uxContract     = buildUXStateContract(intent.description) ?? '';
+
+      const dnaAndContract = [dnaBlock, uxContract].filter(Boolean).join('\n\n');
+      if (dnaAndContract) {
+        builtPrompt = {
+          ...builtPrompt,
+          system: ((builtPrompt.system ?? '') + '\n\n' + dnaAndContract).trimStart(),
+        };
+      }
     }
 
     // If model doesn't honour system role: merge system into user message

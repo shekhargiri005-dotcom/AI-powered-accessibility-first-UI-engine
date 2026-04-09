@@ -22,7 +22,7 @@ export interface ProjectVersion {
 export interface Project {
   id: string;
   name: string;
-  componentType: 'component' | 'app' | 'webgl';
+  componentType: 'component' | 'app' | 'depth_ui';
   createdAt: string;
   updatedAt: string;
   currentVersion: number;
@@ -76,7 +76,7 @@ function toProject(row: DbProject): Project {
   return {
     id: row.id,
     name: row.name,
-    componentType: row.componentType as 'component' | 'app' | 'webgl',
+    componentType: row.componentType as 'component' | 'app' | 'depth_ui',
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     currentVersion: row.currentVersion,
@@ -99,7 +99,7 @@ const VERSION_INCLUDE = { versions: { orderBy: { version: 'asc' as const } } };
 export async function createProject(
   id: string,
   name: string,
-  componentType: 'component' | 'app' | 'webgl',
+  componentType: 'component' | 'app' | 'depth_ui',
   code: string | Record<string, string>,
   intent: UIIntent,
   a11yReport: A11yReport,

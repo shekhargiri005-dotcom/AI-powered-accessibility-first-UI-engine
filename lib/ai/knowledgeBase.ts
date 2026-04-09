@@ -4,7 +4,7 @@ export interface ComponentKnowledge {
   keywords: string[];
   guidelines: string;
   isAppTemplate?: boolean;
-  isWebglTemplate?: boolean;
+  isDepthUITemplate?: boolean;
 }
 
 export const KNOWLEDGE_BASE: ComponentKnowledge[] = [
@@ -223,27 +223,41 @@ export const KNOWLEDGE_BASE: ComponentKnowledge[] = [
     isAppTemplate: true,
     guidelines: `FULL APP: Premium e-commerce shopping. Screens: Home (hero banner + category pills + featured products grid + flash sale countdown), Products (filterable grid with sort options), Product Detail (image carousel placeholder, price, size selector, add to cart), Cart (item list with quantity controls, total, checkout CTA), Profile (orders, wishlist, addresses). Nav: bottom bar with Home/Search/Cart(badge)/Wishlist/Profile. Colors: background=#FFFFFF, surface=#F8F9FA, primary=#6366F1, text=#1F2937. Mock data: 12 products with emoji images, names, prices, star ratings, sale badges. Cart: 3 items with quantity steppers. Flash sale: countdown timer component.`
   },
-  // ─── 3D WebGL Templates ──────────────────────────────────────────────────
+  // ─── Depth UI Templates ──────────────────────────────────────────────────
   {
-    id: 'webgl-portfolio',
-    name: '3D Interactive Portfolio',
-    keywords: ['3d portfolio', 'webgl portfolio', 'interactive 3d resume', 'floating cubes', '3d showcase'],
-    isWebglTemplate: true,
-    guidelines: `WEBGL APP: A beautiful 3D portfolio. Scene: A dark, moody environment with an abstract central floating shape (e.g. rotating Icosahedron or group of floating cubes). Lighting: Ambient light, a colorful spotlight (e.g. purple/blue), and Environment maps. UI Overlay: Glassmorphic header nav, a hero section (Title: "Creative Developer", Subtitle, "View Work" button), and floating social icons, layered using Tailwind over the canvas. Animation: useFrame to slowly rotate the central mesh and make it float up and down.`
+    id: 'depth-startup',
+    name: 'Depth UI Startup Hero',
+    keywords: ['startup hero', 'depth ui', 'premium hero', 'floating cards', 'layered hero'],
+    isDepthUITemplate: true,
+    guidelines: `DEPTH UI: A beautiful premium startup landing page hero. Features soft parallax, glowing blurred floating background shapes, and floating cards. Use Tailwind CSS with arbitrary values for transforms and standard Framer Motion for scroll/hover interactions. Avoid 3D WebGL. Structure: 1) Hero with headline + sub-headline + CTA button, 2) Soft glowing orbs behind the text using absolute divs with blur and opacity, 3) Floating UI screenshot cards at depth offset transforms. Motion: use framer motion "useScroll" + "useTransform" to make the orbs move slower than the scroll (parallax factor 0.3). All animated elements must have a "prefers-reduced-motion" static fallback.`
   },
   {
-    id: 'webgl-landing',
-    name: '3D SaaS Landing Page',
-    keywords: ['3d landing page', 'webgl saas', '3d hero', '3d website background', 'site with moving component', 'three.js site'],
-    isWebglTemplate: true,
-    guidelines: `WEBGL APP: A modern SaaS product landing page with a 3D hero background. Scene: A bright, clean environment with floating geometric primitives (spheres, toruses, cones) acting as abstract product features. Uses ContactShadows for grounding. Lighting: Soft bright directional light + ambient. UI Overlay: Standard SaaS hero text ("Build Faster. Scale Further."), email signup input, and "Get Started" button over the left side of the screen. Animation: useFrame to slowly spin the geometry and hover them gently.`
+    id: 'depth-feature',
+    name: 'Depth UI Feature Reveal',
+    keywords: ['feature reveal', 'depth ui feature', 'scroll section', 'layered feature'],
+    isDepthUITemplate: true,
+    guidelines: `DEPTH UI: A feature reveal section heavily leveraging soft parallax depth. As the user scrolls, feature text floats up cleanly while background dashboard screenshots or illustrative cards subtly scale and move on a Z-axis simulation. Use Framer Motion useScroll and useTransform. Avoid Three.js. Each feature block: left text + right "floating UI card" image with a translateY driven by scroll offset. Background: gradient radial glow that persists across sections. Entry animations: "initial={{ opacity: 0, y: 40 }}", "whileInView={{ opacity: 1, y: 0 }}", "viewport={{ once: true }}".`
   },
   {
-    id: 'webgl-data-viz',
-    name: '3D Data Visualization',
-    keywords: ['3d data viz', '3d chart', '3d graph', 'webgl data visualization', '3d analytics'],
-    isWebglTemplate: true,
-    guidelines: `WEBGL APP: An interactive 3D data visualization dashboard. Scene: A 3D bar chart or scatter plot using instanced meshes or mapped groups of Box/Sphere geometries representing data points. Includes Text3D labels for axes. Controls: OrbitControls enabled for user to rotate and explore the data. UI Overlay: Sidebar with data filters, legend, and metric cards overlaid on the canvas. Lighting: Professional studio lighting setup.`
+    id: 'depth-parallax-marketing',
+    name: 'Depth UI Full-Page Parallax Marketing Site',
+    keywords: ['parallax marketing', 'depth landing', 'cinematic parallax', 'full page depth', 'scroll depth'],
+    isDepthUITemplate: true,
+    guidelines: `DEPTH UI: A full-page cinematic marketing site with heavy scroll-linked parallax. Sections: Hero, Feature Showcase, Social Proof, Pricing, CTA Footer. Motion architecture: a root useScroll hook tracks the total page scroll. Each section uses useTransform to interpolate translateY, opacity, and scale from scroll progress ranges (e.g. [0.0, 0.25] for hero, [0.2, 0.45] for features). Background atmospheric layer: large slow-moving gradient blobs (motion.div with useTransform, factor 0.1). Foreground elements move faster (factor 0.6). Typography animates in with staggered children (variants with staggerDelay 0.1). Accessibility: entire motion system controlled by a single CSS media query "prefers-reduced-motion: reduce" that sets all transitions to "none".`
+  },
+  {
+    id: 'depth-scroll-storytelling',
+    name: 'Depth UI Scroll Storytelling',
+    keywords: ['scroll storytelling', 'cinematic scroll', 'story scroll', 'narrative scroll', 'immersive scroll'],
+    isDepthUITemplate: true,
+    guidelines: `DEPTH UI: A scroll-driven narrative / storytelling presentation. Multiple full-viewport "chapters" stacked vertically. Each chapter fades in as it enters the viewport and fades out as it leaves. Use Framer Motion useInView for entry and exit. Sticky progress indicator: a fixed left-side dot navigation showing the active chapter. Chapter structure: big full-screen background gradient layer (slow-moving parallax), centred text content (faster), floating decorative elements (variable parallax). Each chapter has a theme: chapter 1 = deep navy, chapter 2 = warm amber, chapter 3 = emerald. All transitions are cross-fading, no jarring cuts.`
+  },
+  {
+    id: 'depth-floating-dashboard',
+    name: 'Depth UI Floating Dashboard',
+    keywords: ['floating dashboard', 'depth dashboard', 'glass dashboard', 'premium dashboard'],
+    isDepthUITemplate: true,
+    guidelines: `DEPTH UI: A premium dashboard with glassmorphism cards floating over atmospheric depth backgrounds. Layout: sidebar navigation + main content grid. Background: radial gradient with additional blurred blob shapes (purple/indigo) that subtly drift using CSS keyframes (very slow, 20s loop). Cards: glass effect (backdrop-filter blur, semi-transparent white border, subtle box-shadow). Card entrance: staggered framer-motion "whileInView" reveal. Stats cards: animated counter using framer-motion "useAnimate". Charts: clean SVG line/bar charts. No external chart libraries. Accessibility: all dashboard data exposed as accessible table in sr-only div for screen readers.`
   },
 ];
 
@@ -267,11 +281,11 @@ export function findAppTemplate(prompt: string): string | null {
   return null;
 }
 
-export function findWebglTemplate(prompt: string): string | null {
+export function findDepthUITemplate(prompt: string): string | null {
   const normalized = prompt.toLowerCase();
   for (const item of KNOWLEDGE_BASE) {
-    if (item.isWebglTemplate && item.keywords.some(kw => normalized.includes(kw))) {
-      return `WEBGL TEMPLATE [${item.name}]: ${item.guidelines}`;
+    if (item.isDepthUITemplate && item.keywords.some(kw => normalized.includes(kw))) {
+      return `DEPTH UI TEMPLATE [${item.name}]: ${item.guidelines}`;
     }
   }
   return null;

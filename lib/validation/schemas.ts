@@ -17,7 +17,7 @@ export const IntentClassificationSchema = z.object({
   intentType: z.enum(INTENT_TYPES).catch('ui_generation'),
   confidence: z.number().min(0).max(1).catch(0.8),
   summary: z.string().catch(''),
-  suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
+  suggestedMode: z.enum(['component', 'app', 'depth_ui']).catch('component'),
   needsClarification: z.boolean().catch(false),
   clarificationQuestion: z.string().nullish().catch(undefined).transform(v => v ?? undefined),
   shouldGenerateCode: z.boolean().catch(true),
@@ -31,7 +31,7 @@ export const IntentClassificationSchema = z.object({
   visualType: z.enum([
     '2d-standard', 'aesthetic-motion', 'minimal-futuristic', 
     '3d-component', 'full-3d', 'physics-based', 'simulation-ui', 
-    'hud-ui', 'cinematic', 'hybrid', 'unknown'
+    'hud-ui', 'cinematic', 'hybrid', 'depth-ui', 'unknown'
   ]).catch('unknown'),
   complexity: z.enum(['simple', 'medium', 'advanced', 'system-level']).catch('medium'),
   platform: z.enum(['web', 'mobile', 'tablet', 'desktop', 'responsive']).catch('responsive'),
@@ -92,7 +92,7 @@ export const ThinkingPlanSchema = z.object({
   likelySections: z.array(z.string()).optional(),
 
   requirementBreakdown: RequirementBreakdownSchema.optional(),
-  suggestedMode: z.enum(['component', 'app', 'webgl']).catch('component'),
+  suggestedMode: z.enum(['component', 'app', 'depth_ui']).catch('component'),
   shouldGenerateCode: z.boolean().catch(true),
 });
 
@@ -183,30 +183,57 @@ export const AppIntentSchema = UIIntentSchema.extend({
   navStyle: z.enum(['bottom', 'sidebar', 'top']).catch('bottom'),
 });
 
-// ─── WebGLIntent Schema ───────────────────────────────────────────────────────
+// ─── Depth UI Specific Schemas ────────────────────────────────────────────────
 
-export const WebGLIntentSchema = UIIntentSchema.extend({
-  componentType: z.literal('webgl'),
-  webglType: z.string().catch('canvas'),
-  sceneElements: z.array(z.object({
-    name: z.string(),
-    type: z.string(),
-    behavior: z.string(),
-  })).catch([]),
+export const MotionDesignSpecSchema = z.object({
+  motionStyle: z.enum(['minimal', 'premium', 'immersive']).catch('premium'),
+  parallaxEnabled: z.boolean().catch(true),
+  parallaxType: z.enum(['hero_depth', 'feature_reveal', 'mouse_reactive', 'scroll_scene', 'soft_depth']).catch('soft_depth'),
+  intensity: z.enum(['low', 'medium', 'high']).catch('low'),
+  allowedZones: z.array(z.string()).catch([]),
+  forbiddenZones: z.array(z.string()).catch([]),
+  reducedMotionFallback: z.boolean().catch(true),
+  mobileReduction: z.boolean().catch(true),
+  performanceMode: z.enum(['safe', 'balanced', 'premium']).catch('safe'),
+});
+
+export const ParallaxSpecSchema = z.object({
+  enabled: z.boolean().catch(true),
+  style: z.enum(['none', 'subtle', 'layered', 'cinematic', 'immersive']).catch('subtle'),
+  pageScope: z.enum(['hero-only', 'section-based', 'full-page']).catch('section-based'),
+  intensity: z.enum(['low', 'medium', 'high']).catch('low'),
+  motionTrigger: z.enum(['scroll', 'mouse', 'hybrid']).catch('scroll'),
+  allowedRegions: z.array(z.string()).catch([]),
+  forbiddenRegions: z.array(z.string()).catch([]),
+  depthLayers: z.number().catch(2),
+  mobileBehavior: z.enum(['disable', 'reduce', 'static-fallback']).catch('reduce'),
+  reducedMotionSupport: z.boolean().catch(true),
+  performanceMode: z.enum(['safe', 'balanced', 'premium']).catch('safe'),
+});
+
+export const DepthUIModePresetSchema = z.object({
+  generationMode: z.literal('depth_ui'),
+  visualPriority: z.enum(['premium', 'storytelling', 'startup', 'immersive']).catch('startup'),
+  motionDesign: MotionDesignSpecSchema,
+  parallax: ParallaxSpecSchema,
+});
+
+export type MotionDesignSpec = z.infer<typeof MotionDesignSpecSchema>;
+export type ParallaxSpec = z.infer<typeof ParallaxSpecSchema>;
+export type DepthUIModePreset = z.infer<typeof DepthUIModePresetSchema>;
+
+// ─── DepthUIIntent Schema ───────────────────────────────────────────────────────
+
+export const DepthUIIntentSchema = UIIntentSchema.extend({
+  componentType: z.literal('depth_ui'),
+  depthArchetype: z.string().catch('soft_depth'),
+  depthSpec: DepthUIModePresetSchema.optional(),
   colorScheme: z.object({
     primary: z.string(),
     background: z.string(),
-    ambientLight: z.string(),
-    directionalLight: z.string(),
-  }).catch({ primary: '#3B82F6', background: '#000000', ambientLight: '#FFFFFF', directionalLight: '#FFFFFF' }),
-  uiOverlay: z.array(z.object({
-    element: z.string(),
-    position: z.string(),
-  })).catch([]),
-  cameraSetup: z.object({
-    position: z.array(z.number()).length(3),
-    fov: z.number(),
-  }).catch({ position: [0, 0, 5], fov: 75 }),
+    surface: z.string(),
+    text: z.string(),
+  }).catch({ primary: '#3B82F6', background: '#09090b', surface: '#18181b', text: '#FFFFFF' }),
 });
 
 export type UIIntent = z.infer<typeof UIIntentSchema> & {
@@ -215,10 +242,9 @@ export type UIIntent = z.infer<typeof UIIntentSchema> & {
   colorScheme?: unknown;
   features?: string[];
   navStyle?: string;
-  webglType?: string;
-  sceneElements?: unknown;
-  uiOverlay?: unknown;
-  cameraSetup?: unknown;
+  depthArchetype?: string;
+  depthSpec?: DepthUIModePreset;
+  purpose?: string;
   // Refinement fields are already in the base schema but for clarity:
   isRefinement?: boolean;
   targetFiles?: string[];

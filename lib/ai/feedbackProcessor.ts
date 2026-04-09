@@ -80,7 +80,7 @@ export async function enrichPromptWithFeedback(
   }
 
   // ── Signal: inject approved examples ──────────────────────────────────────────────────
-  const topRated = getTopRatedGenerations(intentType, 1);
+  const topRated = await getTopRatedGenerations(intentType, 1);
 
   if (topRated.length > 0) {
     // Prefer correctedCode (user-improved) over original generated code

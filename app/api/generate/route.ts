@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     }
 
     const intent = intentValidation.data;
-    const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'webgl' ? 'webgl' : 'component';
+    const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
 
     // Detect local/Ollama models — skip expensive review/repair LLM calls for them.
     // IMPORTANT: do NOT treat missing `provider` as local — cloud models often don't

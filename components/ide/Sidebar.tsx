@@ -24,7 +24,7 @@ interface SidebarProps {
 const TYPE_ICONS: Record<string, React.ReactNode> = {
   component: <Layers className="w-4 h-4 text-blue-400" />,
   app: <Code className="w-4 h-4 text-violet-400" />,
-  webgl: <Box className="w-4 h-4 text-cyan-400" />,
+  depth_ui: <Layers className="w-4 h-4 text-cyan-400" />,
 };
 
 export default function Sidebar({

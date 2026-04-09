@@ -34,11 +34,11 @@ import { truncateToTokenBudget } from './tieredPipeline';
 import {
   COMPONENT_GENERATOR_SYSTEM_PROMPT,
   APP_MODE_SYSTEM_PROMPT,
-  WEBGL_MODE_SYSTEM_PROMPT,
+  DEPTH_UI_SYSTEM_PROMPT,
   REFINEMENT_SYSTEM_PROMPT,
   buildComponentGeneratorPrompt,
   buildAppModeGeneratorPrompt,
-  buildWebglModeGeneratorPrompt,
+  buildDepthUIModeGeneratorPrompt,
 } from './prompts';
 import { formatBlueprintForPrompt } from '../intelligence/blueprintEngine';
 import type { MemoryEntry } from './memory';
@@ -238,7 +238,7 @@ OUTPUT: Return ONLY raw TSX code. No markdown. No explanation. Export default th
  * @param intent    Parsed UI intent
  * @param blueprint Selected UI blueprint from blueprintEngine
  * @param config    Pipeline config derived from the model's capability profile
- * @param mode      Generation mode: 'component' | 'app' | 'webgl'
+ * @param mode      Generation mode: 'component' | 'app' | 'depth_ui'
  * @param knowledge Optional knowledge base injection (pattern examples)
  * @param memory    Optional few-shot examples from memory store
  * @param refinementContext  If set, this is a refinement request
@@ -280,10 +280,10 @@ export function buildModelAwarePrompt(
     case 'freeform':
     default:
       // Large and cloud models — full existing system prompts
-      if (mode === 'webgl') {
+      if (mode === 'depth_ui') {
         return {
-          system: WEBGL_MODE_SYSTEM_PROMPT,
-          user: buildWebglModeGeneratorPrompt(intent, knowledge, false),
+          system: DEPTH_UI_SYSTEM_PROMPT,
+          user: buildDepthUIModeGeneratorPrompt(intent, knowledge, false),
         };
       }
       if (mode === 'app') {
