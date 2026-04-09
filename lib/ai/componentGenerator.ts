@@ -102,7 +102,7 @@ export async function generateComponent(
 
     // ─── Step 3: Knowledge + memory lookup ───────────────────────────────────
     let knowledge: string | null = null;
-    let memory = getRelevantExamples(intent);
+    let memory = await getRelevantExamples(intent);
 
     if (!intent.isRefinement) {
       if (mode === 'webgl') {
@@ -117,7 +117,7 @@ export async function generateComponent(
     // ─── Step 3.5: Feedback enrichment ───────────────────────────────────────
     // Reads the local stats cache (zero network) and injects corrective guidance
     // and/or approved example snippets into the system prompt when applicable.
-    const feedbackEnrichment = enrichPromptWithFeedback(intent, effectiveModel);
+    const feedbackEnrichment = await enrichPromptWithFeedback(intent, effectiveModel);
 
     // ─── Step 4: Build model-aware prompt ────────────────────────────────────
     let builtPrompt = buildModelAwarePrompt(

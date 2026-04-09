@@ -6,7 +6,7 @@ import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
 import { generateTests } from '@/lib/testGenerator';
 import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
-import { saveGeneration, getProjectById } from '@/lib/ai/memory';
+import { saveGeneration, getProjectByIdAsync } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
 import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
@@ -153,9 +153,9 @@ export async function POST(request: NextRequest) {
     // Step 0: Handle Refinement Context
     let refinementContext: { code: string; manifest?: unknown } | undefined;
     if (intent.isRefinement && intent.previousProjectId) {
-      const parentProject = getProjectById(intent.previousProjectId);
+      const parentProject = await getProjectByIdAsync(intent.previousProjectId);
       if (parentProject) {
-        // Find the specific file to refine if targetFiles is provided, 
+        // Find the specific file to refine if targetFiles is provided,
         // otherwise default to the first file or the full component string
         let targetCode: string;
         if (typeof parentProject.code === 'string') {

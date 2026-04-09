@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import type { UIIntent, A11yReport } from '../validation/schemas';
+
+/** P2021 = table does not exist (migration pending). Treat as non-fatal. */
+function isTableMissingError(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2021';
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -100,27 +106,44 @@ export async function createProject(
 ): Promise<Project> {
   const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
   const linesChanged = typeof code === 'string' ? code.split('\n').length : 0;
+  const now = new Date().toISOString();
 
-  const row = await prisma.project.create({
-    data: {
-      id,
-      name,
-      componentType,
-      currentVersion: 1,
-      versions: {
-        create: {
-          version: 1,
-          code: codeStr,
-          intent: intent as object,
-          a11yReport: a11yReport as object,
-          changeDescription: 'Initial generation',
-          linesChanged,
+  try {
+    const row = await prisma.project.create({
+      data: {
+        id,
+        name,
+        componentType,
+        currentVersion: 1,
+        versions: {
+          create: {
+            version: 1,
+            code: codeStr,
+            intent: intent as object,
+            a11yReport: a11yReport as object,
+            changeDescription: 'Initial generation',
+            linesChanged,
+          },
         },
       },
-    },
-    include: VERSION_INCLUDE,
-  });
-  return toProject(row as DbProject);
+      include: VERSION_INCLUDE,
+    });
+    return toProject(row as DbProject);
+  } catch (e) {
+    if (isTableMissingError(e)) {
+      // Migration pending — return a synthetic in-memory project so the UI still works
+      console.warn('[projectStore] Project table missing (migration pending) — returning in-memory stub');
+      return {
+        id, name, componentType,
+        createdAt: now, updatedAt: now, currentVersion: 1,
+        versions: [{
+          version: 1, timestamp: now, code,
+          intent, a11yReport, changeDescription: 'Initial generation', linesChanged,
+        }],
+      };
+    }
+    throw e;
+  }
 }
 
 export async function saveVersion(
@@ -130,37 +153,42 @@ export async function saveVersion(
   a11yReport: A11yReport,
   changeDescription: string,
 ): Promise<Project | null> {
-  const existing = await prisma.project.findUnique({
-    where: { id },
-    include: VERSION_INCLUDE,
-  });
-  if (!existing) return null;
+  try {
+    const existing = await prisma.project.findUnique({
+      where: { id },
+      include: VERSION_INCLUDE,
+    });
+    if (!existing) return null;
 
-  const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
-  const lastVersion = existing.versions[existing.versions.length - 1];
-  const prevLines = (lastVersion?.code ?? '').split('\n').length;
-  const newLines = typeof code === 'string' ? code.split('\n').length : 0;
-  const linesChanged = Math.abs(newLines - prevLines);
-  const newVersionNumber = existing.currentVersion + 1;
+    const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
+    const lastVersion = existing.versions[existing.versions.length - 1];
+    const prevLines = (lastVersion?.code ?? '').split('\n').length;
+    const newLines = typeof code === 'string' ? code.split('\n').length : 0;
+    const linesChanged = Math.abs(newLines - prevLines);
+    const newVersionNumber = existing.currentVersion + 1;
 
-  const row = await prisma.project.update({
-    where: { id },
-    data: {
-      currentVersion: newVersionNumber,
-      versions: {
-        create: {
-          version: newVersionNumber,
-          code: codeStr,
-          intent: intent as object,
-          a11yReport: a11yReport as object,
-          changeDescription,
-          linesChanged,
+    const row = await prisma.project.update({
+      where: { id },
+      data: {
+        currentVersion: newVersionNumber,
+        versions: {
+          create: {
+            version: newVersionNumber,
+            code: codeStr,
+            intent: intent as object,
+            a11yReport: a11yReport as object,
+            changeDescription,
+            linesChanged,
+          },
         },
       },
-    },
-    include: VERSION_INCLUDE,
-  });
-  return toProject(row as DbProject);
+      include: VERSION_INCLUDE,
+    });
+    return toProject(row as DbProject);
+  } catch (e) {
+    if (isTableMissingError(e)) return null;
+    throw e;
+  }
 }
 
 export async function getProject(id: string): Promise<Project | null> {
@@ -200,34 +228,39 @@ export async function listProjects(): Promise<ProjectSummary[]> {
 }
 
 export async function rollbackToVersion(id: string, targetVersion: number): Promise<Project | null> {
-  const existing = await prisma.project.findUnique({
-    where: { id },
-    include: VERSION_INCLUDE,
-  });
-  if (!existing) return null;
+  try {
+    const existing = await prisma.project.findUnique({
+      where: { id },
+      include: VERSION_INCLUDE,
+    });
+    if (!existing) return null;
 
-  const target = existing.versions.find((v) => v.version === targetVersion);
-  if (!target) return null;
+    const target = existing.versions.find((v) => v.version === targetVersion);
+    if (!target) return null;
 
-  const newVersionNumber = existing.currentVersion + 1;
-  const row = await prisma.project.update({
-    where: { id },
-    data: {
-      currentVersion: newVersionNumber,
-      versions: {
-        create: {
-          version: newVersionNumber,
-          code: target.code,
-          intent: target.intent as object,
-          a11yReport: target.a11yReport as object,
-          changeDescription: `Rolled back to v${targetVersion}`,
-          linesChanged: 0,
+    const newVersionNumber = existing.currentVersion + 1;
+    const row = await prisma.project.update({
+      where: { id },
+      data: {
+        currentVersion: newVersionNumber,
+        versions: {
+          create: {
+            version: newVersionNumber,
+            code: target.code,
+            intent: target.intent as object,
+            a11yReport: target.a11yReport as object,
+            changeDescription: `Rolled back to v${targetVersion}`,
+            linesChanged: 0,
+          },
         },
       },
-    },
-    include: VERSION_INCLUDE,
-  });
-  return toProject(row as DbProject);
+      include: VERSION_INCLUDE,
+    });
+    return toProject(row as DbProject);
+  } catch (e) {
+    if (isTableMissingError(e)) return null;
+    throw e;
+  }
 }
 
 export async function deleteProject(id: string): Promise<boolean> {

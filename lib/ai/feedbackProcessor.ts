@@ -15,7 +15,7 @@
  */
 
 import { getFeedbackStats, getTopRatedGenerations } from './feedbackStore';
-import { getProjectById } from './memory';
+import { getProjectByIdAsync } from './memory';
 import type { UIIntent } from '../validation/schemas';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -46,10 +46,10 @@ export interface FeedbackEnrichment {
  * @param intent   The parsed UI intent for this request
  * @param modelId  The resolved model identifier (e.g. "gpt-4o")
  */
-export function enrichPromptWithFeedback(
+export async function enrichPromptWithFeedback(
   intent:  UIIntent,
   modelId: string,
-): FeedbackEnrichment {
+): Promise<FeedbackEnrichment> {
   const intentType = (intent.componentType ?? 'component').toLowerCase();
   const stats      = getFeedbackStats(modelId, intentType);
 
@@ -57,7 +57,7 @@ export function enrichPromptWithFeedback(
   let warn       = false;
   let warnReason = '';
 
-  // ── Signal: low approval rate ──────────────────────────────────────────────
+  // ── Signal: low approval rate ──────────────────────────────────────────────────────────
   if (stats && stats.total >= MIN_SAMPLES) {
     if (stats.successRate < WARN_THRESHOLD) {
       warn       = true;
@@ -79,7 +79,7 @@ export function enrichPromptWithFeedback(
     }
   }
 
-  // ── Signal: inject approved examples ──────────────────────────────────────
+  // ── Signal: inject approved examples ──────────────────────────────────────────────────
   const topRated = getTopRatedGenerations(intentType, 1);
 
   if (topRated.length > 0) {
@@ -87,9 +87,9 @@ export function enrichPromptWithFeedback(
     let snippet: string | null = topRated[0].correctedCode?.slice(0, SNIPPET_CHARS) ?? null;
 
     if (!snippet) {
-      // Fall back to the original code from history.json
+      // Fall back to the original code from the DB
       try {
-        const memEntry = getProjectById(topRated[0].generationId);
+        const memEntry = await getProjectByIdAsync(topRated[0].generationId);
         if (memEntry && typeof memEntry.code === 'string') {
           snippet = memEntry.code.slice(0, SNIPPET_CHARS);
         }

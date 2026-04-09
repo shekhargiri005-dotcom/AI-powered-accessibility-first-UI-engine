@@ -1,47 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-import { getProjectById } from '@/lib/ai/memory';
-
-
+import { prisma } from '@/lib/prisma';
+import { getProjectByIdAsync } from '@/lib/ai/memory';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
 
   try {
-
+    // ── Single project lookup ────────────────────────────────────────────────
     if (id) {
-      const project = getProjectById(id);
+      const project = await getProjectByIdAsync(id);
       if (!project) {
         return NextResponse.json({ success: false, error: 'Project not found' }, { status: 404 });
       }
       return NextResponse.json({ success: true, project });
     }
 
-    const MEMORY_FILE_PATH = path.join(process.cwd(), 'data', 'history.json');
-    if (!fs.existsSync(MEMORY_FILE_PATH)) {
-      return NextResponse.json({ history: [] });
-    }
-    
-    const data = fs.readFileSync(MEMORY_FILE_PATH, 'utf-8');
-    const parsed = JSON.parse(data);
-    
-    // We don't want to send the entire raw code blocks over the wire just for a history list,
-    // so we map it out to lightweight summary chips
-    const summarizedHistory = parsed.map((entry: { id: string, timestamp: string, componentType: string, componentName: string, intent: { description: string } }) => ({
-      id: entry.id,
-      timestamp: entry.timestamp,
-      componentType: entry.componentType,
-      componentName: entry.componentName,
-      promptSnippet: entry.intent.description.length > 60 
-        ? entry.intent.description.substring(0, 60) + '...' 
-        : entry.intent.description
-    }));
+    // ── Full history list ────────────────────────────────────────────────────
+    // Returns a lightweight summary shape (no code blobs) identical to what
+    // the front-end previously consumed from the history.json endpoint.
+    const rows = await prisma.project.findMany({
+      include: {
+        versions: { orderBy: { version: 'desc' }, take: 1 },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: 200,
+    });
+
+    const summarizedHistory = rows
+      .map((row) => {
+        const latest = row.versions[0];
+        if (!latest) return null;
+
+        const intent = latest.intent as {
+          description?: string;
+          componentName?: string;
+        } | null;
+
+        const description = intent?.description ?? '';
+
+        return {
+          id:            row.id,
+          timestamp:     latest.timestamp.toISOString(),
+          componentType: row.componentType,
+          componentName: row.name,
+          promptSnippet: description.length > 60
+            ? description.substring(0, 60) + '...'
+            : description,
+        };
+      })
+      .filter(Boolean);
 
     return NextResponse.json({ history: summarizedHistory });
   } catch (error) {
-    console.error('Failed to parse history JSON:', error);
+    console.error('Failed to fetch history from DB:', error);
     return NextResponse.json({ history: [] });
   }
 }

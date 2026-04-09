@@ -383,32 +383,37 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
     tailwindcss: '^3.4.1',
     postcss: '^8.4.35',
     autoprefixer: '^10.4.18',
+    // ALWAYS include packages used by the injected ui-ecosystem files.
+    // @ui/core/index.ts re-exports Modal (needs @radix-ui/react-dialog),
+    // Button (needs @radix-ui/react-slot + class-variance-authority),
+    // and shared utilities (clsx, tailwind-merge). These packages must be
+    // present in EVERY Sandpack session regardless of user-generated imports.
+    '@radix-ui/react-dialog': '^1.0.5',
+    '@radix-ui/react-slot':   '^1.0.2',
+    'class-variance-authority': '^0.7.0',
+    'clsx': '^2.1.1',
+    'tailwind-merge': '^2.3.0',
+    'html2canvas': '^1.4.1', // Always for CaptureWrapper
   };
 
-  if (codeString.includes('lucide-react')) deps['lucide-react'] = '^0.378.0';
-  if (codeString.includes('framer-motion')) deps['framer-motion'] = '^11.2.10';
-  if (codeString.includes('react-router-dom')) deps['react-router-dom'] = '^6.22.3';
-  if (codeString.includes('react-icons')) deps['react-icons'] = '^5.0.1';
-  if (codeString.includes('recharts')) deps['recharts'] = '^2.12.7';
-  if (codeString.includes('cva') || codeString.includes('class-variance-authority')) deps['class-variance-authority'] = '^0.7.0';
-  if (codeString.includes('clsx')) deps['clsx'] = '^2.1.1';
-  if (codeString.includes('tailwind-merge')) deps['tailwind-merge'] = '^2.3.0';
-  if (codeString.includes('@radix-ui/react-slot')) deps['@radix-ui/react-slot'] = '^1.0.2';
-  if (codeString.includes('@radix-ui/react-dialog')) deps['@radix-ui/react-dialog'] = '^1.0.5';
-  if (codeString.includes('cmdk')) deps['cmdk'] = '^1.0.0';
-  deps['html2canvas'] = '^1.4.1'; // Always include for CaptureWrapper
+  if (codeString.includes('lucide-react'))      deps['lucide-react']       = '^0.378.0';
+  if (codeString.includes('framer-motion'))      deps['framer-motion']       = '^11.2.10';
+  if (codeString.includes('react-router-dom'))   deps['react-router-dom']    = '^6.22.3';
+  if (codeString.includes('react-icons'))        deps['react-icons']         = '^5.0.1';
+  if (codeString.includes('recharts'))           deps['recharts']            = '^2.12.7';
+  if (codeString.includes('cmdk'))               deps['cmdk']                = '^1.0.0';
 
   if (codeString.includes('three') || codeString.includes('@react-three')) {
-    deps['three'] = '0.164.0';
-    deps['@types/three'] = '0.164.0';
-    deps['@react-three/fiber'] = '8.17.10';
-    deps['@react-three/drei'] = '9.114.3';
-    deps['maath'] = '^0.10.8';
+    deps['three']               = '0.164.0';
+    deps['@types/three']        = '0.164.0';
+    deps['@react-three/fiber']  = '8.17.10';
+    deps['@react-three/drei']   = '9.114.3';
+    deps['maath']               = '^0.10.8';
   }
 
   if (codeString.includes('@react-spring')) {
     deps['@react-spring/three'] = '^9.7.3';
-    deps['@react-spring/web'] = '^9.7.3';
+    deps['@react-spring/web']   = '^9.7.3';
   }
 
   return deps;
