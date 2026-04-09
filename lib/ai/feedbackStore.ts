@@ -12,6 +12,7 @@
 import fs   from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { upsertFeedbackEmbedding } from './vectorStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -175,6 +176,19 @@ export async function recordFeedback(
       // Non-fatal in dev — local JSON is source of truth
     }
   }, 0);
+
+  // 4. Vector embedding — fire-and-forget, only for corrected entries with code
+  if (entry.signal === 'corrected' && entry.correctedCode) {
+    setTimeout(() => {
+      upsertFeedbackEmbedding({
+        feedbackId:     entry.id,
+        intentType:     entry.intentType,
+        correctedCode:  entry.correctedCode!,
+        correctionNote: entry.correctionNote,
+        a11yScore:      entry.a11yScore,
+      }).catch(() => { /* non-fatal */ });
+    }, 100);
+  }
 }
 
 // ─── Public Reads ─────────────────────────────────────────────────────────────

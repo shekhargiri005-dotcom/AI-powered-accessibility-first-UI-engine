@@ -182,3 +182,34 @@ model ProjectVersion {
 
   @@unique([projectId, version])
 }
+
+// ─── VECTOR EMBEDDINGS (pgvector) ─────────────────────────────────────────────
+// Similarity queries are run via raw SQL (@neondatabase/serverless),
+// because Prisma has no native vector type yet.
+// Embedding dims: 768 (Google text-embedding-004 model).
+
+model ComponentEmbedding {
+  id          String   @id @default(cuid())
+  /// Matches KNOWLEDGE_BASE item id (e.g. "dashboard", "app-trello")
+  knowledgeId String   @unique
+  name        String
+  keywords    String[]
+  guidelines  String   @db.Text
+  /// vector(768) — stored via raw SQL; Prisma treats as Unsupported
+  embedding   Unsupported("vector(768)")?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model FeedbackEmbedding {
+  id             String   @id @default(cuid())
+  /// Links to GenerationFeedback.id (string UUID from feedbackStore)
+  feedbackId     String   @unique
+  intentType     String
+  correctedCode  String   @db.Text
+  correctionNote String?  @db.Text
+  a11yScore      Int      @default(0)
+  /// vector(768) — stored via raw SQL; Prisma treats as Unsupported
+  embedding      Unsupported("vector(768)")?
+  createdAt      DateTime @default(now())
+}

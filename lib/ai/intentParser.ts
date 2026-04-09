@@ -10,7 +10,12 @@ import {
   buildAppModeIntentPrompt,
   buildWebglModeIntentPrompt,
 } from './prompts';
-import { findRelevantKnowledge, findAppTemplate, findWebglTemplate } from './knowledgeBase';
+import {
+  findRelevantKnowledgeSemantic,
+  findAppTemplateSemantic,
+  findWebglTemplateSemantic,
+  findRelevantFeedback,
+} from './semanticKnowledgeBase';
 import { 
   UIIntentSchema, 
   AppIntentSchema, 
@@ -51,16 +56,22 @@ export async function parseIntent(
     let systemPrompt: string;
     let userPrompt: string;
 
+    // ── Semantic knowledge retrieval (falls back to keyword matching internally) ──
     if (mode === 'webgl') {
-      knowledge = findWebglTemplate(userInput) ?? findRelevantKnowledge(userInput);
+      knowledge = await findWebglTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
       systemPrompt = WEBGL_MODE_INTENT_SYSTEM_PROMPT;
       userPrompt = buildWebglModeIntentPrompt(userInput, knowledge);
     } else if (mode === 'app') {
-      knowledge = findAppTemplate(userInput) ?? findRelevantKnowledge(userInput);
+      knowledge = await findAppTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
       systemPrompt = APP_MODE_INTENT_SYSTEM_PROMPT;
       userPrompt = buildAppModeIntentPrompt(userInput, knowledge);
     } else {
-      knowledge = findRelevantKnowledge(userInput);
+      // Semantic component search + RAG from past user corrections
+      const [semanticKnowledge, feedbackContext] = await Promise.all([
+        findRelevantKnowledgeSemantic(userInput),
+        findRelevantFeedback(userInput),
+      ]);
+      knowledge = [semanticKnowledge, feedbackContext].filter(Boolean).join('\n\n') || null;
       systemPrompt = INTENT_PARSER_SYSTEM_PROMPT;
       userPrompt = buildIntentParsePrompt(userInput, knowledge);
     }
