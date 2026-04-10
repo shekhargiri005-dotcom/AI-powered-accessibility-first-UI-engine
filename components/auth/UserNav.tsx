@@ -5,7 +5,7 @@ import { useSession, signOut, signIn } from 'next-auth/react';
 import Image from 'next/image';
 import {
   Settings2, LogOut, User as UserIcon, MoreHorizontal,
-  Cpu, Lock, ShieldCheck, ChevronRight,
+  Cpu, Lock, ShieldCheck, ChevronRight, X,
 } from 'lucide-react';
 import AIEngineConfigPanel, { type AIEngineConfig } from '@/components/AIEngineConfigPanel';
 
@@ -18,6 +18,7 @@ export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) 
   const { data: session, status } = useSession();
   const [isOpen,       setIsOpen]       = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
   if (status === 'loading') {
@@ -199,6 +200,7 @@ export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) 
               {/* Profile Settings */}
               <button
                 role="menuitem"
+                onClick={() => { setIsOpen(false); setIsProfileOpen(true); }}
                 className="
                   w-full flex items-center gap-2.5 px-3 py-2.5
                   text-sm text-gray-400 hover:text-gray-100
@@ -212,25 +214,67 @@ export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) 
                 <span className="flex-1 text-left font-medium">Profile Settings</span>
               </button>
 
-              {/* Divider */}
-              <div className="h-px bg-gray-800/60 my-1.5 mx-1" />
+            </div>
+          </div>
+        </>
+      )}
 
-              {/* Log out */}
-              <button
-                role="menuitem"
-                onClick={() => signOut({ callbackUrl: '/login' })}
-                className="
-                  w-full flex items-center gap-2.5 px-3 py-2.5
-                  text-sm text-red-400 hover:text-red-300
-                  hover:bg-red-500/10 rounded-xl transition-all duration-150
-                  group
-                "
-              >
-                <div className="p-1 rounded-lg bg-red-500/10 group-hover:bg-red-500/20 transition-colors">
-                  <LogOut className="w-3.5 h-3.5 text-red-400/70 group-hover:text-red-400" />
+      {/* Profile Settings Modal */}
+      {isProfileOpen && (
+        <>
+          <div className="fixed inset-0 z-[60] bg-black/70 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsProfileOpen(false)} aria-hidden="true" />
+          <div className="fixed z-[60] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm bg-gray-950 border border-gray-800/80 rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b flex-shrink-0 border-gray-800/60 bg-gray-900/40">
+              <h2 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-gray-800 flex items-center justify-center">
+                  <UserIcon className="w-4 h-4 text-violet-400" />
                 </div>
-                <span className="flex-1 text-left font-medium">Sign Out</span>
+                Profile Settings
+              </h2>
+              <button onClick={() => setIsProfileOpen(false)} className="p-1.5 rounded-xl text-gray-500 hover:text-white hover:bg-gray-800 transition-colors">
+                <span className="sr-only">Close</span>
+                <X className="w-4 h-4" />
               </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-5 space-y-6">
+              {/* User Identity */}
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-blue-600 to-violet-600 flex flex-shrink-0 items-center justify-center border-2 border-gray-800 shadow-xl">
+                  {session.user.image ? (
+                    <Image src={session.user.image} alt={name} width={64} height={64} className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-xl font-bold text-white">{initials}</span>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-base font-bold text-white truncate">{name}</h3>
+                  <p className="text-sm text-gray-500 truncate">{email}</p>
+                  <span className="inline-flex mt-1.5 items-center gap-1 px-2 py-0.5 rounded-md bg-blue-500/15 border border-blue-500/25 text-blue-300 text-[10px] font-bold uppercase tracking-wider">
+                    <ShieldCheck className="w-3 h-3" /> Owner
+                  </span>
+                </div>
+              </div>
+              
+              {/* Actions Section */}
+              <div className="bg-gray-900/50 rounded-2xl border border-gray-800/60 p-4 space-y-3">
+                <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Account Actions</h4>
+                
+                <button
+                  onClick={() => signOut({ callbackUrl: '/login' })}
+                  className="w-full flex items-center justify-between gap-3 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 rounded-xl text-red-500 hover:text-red-400 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-1 rounded-md bg-red-500/10 group-hover:bg-red-500/20 transition-colors">
+                      <LogOut className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                    </div>
+                    <span className="text-sm font-semibold">Sign Out</span>
+                  </div>
+                  <ChevronRight className="w-4 h-4 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                </button>
+              </div>
             </div>
           </div>
         </>
