@@ -223,25 +223,25 @@ export default function RightPanel({
 
   const engineConfidence = (() => {
     // Base weights
-    const wi = 0.20;
-    let wa = 0.30;
-    let wc = 0.35;
-    let wf = 0.15;
+    const wi = 0.25; // intent quality
+    let wa = 0.40;   // accessibility (deterministic — always available)
+    let wc = 0.25;   // critique (may be 0 if quota-limited)
+    let wf = 0.10;   // feedback learning signal
 
     const hasCritique = critiqueScore > 0;
-    const hasFeedback = typeof feedbackSuccessRate === 'number' && (feedbackStats?.total ?? 0) >= 5;
+    const hasFeedback = typeof feedbackSuccessRate === 'number' && (feedbackStats?.total ?? 0) >= 3;
 
-    // If critique is unavailable, redistribute its weight to deterministic signals
+    // If critique unavailable, redistribute to deterministic signals
     if (!hasCritique) {
-      wa += 0.20;
-      wf += 0.15;
+      wa += wc * 0.70; // most of critique weight goes to a11y
+      wi += wc * 0.30; // rest to intent
       wc = 0;
     }
 
-    // If feedback is too sparse or unavailable, redistribute to a11y + critique
+    // If feedback too sparse, redistribute to a11y + critique
     if (!hasFeedback) {
-      wa += wf * 0.6;
-      wc += wf * 0.4;
+      wa += wf * 0.60;
+      if (hasCritique) wc += wf * 0.40; else wi += wf * 0.40;
       wf = 0;
     }
 
@@ -251,9 +251,8 @@ export default function RightPanel({
       (wc * critiqueScore) +
       (wf * (feedbackSuccessRate ?? 0));
 
-    // Penalize unresolved final-round states to avoid overconfidence
-    if (finalRoundStatus === 'skipped') score -= 6;
-    if (finalRoundStatus === 'error') score -= 10;
+    // Small penalty only for hard errors — skipped is expected in most envs
+    if (finalRoundStatus === 'error') score -= 5;
 
     return Math.max(0, Math.min(100, Math.round(score)));
   })();
@@ -283,36 +282,27 @@ export default function RightPanel({
       ? initialProject.code.slice(0, 2000)
       : Object.values(initialProject.code)[0]?.slice(0, 2000) ?? '';
 
-    const suggestionPrompt = `You are a senior UI/UX designer reviewing a generated React component called "${initialProject.intent.componentName}". 
-Based on this code snippet, suggest exactly 3 short, specific, and actionable UI refinements the user could apply.
-Each suggestion should be a single sentence, max 12 words, phrased as an instruction (e.g. "Add a glowing gradient to the hero title").
-Focus on: visual aesthetics, micro-interactions, spacing, color vibrancy, typography, or accessibility.
-Return ONLY a JSON array of 3 strings. No markdown, no explanation.
 
-CODE:
-${codeSnippet}`;
 
     setSuggestionsLoading(true);
-    fetch('/api/think', {
+    fetch('/api/suggestions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        prompt: suggestionPrompt,
-        ...(aiConfig?.model ? { model: aiConfig.model, provider: aiConfig.provider, apiKey: aiConfig.apiKey, baseUrl: aiConfig.baseUrl } : {}),
+        componentName: initialProject.intent.componentName,
+        codeSnippet,
+        ...(aiConfig?.model ? {
+          model: aiConfig.model,
+          provider: aiConfig.provider,
+          apiKey: aiConfig.apiKey && aiConfig.apiKey !== '••••' ? aiConfig.apiKey : undefined,
+          baseUrl: aiConfig.baseUrl,
+        } : {}),
       }),
     })
       .then((r) => r.json())
-      .then((data) => {
-        const raw: string = data.thinking ?? data.plan ?? data.result ?? '';
-        // Extract JSON array from response
-        const match = raw.match(/\[[\s\S]*?\]/);
-        if (match) {
-          try {
-            const parsed = JSON.parse(match[0]) as string[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setSuggestions(parsed.slice(0, 3).filter((s) => typeof s === 'string' && s.length > 5));
-            }
-          } catch { /* ignore parse errors */ }
+      .then((data: { success: boolean; suggestions?: string[] }) => {
+        if (data.success && Array.isArray(data.suggestions)) {
+          setSuggestions(data.suggestions.filter((s) => typeof s === 'string' && s.length > 5));
         }
       })
       .catch(() => { /* non-blocking */ })
