@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   SandpackProvider,
   SandpackLayout,
@@ -156,11 +156,20 @@ export default function SandpackPreviewComponent({
   const [editMode, setEditMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const files        = buildSandpackFiles(code, componentName);
-  const dynamicDeps  = getSandpackDependencies(code);
+  const files = useMemo(
+    () => buildSandpackFiles(code, componentName),
+    [code, componentName]
+  );
+  
+  const dynamicDeps = useMemo(
+    () => getSandpackDependencies(code),
+    [code]
+  );
+
   const activeFile   = typeof code === 'string'
     ? `/src/${componentName}.tsx`
     : '/src/App.tsx';
+  
   const activeFileEntry = files[activeFile];
   const initialCode     = typeof activeFileEntry === 'string'
     ? activeFileEntry
