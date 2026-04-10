@@ -573,6 +573,16 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     setError('');
 
     if (mode === 'cloud') {
+      if (!selectedProviderId || !PROVIDERS[selectedProviderId]) {
+        setError('Choose a provider first.');
+        setCloudStep(1);
+        return;
+      }
+      if (!apiKey.trim() && !provider.noKey) {
+        setError('Enter API credentials before choosing a model.');
+        setCloudStep(2);
+        return;
+      }
       if (!effectiveModel) {
         setError('Choose a generation model or enter a custom one.');
         setCloudStep(3);
@@ -908,7 +918,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                         <p className="text-[10px] text-red-400 px-1">{modelsFetchError}</p>
                       )}
                       <p className="text-[10px] text-gray-600 text-center">
-                        Your key is sent over HTTPS to query {provider.name}'s model list — never stored.
+                        Your key is sent over HTTPS to query {provider.name}&apos;s model list — never stored.
                       </p>
                     </div>
                   )}
