@@ -866,6 +866,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                           placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
                       />
                     </div>
+                  )}
                 </div>
               )}
 
