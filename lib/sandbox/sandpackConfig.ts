@@ -90,6 +90,20 @@ function injectMissingFileStubs(files: SandpackFiles): void {
 
 
 /**
+ * Removes markdown code blocks backticks like ```tsx ... ```
+ */
+function stripMarkdown(code: string): string {
+  let cleaned = code.trim();
+  if (cleaned.startsWith('```')) {
+    const lines = cleaned.split('\n');
+    if (lines[0].startsWith('```')) lines.shift();
+    if (lines[lines.length - 1].startsWith('```')) lines.pop();
+    cleaned = lines.join('\n');
+  }
+  return cleaned;
+}
+
+/**
  * Builds the Sandpack file tree for live preview.
  * Injects the generated component and bootstraps it in App.tsx using Vite structure.
  */
@@ -97,8 +111,18 @@ export function buildSandpackFiles(
   componentCode: string | Record<string, string>,
   componentName: string,
 ): SandpackFiles {
+  let processedCode = componentCode;
+  if (typeof componentCode === 'string') {
+    processedCode = stripMarkdown(componentCode);
+  } else {
+    processedCode = { ...componentCode };
+    for (const key of Object.keys(processedCode)) {
+      processedCode[key] = stripMarkdown(processedCode[key]);
+    }
+  }
+
   // Strip / stub any imports that can't resolve in the Sandpack environment
-  const safeCode = sanitizeAllImports(componentCode);
+  const safeCode = sanitizeAllImports(processedCode);
   const isMultiFile = typeof safeCode !== 'string';
   const mainCode = isMultiFile ? (safeCode['App.tsx'] as string) || '' : safeCode;
 

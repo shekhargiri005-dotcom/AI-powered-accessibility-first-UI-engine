@@ -58,6 +58,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   };
 
   const isPromptValid = prompt.trim().length >= 10;
+  const [interimTranscript, setInterimTranscript] = useState('');
 
   useEffect(() => {
     fetch('/api/history')
@@ -81,23 +82,29 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           
           recognition.onresult = (event) => {
             let finalTranscript = '';
+            let currentInterim = '';
             for (let i = event.resultIndex; i < event.results.length; ++i) {
               if (event.results[i].isFinal) {
                 finalTranscript += event.results[i][0].transcript + ' ';
+              } else {
+                currentInterim += event.results[i][0].transcript;
               }
             }
             if (finalTranscript) {
               setPrompt((prev) => (prev ? prev.trim() + ' ' : '') + finalTranscript.trim() + ' ');
             }
+            setInterimTranscript(currentInterim);
           };
 
           recognition.onerror = (event) => {
             console.error("Speech recognition error:", event.error);
             setIsRecording(false);
+            setInterimTranscript('');
           };
 
           recognition.onend = () => {
             setIsRecording(false);
+            setInterimTranscript('');
           };
           
           recognitionRef.current = recognition;
@@ -347,7 +354,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                Listening... Speak clearly.
+                Listening... {interimTranscript ? <span className="text-gray-300 ml-1 italic">{interimTranscript}</span> : 'Speak clearly.'}
                 <button type="button" onClick={toggleRecording} className="ml-1 text-red-500 hover:text-white transition-colors" aria-label="Stop recording">
                   <X className="w-3 h-3" />
                 </button>
