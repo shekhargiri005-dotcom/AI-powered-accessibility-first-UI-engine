@@ -6,6 +6,7 @@ import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validateAccessibility, autoRepairA11y } from '@/lib/validation/a11yValidator';
 import { generateTests } from '@/lib/testGenerator';
 import { reviewGeneratedCode, repairGeneratedCode } from '@/lib/ai/uiReviewer';
+import type { ReviewerAdapterOverride } from '@/lib/ai/uiReviewer';
 import { saveGeneration, getProjectByIdAsync } from '@/lib/ai/memory';
 import { UIIntentSchema } from '@/lib/validation/schemas';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
@@ -220,7 +221,11 @@ export async function POST(request: NextRequest) {
     const deterministicCheck = validateGeneratedCode(finalSourceCode);
     if (!deterministicCheck.valid) {
       const reason = deterministicCheck.errors.map((e) => e.message).join(' | ');
-      const repaired = await repairGeneratedCode(finalSourceCode, `Fix deterministic validation errors: ${reason}`);
+      const repaired = await repairGeneratedCode(
+        finalSourceCode,
+        `Fix deterministic validation errors: ${reason}`,
+        provider ? { provider, apiKey: effectiveApiKey, baseUrl } : undefined,
+      );
       if (repaired && repaired.length > 100) {
         finalSourceCode = repaired;
         reviewData = { source: 'deterministic', passed: false, reason };
@@ -230,6 +235,13 @@ export async function POST(request: NextRequest) {
     // Step 1.6: UI Expert Critique & Repair Agent
     // Skipped for local/Ollama models — review would queue a 2nd+ slow local inference call.
     // Only runs when a fast cloud model (REVIEW_MODEL env var or a configured cloud key) is available.
+    //
+    // adapterOverride ensures the engine uses the SAME provider the user selected in the UI
+    // instead of re-resolving independently from env vars (which may point to an over-quota key).
+    const adapterOverride: ReviewerAdapterOverride | undefined = provider
+      ? { provider, apiKey: effectiveApiKey, baseUrl }
+      : undefined;
+
     let critiqueData: unknown;
     let repairedByReviewer = false;
     if (!isLocalModel) {
@@ -239,6 +251,7 @@ export async function POST(request: NextRequest) {
           const repaired = await repairGeneratedCode(
             finalSourceCode,
             `Runtime crash detected in headless render. Fix this error:\n${visionResult.runtimeError}`,
+            adapterOverride,
           );
           if (repaired && repaired.length > 100) {
             finalSourceCode = repaired;
@@ -251,12 +264,20 @@ export async function POST(request: NextRequest) {
           reviewData = { source: 'vision', passed: false, reason: visionResult.visualCritique ?? 'Vision critique failed.' };
         }
 
-        const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
+        const reviewResult = await reviewGeneratedCode(
+          finalSourceCode,
+          JSON.stringify({ ...intent, mode, model }),
+          adapterOverride,
+        );
         critiqueData = reviewResult;
 
         if (!reviewResult.passed && reviewResult.repairInstructions) {
           reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
-          const repairedCode = await repairGeneratedCode(finalSourceCode, reviewResult.repairInstructions);
+          const repairedCode = await repairGeneratedCode(
+            finalSourceCode,
+            reviewResult.repairInstructions,
+            adapterOverride,
+          );
           if (repairedCode && repairedCode.length > 200) {
             reqLogger.info('Repair success. UI improved by agent.');
             finalSourceCode = repairedCode;

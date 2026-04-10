@@ -3,7 +3,19 @@ import type { AdapterConfig } from './adapters/index';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { z } from 'zod';
 
-// Dynamic client used inside functions.
+/**
+ * Optional override that allows callers to pass the user's UI-selected provider
+ * instead of relying on env-var auto-detection (resolveDefaultAdapter).
+ * This ensures the review/repair engines honour the active Generation Engine Setup.
+ */
+export interface ReviewerAdapterOverride {
+  /** Provider id (e.g. 'groq', 'anthropic', 'google') */
+  provider?: string;
+  /** Raw API key for the provider */
+  apiKey?: string;
+  /** Custom base URL (OpenAI-compat providers) */
+  baseUrl?: string;
+}
 
 const ReviewSchema = z.object({
   passed: z.boolean(),
@@ -38,12 +50,36 @@ Return ONLY valid JSON matching this schema:
 If the score is below 75, passed must be false.
 Be highly critical. We want premium, expert-level interfaces, not basic templates.`;
 
-export async function reviewGeneratedCode(code: string, intentContext: string): Promise<UIReviewResult> {
+export async function reviewGeneratedCode(
+  code: string,
+  intentContext: string,
+  adapterOverride?: ReviewerAdapterOverride,
+): Promise<UIReviewResult> {
   try {
-    const model  = process.env.REVIEW_MODEL ?? '';
-    const cfg: AdapterConfig = model
-      ? { model }
-      : resolveDefaultAdapter('REVIEW');
+    const purposeModel = process.env.REVIEW_MODEL ?? '';
+    let cfg: AdapterConfig;
+
+    if (purposeModel) {
+      // Explicit purpose-specific env override always wins
+      cfg = { model: purposeModel };
+    } else if (adapterOverride?.provider) {
+      // Use the provider the user selected in the Generation Engine Setup UI
+      const defaults = {
+        groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-haiku-20240307',
+        google: 'gemini-2.0-flash', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
+        together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini',
+        mistral: 'mistral-small-latest',
+      } as Record<string, string>;
+      cfg = {
+        model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
+        provider: adapterOverride.provider,
+        apiKey:   adapterOverride.apiKey,
+        baseUrl:  adapterOverride.baseUrl,
+      };
+    } else {
+      cfg = resolveDefaultAdapter('REVIEW');
+    }
+
     const adapter = await getWorkspaceAdapter(cfg);
 
     const adapterResult = await adapter.generate({
@@ -70,9 +106,15 @@ export async function reviewGeneratedCode(code: string, intentContext: string): 
 
     return result.data;
   } catch (error) {
-    console.error('Critique Engine Error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    // Surface quota errors as a clear warning rather than a noisy stacktrace
+    if (msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('quota')) {
+      console.warn('Critique Engine: provider quota exceeded — skipping critique. Consider adding GROQ_API_KEY or switching REVIEW_PROVIDER.', { hint: msg.slice(0, 200) });
+    } else {
+      console.error('Critique Engine Error:', error);
+    }
     // On failure, default to pass to avoid breaking the pipeline entirely
-    return { passed: true, score: 80, critiques: ['Critique engine threw an exception'] };
+    return { passed: true, score: 80, critiques: ['Critique engine skipped (quota or provider error)'] };
   }
 }
 
@@ -85,12 +127,34 @@ Ensure the layout is robust, the aesthetics are premium, and Tailwind classes ar
 
 OUTPUT FORMAT: Return ONLY the raw TSX code for the fixed component. No markdown fences. No explanations.`;
 
-export async function repairGeneratedCode(brokenCode: string, repairInstructions: string): Promise<string> {
+export async function repairGeneratedCode(
+  brokenCode: string,
+  repairInstructions: string,
+  adapterOverride?: ReviewerAdapterOverride,
+): Promise<string> {
   try {
-    const model  = process.env.REPAIR_MODEL ?? '';
-    const cfg: AdapterConfig = model
-      ? { model }
-      : resolveDefaultAdapter('REPAIR');
+    const purposeModel = process.env.REPAIR_MODEL ?? '';
+    let cfg: AdapterConfig;
+
+    if (purposeModel) {
+      cfg = { model: purposeModel };
+    } else if (adapterOverride?.provider) {
+      const defaults = {
+        groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-5-sonnet-20241022',
+        google: 'gemini-1.5-pro', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
+        together: 'meta-llama/Llama-3-70b-chat-hf', openrouter: 'openai/gpt-4o',
+        mistral: 'mistral-large-latest',
+      } as Record<string, string>;
+      cfg = {
+        model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
+        provider: adapterOverride.provider,
+        apiKey:   adapterOverride.apiKey,
+        baseUrl:  adapterOverride.baseUrl,
+      };
+    } else {
+      cfg = resolveDefaultAdapter('REPAIR');
+    }
+
     const adapter = await getWorkspaceAdapter(cfg);
 
     const adapterResult = await adapter.generate({
@@ -116,7 +180,12 @@ export async function repairGeneratedCode(brokenCode: string, repairInstructions
 
     return cleaned || brokenCode; // fallback to original if completely empty
   } catch (error) {
-    console.error('Repair Engine Error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('429') || msg.includes('insufficient_quota') || msg.includes('quota')) {
+      console.warn('Repair Engine: provider quota exceeded — returning original code. Consider adding GROQ_API_KEY or switching REPAIR_PROVIDER.', { hint: msg.slice(0, 200) });
+    } else {
+      console.error('Repair Engine Error:', error);
+    }
     return brokenCode;
   }
 }

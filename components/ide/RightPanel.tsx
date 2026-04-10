@@ -82,6 +82,50 @@ function SuccessRateBadge({ rate }: { rate: number }) {
   );
 }
 
+function ConfidenceGauge({ value, label }: { value: number; label: string }) {
+  const v = Math.max(0, Math.min(100, value));
+  const radius = 9;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (v / 100) * circumference;
+  const color = v >= 85 ? '#10b981' : v >= 70 ? '#f59e0b' : '#fb7185';
+
+  return (
+    <div
+      className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full border bg-gray-900/40 border-gray-700/50"
+      aria-label={`Engine confidence ${v} percent. ${label}.`}
+      title={`Engine confidence: ${v}% · ${label}`}
+    >
+      <div className="relative w-6 h-6 flex items-center justify-center">
+        <svg width="24" height="24" viewBox="0 0 24 24" className="-rotate-90">
+          <circle cx="12" cy="12" r={radius} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="2.5" />
+          <circle
+            cx="12"
+            cy="12"
+            r={radius}
+            fill="none"
+            stroke={color}
+            strokeWidth="2.5"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dashoffset 0.5s cubic-bezier(0.4,0,0.2,1)' }}
+          />
+        </svg>
+        <span className="absolute text-[9px] font-bold tabular-nums" style={{ color }}>
+          {v}
+        </span>
+      </div>
+      <span
+        className={`text-[10px] font-semibold ${
+          v >= 85 ? 'text-emerald-300' : v >= 70 ? 'text-amber-300' : 'text-rose-300'
+        }`}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
 // ─── html2canvas capture helper ─────────────────────────────────────────────
 // CaptureWrapper proactively broadcasts SNAPSHOT_RESULT out of the sandboxed iframe
 let globalSandpackSnapshot: string | null = null;
@@ -212,10 +256,7 @@ export default function RightPanel({
     engineConfidence >= 85 ? 'Ready to ship' :
     engineConfidence >= 70 ? 'Needs minor refinement' :
     'Regenerate or repair first';
-  const confidenceColor =
-    engineConfidence >= 85 ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' :
-    engineConfidence >= 70 ? 'text-amber-300 border-amber-500/30 bg-amber-500/10' :
-    'text-rose-300 border-rose-500/30 bg-rose-500/10';
+  // color/label handled by ConfidenceGauge
 
   // Reset Final Round when a new project/generation comes in
   useEffect(() => {
@@ -438,9 +479,7 @@ export default function RightPanel({
             v{currentVersion}
           </span>
           <IntentBadge intentType={currentVersion > 1 ? 'ui_refinement' : 'ui_generation'} size="sm" showLabel={false} />
-          <div className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold ${confidenceColor}`}>
-            Engine Confidence {engineConfidence}% · {confidenceLabel}
-          </div>
+          <ConfidenceGauge value={engineConfidence} label={confidenceLabel} />
         </div>
 
         <div className="flex items-center gap-1.5 p-1 bg-gray-900/50 rounded-lg border border-gray-800">

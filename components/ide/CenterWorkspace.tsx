@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw } from 'lucide-react';
-import PromptInput, { type GenerationMode } from '@/components/PromptInput';
+import PromptInput, { type GenerationMode, type SubmitOptions } from '@/components/PromptInput';
 import ThinkingPanel from '@/components/ThinkingPanel';
 import PipelineStatus from '@/components/PipelineStatus';
 import type {
@@ -12,7 +12,7 @@ import type {
 import type { PipelineStep } from '@/components/PipelineStatus';
 
 interface CenterWorkspaceProps {
-  onPromptSubmit: (prompt: string, mode: GenerationMode) => void;
+  onPromptSubmit: (prompt: string, mode: GenerationMode, options?: SubmitOptions) => void;
   isLoading: boolean;
   hasActiveProject: boolean;
   onIntentDetected: (classification: IntentClassification | null) => void;

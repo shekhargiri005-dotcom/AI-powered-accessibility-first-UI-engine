@@ -29,9 +29,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt, mode, contextId, model, provider, apiKey, baseUrl } = body as {
+    const { prompt, mode, depthUi, contextId, model, provider, apiKey, baseUrl } = body as {
       prompt: string;
       mode: GenerationMode;
+      depthUi?: boolean;
       contextId?: string;
       // User-configured model — forwarded so we honour their Ollama/cloud selection
       // rather than allowing the env-resolved adapter to silently pick up a
@@ -94,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      intent: result.intent,
+      intent: depthUi ? { ...(result.intent as object), depthUi: true } : result.intent,
     });
   } catch (error) {
     reqLogger.error('Unexpected error during intent parsing', error);

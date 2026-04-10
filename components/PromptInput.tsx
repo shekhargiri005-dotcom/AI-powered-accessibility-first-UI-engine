@@ -7,6 +7,10 @@ import type { IntentClassification } from '@/lib/validation/schemas';
 
 export type GenerationMode = 'component' | 'app' | 'depth_ui';
 
+export interface SubmitOptions {
+  depthUi?: boolean;
+}
+
 interface SpeechRecognitionEvent {
   resultIndex: number;
   results: { isFinal: boolean; [key: number]: { transcript: string } }[];
@@ -28,7 +32,7 @@ interface SpeechRecognitionConstructor {
 }
 
 interface PromptInputProps {
-  onSubmit: (prompt: string, mode: GenerationMode) => void;
+  onSubmit: (prompt: string, mode: GenerationMode, options?: SubmitOptions) => void;
   isLoading: boolean;
   onIntentDetected?: (classification: IntentClassification) => void;
   hasActiveProject?: boolean;
@@ -36,7 +40,8 @@ interface PromptInputProps {
 
 export default function PromptInput({ onSubmit, isLoading, onIntentDetected, hasActiveProject }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
-  const [mode, setMode] = useState<GenerationMode>('component');
+  const [scopeMode, setScopeMode] = useState<'component' | 'app'>('component');
+  const [depthUi, setDepthUi] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessingImage, setIsProcessingImage] = useState(false);
@@ -215,7 +220,8 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
     }
     if (!isPromptValid || isLoading) return;
     setValidationError(null);
-    onSubmit(prompt.trim(), mode);
+    const effectiveMode: GenerationMode = scopeMode === 'component' && depthUi ? 'depth_ui' : scopeMode;
+    onSubmit(prompt.trim(), effectiveMode, { depthUi });
     setPrompt('');
     setIsRecording(false);
     setLiveIntent(null);
@@ -226,7 +232,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   const maxChars = 10000;
   const isOverLimit = charCount > maxChars;
 
-  const placeholder = mode === 'app'
+  const placeholder = scopeMode === 'app'
     ? 'Describe a full app in one line, e.g. &quot;Build an Instagram-like social media app&quot; or &quot;Create a Spotify music player&quot;'
     : 'Describe a UI component, e.g. &quot;A login form with email and password&quot; or paste a design prompt…';
 
@@ -242,7 +248,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               Describe Your UI
             </h2>
             <p className="text-xs text-gray-400">
-              Natural language → accessible React {mode === 'app' ? 'application' : 'component'}
+              Natural language → accessible React {scopeMode === 'app' ? 'application' : 'component'}
             </p>
           </div>
         </div>
@@ -255,14 +261,13 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         >
           <button
             type="button"
-            onClick={() => setMode('component')}
-            aria-pressed={mode === 'component'}
+            onClick={() => setScopeMode('component')}
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-800
               disabled:opacity-50 disabled:cursor-not-allowed
-              ${mode === 'component'
+              ${scopeMode === 'component'
                 ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'
                 : 'text-gray-400 hover:text-white'
               }
@@ -278,14 +283,13 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           </button>
           <button
             type="button"
-            onClick={() => setMode('app')}
-            aria-pressed={mode === 'app'}
+            onClick={() => setScopeMode('app')}
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:ring-offset-gray-800
               disabled:opacity-50 disabled:cursor-not-allowed
-              ${mode === 'app'
+              ${scopeMode === 'app'
                 ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-md shadow-violet-500/25'
                 : 'text-gray-400 hover:text-white'
               }
@@ -300,14 +304,13 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           </button>
           <button
             type="button"
-            onClick={() => setMode('depth_ui')}
-            aria-pressed={mode === 'depth_ui'}
+            onClick={() => setDepthUi((v) => !v)}
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
               focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 focus:ring-offset-gray-800
               disabled:opacity-50 disabled:cursor-not-allowed
-              ${mode === 'depth_ui'
+              ${depthUi
                 ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white shadow-md shadow-cyan-500/25'
                 : 'text-gray-400 hover:text-white'
               }
@@ -320,7 +323,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         </div>
 
         {/* Hints */}
-        {mode === 'app' && (
+        {scopeMode === 'app' && (
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 mb-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
@@ -332,7 +335,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             </p>
           </div>
         )}
-        {mode === 'depth_ui' && (
+        {depthUi && (
           <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" aria-hidden="true">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
@@ -351,8 +354,8 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
           relative flex flex-col w-full transition-all duration-300
           bg-[#212121] backdrop-blur-md border border-[#303030] 
           ${isFocused ? 'ring-1 ring-white/10 shadow-2xl' : 'hover:border-[#404040] shadow-xl'}
-          ${mode === 'app' ? 'ring-1 ring-violet-500/20' : ''}
-          ${mode === 'depth_ui' ? 'ring-1 ring-cyan-500/20' : ''}
+          ${scopeMode === 'app' ? 'ring-1 ring-violet-500/20' : ''}
+          ${depthUi ? 'ring-1 ring-cyan-500/20' : ''}
           rounded-2xl overflow-hidden
         `}>
           
@@ -444,6 +447,8 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                 onChange={handleFileUpload}
                 className="hidden"
                 accept="image/jpeg,image/png,image/gif,image/webp"
+                aria-label="Attach image file"
+                title="Attach image file"
               />
               <button 
                 type="button" 

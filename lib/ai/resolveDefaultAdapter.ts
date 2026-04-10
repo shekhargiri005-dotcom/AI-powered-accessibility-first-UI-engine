@@ -8,14 +8,14 @@
  *
  * Priority order (by capability tier and cost efficiency):
  *  1. Purpose-specific env override (e.g. INTENT_MODEL / INTENT_PROVIDER / INTENT_API_KEY)
- *  2. OpenAI
- *  3. Anthropic
- *  4. Google Gemini
- *  5. Groq  (fast, free-tier)
- *  6. DeepSeek
- *  7. Together AI
- *  8. OpenRouter
- *  9. Mistral
+ *  2. Groq        (fast, generous free-tier — great for REVIEW/REPAIR/INTENT)
+ *  3. Google Gemini
+ *  4. Anthropic
+ *  5. DeepSeek
+ *  6. Together AI
+ *  7. OpenRouter
+ *  8. Mistral
+ *  9. OpenAI      (deprioritized — quota exhausts easily on free/trial keys)
  * 10. Ollama / LM Studio (local — no key needed, always available as last resort)
  */
 
@@ -43,21 +43,25 @@ const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
   REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
 };
 
-/** Ordered provider detection list — first one with an env key wins */
+/** Ordered provider detection list — first one with an env key wins.
+ *  OpenAI is intentionally placed last: its free/trial quota exhausts quickly.
+ *  Groq is first: fast, free-tier, excellent for lightweight critique & repair tasks.
+ */
 const PROVIDER_CHECKS: Array<{
   id: string;
   envKey: string;
   baseUrl?: string;
 }> = [
-  { id: 'openai',     envKey: 'OPENAI_API_KEY' },
-  { id: 'anthropic',  envKey: 'ANTHROPIC_API_KEY' },
+  { id: 'groq',       envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
   { id: 'google',     envKey: 'GOOGLE_API_KEY' },
   { id: 'google',     envKey: 'GEMINI_API_KEY' },
-  { id: 'groq',       envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
+  { id: 'anthropic',  envKey: 'ANTHROPIC_API_KEY' },
   { id: 'deepseek',   envKey: 'DEEPSEEK_API_KEY' },
   { id: 'together',   envKey: 'TOGETHER_API_KEY',     baseUrl: 'https://api.together.xyz/v1' },
   { id: 'openrouter', envKey: 'OPENROUTER_API_KEY',   baseUrl: 'https://openrouter.ai/api/v1' },
   { id: 'mistral',    envKey: 'MISTRAL_API_KEY' },
+  // OpenAI last — free/trial keys exhaust quota quickly
+  { id: 'openai',     envKey: 'OPENAI_API_KEY' },
 ];
 
 /**

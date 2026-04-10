@@ -55,6 +55,14 @@ export async function generateAppManifest(
     'USER INTENT:\n' +
     JSON.stringify(intent, null, 2);
 
+  if ((intent as UIIntent & { depthUi?: boolean }).depthUi) {
+    prompt +=
+      '\n\nDEPTH UI STYLE MODE:\n' +
+      '- The user wants a premium “Depth UI” aesthetic (parallax layers, floating cards, subtle glow, glassmorphism).\n' +
+      '- Plan file responsibilities to support layered visuals and motion (hero layers, background ornaments, reusable motion utilities inside components).\n' +
+      '- Ensure accessibility: respect prefers-reduced-motion; animations must degrade gracefully.\n';
+  }
+
   if (isMultiSlide) {
     prompt +=
       '\n\nCRITICAL MULTI-SLIDE ARCHITECTURE REQUIREMENT: The user requested a MULTI-SLIDE / PAGINATED experience. ' +
@@ -116,6 +124,15 @@ export async function generateFileChunk(
     '7. CRITICAL: Use `lucide-react` EXCLUSIVELY for icons. Import them individually using destructuring: `import { ... } from \'lucide-react\';`\n' +
     '8. NEVER import from "./utils/", "./hooks/", or other non-existent paths. ' +
     'All custom logic and hooks must be self-contained within this file or imported ONLY from components/files listed in the APP MANIFEST above.\n\n';
+
+  if ((intent as UIIntent & { depthUi?: boolean }).depthUi) {
+    prompt +=
+      'DEPTH UI STYLE REQUIREMENTS:\n' +
+      '- Add tasteful motion + depth (parallax, floating layers, soft glows, glass) but keep it performance-safe.\n' +
+      '- Use Framer Motion only if it is already available in the workspace; otherwise use CSS transforms/transition with requestAnimationFrame-free patterns.\n' +
+      '- MUST respect prefers-reduced-motion (disable/soften motion).\n' +
+      '- Keep interactions accessible: focus-visible rings, keyboard nav, high contrast.\n\n';
+  }
 
   if (isMultiSlide) {
     prompt +=

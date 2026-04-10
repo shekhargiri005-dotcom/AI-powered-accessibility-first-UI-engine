@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import type { GenerationMode } from '@/components/PromptInput';
+import type { GenerationMode, SubmitOptions } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
 import type { UIIntent, A11yReport, ThinkingPlan, IntentClassification } from '@/lib/validation/schemas';
@@ -93,6 +93,7 @@ export default function HomePage() {
   // Intent & Thinking state
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [pendingMode, setPendingMode] = useState<GenerationMode>('component');
+  const [pendingDepthUi, setPendingDepthUi] = useState(false);
   const [liveClassification, setLiveClassification] = useState<IntentClassification | null>(null);
   const [lastIntentConfidence, setLastIntentConfidence] = useState<number>(0.8);
   const [thinkingPlan, setThinkingPlan] = useState<ThinkingPlan | null>(null);
@@ -153,7 +154,7 @@ export default function HomePage() {
   }, []);
 
   // ─── Generation Pipeline ──────────────────────────────────────────────────
-  const runGenerationPipeline = useCallback(async (prompt: string, mode: GenerationMode) => {
+  const runGenerationPipeline = useCallback(async (prompt: string, mode: GenerationMode, depthUi?: boolean) => {
     setStage('parsing');
     setPipelineStep('parsing');
 
@@ -162,7 +163,7 @@ export default function HomePage() {
       const parseRes = await fetch('/api/parse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, mode, contextId: activeProjectId || undefined, ...aiPayload() }),
+        body: JSON.stringify({ prompt, mode, depthUi: !!depthUi, contextId: activeProjectId || undefined, ...aiPayload() }),
       });
       const parseData = await parseRes.json();
       if (!parseData.success) {
@@ -171,6 +172,7 @@ export default function HomePage() {
         return;
       }
       intent = parseData.intent;
+      if (depthUi) (intent as UIIntent & { depthUi?: boolean }).depthUi = true;
       setPipelineStep('parsed');
     } catch {
       setStage('error'); setPipelineStep('error');
@@ -195,7 +197,7 @@ export default function HomePage() {
         const manifestRes = await fetch('/api/manifest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intent, ...aiFields, isMultiSlide: isMultiSlideMode }),
+          body: JSON.stringify({ intent, ...aiFields, isMultiSlide: isMultiSlideMode, depthUi: !!depthUi }),
         });
         const manifestData = await manifestRes.json();
         if (!manifestData.success) throw new Error(manifestData.error || 'Manifest failed');
@@ -206,7 +208,7 @@ export default function HomePage() {
           const chunkRes = await fetch('/api/chunk', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ intent, manifest, targetFile: fileReq.filename, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
+            body: JSON.stringify({ intent, manifest, targetFile: fileReq.filename, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode, depthUi: !!depthUi }),
           });
           const chunkData = await chunkRes.json();
           if (chunkData.success) generatedFiles[fileReq.filename] = chunkData.code;
@@ -235,7 +237,7 @@ export default function HomePage() {
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent, mode, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
+        body: JSON.stringify({ intent, mode, depthUi: !!depthUi, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
       });
       const latencyMs   = Date.now() - t0;
       const generateData = await generateRes.json();
@@ -283,9 +285,10 @@ export default function HomePage() {
   }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
 
   // ─── Interaction Handlers ─────────────────────────────────────────────────
-  const handlePromptSubmit = useCallback(async (prompt: string, mode: GenerationMode) => {
+  const handlePromptSubmit = useCallback(async (prompt: string, mode: GenerationMode, options?: SubmitOptions) => {
     setPendingPrompt(prompt);
     setPendingMode(mode);
+    setPendingDepthUi(!!options?.depthUi);
     setThinkingPlan(null);
     setPipelineError(undefined);
 
@@ -357,10 +360,15 @@ export default function HomePage() {
     }
     setPendingPrompt(prompt);
     setPendingMode(output?.mode ?? 'component');
+    setPendingDepthUi(!!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi);
     setPipelineError(undefined);
     setThinkingPlan(null);
     // NOTE: do NOT clear output — RightPanel must remain visible with the overlay
-    await runGenerationPipeline(prompt, output?.mode ?? 'component');
+    await runGenerationPipeline(
+      prompt,
+      output?.mode ?? 'component',
+      !!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi,
+    );
   }, [aiConfig, output?.mode, runGenerationPipeline]);
 
   const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
@@ -369,7 +377,12 @@ export default function HomePage() {
     <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-y-auto overflow-x-hidden lg:overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
       {/* Mobile top bar */}
       <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-gray-950/80 backdrop-blur-md z-40 border-b border-gray-800/60 flex items-center px-4">
-        <button onClick={() => setIsMobileSidebarOpen(true)} className="p-2 text-gray-400 hover:text-white rounded-lg">
+        <button
+          onClick={() => setIsMobileSidebarOpen(true)}
+          className="p-2 text-gray-400 hover:text-white rounded-lg"
+          aria-label="Open sidebar"
+          title="Open sidebar"
+        >
           <Menu className="w-5 h-5" />
         </button>
         <span className="font-bold ml-2 text-gray-200">AI UI Engine</span>
@@ -413,7 +426,7 @@ export default function HomePage() {
           originalPrompt={pendingPrompt}
           onProceed={async () => {
             setThinkingPlan(null);
-            await runGenerationPipeline(pendingPrompt, pendingMode);
+            await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
           }}
           onRefineUnderstanding={() => {
             setStage('idle');
