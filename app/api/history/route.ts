@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { prisma, withReconnect } from '@/lib/prisma';
 import { getProjectByIdAsync } from '@/lib/ai/memory';
 
 export async function GET(request: NextRequest) {
@@ -19,13 +19,13 @@ export async function GET(request: NextRequest) {
     // ── Full history list ────────────────────────────────────────────────────
     // Returns a lightweight summary shape (no code blobs) identical to what
     // the front-end previously consumed from the history.json endpoint.
-    const rows = await prisma.project.findMany({
+    const rows = await withReconnect(() => prisma.project.findMany({
       include: {
         versions: { orderBy: { version: 'desc' }, take: 1 },
       },
       orderBy: { updatedAt: 'desc' },
       take: 200,
-    });
+    }));
 
     const summarizedHistory = rows
       .map((row) => {

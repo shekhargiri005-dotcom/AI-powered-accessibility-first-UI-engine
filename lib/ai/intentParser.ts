@@ -164,9 +164,36 @@ export async function parseIntent(
 
     // Check for error response from AI
     if (typeof parsed === 'object' && parsed !== null && 'error' in parsed) {
+      const aiErrorMsg = (parsed as { error: string }).error;
+
+      // "Not a UI description" is a soft rejection — the model was too strict.
+      // The prompt already passed input validation + classify, so we attempt a
+      // minimal-intent recovery instead of hard-failing the whole pipeline.
+      if (aiErrorMsg === 'Not a UI description' || aiErrorMsg?.toLowerCase().includes('not a ui')) {
+        // Build a minimal fallback intent so generation can still proceed
+        const fallbackIntent = {
+          componentType: 'component',
+          componentName: userInput.trim().split(' ').slice(0, 3).map(
+            (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+          ).join('') + 'Component',
+          description: userInput.trim().substring(0, 200),
+          fields: [],
+          layout: { type: 'single-column', maxWidth: 'lg', alignment: 'center' },
+          interactions: [],
+          theme: { variant: 'default', size: 'md' },
+          a11yRequired: ['keyboard navigation', 'aria-labels'],
+          semanticElements: ['main', 'section'],
+          isRefinement: false,
+        };
+        const fallbackValidation = (mode === 'app' ? AppIntentSchema : mode === 'depth_ui' ? DepthUIIntentSchema : UIIntentSchema).safeParse(fallbackIntent);
+        if (fallbackValidation.success) {
+          return { success: true, intent: fallbackValidation.data, rawResponse: rawContent };
+        }
+      }
+
       return {
         success: false,
-        error: (parsed as { error: string }).error,
+        error: `AI rejected this prompt: ${aiErrorMsg}. Try rephrasing as a UI component description (e.g. "a login form", "a dashboard card", "a hero section").`,
         rawResponse: rawContent,
       };
     }
