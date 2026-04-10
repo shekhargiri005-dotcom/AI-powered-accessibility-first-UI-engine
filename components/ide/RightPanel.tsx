@@ -223,7 +223,7 @@ export default function RightPanel({
 
   const engineConfidence = (() => {
     // Base weights
-    const wi = 0.25; // intent quality
+    let wi = 0.25; // intent quality
     let wa = 0.40;   // accessibility (deterministic — always available)
     let wc = 0.25;   // critique (may be 0 if quota-limited)
     let wf = 0.10;   // feedback learning signal
