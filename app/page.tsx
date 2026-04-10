@@ -204,7 +204,9 @@ export default function HomePage() {
     }
 
     try {
-      const maxTokens = 5000;
+      // Depth UI generates multi-section cinematic layouts with parallax layers and Framer Motion
+      // variants — these legitimately need more output tokens to avoid mid-file truncation.
+      const maxTokens = (mode === 'depth_ui' || depthUi) ? 7000 : 5000;
       const aiFields  = aiPayload();
 
       if (isFullAppMode && mode === 'app') {
