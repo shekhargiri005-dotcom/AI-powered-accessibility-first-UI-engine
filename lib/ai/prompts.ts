@@ -442,7 +442,12 @@ export function buildDepthUIModeIntentPrompt(userInput: string, knowledge: strin
 }
 
 export function buildDepthUIModeGeneratorPrompt(
-  intent: object & { depthSpec?: unknown },
+  intent: object & { 
+    depthSpec?: {
+      parallaxCoefficients?: { bgLayerSpeedFactor: number; midLayerSpeedFactor: number; fgLayerSpeedFactor: number; useRelativeScroll: boolean };
+      motionDesign?: { motionStyle?: string; forbiddenZones?: string[] };
+    }
+  },
   knowledge: string | null = null,
   isMultiSlide: boolean = false
 ): string {
