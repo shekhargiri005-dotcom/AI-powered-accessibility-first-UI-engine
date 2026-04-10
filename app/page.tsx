@@ -92,7 +92,8 @@ export default function HomePage() {
   // Stable timestamp for the current output — only changes when output itself changes.
   // Using new Date() inline in JSX caused a new value on every render, making RightPanel
   // reset its version history and treat every re-render as a brand-new project.
-  const outputTimestampRef = useRef<string>(new Date().toISOString());
+  // Initialized to '' — runGenerationPipeline stamps the real value before setOutput() is called.
+  const outputTimestampRef = useRef<string>('');
 
   // Intent & Thinking state
   const [pendingPrompt, setPendingPrompt] = useState('');
