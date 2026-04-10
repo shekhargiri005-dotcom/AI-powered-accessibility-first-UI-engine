@@ -72,7 +72,7 @@ export default function Sidebar({
 
       {/* Sidebar Container */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-72 bg-gray-950/80 backdrop-blur-xl border-r border-gray-800/60
+        fixed inset-y-0 left-0 z-50 w-72 lg:w-full lg:h-full bg-gray-950/80 backdrop-blur-xl border-r border-gray-800/60
         flex flex-col min-h-0 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0
         ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
