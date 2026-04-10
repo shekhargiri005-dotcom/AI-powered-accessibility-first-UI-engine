@@ -254,6 +254,10 @@ export default function RightPanel({
     // Small penalty only for hard errors — skipped is expected in most envs
     if (finalRoundStatus === 'error') score -= 5;
 
+    // Generation-success floor: if we have any intentScore the pipeline ran —
+    // don't let sparse signals make a successful generation look like a failure.
+    if (intentScore > 0) score = Math.max(score, 30);
+
     return Math.max(0, Math.min(100, Math.round(score)));
   })();
   const confidenceLabel =

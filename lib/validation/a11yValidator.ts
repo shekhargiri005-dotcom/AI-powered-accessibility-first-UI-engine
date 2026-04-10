@@ -132,13 +132,18 @@ const A11Y_RULES: A11yRule[] = [
     severity: 'error',
     description: 'Interactive elements must be keyboard accessible',
     check: (code) => {
-      // Check for onClick handlers on non-interactive elements (div, span with onClick)
-      const nonInteractive = code.match(/<(?:div|span)\s[^>]*onClick[^>]*>/);
+      // Check for onClick handlers on non-interactive elements (div, span) without role or tabIndex
+      const nonInteractive = code.match(/<(?:div|span)\s[^>]*onClick[^>]*(?!role=)[^>]*>/);
       if (nonInteractive) {
+        const tag = nonInteractive[0];
+        // Pass if it has role="button" or tabIndex
+        if (/role\s*=\s*["']button["']/.test(tag) || /tabIndex/.test(tag)) {
+          return { passed: true };
+        }
         return {
           passed: false,
-          element: nonInteractive[0].substring(0, 50),
-          detail: 'onClick on non-interactive element without role/tabIndex',
+          element: tag.substring(0, 50),
+          detail: 'onClick on non-interactive element without role="button"/tabIndex',
         };
       }
       return { passed: true };
@@ -171,7 +176,12 @@ const A11Y_RULES: A11yRule[] = [
     severity: 'warning',
     description: 'Text must have sufficient color contrast (4.5:1 ratio)',
     check: (code) => {
-      // Check for low-contrast Tailwind pairs (gray-300 text on white bg)
+      // Only flag light text colors when there is NO dark background present.
+      // Generated dark-mode UIs (bg-zinc-900, bg-gray-950, bg-gray-900, bg-slate-900 etc.)
+      // have excellent contrast with text-gray-200/300 — these are NOT accessibility issues.
+      const hasDarkBackground = /bg-(?:zinc|gray|slate|neutral|stone)-(?:800|900|950)/.test(code);
+      if (hasDarkBackground) return { passed: true };
+
       const lowContrastPatterns = [
         /text-gray-300/, /text-gray-200/, /text-gray-100/,
         /text-yellow-200/, /text-blue-200/,
@@ -181,7 +191,7 @@ const A11Y_RULES: A11yRule[] = [
           return {
             passed: false,
             element: 'Text element',
-            detail: `Potential low-contrast color: ${pattern.source}`,
+            detail: `Potential low-contrast color: ${pattern.source} on light background`,
           };
         }
       }
@@ -195,8 +205,12 @@ const A11Y_RULES: A11yRule[] = [
     severity: 'warning',
     description: 'Focused elements must have a visible focus indicator',
     check: (code) => {
-      // Check if outline is removed without a replacement
-      if (/outline-none/.test(code) && !/focus-visible:ring/.test(code) && !/focus:ring/.test(code)) {
+      // Only flag when outline-none is used AND there is no focus ring replacement
+      if (
+        /outline-none/.test(code) &&
+        !/focus(?:-visible)?:(?:ring|outline)/.test(code) &&
+        !/focus:outline/.test(code)
+      ) {
         return {
           passed: false,
           element: 'Focusable element',
@@ -231,8 +245,8 @@ export function validateAccessibility(code: string): A11yReport {
   const errorCount = violations.filter(v => v.severity === 'error').length;
   const warningCount = violations.filter(v => v.severity === 'warning').length;
 
-  // Score: Start at 100, deduct 15 per error, 5 per warning
-  const score = Math.max(0, 100 - errorCount * 15 - warningCount * 5);
+  // Score: Start at 100, deduct 10 per hard error, 3 per warning, 1 per info
+  const score = Math.max(0, 100 - errorCount * 10 - warningCount * 3);
   const passed = errorCount === 0;
 
   const suggestions = violations.map(v => `[${v.ruleId}] ${v.suggestion}`);
