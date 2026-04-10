@@ -796,7 +796,6 @@ export default function RightPanel({
             </div>
           )}
         </div>
-        )}
 
         {/* Refine Input */}
         <div className="flex items-center gap-3 w-full p-4">
