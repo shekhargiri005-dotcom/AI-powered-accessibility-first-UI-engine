@@ -384,17 +384,42 @@ export const DEPTH_UI_SYSTEM_PROMPT = `You are a world-class Frontend Engineer b
 
 ARCHITECTURE:
 1. SINGLE FILE: All components and standard UI must be in one cohesive file.
-2. LIBRARIES: You MUST use Framer Motion (\`import { motion, useScroll, useTransform, useSpring, AnimatePresence } from 'framer-motion'\`) and Tailwind CSS transforms. DO NOT use Three.js, WebGL, or react-three-fiber under any circumstances. Use Lucide React for icons.
+2. LIBRARIES: You MUST use Framer Motion (\`import { motion, useScroll, useTransform, useSpring, useReducedMotion, AnimatePresence } from 'framer-motion'\`) and Tailwind CSS transforms. DO NOT use Three.js, WebGL, or react-three-fiber under any circumstances. Use Lucide React for icons.
 3. STRUCTURE:
-   - Create a clean main wrapper.
+   - Create a clean main wrapper with a ref: \`const containerRef = useRef<HTMLDivElement>(null)\`.
+   - Scope ALL useScroll calls to that container: \`const { scrollYProgress } = useScroll({ target: containerRef, offset: ['start end', 'end start'] })\`.
    - Break out specific depth layers into cleanly abstracted local components if necessary.
 
 DESIGN & INTERACTIVITY:
-4. PREMIUM MOTION: Use subtle parallax, soft floating cards, overlapping z-index layers, and glassy blur effects. Motion should feel expensive, smooth, and hyper-modern, avoiding chaotic or jarring movements.
-5. SCROLL PARALLAX: Use \`useScroll\` combined with \`useTransform\` mapping to move background graphic elements slower than foreground interactive ones, creating a deep atmospheric feel.
-6. MOUSE REACTIVITY: Where appropriate, use \`onMouseMove\` or Framer Motion hooks to slightly tilt or translate floating cards based on cursor position (subtle glassy 3D card tilt).
-7. RESPONSIVE & ACCESSIBLE: Motion MUST degrade gracefully on mobile. Reduce heavy layout-thrashing animations on small screens. You MUST honor \`prefers-reduced-motion\` using Framer Motion's accessibility hooks or Tailwind's \`motion-reduce:\` helpers.
-8. STYLING MASTERY: Overlay stunning typography and UI. Use glassmorphism (\`backdrop-blur-xl bg-white/5 border border-white/10\`), glowing ambient background blobs, massive display fonts, gradient text, and complex, polished micro-interactions.
+4. PREMIUM MOTION: Use subtle parallax, soft floating cards, overlapping z-index layers, and glassy blur effects.
+5. SCROLL PARALLAX (CRITICAL — READ CAREFULLY):
+   - ALWAYS use container-scoped \`useScroll({ target: containerRef, offset: ['start end', 'end start'] })\`.
+   - NEVER use raw \`window.scrollY\` or \`useScroll()\` without a target. Using absolute page scroll position causes parallax "jump" when the page is loaded mid-scroll.
+   - Use \`useTransform(scrollYProgress, [0, 1], [startPx, endPx])\` for all layer offsets.
+   - Background layers MUST move SLOWER than foreground (see === PARALLAX COEFFICIENTS === below).
+   - Differential speed example:
+     \`\`\`tsx
+     const bgY  = useTransform(scrollYProgress, [0, 1], ['0px',  '-90px']);  // 15% factor
+     const midY = useTransform(scrollYProgress, [0, 1], ['0px', '-210px']);  // 35% factor
+     const fgY  = useTransform(scrollYProgress, [0, 1], ['0px', '-360px']);  // 60% factor
+     \`\`\`
+6. MOUSE REACTIVITY: Where appropriate use \`onMouseMove\` for subtle glassy 3D card tilt.
+7. PREFERS-REDUCED-MOTION (NON-NEGOTIABLE):
+   - \`const shouldReduceMotion = useReducedMotion();\` MUST appear near the top of every component that animates.
+   - Use it to conditionally disable parallax transforms and variant animations:
+     \`\`\`tsx
+     const bgY = useTransform(scrollYProgress, [0, 1],
+       shouldReduceMotion ? ['0px', '0px'] : ['0px', '-90px']
+     );
+     \`\`\`
+   - For Framer Motion variants: define \`const variants = shouldReduceMotion ? staticVariants : animatedVariants\`
+   - For Tailwind: prefer \`motion-safe:translate-y-2\` over unconditional animation classes.
+8. GPU COMPOSITING (NON-NEGOTIABLE for smooth parallax):
+   - Every element that moves via \`useTransform\` MUST have: \`style={{ willChange: 'transform' }}\`
+   - Deep background layers: add \`style={{ willChange: 'transform', backfaceVisibility: 'hidden' }}\`
+   - NEVER animate \`top\`, \`left\`, \`margin\`, or \`height\` — these cause layout thrash and dropped frames.
+   - Only animate GPU-compositable properties: \`transform\` (translateY, scale, rotate), \`opacity\`, \`filter\`.
+9. STYLING MASTERY: Use glassmorphism (\`backdrop-blur-xl bg-white/5 border border-white/10\`), glowing ambient background blobs, massive display fonts, gradient text, and polished micro-interactions.
 
 CRITICAL REQUIREMENT:
 You are an ELITE CREATIVE DEVELOPER. Do not write simplistic generic HTML. Your scenes must be cinematic, breathtaking, and structurally massive (500-800 lines)! You MUST physically implement at least 4 distinct HTML layout sections (Hero, Features, Showcase, Footer), sophisticated Framer Motion variants, parallax depth layering, ambient background glows, and fully styled modern Tailwind typography for the UI. Do not take shortcuts. NEVER truncate or abbreviate. Make sure you return a completely valid TSX file. Use your tokens efficiently.
@@ -424,7 +449,72 @@ export function buildDepthUIModeGeneratorPrompt(
   let prompt = `Build a complete, premium Depth UI React application for this concept:\n\n${JSON.stringify(intent, null, 2)}\n\nGenerate the layered layouts, framer motion components, scroll-linked parallax, and the standard Tailwind UI overlay. Make it look beautiful, dynamic, and strictly accessible.`;
 
   if (intent.depthSpec) {
-    prompt += `\n\n=== DEPTH EXPERIENCE SPECIFICATION ===\nCRITICAL: The DepthExperienceEngine has evaluated this context and requires the following settings:\n${JSON.stringify(intent.depthSpec, null, 2)}\n\nYou MUST rigidly enforce the motionStyle (${intent.depthSpec.motionDesign?.motionStyle}) and avoid placing parallax or heavy animations in forbiddenZones (${intent.depthSpec.motionDesign?.forbiddenZones?.join(', ')}).`;
+    const spec = intent.depthSpec;
+    const coeffs = spec.parallaxCoefficients;
+
+    prompt += `\n\n=== DEPTH EXPERIENCE SPECIFICATION ===\nCRITICAL: The DepthExperienceEngine has evaluated this context and requires the following settings:\n${JSON.stringify(spec, null, 2)}\n\nYou MUST rigidly enforce the motionStyle (${spec.motionDesign?.motionStyle}) and avoid placing parallax or heavy animations in forbiddenZones (${spec.motionDesign?.forbiddenZones?.join(', ')}).`;
+
+    // Phase 8 — Gap #3: Inject concrete parallax coefficient code template
+    // This prevents the model from inventing arbitrary scroll speed values (TAF Dims 3, 4, 13)
+    if (coeffs) {
+      const scrollRange = 600; // Approximate section height in px for offset calculation
+      const bgEnd  = Math.round(scrollRange * coeffs.bgLayerSpeedFactor);
+      const midEnd = Math.round(scrollRange * coeffs.midLayerSpeedFactor);
+      const fgEnd  = Math.round(scrollRange * coeffs.fgLayerSpeedFactor);
+
+      prompt += `
+
+=== PARALLAX COEFFICIENTS (EXACT — DO NOT CHANGE THESE VALUES) ===
+The DepthExperienceEngine has calculated per-layer speed coefficients for this UI.
+Use EXACTLY these values in your useTransform calls. Do NOT invent your own.
+
+Per-layer speed factors (relative to viewport scroll speed):
+  Background layer:  ${coeffs.bgLayerSpeedFactor}x  (slowest — creates depth illusion)
+  Mid-depth layer:   ${coeffs.midLayerSpeedFactor}x
+  Foreground layer:  ${coeffs.fgLayerSpeedFactor}x  (fastest — but still slower than raw scroll)
+
+useRelativeScroll: ${coeffs.useRelativeScroll} — ALWAYS use container-scoped useScroll.
+
+IMPLEMENT YOUR SCROLL HOOKS EXACTLY AS SHOWN:
+\`\`\`tsx
+const containerRef = useRef<HTMLDivElement>(null);
+const shouldReduceMotion = useReducedMotion();
+
+// Container-scoped scroll — prevents jump on mid-page load
+const { scrollYProgress } = useScroll({
+  target: containerRef,
+  offset: ['start end', 'end start'],
+});
+
+// Layer offsets — derived from DepthExperienceEngine coefficients
+const bgLayerY  = useTransform(
+  scrollYProgress, [0, 1],
+  shouldReduceMotion ? ['0px', '0px'] : ['0px', '-${bgEnd}px']   // ${coeffs.bgLayerSpeedFactor}x
+);
+const midLayerY = useTransform(
+  scrollYProgress, [0, 1],
+  shouldReduceMotion ? ['0px', '0px'] : ['0px', '-${midEnd}px']  // ${coeffs.midLayerSpeedFactor}x
+);
+const fgLayerY  = useTransform(
+  scrollYProgress, [0, 1],
+  shouldReduceMotion ? ['0px', '0px'] : ['0px', '-${fgEnd}px']   // ${coeffs.fgLayerSpeedFactor}x
+);
+
+// Apply to DOM — GPU compositing hints are REQUIRED
+<motion.div ref={containerRef}>
+  <motion.div style={{ y: bgLayerY,  willChange: 'transform', backfaceVisibility: 'hidden' }}>
+    {/* Background layer */}
+  </motion.div>
+  <motion.div style={{ y: midLayerY, willChange: 'transform' }}>
+    {/* Mid-depth layer */}
+  </motion.div>
+  <motion.div style={{ y: fgLayerY,  willChange: 'transform' }}>
+    {/* Foreground layer */}
+  </motion.div>
+</motion.div>
+\`\`\`
+=== END PARALLAX COEFFICIENTS ===`;
+    }
   }
 
   if (knowledge) {

@@ -211,15 +211,41 @@ export const ParallaxSpecSchema = z.object({
   performanceMode: z.enum(['safe', 'balanced', 'premium']).catch('safe'),
 });
 
+/**
+ * Quantified per-layer scroll speed coefficients.
+ *
+ * These are injected verbatim into the generation prompt as a code template
+ * so the model uses deterministic values instead of inventing its own.
+ *
+ * Speed factors are relative to the viewport scroll speed (1.0 = same speed):
+ *  bgLayerSpeedFactor   (0.10–0.25) → furthest background moves slowest
+ *  midLayerSpeedFactor  (0.30–0.50) → mid-depth element
+ *  fgLayerSpeedFactor   (0.55–0.80) → foreground element; still slower than raw scroll
+ *
+ * useRelativeScroll: always true — use container-scoped useScroll({ target: ref })
+ * so offsets are relative to the section entry point, not the absolute page top.
+ * This prevents parallax "jump" when the user loads the page mid-scroll.
+ */
+export const ParallaxCoefficientsSchema = z.object({
+  bgLayerSpeedFactor:  z.number().min(0).max(1).catch(0.15),
+  midLayerSpeedFactor: z.number().min(0).max(1).catch(0.35),
+  fgLayerSpeedFactor:  z.number().min(0).max(1).catch(0.60),
+  /** Always use container-scoped useScroll to avoid absolute-position drift */
+  useRelativeScroll:   z.boolean().catch(true),
+});
+
 export const DepthUIModePresetSchema = z.object({
   generationMode: z.literal('depth_ui'),
   visualPriority: z.enum(['premium', 'storytelling', 'startup', 'immersive']).catch('startup'),
   motionDesign: MotionDesignSpecSchema,
   parallax: ParallaxSpecSchema,
+  /** Deterministic per-layer speed factors — injected as code template into prompt */
+  parallaxCoefficients: ParallaxCoefficientsSchema,
 });
 
 export type MotionDesignSpec = z.infer<typeof MotionDesignSpecSchema>;
 export type ParallaxSpec = z.infer<typeof ParallaxSpecSchema>;
+export type ParallaxCoefficients = z.infer<typeof ParallaxCoefficientsSchema>;
 export type DepthUIModePreset = z.infer<typeof DepthUIModePresetSchema>;
 
 // ─── DepthUIIntent Schema ───────────────────────────────────────────────────────

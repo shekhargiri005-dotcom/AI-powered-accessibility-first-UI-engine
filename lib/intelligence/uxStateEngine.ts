@@ -18,7 +18,7 @@
 
 export interface UXStateCheck {
   /** Identifier for this UX state */
-  state:    'loading' | 'empty' | 'error' | 'disabled' | 'hover' | 'focus';
+  state:    'loading' | 'empty' | 'error' | 'disabled' | 'hover' | 'focus' | 'reduced_motion';
   /** Whether the state appears to be handled in the code */
   present:  boolean;
   /** How important this state is for this component type */
@@ -141,10 +141,28 @@ function hasFocusState(code: string): boolean {
   );
 }
 
+/**
+ * Detect if prefers-reduced-motion guard is implemented (a11y critical for animated UIs).
+ * Checks for Framer Motion's useReducedMotion(), CSS media query, or Tailwind motion-reduce:
+ */
+function hasReducedMotionGuard(code: string): boolean {
+  return (
+    code.includes('useReducedMotion')    || // Framer Motion: const shouldReduceMotion = useReducedMotion()
+    code.includes('prefers-reduced-motion') || // CSS @media or matchMedia
+    code.includes('motion-reduce:')      || // Tailwind motion-reduce: variant
+    code.includes('motion-safe:')        || // Tailwind motion-safe: variant
+    code.includes('reducedMotion')       || // common variable name pattern
+    code.includes('MotionConfig')           // Framer Motion MotionConfig with reducedMotion prop
+  );
+}
+
 // ─── Priority Rules per Component Type ───────────────────────────────────────
 
+// Phase 8: Pull out state type for clarity
+type UXState = UXStateCheck['state'];
+
 interface PriorityRule {
-  state:    UXStateCheck['state'];
+  state:    UXState;
   priority: UXStateCheck['priority'];
 }
 
@@ -222,12 +240,14 @@ const PRIORITY_RULES: Record<string, PriorityRule[]> = {
     { state: 'disabled', priority: 'optional' },
   ],
   depth_experience: [
-    { state: 'hover',    priority: 'recommended' },
-    { state: 'focus',    priority: 'required' },  // a11y: parallax must degrade gracefully
-    { state: 'loading',  priority: 'optional' },
-    { state: 'empty',    priority: 'optional' },
-    { state: 'error',    priority: 'optional' },
-    { state: 'disabled', priority: 'optional' },
+    // Phase 8: prefers-reduced-motion is REQUIRED for animated UI (TAF Section D)
+    { state: 'reduced_motion', priority: 'required' },
+    { state: 'focus',          priority: 'required' },  // a11y: parallax must degrade gracefully
+    { state: 'hover',          priority: 'recommended' },
+    { state: 'loading',        priority: 'optional' },
+    { state: 'empty',          priority: 'optional' },
+    { state: 'error',          priority: 'optional' },
+    { state: 'disabled',       priority: 'optional' },
   ],
   general: [
     { state: 'hover',    priority: 'recommended' },
@@ -242,12 +262,14 @@ const PRIORITY_RULES: Record<string, PriorityRule[]> = {
 // ─── Guidance Templates ───────────────────────────────────────────────────────
 
 const GUIDANCE: Record<UXStateCheck['state'], string> = {
-  loading:  'Add a loading skeleton or spinner: {isLoading && <div className="animate-pulse ...">...skeleton...</div>}',
-  empty:    'Add an empty state for when the data array is empty: {items.length === 0 && <EmptyState icon={...} message="No items yet" />}',
-  error:    'Add an error state: {error && <div role="alert" className="text-red-500">...</div>}',
-  disabled: 'Add disabled state to interactive elements: disabled={isLoading || isSubmitting} with aria-disabled={true}',
-  hover:    'Add hover states using Tailwind: hover:bg-zinc-800 hover:scale-[1.02] transition-all duration-150',
-  focus:    'Add visible focus rings for keyboard accessibility: focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
+  loading:       'Add a loading skeleton or spinner: {isLoading && <div className="animate-pulse ...">...skeleton...</div>}',
+  empty:         'Add an empty state for when the data array is empty: {items.length === 0 && <EmptyState icon={...} message="No items yet" />}',
+  error:         'Add an error state: {error && <div role="alert" className="text-red-500">...</div>}',
+  disabled:      'Add disabled state to interactive elements: disabled={isLoading || isSubmitting} with aria-disabled={true}',
+  hover:         'Add hover states using Tailwind: hover:bg-zinc-800 hover:scale-[1.02] transition-all duration-150',
+  focus:         'Add visible focus rings for keyboard accessibility: focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2',
+  // Phase 8: prefers-reduced-motion guidance
+  reduced_motion: 'Add prefers-reduced-motion guard using Framer Motion: const shouldReduceMotion = useReducedMotion(); then conditionally disable parallax variants: const variants = shouldReduceMotion ? staticVariants : parallaxVariants. Alternatively use Tailwind motion-reduce: or motion-safe: prefix classes.',
 };
 
 // ─── Main Audit Function ──────────────────────────────────────────────────────
@@ -263,12 +285,14 @@ export function auditUXStates(code: string, prompt: string): UXStateAudit {
   const rules         = PRIORITY_RULES[componentType] ?? PRIORITY_RULES.general;
 
   const detectors: Record<UXStateCheck['state'], (c: string) => boolean> = {
-    loading:  hasLoadingState,
-    empty:    hasEmptyState,
-    error:    hasErrorState,
-    disabled: hasDisabledState,
-    hover:    hasHoverState,
-    focus:    hasFocusState,
+    loading:       hasLoadingState,
+    empty:         hasEmptyState,
+    error:         hasErrorState,
+    disabled:      hasDisabledState,
+    hover:         hasHoverState,
+    focus:         hasFocusState,
+    // Phase 8: reduced_motion detector for depth_experience components
+    reduced_motion: hasReducedMotionGuard,
   };
 
   const checks: UXStateCheck[] = rules.map(rule => ({
