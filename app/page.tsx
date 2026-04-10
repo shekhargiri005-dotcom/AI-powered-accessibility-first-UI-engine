@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import type { GenerationMode, SubmitOptions } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
@@ -89,6 +89,10 @@ export default function HomePage() {
 
   // Workspace state
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  // Stable timestamp for the current output — only changes when output itself changes.
+  // Using new Date() inline in JSX caused a new value on every render, making RightPanel
+  // reset its version history and treat every re-render as a brand-new project.
+  const outputTimestampRef = useRef<string>(new Date().toISOString());
 
   // Intent & Thinking state
   const [pendingPrompt, setPendingPrompt] = useState('');
@@ -262,6 +266,8 @@ export default function HomePage() {
       };
       setOutput(newOutput);
       setStage('complete');
+      // Stamp a stable timestamp for this output so RightPanel version history stays coherent
+      outputTimestampRef.current = new Date().toISOString();
 
       // Record generation metadata for the FeedbackBar (fire-and-forget hash)
       hashPromptClient(prompt).then((promptHash) => {
@@ -348,9 +354,6 @@ export default function HomePage() {
 
   // Direct refinement: skips classify/think/awaiting_confirm and immediately
   // runs the generation pipeline in the context of the current active project.
-  // This keeps the user in the same workspace (same activeProjectId, output stays
-  // visible) and shows the 'Evolving UI' overlay in RightPanel instead of the
-  // ThinkingPanel. Only called from the RightPanel bottom refine bar.
   const handleDirectRefine = useCallback(async (prompt: string) => {
     if (!aiConfig) {
       setPipelineError('No AI model configured. Click "AI Engine Config" in the sidebar to set up your LLM.');
@@ -358,18 +361,19 @@ export default function HomePage() {
       setPipelineStep('error');
       return;
     }
+    // Snapshot current project context — runGenerationPipeline reads activeProjectId
+    // via closure, but we want to guarantee the refinement stays on this project.
+    const currentMode = output?.mode ?? 'component';
+    const currentDepthUi = !!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi;
+
     setPendingPrompt(prompt);
-    setPendingMode(output?.mode ?? 'component');
-    setPendingDepthUi(!!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi);
+    setPendingMode(currentMode);
+    setPendingDepthUi(currentDepthUi);
     setPipelineError(undefined);
     setThinkingPlan(null);
     // NOTE: do NOT clear output — RightPanel must remain visible with the overlay
-    await runGenerationPipeline(
-      prompt,
-      output?.mode ?? 'component',
-      !!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi,
-    );
-  }, [aiConfig, output?.mode, runGenerationPipeline]);
+    await runGenerationPipeline(prompt, currentMode, currentDepthUi);
+  }, [aiConfig, output?.mode, output?.intent, runGenerationPipeline]);
 
   const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
@@ -465,7 +469,7 @@ export default function HomePage() {
           <RightPanel
             initialProject={{
               id: activeProjectId || 'current',
-              timestamp: new Date().toISOString(),
+              timestamp: outputTimestampRef.current,
               code: output.code,
               intent: output.intent,
               a11yReport: output.a11yReport,

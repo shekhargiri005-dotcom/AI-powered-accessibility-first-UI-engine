@@ -43,17 +43,33 @@ export async function POST(request: NextRequest) {
       baseUrl?: string;
     };
 
-    // ─── Input Validation ─────────────────────────────────────────────────────
-    const inputCheck = validatePromptInput(prompt);
-    if (!inputCheck.valid) {
-      reqLogger.warn('Input validation failed', { reason: inputCheck.reason });
-      return NextResponse.json(
-        { success: false, error: inputCheck.reason, suggestions: inputCheck.suggestions },
-        { status: 400 }
-      );
+    // ─── Input Validation ──────────────────────────────────────────────────────
+    // When contextId is set this is a refinement — e.g. "make it blue", "add a shadow".
+    // These prompts are intentionally short and lack UI signal words, so we skip
+    // the "does this look like a UI description?" heuristic and only run basic guards.
+    const isRefinement = !!contextId;
+    let sanitizedPrompt: string;
+
+    if (isRefinement) {
+      const trimmed = String(prompt).trim();
+      if (!trimmed) {
+        return NextResponse.json({ success: false, error: 'Refinement prompt cannot be empty.' }, { status: 400 });
+      }
+      if (trimmed.length < 2) {
+        return NextResponse.json({ success: false, error: 'Refinement prompt is too short.' }, { status: 400 });
+      }
+      sanitizedPrompt = trimmed.substring(0, 20000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
+    } else {
+      const inputCheck = validatePromptInput(prompt);
+      if (!inputCheck.valid) {
+        reqLogger.warn('Input validation failed', { reason: inputCheck.reason });
+        return NextResponse.json(
+          { success: false, error: inputCheck.reason, suggestions: inputCheck.suggestions },
+          { status: 400 }
+        );
+      }
+      sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
     }
-    // Use the sanitized version — raw prompt was previously being passed instead (bug)
-    const sanitizedPrompt = inputCheck.sanitized ?? String(prompt).trim();
 
     const generationMode: GenerationMode =
       mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
