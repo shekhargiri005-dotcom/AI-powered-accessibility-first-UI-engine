@@ -154,6 +154,7 @@ export default function SandpackPreviewComponent({
     screenshotCallbackRef.current?.(src);
   }, []);
   const [editMode, setEditMode] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const files        = buildSandpackFiles(code, componentName);
   const dynamicDeps  = getSandpackDependencies(code);
@@ -176,13 +177,23 @@ export default function SandpackPreviewComponent({
         <h3 id="preview-heading" className="text-sm font-semibold text-white">
           Live Preview
         </h3>
-        <span className="text-xs text-gray-500 ml-auto">Powered by Vite &amp; Sandpack</span>
+        <span className="text-xs text-gray-500 ml-auto hidden sm:inline-block">Powered by Vite &amp; Sandpack</span>
+
+        {/* Custom Reload Button to fix Sandpack built-in refresh issues */}
+        <button
+          onClick={() => setRefreshKey((k) => k + 1)}
+          title="Force reload preview"
+          className="ml-auto sm:ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600 hover:bg-gray-800"
+        >
+          <RefreshCw className="w-3 h-3" />
+          Reload
+        </button>
 
         {/* Edit mode toggle — reveals inline code editor for direct edits + auto-capture */}
         <button
           onClick={() => setEditMode((v) => !v)}
           title={editMode ? 'Close editor' : 'Edit code inline (changes auto-captured)'}
-          className={`ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all
             ${editMode
               ? 'bg-blue-500/15 text-blue-300 border-blue-500/30 hover:bg-blue-500/25'
               : 'text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600 hover:bg-gray-800'
@@ -197,7 +208,7 @@ export default function SandpackPreviewComponent({
       <div className="flex-1 min-h-0 relative flex flex-col">
         <PreviewErrorBoundary componentName={componentName}>
           <SandpackProvider
-            key={`${componentName}-${editMode}`}
+            key={`${componentName}-${editMode}-${refreshKey}`}
             template="vite-react-ts"
             theme="dark"
             files={files}
@@ -248,8 +259,8 @@ export default function SandpackPreviewComponent({
 
               <SandpackPreviewPanel
                 showNavigator={true}
-                showRestartButton={true}
-                showRefreshButton={true}
+                showRestartButton={false}
+                showRefreshButton={false}
                 showOpenInCodeSandbox={false}
                 style={{
                   height:    editMode ? '60%' : '100%',
