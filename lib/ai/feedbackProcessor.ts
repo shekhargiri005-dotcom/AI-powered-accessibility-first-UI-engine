@@ -105,6 +105,18 @@ export async function enrichPromptWithFeedback(
     }
   }
 
+  const visualLessons = topRated
+    .map((g) => g.correctionNote)
+    .filter((note): note is string => !!note && note.trim().length > 0)
+    .slice(0, 2);
+
+  if (visualLessons.length > 0) {
+    lines.push(
+      'VISUAL LESSONS LEARNED (prioritize these fixes):',
+      ...visualLessons.map((note, idx) => `- Lesson ${idx + 1}: ${note}`),
+    );
+  }
+
   return {
     systemPromptAppend: lines.join('\n'),
     warn,

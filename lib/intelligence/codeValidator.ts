@@ -1,3 +1,5 @@
+import ts from 'typescript';
+
 /**
  * Code Validator — pre-preview validation of generated TSX/JSX code.
  * Ensures code is browser-safe and structurally valid before Sandpack.
@@ -295,6 +297,38 @@ export function validateGeneratedCode(code: string, _fileName = 'component.tsx')
       if (check.severity === 'error') errors.push(entry);
       else warnings.push(entry);
     }
+  }
+
+  // Deterministic TS/TSX syntax validation (in-memory compile check)
+  const transpile = ts.transpileModule(code, {
+    compilerOptions: {
+      jsx: ts.JsxEmit.ReactJSX,
+      target: ts.ScriptTarget.ES2020,
+      module: ts.ModuleKind.ESNext,
+      strict: false,
+      skipLibCheck: true,
+    },
+    reportDiagnostics: true,
+    fileName: _fileName,
+  });
+
+  for (const d of transpile.diagnostics ?? []) {
+    if (d.category !== ts.DiagnosticCategory.Error) continue;
+    const message = ts.flattenDiagnosticMessageText(d.messageText, '\n');
+    let line: number | undefined;
+    if (typeof d.start === 'number') {
+      const pos = ts.getLineAndCharacterOfPosition(
+        ts.createSourceFile(_fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX),
+        d.start,
+      );
+      line = pos.line + 1;
+    }
+    errors.push({
+      code: 'TS_SYNTAX_ERROR',
+      severity: 'error',
+      message: `TypeScript parse error${line ? ` (line ${line})` : ''}: ${message}`,
+      line,
+    });
   }
 
   // Accessibility checks (warnings)

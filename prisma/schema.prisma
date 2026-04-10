@@ -175,6 +175,8 @@ model ProjectVersion {
   code              String   @db.Text
   intent            Json
   a11yReport        Json
+  thinkingPlan      Json?
+  reviewData        Json?
   changeDescription String   @default("")
   linesChanged      Int      @default(0)
 

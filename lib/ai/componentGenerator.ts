@@ -70,6 +70,7 @@ export async function generateComponent(
   provider?: string,
   apiKey?: string,
   baseUrl?: string,
+  thinkingPlan?: unknown,
 ): Promise<GenerationResult> {
   try {
     const searchText = intent.description + ' ' + intent.componentName;
@@ -119,7 +120,7 @@ export async function generateComponent(
     if (mode === 'depth_ui') {
       const depthSpec: DepthUIModePreset = evaluateDepthExperience(intent, blueprint);
       // Inject into intent so promptBuilder can see it
-      (intent as any).depthSpec = depthSpec;
+      (intent as UIIntent & { depthSpec?: DepthUIModePreset }).depthSpec = depthSpec;
     }
 
     // ─── Step 3.5: Feedback enrichment ───────────────────────────────────────
@@ -152,6 +153,19 @@ export async function generateComponent(
       builtPrompt = {
         ...builtPrompt,
         system: ((builtPrompt.system ?? '') + '\n\n' + feedbackEnrichment.systemPromptAppend).trimStart(),
+      };
+    }
+
+    if (thinkingPlan) {
+      const serializedPlan = JSON.stringify(thinkingPlan, null, 2);
+      builtPrompt = {
+        ...builtPrompt,
+        system: (
+          (builtPrompt.system ?? '') +
+          '\n\nREASONING ALIGNMENT:\n' +
+          'Follow this approved thinking plan while matching prior gold-standard fixes.\n' +
+          serializedPlan
+        ).trimStart(),
       };
     }
 

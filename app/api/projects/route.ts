@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     const {
       id, name, componentType, code, intent, a11yReport,
-      changeDescription, isNewProject,
+      changeDescription, isNewProject, thinkingPlan, reviewData,
     } = body as {
       id: string;
       name: string;
@@ -30,6 +30,8 @@ export async function POST(request: NextRequest) {
       a11yReport: A11yReport;
       changeDescription?: string;
       isNewProject?: boolean;
+      thinkingPlan?: unknown;
+      reviewData?: unknown;
     };
 
     if (!id || !code || !intent) {
@@ -45,15 +47,24 @@ export async function POST(request: NextRequest) {
         id, name || intent.componentName,
         componentType || 'component',
         code, intent, a11yReport,
+        { thinkingPlan, reviewData },
       );
     } else {
-      project = await saveVersion(id, code, intent, a11yReport, changeDescription || 'Refinement');
+      project = await saveVersion(
+        id,
+        code,
+        intent,
+        a11yReport,
+        changeDescription || 'Refinement',
+        { thinkingPlan, reviewData },
+      );
       if (!project) {
         // Project not found — create it (handles edge-case of first-time save without isNewProject flag)
         project = await createProject(
           id, name || intent.componentName,
           componentType || 'component',
           code, intent, a11yReport,
+          { thinkingPlan, reviewData },
         );
       }
     }

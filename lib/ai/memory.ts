@@ -23,6 +23,8 @@ export interface MemoryEntry {
   manifest?: FileManifestItem[];
   a11yScore: number;
   parentId?: string;
+  thinkingPlan?: unknown;
+  reviewData?: unknown;
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export function saveGeneration(
   manifest?: FileManifestItem[],
   parentId?: string,
   preGeneratedId?: string,
+  metadata?: { thinkingPlan?: unknown; reviewData?: unknown },
 ): string {
   const id = preGeneratedId ?? crypto.randomUUID();
 
@@ -82,6 +85,8 @@ export function saveGeneration(
                 code: codeStr,
                 intent: intent as object,
                 a11yReport: { score: a11yScore, passed: a11yScore >= 80, issues: [] } as object,
+                thinkingPlan: metadata?.thinkingPlan as object | undefined,
+                reviewData: metadata?.reviewData as object | undefined,
                 changeDescription: 'Re-generation',
                 linesChanged,
               },
@@ -101,6 +106,8 @@ export function saveGeneration(
                 code: codeStr,
                 intent: intent as object,
                 a11yReport: { score: a11yScore, passed: a11yScore >= 80, issues: [] } as object,
+                thinkingPlan: metadata?.thinkingPlan as object | undefined,
+                reviewData: metadata?.reviewData as object | undefined,
                 changeDescription: 'Initial generation',
                 linesChanged,
               },
@@ -135,6 +142,8 @@ export async function getProjectByIdAsync(id: string): Promise<MemoryEntry | nul
       intent:        latest.intent as UIIntent,
       code:          parseCode(latest.code),
       a11yScore:     (latest.a11yReport as { score?: number })?.score ?? 0,
+      thinkingPlan:  latest.thinkingPlan ?? undefined,
+      reviewData:    latest.reviewData ?? undefined,
     };
   } catch (error) {
     console.error(`Failed to find project with ID ${id}:`, error);
@@ -175,7 +184,7 @@ export async function getRelevantExamples(intent: UIIntent): Promise<MemoryEntry
     });
 
     const entries: MemoryEntry[] = rows
-      .map((row) => {
+      .map((row): MemoryEntry | null => {
         const latest = row.versions[0];
         if (!latest) return null;
         const score = (latest.a11yReport as { score?: number })?.score ?? 0;
@@ -187,7 +196,9 @@ export async function getRelevantExamples(intent: UIIntent): Promise<MemoryEntry
           intent:        latest.intent as UIIntent,
           code:          parseCode(latest.code),
           a11yScore:     score,
-        } satisfies MemoryEntry;
+          thinkingPlan:  latest.thinkingPlan ?? undefined,
+          reviewData:    latest.reviewData ?? undefined,
+        };
       })
       .filter((e): e is MemoryEntry => e !== null && e.a11yScore === 100);
 

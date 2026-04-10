@@ -11,9 +11,12 @@ import { UIIntentSchema } from '@/lib/validation/schemas';
 import { validateBrowserSafeCode, sanitizeGeneratedCode } from '@/lib/validation/security';
 import { validatePromptInput, validateGenerationMode } from '@/lib/intelligence/inputValidator';
 import { resolveAndPatch } from '@/lib/intelligence/dependencyResolver';
+import { validateGeneratedCode } from '@/lib/intelligence/codeValidator';
 import { logger } from '@/lib/logger';
 import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
+import { runVisionRuntimeReview } from '@/lib/ai/visionReviewer';
+import { upsertComponentEmbedding } from '@/lib/ai/vectorStore';
 
 export const maxDuration = 300;
 
@@ -40,9 +43,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag, provider, apiKey, baseUrl } = body as {
+    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag, provider, apiKey, baseUrl, thinkingPlan } = body as {
       mode?: string; model?: string; maxTokens?: number; provider?: string;
       isMultiSlide?: boolean; prompt?: string; stream?: boolean; apiKey?: string; baseUrl?: string;
+      thinkingPlan?: unknown;
     };
 
     // Sanitise masked key — page.tsx stores '••••' when loaded from localStorage
@@ -191,6 +195,7 @@ export async function POST(request: NextRequest) {
       provider,
       effectiveApiKey,
       baseUrl,
+      thinkingPlan,
     );
     if (!generationResult.success || !generationResult.code) {
       // Include model+provider in log so we can diagnose which provider caused the failure
@@ -208,13 +213,44 @@ export async function POST(request: NextRequest) {
 
     const code = generationResult.code;
 
-    // Step 1.5: UI Expert Critique & Repair Agent
+    let finalSourceCode = code;
+
+    // Step 1.5: Deterministic syntax validation before expensive review calls
+    let reviewData: Record<string, unknown> | undefined;
+    const deterministicCheck = validateGeneratedCode(finalSourceCode);
+    if (!deterministicCheck.valid) {
+      const reason = deterministicCheck.errors.map((e) => e.message).join(' | ');
+      const repaired = await repairGeneratedCode(finalSourceCode, `Fix deterministic validation errors: ${reason}`);
+      if (repaired && repaired.length > 100) {
+        finalSourceCode = repaired;
+        reviewData = { source: 'deterministic', passed: false, reason };
+      }
+    }
+
+    // Step 1.6: UI Expert Critique & Repair Agent
     // Skipped for local/Ollama models — review would queue a 2nd+ slow local inference call.
     // Only runs when a fast cloud model (REVIEW_MODEL env var or a configured cloud key) is available.
-    let finalSourceCode = code;
     let critiqueData: unknown;
+    let repairedByReviewer = false;
     if (!isLocalModel) {
       try {
+        const visionResult = await runVisionRuntimeReview(finalSourceCode);
+        if (!visionResult.runtimeOk && visionResult.runtimeError) {
+          const repaired = await repairGeneratedCode(
+            finalSourceCode,
+            `Runtime crash detected in headless render. Fix this error:\n${visionResult.runtimeError}`,
+          );
+          if (repaired && repaired.length > 100) {
+            finalSourceCode = repaired;
+            repairedByReviewer = true;
+            reviewData = { source: 'runtime', passed: false, reason: visionResult.runtimeError };
+          }
+        } else if (visionResult.visualPassed === false && visionResult.suggestedCode) {
+          finalSourceCode = visionResult.suggestedCode;
+          repairedByReviewer = true;
+          reviewData = { source: 'vision', passed: false, reason: visionResult.visualCritique ?? 'Vision critique failed.' };
+        }
+
         const reviewResult = await reviewGeneratedCode(finalSourceCode, JSON.stringify({ ...intent, mode, model }));
         critiqueData = reviewResult;
 
@@ -224,9 +260,12 @@ export async function POST(request: NextRequest) {
           if (repairedCode && repairedCode.length > 200) {
             reqLogger.info('Repair success. UI improved by agent.');
             finalSourceCode = repairedCode;
+            repairedByReviewer = true;
+            reviewData = { source: 'text-review', passed: false, reason: reviewResult.repairInstructions };
           }
         } else {
           reqLogger.info('Critique passed', { score: reviewResult.score });
+          if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
         }
       } catch (e) {
         reqLogger.warn('UI Reviewer failed, proceeding with original code', { error: e });
@@ -258,7 +297,7 @@ export async function POST(request: NextRequest) {
         let appliedFixes: string[] = [];
 
         if (!initialReport.passed) {
-          const repaired = autoRepairA11y(code);
+          const repaired = autoRepairA11y(finalSourceCode);
           finalCode = repaired.code;
           appliedFixes = repaired.appliedFixes;
         }
@@ -289,8 +328,21 @@ export async function POST(request: NextRequest) {
           undefined,
           intent.previousProjectId,
           genId,
+          { thinkingPlan, reviewData },
         );
       }, 0);
+    }
+
+    if (repairedByReviewer && finalReport.passed && typeof finalCode === 'string') {
+      const reason = typeof reviewData?.reason === 'string' ? reviewData.reason : 'Autonomous repair applied.';
+      const repairGuidelines = `Crash/Critique: ${reason}\n\nFix: ${finalCode}`;
+      void upsertComponentEmbedding({
+        knowledgeId: `repair:${genId}`,
+        name: `${intent.componentName} repair pattern`,
+        keywords: [intent.componentType ?? 'component', intent.componentName, 'repair', 'runtime', 'critique'],
+        guidelines: repairGuidelines,
+        source: 'repair',
+      });
     }
 
     // Step 6b: Dependency resolution for multi-file outputs (applies to original generated files)

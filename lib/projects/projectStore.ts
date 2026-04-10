@@ -15,6 +15,8 @@ export interface ProjectVersion {
   code: string | Record<string, string>;
   intent: UIIntent;
   a11yReport: A11yReport;
+  thinkingPlan?: unknown;
+  reviewData?: unknown;
   changeDescription: string;
   linesChanged?: number;
 }
@@ -48,6 +50,8 @@ type DbVersion = {
   code: string;
   intent: unknown;
   a11yReport: unknown;
+  thinkingPlan?: unknown | null;
+  reviewData?: unknown | null;
   changeDescription: string;
   linesChanged: number;
 };
@@ -86,6 +90,8 @@ function toProject(row: DbProject): Project {
       code: parseCode(v.code),
       intent: v.intent as UIIntent,
       a11yReport: v.a11yReport as A11yReport,
+      thinkingPlan: v.thinkingPlan ?? undefined,
+      reviewData: v.reviewData ?? undefined,
       changeDescription: v.changeDescription,
       linesChanged: v.linesChanged,
     })),
@@ -103,6 +109,7 @@ export async function createProject(
   code: string | Record<string, string>,
   intent: UIIntent,
   a11yReport: A11yReport,
+  metadata?: { thinkingPlan?: unknown; reviewData?: unknown },
 ): Promise<Project> {
   const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
   const linesChanged = typeof code === 'string' ? code.split('\n').length : 0;
@@ -121,6 +128,8 @@ export async function createProject(
             code: codeStr,
             intent: intent as object,
             a11yReport: a11yReport as object,
+            thinkingPlan: metadata?.thinkingPlan as Prisma.InputJsonValue | undefined,
+            reviewData: metadata?.reviewData as Prisma.InputJsonValue | undefined,
             changeDescription: 'Initial generation',
             linesChanged,
           },
@@ -138,7 +147,10 @@ export async function createProject(
         createdAt: now, updatedAt: now, currentVersion: 1,
         versions: [{
           version: 1, timestamp: now, code,
-          intent, a11yReport, changeDescription: 'Initial generation', linesChanged,
+          intent, a11yReport,
+          thinkingPlan: metadata?.thinkingPlan,
+          reviewData: metadata?.reviewData,
+          changeDescription: 'Initial generation', linesChanged,
         }],
       };
     }
@@ -152,6 +164,7 @@ export async function saveVersion(
   intent: UIIntent,
   a11yReport: A11yReport,
   changeDescription: string,
+  metadata?: { thinkingPlan?: unknown; reviewData?: unknown },
 ): Promise<Project | null> {
   try {
     const existing = await prisma.project.findUnique({
@@ -177,6 +190,8 @@ export async function saveVersion(
             code: codeStr,
             intent: intent as object,
             a11yReport: a11yReport as object,
+            thinkingPlan: metadata?.thinkingPlan as Prisma.InputJsonValue | undefined,
+            reviewData: metadata?.reviewData as Prisma.InputJsonValue | undefined,
             changeDescription,
             linesChanged,
           },

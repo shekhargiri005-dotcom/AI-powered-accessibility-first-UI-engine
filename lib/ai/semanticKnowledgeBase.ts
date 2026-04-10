@@ -40,6 +40,7 @@ const COMPONENT_THRESHOLD  = 0.50;
 const REGISTRY_THRESHOLD   = 0.48;
 /** Minimum cosine similarity to include a feedback result */
 const FEEDBACK_THRESHOLD   = 0.62;
+const REPAIR_THRESHOLD     = 0.58;
 /** Maximum characters of corrected code to inject into the prompt */
 const FEEDBACK_SNIPPET_CHARS = 700;
 
@@ -184,7 +185,6 @@ export async function findBlueprintPattern(
 
     const block = results
       .map((r, i) => {
-        const layoutName = r.knowledgeId.replace(/^blueprint:/, '');
         return [
           `[Layout ${i + 1}] ${r.name} (${(r.similarity * 100).toFixed(0)}% match):`,
           r.guidelines
@@ -269,6 +269,27 @@ export async function findRelevantFeedback(
   }
 }
 
+export async function findRelevantRepairs(
+  prompt: string,
+  topK = 2,
+): Promise<string | null> {
+  try {
+    const results = await searchComponentsBySource(prompt, 'repair', topK, REPAIR_THRESHOLD);
+    if (results.length === 0) return null;
+
+    const sections = results.map((r, i) => {
+      return [
+        `[Repair ${i + 1} — ${r.name} (${(r.similarity * 100).toFixed(0)}% match)]`,
+        `PAST MISTAKE CAUGHT:\n${r.guidelines}`,
+      ].join('\n');
+    });
+
+    return `PAST MISTAKES CAUGHT (reuse these proven fixes before first attempt):\n\n${sections.join('\n\n')}`;
+  } catch {
+    return null;
+  }
+}
+
 // ─── Combined Context Builder ─────────────────────────────────────────────────
 
 /**
@@ -286,7 +307,7 @@ export async function buildSemanticContext(
 ): Promise<string> {
   const sections: string[] = [];
 
-  const [knowledge, registry, blueprint, motion, feedback] = await Promise.allSettled([
+  const [knowledge, registry, blueprint, motion, feedback, repairs] = await Promise.allSettled([
     // 1. Template knowledge (all modes)
     mode === 'app'      ? findAppTemplateSemantic(prompt)
     : mode === 'depth_ui' ? findDepthUITemplateSemantic(prompt)
@@ -303,6 +324,8 @@ export async function buildSemanticContext(
 
     // 5. Feedback RAG (all modes)
     findRelevantFeedback(prompt),
+    // 6. Autonomous repair memory (all modes)
+    findRelevantRepairs(prompt),
   ]);
 
   if (knowledge.status === 'fulfilled' && knowledge.value) sections.push(knowledge.value);
@@ -310,6 +333,7 @@ export async function buildSemanticContext(
   if (blueprint.status === 'fulfilled' && blueprint.value) sections.push(blueprint.value);
   if (motion.status    === 'fulfilled' && motion.value)    sections.push(motion.value);
   if (feedback.status  === 'fulfilled' && feedback.value)  sections.push(feedback.value);
+  if (repairs.status   === 'fulfilled' && repairs.value)   sections.push(repairs.value);
 
   return sections.join('\n\n---\n\n');
 }

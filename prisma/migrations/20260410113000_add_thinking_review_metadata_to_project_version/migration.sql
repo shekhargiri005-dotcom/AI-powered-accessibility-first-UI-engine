@@ -1,0 +1,4 @@
+ALTER TABLE "ProjectVersion"
+ADD COLUMN IF NOT EXISTS "thinkingPlan" JSONB,
+ADD COLUMN IF NOT EXISTS "reviewData" JSONB;
+
