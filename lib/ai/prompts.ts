@@ -125,6 +125,13 @@ MANDATORY RULES:
 8. Meaningful Interactions:
    - Add hover effects (scale, shadow) on buttons and cards (\`hover:-translate-y-1 hover:shadow-md transition-all duration-300\`).
    - For tables or lists, include client-side sorting and filtering.
+   - If you include a theme picker, ensure it updates standard React state and applies classes dynamically, or initializes root CSS vars properly.
+7. Realistic Logic & Mock Data:
+   - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
+   - Include loading states (skeletons or spinners) and error handling. Example: \`const [rev, setRev] = useState(null); useEffect(() => { setTimeout(() => setRev(12345), 1000); }, []);\`
+8. Meaningful Interactions:
+   - Add hover effects (scale, shadow) on buttons and cards (\`hover:-translate-y-1 hover:shadow-md transition-all duration-300\`).
+   - For tables or lists, include client-side sorting and filtering.
    - Use Recharts for interactive charts with tooltips whenever data visualization is needed.
    - Clicking on elements should open modals or side-drawers with details.
 9. Responsive & Accessible:
@@ -135,7 +142,7 @@ MANDATORY RULES:
 
 
 CRITICAL REQUIREMENT:
-Your component MUST be structurally massive, breathtaking, and hyper-detailed (500-800 lines). You MUST implement at least 4 distinct sub-components, exhaustive styling, complex responsive layouts, micro-interactions, robust business logic, hover/focus states, and rich mock data arrays with dozens of items. Never abbreviate or write simplistic code.
+Build a complete, production-ready component with at least 4 distinct sub-components, interactive states, and rich mock data. Never write stub/placeholder code — always implement full logic. Quality over quantity: ship working, dense, beautiful code.
 
 OUTPUT FORMAT: Return ONLY the raw TSX code - no markdown fences, no explanation.
 
@@ -201,12 +208,14 @@ export function buildComponentGeneratorPrompt(
   }
 
   if (memory.length > 0) {
-    prompt += "\n\n=== LEARNED MEMORY (FEW-SHOT EXAMPLES) ===\nHere are past successful components from this codebase. Emulate their structure, imports, and exact Tailwind aesthetic:\n";
+    // Cap each memory snippet to 200 chars to avoid bloating the prompt with full past components.
+    // The model needs aesthetic cues, not verbatim code reproduction.
+    prompt += "\n\n=== REFERENCE STYLE ===\nEmulate the aesthetic and structural quality of these past generations:\n";
     memory.forEach((mem, i) => {
       const codeSnippet = typeof mem.code === 'string'
         ? mem.code
         : Object.values(mem.code)[0] || '';
-      prompt += "\n--- Example " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet + "\n";
+      prompt += "\n--- Reference " + (i + 1) + ": " + mem.componentName + " ---\n" + codeSnippet.substring(0, 200) + "...\n";
     });
   }
 
@@ -273,37 +282,6 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Make the UI visually breathtaking by using Tailwind's rich default color palettes natively (e.g., bg-indigo-600, text-violet-500, from-rose-500 to-orange-500).
    - Avoid generic/monochrome styles. Every app should have a distinct, colorful personality.
    - DO NOT rely on uninitialized CSS variables like 'bg-[var(--primary)]' because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
-   - If you include a theme customization feature, ensure it falls back gracefully to these vibrant standard Tailwind classes.
-4. REALISTIC LOGIC & MOCK DATA:
-   - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
-   - Include loading states (skeletons or spinners) and error handling.
-5. MEANINGFUL INTERACTIONS:
-   - Add hover effects (scale, shadow) on buttons and cards.
-   - For tables, include client-side sorting and filtering.
-   - Use Recharts for interactive charts with tooltips.
-   - Clicking on elements should open modals, drawers, or navigate state.
-6. RESPONSIVE & ACCESSIBLE:
-   - Layouts MUST be mobile-first: sidebar collapses to hamburger menu, grid wraps.
-   - Use semantic HTML, ARIA labels, focus rings, and ensure keyboard navigation works.
-   - Utilize \`@ui/layout\` and \`@ui/a11y\` to handle heavy lifting.
-
-OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations.
-
-${UI_ECOSYSTEM_API_CHEAT_SHEET}
-
-CRITICAL REQUIREMENT:
-You are a WORLD-CLASS UI ENGINEER. Target extremely dense, professional-grade code (500-800 lines)! You MUST physically implement at least 5 distinct, fully-styled interactive sections or screens. You MUST include deep routing logic, expansive mock data (20+ items), exhaustive Tailwind styles on every element (gradients, transitions, shadows), Recharts, modals, and the live color picker. Do not take shortcuts. NEVER truncate or abbreviate. You must deliver a massive, fully-fledged application in one valid TSX file, exporting default the main component.
-
-=== FEW-SHOT EXAMPLE ===
-For a SaaS Dashboard:
-1. Sidebar navigation.
-2. Header with real-time CSS variable Theme Picker.
-3. Grid of KPI cards that use Skeletons and setTimeout on mount to simulate fetching.
-4. Recharts LineChart for user growth.
-5. Client-side sorting data table for recent transactions.
-`;
-
-export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
   const sanitized = userInput
     .substring(0, 20000)
     .replace(/system:|assistant:|<\|.*?\|>/gi, '')

@@ -204,7 +204,7 @@ export default function HomePage() {
     }
 
     try {
-      const maxTokens = 10000;
+      const maxTokens = 5000;
       const aiFields  = aiPayload();
 
       if (isFullAppMode && mode === 'app') {

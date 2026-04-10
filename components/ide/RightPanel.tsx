@@ -275,18 +275,13 @@ export default function RightPanel({
     finalRoundFiredForRef.current = '';
   }, [initialProject.id, initialProject.timestamp]);
 
-  // ─── AI Suggestions auto-fetch ────────────────────────────────────────────
-  useEffect(() => {
-    const key = initialProject.id + initialProject.timestamp;
-    if (suggestionsKeyRef.current === key || !initialProject.intent?.componentName) return;
-    suggestionsKeyRef.current = key;
+  // ─── AI Suggestions lazy-fetch (user-triggered to save tokens) ──────────
+  const fetchSuggestions = useCallback(() => {
+    if (suggestionsLoading || !initialProject.intent?.componentName) return;
     setSuggestions([]);
-
     const codeSnippet = typeof initialProject.code === 'string'
       ? initialProject.code.slice(0, 2000)
       : Object.values(initialProject.code)[0]?.slice(0, 2000) ?? '';
-
-
 
     setSuggestionsLoading(true);
     fetch('/api/suggestions', {
@@ -309,10 +304,10 @@ export default function RightPanel({
           setSuggestions(data.suggestions.filter((s) => typeof s === 'string' && s.length > 5));
         }
       })
-      .catch(() => { /* non-blocking */ })
+      .catch(() => {})
       .finally(() => setSuggestionsLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialProject.id, initialProject.timestamp]);
+  }, [initialProject.id, initialProject.timestamp, suggestionsLoading, aiConfig]);
 
   // Reset on new project
   useEffect(() => {
@@ -747,44 +742,60 @@ export default function RightPanel({
       {/* ── Persistent Bottom Editing Bar ─────────────────────────────────── */}
       <div className="flex-shrink-0 bg-gray-950 border-t border-gray-800/80 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
 
-        {/* ✨ AI Suggestion Chips */}
-        {(suggestions.length > 0 || suggestionsLoading) && (
-          <div className="px-4 pt-3 pb-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Wand2 className="w-3 h-3 text-violet-400" />
-              <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/80">
-                AI Suggestions
-              </span>
+        {/* ✨ AI Suggestion Chips — lazy loaded on user request */}
+        <div className="px-4 pt-3 pb-1">
+          {suggestions.length === 0 && !suggestionsLoading ? (
+            <button
+              type="button"
+              onClick={fetchSuggestions}
+              disabled={isRefining}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
+                bg-violet-500/10 border border-violet-500/20 text-violet-400/70
+                hover:bg-violet-500/15 hover:text-violet-300 hover:border-violet-500/40
+                disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+            >
+              <Wand2 className="w-3 h-3" />
+              Get AI Ideas
+            </button>
+          ) : (
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Wand2 className="w-3 h-3 text-violet-400" />
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/80">
+                  AI Suggestions
+                </span>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {suggestionsLoading && (
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/60 border border-gray-700/40 text-[11px] text-gray-500">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Generating ideas…
+                  </div>
+                )}
+                {suggestions.map((s, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setRefinementPrompt(s)}
+                    disabled={isRefining}
+                    title={s}
+                    className="
+                      flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
+                      bg-violet-500/10 border border-violet-500/30 text-violet-300
+                      hover:bg-violet-500/20 hover:border-violet-400/50 hover:text-violet-200
+                      disabled:opacity-40 disabled:cursor-not-allowed
+                      transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500
+                      max-w-[220px] truncate
+                    "
+                  >
+                    <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                    {s}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {suggestionsLoading && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/60 border border-gray-700/40 text-[11px] text-gray-500">
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                  Generating ideas…
-                </div>
-              )}
-              {suggestions.map((s, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setRefinementPrompt(s)}
-                  disabled={isRefining}
-                  title={s}
-                  className="
-                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
-                    bg-violet-500/10 border border-violet-500/30 text-violet-300
-                    hover:bg-violet-500/20 hover:border-violet-400/50 hover:text-violet-200
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500
-                    max-w-[220px] truncate
-                  "
-                >
-                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
-                  {s}
-                </button>
-              ))}
-            </div>
-          </div>
+          )}
+        </div>
         )}
 
         {/* Refine Input */}
