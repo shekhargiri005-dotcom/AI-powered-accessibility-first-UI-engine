@@ -212,8 +212,12 @@ function detectFromKey(key: string): ProviderInfo | null {
   if (k.startsWith('gsk_'))                      return PROVIDERS.groq;
   if (k.startsWith('sk-or-'))                    return PROVIDERS.openrouter;
   if (k.startsWith('hf_'))                       return PROVIDERS.huggingface;
-  if (k.startsWith('sk-') || k.startsWith('sk-proj-')) return PROVIDERS.openai;
+  if (k.startsWith('sk-proj-') || k.startsWith('sk-svcacct-')) return PROVIDERS.openai;
+  // DeepSeek keys are specifically sk- followed by 32 hex chars
+  if (/^sk-[a-f0-9]{32}$/.test(k))               return PROVIDERS.deepseek;
   if (k.length >= 32 && /^[a-f0-9]+$/i.test(k))  return PROVIDERS.together;
+  
+  // Ambiguous `sk-...` keys (legacy OpenAI, Mistral, etc.) won't force an auto-switch
   return PROVIDERS.custom;
 }
 
