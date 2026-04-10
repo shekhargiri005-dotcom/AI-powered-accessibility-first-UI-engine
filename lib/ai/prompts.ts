@@ -442,7 +442,7 @@ export function buildDepthUIModeIntentPrompt(userInput: string, knowledge: strin
 }
 
 export function buildDepthUIModeGeneratorPrompt(
-  intent: object & { depthSpec?: any },
+  intent: object & { depthSpec?: unknown },
   knowledge: string | null = null,
   isMultiSlide: boolean = false
 ): string {

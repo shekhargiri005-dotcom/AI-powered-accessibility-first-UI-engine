@@ -121,7 +121,7 @@ export async function parseIntent(
     }
 
     // 1. Strip thinking blocks completely so they don't corrupt JSON parsing
-    let noThinkBlock = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const noThinkBlock = rawContent.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
 
     // 2. Extract JSON if wrapped in markdown
     const jsonMatch = noThinkBlock.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
@@ -206,7 +206,7 @@ export async function parseIntent(
     if (!validation.success) {
       return {
         success: false,
-        error: `Schema validation failed: ${validation.error.issues.map((i: any) => i.message).join(', ')}`,
+        error: `Schema validation failed: ${validation.error.issues.map((i: { message: string }) => i.message).join(', ')}`,
         rawResponse: rawContent,
       };
     }

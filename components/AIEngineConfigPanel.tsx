@@ -469,8 +469,8 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
       try {
         const directRes = await fetch('http://127.0.0.1:11434/api/tags');
         if (directRes.ok) {
-           const data = await directRes.json() as any;
-           const models = (data.models || []).map((m: any) => {
+           const data = await directRes.json() as { models?: Array<{ name?: string; id?: string; size?: number }> };
+           const models = (data.models || []).map((m) => {
               const rawName = m.name || m.id || 'unknown';
               const [base, tag] = rawName.split(':');
               const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -502,9 +502,9 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
       try {
         const directRes = await fetch('http://127.0.0.1:1234/v1/models');
         if (directRes.ok) {
-           const data = await directRes.json() as any;
+           const data = await directRes.json() as { models?: Array<{ name?: string; id?: string; size?: number }>; data?: Array<{ name?: string; id?: string; size?: number }> };
            const modelsList = Array.isArray(data.models) ? data.models : (Array.isArray(data.data) ? data.data : []);
-           const models = modelsList.map((m: any) => {
+           const models = modelsList.map((m) => {
               const rawName = m.name || m.id || 'unknown';
               const [base, tag] = rawName.split(':');
               const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
