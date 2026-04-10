@@ -288,6 +288,30 @@ export async function GET(request: NextRequest) {
         break;
       }
 
+      case 'meta': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Meta/Llama' }, { status: 400 });
+        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        break;
+      }
+
+      case 'qwen': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.DASHSCOPE_API_KEY || process.env.TOGETHER_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Qwen' }, { status: 400 });
+        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+        break;
+      }
+
+      case 'gemma': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Gemma' }, { status: 400 });
+        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        break;
+      }
+
       case 'huggingface':
         // HuggingFace returns a curated list — no live API call needed for model listing
         models = getHuggingFaceModels();
@@ -301,9 +325,14 @@ export async function GET(request: NextRequest) {
       }
 
       // Generic OpenAI-compat: try /v1/models with the provided baseUrl
-      default:
+      default: {
         if (!baseUrl) return NextResponse.json({ success: false, error: 'baseUrl required for custom providers' }, { status: 400 });
-        models = await fetchOpenAIModels(apiKey, baseUrl);
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.OPENAI_API_KEY; // Default fallback
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for custom provider' }, { status: 400 });
+        models = await fetchOpenAIModels(finalKey, baseUrl);
+        break;
+      }
     }
 
     // Sort: featured first, then alphabetical
