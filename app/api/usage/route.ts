@@ -1,10 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 import { logger } from '@/lib/logger';
 import { cacheLife } from 'next/cache';
-
-export const dynamic = 'force-dynamic';
 
 async function getCachedUsage(workspaceId: string | null, days: number) {
   'use cache';
@@ -72,6 +70,9 @@ async function getCachedUsage(workspaceId: string | null, days: number) {
 }
 
 export async function GET(request: Request) {
+  // Opt out of prerendering gracefully by awaiting connection()
+  await connection();
+  
   const reqLogger = logger.createRequestLogger('/api/usage');
   reqLogger.info('Fetching usage statistics');
 
