@@ -776,12 +776,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                       );
                     })}
                   </div>
-                  <button
-                    onClick={() => setCloudStep(2)}
-                    className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
-                  >
-                    Continue with {provider.name} →
-                  </button>
                 </div>
               )}
 
@@ -872,21 +866,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                           placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"
                       />
                     </div>
-                  )}
-
-                  <button
-                    onClick={() => {
-                      setCloudStep(3);
-                      setError('');
-                      // Auto-fetch models when transitioning to step 3
-                      if (!modelsFetched && !modelsFetching) {
-                        setTimeout(fetchModels, 100);
-                      }
-                    }}
-                    className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
-                  >
-                    Continue →
-                  </button>
                 </div>
               )}
 
@@ -1265,12 +1244,25 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
         <div className="flex-shrink-0 px-6 py-4 border-t border-gray-800/60 bg-gray-950/60 backdrop-blur space-y-2">
           <div className="flex items-center gap-3">
             <button
-              onClick={handleSave}
+              onClick={() => {
+                if (mode === 'cloud' && cloudStep === 1) {
+                  setError('');
+                  setCloudStep(2);
+                } else if (mode === 'cloud' && cloudStep === 2) {
+                  setError('');
+                  setCloudStep(3);
+                  if (!modelsFetched && !modelsFetching && (!provider.noKey && apiKey.trim())) {
+                    setTimeout(fetchModels, 100);
+                  }
+                } else {
+                  handleSave();
+                }
+              }}
               disabled={saving || saved}
               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-lg active:scale-[0.98] disabled:cursor-not-allowed
                 ${saved
                   ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : sessionActive && !saving
+                  : sessionActive && !saving && (mode !== 'cloud' || cloudStep === 3)
                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90'
                     : isLocal
                       ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white hover:opacity-90'
@@ -1279,13 +1271,17 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saved  && <CheckCircle className="w-4 h-4" />}
-              {!saving && !saved && sessionActive && (
+              {!saving && !saved && sessionActive && (mode !== 'cloud' || cloudStep === 3) && (
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
               )}
               {saving
                 ? 'Saving…'
                 : saved
                   ? 'Saved! Starting…'
+                  : mode === 'cloud' && cloudStep === 1
+                    ? `Continue with ${provider.name} →`
+                  : mode === 'cloud' && cloudStep === 2
+                    ? 'Continue to Model Selection →'
                   : sessionActive
                     ? 'Engine Active — Update'
                     : 'Activate Generation Engine'}
