@@ -114,12 +114,11 @@ MANDATORY RULES:
 5. Design System & Aesthetics (STRICT):
    - You MUST use a modern, consistent visual style.
    - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
-6. Built-In Theme / Color Picker (REQUIRED):
-   - EVERY generated UI MUST contain a built-in way for the end-user to choose colors.
-   - Implement a floating button or settings drawer with color inputs for primary, secondary, background, and text colors.
-   - Use CSS variables (e.g., --primary) that update in real time via \`document.documentElement.style.setProperty\`.
-   - All components must reference these variables (e.g., \`bg-[var(--primary)]\`, \`text-[var(--text)]\`).
-   - Ensure the picker is accessible and responsive.
+6. Vibrant Colors & Theming (CRITICAL):
+   - Make the UI visually stunning by utilizing Tailwind's rich default color palettes natively (e.g., bg-blue-600, text-emerald-500, bg-zinc-900).
+   - Use gradients (bg-gradient-to-r) and complementary text colors to ensure it is not monochromatic.
+   - DO NOT use uninitialized CSS variables like `bg-[var(--primary)]` unless you strictly initialize them on mount. It's much safer and preferred to use standard Tailwind utility classes directly for maximum color fidelity.
+   - If you include a theme picker, ensure it updates standard React state and applies classes dynamically, or initializes root CSS vars properly.
 7. Realistic Logic & Mock Data:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
    - Include loading states (skeletons or spinners) and error handling. Example: \`const [rev, setRev] = useState(null); useEffect(() => { setTimeout(() => setRev(12345), 1000); }, []);\`
@@ -270,11 +269,11 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Motion/Animation: \`import { Motion } from '@ui/motion';\`
    - Other packages available: \`@ui/forms, @ui/icons, @ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.
    - Never build a raw HTML button or card if \`@ui/core\` has one.
-3. BUILT-IN THEME / COLOR PICKER (REQUIRED):
-   - EVERY generated UI MUST contain a built-in way for the end-user to choose colors.
-   - Implement a floating button or settings drawer with color inputs for primary, secondary, background, and text colors.
-   - Use CSS variables (e.g., --primary, --bg) that update in real time via \`document.documentElement.style.setProperty\`.
-   - All components must reference these variables (e.g., \`bg-[var(--primary)]\`, \`text-[var(--text)]\`). Ensure the picker is accessible and responsive.
+3. COLORFUL & VIBRANT AESTHETICS (CRITICAL):
+   - Make the UI visually breathtaking by using Tailwind's rich default color palettes natively (e.g., bg-indigo-600, text-violet-500, from-rose-500 to-orange-500).
+   - Avoid generic/monochrome styles. Every app should have a distinct, colorful personality.
+   - DO NOT rely on uninitialized CSS variables like `bg-[var(--primary)]` because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
+   - If you include a theme customization feature, ensure it falls back gracefully to these vibrant standard Tailwind classes.
 4. REALISTIC LOGIC & MOCK DATA:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
    - Include loading states (skeletons or spinners) and error handling.
