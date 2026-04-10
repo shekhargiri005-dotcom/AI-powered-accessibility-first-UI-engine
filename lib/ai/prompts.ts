@@ -116,6 +116,7 @@ MANDATORY RULES:
    - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
 6. Vibrant Colors & Theming (CRITICAL):
    - Make the UI visually stunning by utilizing Tailwind's rich default color palettes natively (e.g., bg-blue-600, text-emerald-500, bg-zinc-900).
+   - ALWAYS respect WCAG AA contrast ratios (at least 4.5:1 for normal text, 3:1 for large text). Never use unreadable combinations like text-gray-400 on bg-gray-100 or text-blue-500 on bg-blue-600.
    - Use gradients (bg-gradient-to-r) and complementary text colors to ensure it is not monochromatic.
    - DO NOT use uninitialized CSS variables like 'bg-[var(--primary)]' unless you strictly initialize them on mount. It's much safer and preferred to use standard Tailwind utility classes directly for maximum color fidelity.
    - If you include a theme picker, ensure it updates standard React state and applies classes dynamically, or initializes root CSS vars properly.
@@ -271,6 +272,7 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Never build a raw HTML button or card if \`@ui/core\` has one.
 3. COLORFUL & VIBRANT AESTHETICS (CRITICAL):
    - Make the UI visually breathtaking by using Tailwind's rich default color palettes natively (e.g., bg-indigo-600, text-violet-500, from-rose-500 to-orange-500).
+   - ALWAYS respect WCAG AA contrast ratios (at least 4.5:1 for normal text, 3:1 for large text). Combine light text on dark backgrounds or dark text on light backgrounds strictly.
    - Avoid generic/monochrome styles. Every app should have a distinct, colorful personality.
    - DO NOT rely on uninitialized CSS variables like 'bg-[var(--primary)]' because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
    - If you include a theme customization feature, ensure it falls back gracefully to these vibrant standard Tailwind classes.
