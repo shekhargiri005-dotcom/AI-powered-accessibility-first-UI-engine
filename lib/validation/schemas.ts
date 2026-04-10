@@ -240,7 +240,12 @@ export const DepthUIModePresetSchema = z.object({
   motionDesign: MotionDesignSpecSchema,
   parallax: ParallaxSpecSchema,
   /** Deterministic per-layer speed factors — injected as code template into prompt */
-  parallaxCoefficients: ParallaxCoefficientsSchema,
+  parallaxCoefficients: ParallaxCoefficientsSchema.catch({
+    bgLayerSpeedFactor: 0.15,
+    midLayerSpeedFactor: 0.35,
+    fgLayerSpeedFactor: 0.60,
+    useRelativeScroll: true,
+  }),
 });
 
 export type MotionDesignSpec = z.infer<typeof MotionDesignSpecSchema>;

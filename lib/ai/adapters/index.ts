@@ -42,16 +42,19 @@ const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
  */
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
-  if (m.includes('claude'))                return 'anthropic';
-  if (m.includes('gemini'))               return 'google';
-  if (m.includes('gpt-'))                return 'openai';
-  if (/^o[13][\w.-]*$|^o1-/.test(m))    return 'openai';  // o1, o3-mini, o3, o1-mini, o1-preview
-  if (m.includes('deepseek'))             return 'deepseek';
-  if (m.includes('llama') || m.includes('codellama')) return 'ollama'; // treated as local default
-  if (m.includes('mistral') || m.includes('mixtral')) return 'ollama';
-  if (m.includes('qwen'))                 return 'ollama';
-  if (m.includes('gemma'))                return 'ollama';
-  return 'ollama'; // local default when nothing matches
+  if (m.includes('claude'))                       return 'anthropic';
+  if (m.includes('gemini'))                       return 'google';
+  if (m.includes('gpt-'))                        return 'openai';
+  if (/^o[13][\w.-]*$|^o1-/.test(m))            return 'openai';  // o1, o3-mini, etc.
+  if (m.includes('deepseek'))                     return 'deepseek';
+  if (m.includes('mistral') || m.includes('mixtral')) return 'mistral';
+  if (m.includes('qwen'))                         return 'qwen';
+  if (m.includes('gemma'))                        return 'gemma';
+  // Only route explicitly-namespaced HuggingFace slugs to the Meta cloud adapter.
+  // Bare names like 'llama3', 'llama2', 'codellama' are assumed to be local Ollama models.
+  if (m.startsWith('meta-llama/') || m.startsWith('meta/'))  return 'meta';
+  if (m.includes('codellama') || m.includes('llama')) return 'ollama';
+  return 'ollama'; // safe default for true local models
 }
 
 /** Pass-through — model names used verbatim as configured by the user. */
@@ -150,14 +153,22 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     config = cfg;
   }
 
-  const { model, apiKey, baseUrl } = config;
+  const { model, baseUrl } = config;
   const provId = config.provider ?? detectProvider(model);
 
+  // Strip masked key — treat '••••' and 'local' as "no key provided"
+  const apiKey = (config.apiKey && config.apiKey !== '••••' && config.apiKey !== 'local')
+    ? config.apiKey
+    : undefined;
+
   // ── 1. Known OpenAI-compatible 3rd-party providers ───────────────────────
+  // These use the OpenAI SDK but with a different baseUrl.
+  // groq / openrouter / together / lmstudio / huggingface have entries in OPENAI_COMPAT_BASE_URLS.
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
-  const isCompat  = !!compatUrl && !['openai', 'anthropic', 'google', 'deepseek', 'ollama', 'lmstudio', 'meta', 'mistral', 'qwen', 'gemma'].includes(provId);
+  const namedProviders = ['openai', 'anthropic', 'google', 'deepseek', 'ollama', 'lmstudio', 'meta', 'mistral', 'qwen', 'gemma'];
+  const isCompat = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
-    const key = apiKey || process.env.OPENAI_API_KEY;
+    const key = apiKey || process.env[`${provId.toUpperCase()}_API_KEY`] || process.env.OPENAI_API_KEY;
     if (!key) throw new Error(`API key required for ${provId}. Configure it in the AI Engine Config panel.`);
     return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
   }
@@ -238,7 +249,12 @@ export async function getWorkspaceAdapter(
   userId?: string,
 ): Promise<AIAdapter> {
   // Explicit apiKey provided — use it directly, skip DB lookup
-  if (typeof modelOrConfig !== 'string' && modelOrConfig.apiKey && modelOrConfig.apiKey !== 'local') {
+  // Treat masked and local keys as empty
+  const explicitKey = typeof modelOrConfig !== 'string' &&
+    modelOrConfig.apiKey &&
+    modelOrConfig.apiKey !== 'local' &&
+    modelOrConfig.apiKey !== '••••';
+  if (explicitKey) {
     return getAdapter(modelOrConfig);
   }
 
