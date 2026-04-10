@@ -117,7 +117,7 @@ MANDATORY RULES:
 6. Vibrant Colors & Theming (CRITICAL):
    - Make the UI visually stunning by utilizing Tailwind's rich default color palettes natively (e.g., bg-blue-600, text-emerald-500, bg-zinc-900).
    - Use gradients (bg-gradient-to-r) and complementary text colors to ensure it is not monochromatic.
-   - DO NOT use uninitialized CSS variables like `bg-[var(--primary)]` unless you strictly initialize them on mount. It's much safer and preferred to use standard Tailwind utility classes directly for maximum color fidelity.
+   - DO NOT use uninitialized CSS variables like 'bg-[var(--primary)]' unless you strictly initialize them on mount. It's much safer and preferred to use standard Tailwind utility classes directly for maximum color fidelity.
    - If you include a theme picker, ensure it updates standard React state and applies classes dynamically, or initializes root CSS vars properly.
 7. Realistic Logic & Mock Data:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
@@ -272,7 +272,7 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
 3. COLORFUL & VIBRANT AESTHETICS (CRITICAL):
    - Make the UI visually breathtaking by using Tailwind's rich default color palettes natively (e.g., bg-indigo-600, text-violet-500, from-rose-500 to-orange-500).
    - Avoid generic/monochrome styles. Every app should have a distinct, colorful personality.
-   - DO NOT rely on uninitialized CSS variables like `bg-[var(--primary)]` because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
+   - DO NOT rely on uninitialized CSS variables like 'bg-[var(--primary)]' because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
    - If you include a theme customization feature, ensure it falls back gracefully to these vibrant standard Tailwind classes.
 4. REALISTIC LOGIC & MOCK DATA:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
