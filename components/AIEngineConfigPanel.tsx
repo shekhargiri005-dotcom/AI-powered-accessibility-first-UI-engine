@@ -465,12 +465,11 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     // If backend found nothing, the Next.js process might be in an isolated container. 
     // We can ping Ollama natively from the host's actual browser!
     if (!activeSources.some(s => s.running)) {
+      // Try Ollama
       try {
         const directRes = await fetch('http://127.0.0.1:11434/api/tags');
         if (directRes.ok) {
-           // eslint-disable-next-line @typescript-eslint/no-explicit-any
            const data = await directRes.json() as any;
-           // eslint-disable-next-line @typescript-eslint/no-explicit-any
            const models = (data.models || []).map((m: any) => {
               const rawName = m.name || m.id || 'unknown';
               const [base, tag] = rawName.split(':');
@@ -489,17 +488,49 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
               };
            });
            
-           activeSources = [{
-             name: 'Ollama',
+           activeSources.push({
+             name: 'Ollama (Native Browser)',
              provider: 'ollama',
              v1BaseUrl: 'http://127.0.0.1:11434/v1',
              running: true,
              models
-           }];
+           });
         }
-      } catch {
-        // Direct browser ping failed (CORS or genuinely offline)
-      }
+      } catch {}
+
+      // Try LM Studio
+      try {
+        const directRes = await fetch('http://127.0.0.1:1234/v1/models');
+        if (directRes.ok) {
+           const data = await directRes.json() as any;
+           const modelsList = Array.isArray(data.models) ? data.models : (Array.isArray(data.data) ? data.data : []);
+           const models = modelsList.map((m: any) => {
+              const rawName = m.name || m.id || 'unknown';
+              const [base, tag] = rawName.split(':');
+              const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+              
+              let t = 0.6;
+              const n = rawName.toLowerCase();
+              if (n.includes('coder') || n.includes('code')) t = 0.3;
+              else if (n.includes('instruct') || n.includes('chat')) t = 0.5;
+
+              return {
+                 id: rawName,
+                 label: tag ? `${pretty} (${tag})` : pretty,
+                 size: m.size ? `${(m.size / 1073741824).toFixed(1)} GB` : undefined,
+                 temperature: t
+              };
+           });
+           
+           activeSources.push({
+             name: 'LM Studio (Native Browser)',
+             provider: 'lmstudio',
+             v1BaseUrl: 'http://127.0.0.1:1234/v1',
+             running: true,
+             models
+           });
+        }
+      } catch {}
     }
 
     setLocalSources(activeSources);
