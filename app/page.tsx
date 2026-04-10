@@ -53,6 +53,8 @@ export default function HomePage() {
   const [aiConfig, setAiConfig] = useState<AIEngineConfig | null>(null);
   const [isFullAppMode, setIsFullAppMode] = useState(false);
   const [isMultiSlideMode, setIsMultiSlideMode] = useState(false);
+  // True while RightPanel bottom-bar refine is running; suppresses center workspace
+  const [isDirectRefining, setIsDirectRefining] = useState(false);
 
   // Called when the user saves AI Engine Config
   const handleEngineConfigSaved = useCallback((config: AIEngineConfig) => {
@@ -159,9 +161,16 @@ export default function HomePage() {
   }, []);
 
   // ─── Generation Pipeline ──────────────────────────────────────────────────
-  const runGenerationPipeline = useCallback(async (prompt: string, mode: GenerationMode, depthUi?: boolean) => {
-    setStage('parsing');
-    setPipelineStep('parsing');
+  const runGenerationPipeline = useCallback(async (
+    prompt: string,
+    mode: GenerationMode,
+    depthUi?: boolean,
+    silent?: boolean,   // when true, skip stage/pipelineStep updates (used by direct refine)
+  ) => {
+    if (!silent) {
+      setStage('parsing');
+      setPipelineStep('parsing');
+    }
 
     let intent: UIIntent;
     try {
@@ -220,8 +229,8 @@ export default function HomePage() {
           else throw new Error(`Failed to generate ${fileReq.filename}`);
         }
 
-        setPipelineStep('validating'); await new Promise(r => setTimeout(r, 400));
-        setPipelineStep('testing');   await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('validating'); if (!silent) await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('testing');   if (!silent) await new Promise(r => setTimeout(r, 400));
         setPipelineStep('complete');
 
         const newOutput: GenerationOutput = {
@@ -233,7 +242,8 @@ export default function HomePage() {
           mode: 'app',
         };
         setOutput(newOutput);
-        setStage('complete');
+        if (!silent) setStage('complete');
+        outputTimestampRef.current = new Date().toISOString();
         await persistProject(intent.componentName, 'app', generatedFiles, intent, newOutput.a11yReport);
         return;
       }
@@ -252,9 +262,11 @@ export default function HomePage() {
         return;
       }
 
-      setPipelineStep('validating'); await new Promise(r => setTimeout(r, 400));
-      setPipelineStep('testing');   await new Promise(r => setTimeout(r, 400));
-      setPipelineStep('complete');
+      if (!silent) {
+        setPipelineStep('validating'); await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('testing');   await new Promise(r => setTimeout(r, 400));
+        setPipelineStep('complete');
+      }
 
       const newOutput: GenerationOutput = {
         code: generateData.code,
@@ -266,7 +278,7 @@ export default function HomePage() {
         mode,
       };
       setOutput(newOutput);
-      setStage('complete');
+      if (!silent) setStage('complete');
       // Stamp a stable timestamp for this output so RightPanel version history stays coherent
       outputTimestampRef.current = new Date().toISOString();
 
@@ -286,7 +298,7 @@ export default function HomePage() {
 
       await persistProject(intent.componentName, mode as 'component' | 'app' | 'depth_ui', generateData.code, intent, generateData.a11yReport);
     } catch {
-      setStage('error'); setPipelineStep('error');
+      if (!silent) { setStage('error'); setPipelineStep('error'); }
       setPipelineError('Network error during generation.');
     }
   }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
@@ -355,6 +367,7 @@ export default function HomePage() {
 
   // Direct refinement: skips classify/think/awaiting_confirm and immediately
   // runs the generation pipeline in the context of the current active project.
+  // Uses `silent=true` so the center workspace feed stays dormant.
   const handleDirectRefine = useCallback(async (prompt: string) => {
     if (!aiConfig) {
       setPipelineError('No AI model configured. Click "AI Engine Config" in the sidebar to set up your LLM.');
@@ -362,21 +375,19 @@ export default function HomePage() {
       setPipelineStep('error');
       return;
     }
-    // Snapshot current project context — runGenerationPipeline reads activeProjectId
-    // via closure, but we want to guarantee the refinement stays on this project.
     const currentMode = output?.mode ?? 'component';
     const currentDepthUi = !!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi;
 
-    setPendingPrompt(prompt);
-    setPendingMode(currentMode);
-    setPendingDepthUi(currentDepthUi);
     setPipelineError(undefined);
-    setThinkingPlan(null);
-    // NOTE: do NOT clear output — RightPanel must remain visible with the overlay
-    await runGenerationPipeline(prompt, currentMode, currentDepthUi);
+    setIsDirectRefining(true);
+    try {
+      await runGenerationPipeline(prompt, currentMode, currentDepthUi, /* silent= */ true);
+    } finally {
+      setIsDirectRefining(false);
+    }
   }, [aiConfig, output?.mode, output?.intent, runGenerationPipeline]);
 
-  const isRunning = ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
+  const isRunning = !isDirectRefining && ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-y-auto overflow-x-hidden lg:overflow-hidden bg-gray-950 font-sans text-gray-100 selection:bg-blue-500/30">
@@ -423,8 +434,8 @@ export default function HomePage() {
           isLoading={isRunning}
           hasActiveProject={!!activeProjectId}
           onIntentDetected={setLiveClassification}
-          stage={stage}
-          pipelineStep={pipelineStep}
+          stage={isDirectRefining ? 'complete' : stage}
+          pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
           pipelineError={pipelineError}
           thinkingPlan={thinkingPlan}
           isThinkingLoading={isThinkingLoading}
