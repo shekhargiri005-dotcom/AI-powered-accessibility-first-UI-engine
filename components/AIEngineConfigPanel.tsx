@@ -862,15 +862,11 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
 
                   <button
                     onClick={() => {
-                      if (apiKey.trim() || provider.noKey) {
-                        setCloudStep(3);
-                        setError('');
-                        // Auto-fetch models when transitioning to step 3
-                        if (!modelsFetched && !modelsFetching) {
-                          setTimeout(fetchModels, 100);
-                        }
-                      } else {
-                        setError(`Add your ${provider.name} API key to continue.`);
+                      setCloudStep(3);
+                      setError('');
+                      // Auto-fetch models when transitioning to step 3
+                      if (!modelsFetched && !modelsFetching) {
+                        setTimeout(fetchModels, 100);
                       }
                     }}
                     className={`w-full py-2.5 rounded-2xl text-sm font-bold text-white bg-gradient-to-r ${provider.color} hover:opacity-90 transition-all shadow-md`}
