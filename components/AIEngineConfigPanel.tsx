@@ -520,10 +520,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   const fetchModels = useCallback(async () => {
     if (modelsFetching) return;
     const key = provider.noKey ? 'local' : apiKey.trim();
-    if (!key && !provider.noKey) {
-      setModelsFetchError('Enter your API key first, then fetch models.');
-      return;
-    }
     setModelsFetching(true);
     setModelsFetchError('');
     setFetchedModels([]);
@@ -573,11 +569,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     setError('');
 
     if (mode === 'cloud') {
-      if (!apiKey.trim()) {
-        setError(`Add your ${provider.name} API key to continue.`);
-        setCloudStep(2);
-        return;
-      }
       if (!effectiveModel) {
         setError('Choose a generation model or enter a custom one.');
         setCloudStep(3);

@@ -224,45 +224,69 @@ export async function GET(request: NextRequest) {
     let models: ModelInfo[] = [];
 
     switch (provider) {
-      case 'openai':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenAI' }, { status: 400 });
-        models = await fetchOpenAIModels(apiKey, baseUrl || undefined);
+      case 'openai': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.OPENAI_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenAI' }, { status: 400 });
+        models = await fetchOpenAIModels(finalKey, baseUrl || undefined);
         break;
+      }
 
-      case 'anthropic':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for Anthropic' }, { status: 400 });
-        models = await fetchAnthropicModels(apiKey);
+      case 'anthropic': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.ANTHROPIC_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Anthropic' }, { status: 400 });
+        models = await fetchAnthropicModels(finalKey);
         break;
+      }
 
-      case 'google':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for Google' }, { status: 400 });
-        models = await fetchGoogleModels(apiKey);
+      case 'google': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Google' }, { status: 400 });
+        models = await fetchGoogleModels(finalKey);
         break;
+      }
 
-      case 'groq':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for Groq' }, { status: 400 });
-        models = await fetchGroqModels(apiKey);
+      case 'groq': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.GROQ_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Groq' }, { status: 400 });
+        models = await fetchGroqModels(finalKey);
         break;
+      }
 
-      case 'openrouter':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenRouter' }, { status: 400 });
-        models = await fetchOpenRouterModels(apiKey);
+      case 'openrouter': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.OPENROUTER_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenRouter' }, { status: 400 });
+        models = await fetchOpenRouterModels(finalKey);
         break;
+      }
 
-      case 'together':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for Together AI' }, { status: 400 });
-        models = await fetchTogetherModels(apiKey);
+      case 'together': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.TOGETHER_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Together AI' }, { status: 400 });
+        models = await fetchTogetherModels(finalKey);
         break;
+      }
 
-      case 'deepseek':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for DeepSeek' }, { status: 400 });
-        models = await fetchDeepSeekModels(apiKey);
+      case 'deepseek': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.DEEPSEEK_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for DeepSeek' }, { status: 400 });
+        models = await fetchDeepSeekModels(finalKey);
         break;
+      }
 
-      case 'mistral':
-        if (!apiKey) return NextResponse.json({ success: false, error: 'apiKey required for Mistral' }, { status: 400 });
-        models = await fetchMistralModels(apiKey);
+      case 'mistral': {
+        const key = apiKey === '••••' ? '' : apiKey;
+        const finalKey = key || process.env.MISTRAL_API_KEY || process.env.TOGETHER_API_KEY;
+        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Mistral' }, { status: 400 });
+        models = await fetchMistralModels(finalKey);
         break;
+      }
 
       case 'huggingface':
         // HuggingFace returns a curated list — no live API call needed for model listing
