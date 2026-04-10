@@ -22,7 +22,7 @@ import { logger } from '@/lib/logger';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODEL = 'embedding-001';
 const EMBEDDING_DIMS  = 768;
 
 const GOOGLE_API_KEY  = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? '';
