@@ -422,7 +422,7 @@ export default function HomePage() {
         
         {(!isMounted || isDesktop) ? (
           /* DESKTOP: Resizable Partitions */
-          <div className="flex w-full h-full opacity-0 animate-in fade-in duration-500 fill-mode-forwards">
+          <div className="flex w-full h-full pb-0">
             <PanelGroup orientation="horizontal" className="w-full h-full">
               {/* 1. Left Sidebar */}
               <Panel defaultSize={20} minSize={15} maxSize={30} className="h-full flex flex-col">
