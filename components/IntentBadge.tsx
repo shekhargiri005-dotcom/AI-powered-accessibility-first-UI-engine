@@ -92,8 +92,10 @@ export default function IntentBadge({
     >
       {config.icon}
       {showLabel && (isSmall ? config.shortLabel : config.label)}
-      {confidence !== undefined && !isSmall && (
-        <span className="opacity-60 ml-0.5">{Math.round(confidence * 100)}%</span>
+      {confidence !== undefined && (
+        <span className={`${isSmall ? 'opacity-70 text-[9px] ml-0.5' : 'opacity-60 ml-0.5'}`}>
+          {Math.round(confidence * 100)}%
+        </span>
       )}
     </span>
   );

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock, Sparkles } from 'lucide-react';
+import { Send, Loader2, ChevronRight, Mic, X, Plus, Command, Clock, Sparkles, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import IntentBadge from './IntentBadge';
 import type { IntentClassification } from '@/lib/validation/schemas';
 
@@ -42,6 +42,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [history, setHistory] = useState<{ id: string, componentName: string, promptSnippet: string }[]>([]);
   const [liveIntent, setLiveIntent] = useState<IntentClassification | null>(null);
+  const [confidenceHistory, setConfidenceHistory] = useState<number[]>([]);
   const [isClassifying, setIsClassifying] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const classifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -59,6 +60,11 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
 
   const isPromptValid = prompt.trim().length >= 10;
   const [interimTranscript, setInterimTranscript] = useState('');
+  const latestConfidence = confidenceHistory[confidenceHistory.length - 1];
+  const firstConfidence = confidenceHistory[0];
+  const confidenceDelta = confidenceHistory.length >= 2
+    ? Math.round((latestConfidence - firstConfidence) * 100)
+    : 0;
 
   useEffect(() => {
     fetch('/api/history')
@@ -177,7 +183,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
   // Debounced live intent classification
   const scheduleClassify = useCallback((text: string) => {
     if (classifyTimerRef.current) clearTimeout(classifyTimerRef.current);
-    if (text.trim().length < 10) { setLiveIntent(null); return; }
+    if (text.trim().length < 10) { setLiveIntent(null); setConfidenceHistory([]); return; }
     classifyTimerRef.current = setTimeout(async () => {
       setIsClassifying(true);
       try {
@@ -189,6 +195,9 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         const data = await res.json();
         if (data.success && data.classification) {
           setLiveIntent(data.classification);
+          if (typeof data.classification.confidence === 'number') {
+            setConfidenceHistory((prev) => [...prev, data.classification.confidence].slice(-8));
+          }
           onIntentDetected?.(data.classification);
         }
       } catch { /* ignore */ } finally {
@@ -210,6 +219,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
     setPrompt('');
     setIsRecording(false);
     setLiveIntent(null);
+    setConfidenceHistory([]);
   };
 
   const charCount = prompt.length;
@@ -403,6 +413,18 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                   <>
                     <span className="text-[11px] text-gray-500">Detected:</span>
                     <IntentBadge intentType={liveIntent.intentType} confidence={liveIntent.confidence} size="sm" />
+                    {confidenceHistory.length >= 2 && (
+                      <span className="inline-flex items-center gap-1 text-[10px] text-zinc-400">
+                        {confidenceDelta > 0 ? (
+                          <TrendingUp className="w-3 h-3 text-emerald-400" />
+                        ) : confidenceDelta < 0 ? (
+                          <TrendingDown className="w-3 h-3 text-rose-400" />
+                        ) : (
+                          <Minus className="w-3 h-3 text-zinc-500" />
+                        )}
+                        {confidenceDelta > 0 ? '+' : ''}{confidenceDelta}% over {confidenceHistory.length} tries
+                      </span>
+                    )}
                     {!liveIntent.shouldGenerateCode && (
                       <span className="text-[11px] text-amber-400/80 italic">Will show planning panel first</span>
                     )}

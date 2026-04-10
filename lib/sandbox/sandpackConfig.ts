@@ -125,6 +125,7 @@ export function buildSandpackFiles(
   const safeCode = sanitizeAllImports(processedCode);
   const isMultiFile = typeof safeCode !== 'string';
   const mainCode = isMultiFile ? (safeCode['App.tsx'] as string) || '' : safeCode;
+  const allCode = typeof safeCode === 'string' ? safeCode : Object.values(safeCode).join('\n');
 
   const files: SandpackFiles = {
     '/index.html': {
@@ -380,10 +381,19 @@ export default defineConfig({
     active: false,
   };
 
-  // Inject the entire @ui ecosystem into the Sandpack virtual filesystem
-  Object.entries(uiEcosystem as Record<string, string>).forEach(([filepath, code]) => {
-    files[filepath] = { code, active: false };
-  });
+  // Inject @ui ecosystem only when generated code actually references it.
+  // Loading the full virtual package graph on every preview can cause slow
+  // cold starts and runtime TIME_OUT errors in Sandpack's node environment.
+  const needsUiEcosystem =
+    allCode.includes('@ui/') ||
+    allCode.includes('@/components/ui') ||
+    allCode.includes('@/lib/utils');
+
+  if (needsUiEcosystem) {
+    Object.entries(uiEcosystem as Record<string, string>).forEach(([filepath, code]) => {
+      files[filepath] = { code, active: false };
+    });
+  }
 
   return files;
 }
