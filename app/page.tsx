@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { GenerationMode, SubmitOptions } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
@@ -89,6 +89,16 @@ export default function HomePage() {
 
   // Layout State
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(true);
+
+  useEffect(() => {
+    setIsMounted(true);
+    const handleResize = () => setIsDesktop(window.innerWidth >= 1024);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Workspace state
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
@@ -410,35 +420,140 @@ export default function HomePage() {
       {/* Primary Layout Engine */}
       <div className="flex-1 w-full h-[calc(100dvh-3.5rem)] lg:h-full mt-14 lg:mt-0 relative flex">
         
-        {/* DESKTOP: Resizable Partitions */}
-        <div className="hidden lg:flex w-full h-full">
-          <PanelGroup orientation="horizontal" className="w-full h-full">
-            {/* 1. Left Sidebar */}
-            <Panel defaultSize={20} minSize={15} maxSize={30} className="h-full">
-              <Sidebar
-                activeProjectId={activeProjectId}
-                onSelectProject={loadProject}
-                onNewProject={() => {
-                  setActiveProjectId(null);
-                  setOutput(null);
-                  setStage('idle');
-                  setPipelineStep('idle');
-                  setThinkingPlan(null);
-                  setGenerationMeta(null);
-                }}
-                isMobileOpen={isMobileSidebarOpen}
-                onCloseMobile={() => setIsMobileSidebarOpen(false)}
-                onConfigSaved={handleEngineConfigSaved}
-                onDeactivated={handleEngineDeactivated}
-              />
-            </Panel>
+        {(!isMounted || isDesktop) ? (
+          /* DESKTOP: Resizable Partitions */
+          <div className="flex w-full h-full opacity-0 animate-in fade-in duration-500 fill-mode-forwards">
+            <PanelGroup orientation="horizontal" className="w-full h-full">
+              {/* 1. Left Sidebar */}
+              <Panel defaultSize={20} minSize={15} maxSize={30} className="h-full flex flex-col">
+                <Sidebar
+                  activeProjectId={activeProjectId}
+                  onSelectProject={loadProject}
+                  onNewProject={() => {
+                    setActiveProjectId(null);
+                    setOutput(null);
+                    setStage('idle');
+                    setPipelineStep('idle');
+                    setThinkingPlan(null);
+                    setGenerationMeta(null);
+                  }}
+                  isMobileOpen={isMobileSidebarOpen}
+                  onCloseMobile={() => setIsMobileSidebarOpen(false)}
+                  onConfigSaved={handleEngineConfigSaved}
+                  onDeactivated={handleEngineDeactivated}
+                />
+              </Panel>
 
-            <PanelResizeHandle className="w-1.5 bg-gray-900/50 hover:bg-blue-500/50 transition-colors flex items-center justify-center cursor-col-resize z-50">
-              <div className="h-8 w-0.5 bg-gray-700/50 rounded-full" />
-            </PanelResizeHandle>
+              <PanelResizeHandle className="w-1.5 bg-gray-900/50 hover:bg-blue-500/50 transition-colors flex items-center justify-center cursor-col-resize z-50">
+                <div className="h-8 w-0.5 bg-gray-700/50 rounded-full" />
+              </PanelResizeHandle>
 
-            {/* 2. Center Workspace (AI Command Console) */}
-            <Panel defaultSize={output ? 40 : 80} minSize={20} className="h-full bg-gray-950 relative z-20">
+              {/* 2. Center Workspace (AI Command Console) */}
+              <Panel defaultSize={output ? 40 : 80} minSize={40} className="h-full flex flex-col bg-gray-950 relative z-20">
+                <CenterWorkspace
+                  headerControls={null}
+                  onPromptSubmit={handlePromptSubmit}
+                  isLoading={isRunning}
+                  hasActiveProject={!!activeProjectId}
+                  onIntentDetected={setLiveClassification}
+                  stage={isDirectRefining ? 'complete' : stage}
+                  pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
+                  pipelineError={pipelineError}
+                  thinkingPlan={thinkingPlan}
+                  isThinkingLoading={isThinkingLoading}
+                  originalPrompt={pendingPrompt}
+                  onProceed={async () => {
+                    setThinkingPlan(null);
+                    await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
+                  }}
+                  onRefineUnderstanding={() => {
+                    setStage('idle');
+                    setPipelineStep('idle');
+                    setThinkingPlan(null);
+                  }}
+                  onChangeIntent={async (intentType) => {
+                    setThinkingPlan(null);
+                    setIsThinkingLoading(true);
+                    try {
+                      const res = await fetch('/api/think', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ prompt: pendingPrompt, intentType }),
+                      });
+                      const data = await res.json();
+                      if (data.success) setThinkingPlan(data.plan);
+                    } catch { /* fallback */ } finally {
+                      setIsThinkingLoading(false);
+                    }
+                  }}
+                  onDismissThinking={() => {
+                    setThinkingPlan(null);
+                    setStage('idle');
+                    setPipelineStep('idle');
+                  }}
+                  onAskClarification={(q) => {
+                    setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
+                  }}
+                />
+              </Panel>
+
+              {/* 3. Right Profile (Live Preview) */}
+              {output && (
+                <>
+                  <PanelResizeHandle className="w-1.5 bg-gray-900/50 hover:bg-blue-500/50 transition-colors flex items-center justify-center cursor-col-resize z-50">
+                    <div className="h-8 w-0.5 bg-gray-700/50 rounded-full" />
+                  </PanelResizeHandle>
+
+                  <Panel defaultSize={40} minSize={25} className="h-full flex flex-col relative z-10 bg-gray-950">
+                    <RightPanel
+                      initialProject={{
+                        id: activeProjectId || 'current',
+                        timestamp: outputTimestampRef.current,
+                        code: output.code,
+                        intent: output.intent,
+                        a11yReport: output.a11yReport,
+                        componentName: output.componentName,
+                        tests: output.tests
+                      }}
+                      onRefine={handleDirectRefine}
+                      isRefining={isRunning}
+                      projectId={activeProjectId}
+                      feedbackMeta={generationMeta}
+                      intentConfidence={lastIntentConfidence}
+                      aiConfig={aiConfig ? {
+                        model:    aiConfig.model,
+                        provider: aiConfig.provider,
+                        apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
+                        baseUrl:  aiConfig.baseUrl,
+                      } : null}
+                    />
+                  </Panel>
+                </>
+              )}
+            </PanelGroup>
+          </div>
+        ) : (
+          /* MOBILE OVERRIDE: Stacked Layout */
+          <div className="flex flex-col w-full h-full overflow-y-auto">
+            {/* Sidebar is fixed on mobile, so we just render it */}
+            <Sidebar
+              activeProjectId={activeProjectId}
+              onSelectProject={loadProject}
+              onNewProject={() => {
+                setActiveProjectId(null);
+                setOutput(null);
+                setStage('idle');
+                setPipelineStep('idle');
+                setThinkingPlan(null);
+                setGenerationMeta(null);
+              }}
+              isMobileOpen={isMobileSidebarOpen}
+              onCloseMobile={() => setIsMobileSidebarOpen(false)}
+              onConfigSaved={handleEngineConfigSaved}
+              onDeactivated={handleEngineDeactivated}
+            />
+            
+            <div className="flex-1 flex flex-col min-h-[100dvh]">
               <CenterWorkspace
                 headerControls={null}
                 onPromptSubmit={handlePromptSubmit}
@@ -484,139 +599,36 @@ export default function HomePage() {
                   setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
                 }}
               />
-            </Panel>
-
-            {/* 3. Right Profile (Live Preview) */}
-            {output && (
-              <>
-                <PanelResizeHandle className="w-1.5 bg-gray-900/50 hover:bg-blue-500/50 transition-colors flex items-center justify-center cursor-col-resize z-50">
-                  <div className="h-8 w-0.5 bg-gray-700/50 rounded-full" />
-                </PanelResizeHandle>
-
-                <Panel defaultSize={40} minSize={20} className="h-full relative z-10 bg-gray-950">
-                  <RightPanel
-                    initialProject={{
-                      id: activeProjectId || 'current',
-                      timestamp: outputTimestampRef.current,
-                      code: output.code,
-                      intent: output.intent,
-                      a11yReport: output.a11yReport,
-                      componentName: output.componentName,
-                      tests: output.tests
-                    }}
-                    onRefine={handleDirectRefine}
-                    isRefining={isRunning}
-                    projectId={activeProjectId}
-                    feedbackMeta={generationMeta}
-                    intentConfidence={lastIntentConfidence}
-                    aiConfig={aiConfig ? {
-                      model:    aiConfig.model,
-                      provider: aiConfig.provider,
-                      apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
-                      baseUrl:  aiConfig.baseUrl,
-                    } : null}
-                  />
-                </Panel>
-              </>
-            )}
-          </PanelGroup>
-        </div>
-
-        {/* MOBILE OVERRIDE: Stacked Layout */}
-        <div className="flex lg:hidden flex-col w-full h-full overflow-y-auto">
-          {/* Sidebar is fixed on mobile, so we just render it */}
-          <Sidebar
-            activeProjectId={activeProjectId}
-            onSelectProject={loadProject}
-            onNewProject={() => {
-              setActiveProjectId(null);
-              setOutput(null);
-              setStage('idle');
-              setPipelineStep('idle');
-              setThinkingPlan(null);
-              setGenerationMeta(null);
-            }}
-            isMobileOpen={isMobileSidebarOpen}
-            onCloseMobile={() => setIsMobileSidebarOpen(false)}
-            onConfigSaved={handleEngineConfigSaved}
-            onDeactivated={handleEngineDeactivated}
-          />
-          
-          <div className="flex-1 flex flex-col min-h-[100dvh]">
-            <CenterWorkspace
-              headerControls={null}
-              onPromptSubmit={handlePromptSubmit}
-              isLoading={isRunning}
-              hasActiveProject={!!activeProjectId}
-              onIntentDetected={setLiveClassification}
-              stage={isDirectRefining ? 'complete' : stage}
-              pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
-              pipelineError={pipelineError}
-              thinkingPlan={thinkingPlan}
-              isThinkingLoading={isThinkingLoading}
-              originalPrompt={pendingPrompt}
-              onProceed={async () => {
-                setThinkingPlan(null);
-                await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
-              }}
-              onRefineUnderstanding={() => {
-                setStage('idle');
-                setPipelineStep('idle');
-                setThinkingPlan(null);
-              }}
-              onChangeIntent={async (intentType) => {
-                setThinkingPlan(null);
-                setIsThinkingLoading(true);
-                try {
-                  const res = await fetch('/api/think', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt: pendingPrompt, intentType }),
-                  });
-                  const data = await res.json();
-                  if (data.success) setThinkingPlan(data.plan);
-                } catch { /* fallback */ } finally {
-                  setIsThinkingLoading(false);
-                }
-              }}
-              onDismissThinking={() => {
-                setThinkingPlan(null);
-                setStage('idle');
-                setPipelineStep('idle');
-              }}
-              onAskClarification={(q) => {
-                setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
-              }}
-            />
-          </div>
-
-          {output && (
-            <div className="flex-1 flex flex-col min-h-[100dvh]">
-              <RightPanel
-                initialProject={{
-                  id: activeProjectId || 'current',
-                  timestamp: outputTimestampRef.current,
-                  code: output.code,
-                  intent: output.intent,
-                  a11yReport: output.a11yReport,
-                  componentName: output.componentName,
-                  tests: output.tests
-                }}
-                onRefine={handleDirectRefine}
-                isRefining={isRunning}
-                projectId={activeProjectId}
-                feedbackMeta={generationMeta}
-                intentConfidence={lastIntentConfidence}
-                aiConfig={aiConfig ? {
-                  model:    aiConfig.model,
-                  provider: aiConfig.provider,
-                  apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
-                  baseUrl:  aiConfig.baseUrl,
-                } : null}
-              />
             </div>
-          )}
-        </div>
+
+            {output && (
+              <div className="flex-1 flex flex-col min-h-[100dvh]">
+                <RightPanel
+                  initialProject={{
+                    id: activeProjectId || 'current',
+                    timestamp: outputTimestampRef.current,
+                    code: output.code,
+                    intent: output.intent,
+                    a11yReport: output.a11yReport,
+                    componentName: output.componentName,
+                    tests: output.tests
+                  }}
+                  onRefine={handleDirectRefine}
+                  isRefining={isRunning}
+                  projectId={activeProjectId}
+                  feedbackMeta={generationMeta}
+                  intentConfidence={lastIntentConfidence}
+                  aiConfig={aiConfig ? {
+                    model:    aiConfig.model,
+                    provider: aiConfig.provider,
+                    apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
+                    baseUrl:  aiConfig.baseUrl,
+                  } : null}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
