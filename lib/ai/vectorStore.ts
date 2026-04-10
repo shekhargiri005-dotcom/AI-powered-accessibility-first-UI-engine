@@ -13,7 +13,7 @@
  * Storage: pgvector columns (vector(768)) on Neon — queried via @neondatabase/serverless
  * raw SQL because Prisma has no native vector type support yet.
  *
- * Embedding model: Google text-embedding-004 (768 dims, free tier, 1,500 req/min)
+ * Embedding model: Google embedding API (with runtime fallback model selection)
  * called directly via the REST API using GOOGLE_API_KEY.
  */
 
@@ -22,12 +22,10 @@ import { logger } from '@/lib/logger';
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const EMBEDDING_MODEL = 'text-embedding-004';
+const EMBEDDING_MODELS = ['gemini-embedding-001', 'text-embedding-004'] as const;
 const EMBEDDING_DIMS  = 768;
 
 const GOOGLE_API_KEY  = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? '';
-const GOOGLE_EMBED_URL = `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:embedContent`;
-
 // ─── Neon SQL client (raw — for vector ops) ───────────────────────────────────
 
 /**
@@ -43,8 +41,8 @@ function getSql() {
 // ─── Embedding Generation ─────────────────────────────────────────────────────
 
 /**
- * Generate a normalized 768-dim embedding vector for the given text using
- * Google's text-embedding-004 model.
+ * Generate a normalized 768-dim embedding vector using Google's embedding API.
+ * Tries multiple model IDs for compatibility across API projects/regions.
  *
  * Returns null instead of throwing so callers can gracefully fall back.
  */
@@ -55,30 +53,42 @@ export async function embedText(text: string): Promise<number[] | null> {
   }
 
   try {
-    const res = await fetch(`${GOOGLE_EMBED_URL}?key=${GOOGLE_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: `models/${EMBEDDING_MODEL}`,
-        content: { parts: [{ text }] },
-      }),
-    });
+    for (const modelId of EMBEDDING_MODELS) {
+      const embedUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:embedContent?key=${GOOGLE_API_KEY}`;
+      const res = await fetch(embedUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${modelId}`,
+          content: { parts: [{ text }] },
+          outputDimensionality: EMBEDDING_DIMS,
+        }),
+      });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      logger.warn({ endpoint: 'vectorStore', message: 'Embedding API error', metadata: { status: res.status, body: errText } });
-      return null;
+      if (!res.ok) {
+        const errText = await res.text();
+        logger.warn({
+          endpoint: 'vectorStore',
+          message: 'Embedding API error',
+          metadata: { status: res.status, modelId, body: errText },
+        });
+        continue;
+      }
+
+      const data = await res.json() as { embedding?: { values?: number[] } };
+      const values = data?.embedding?.values;
+      if (!Array.isArray(values) || values.length !== EMBEDDING_DIMS) {
+        logger.warn({
+          endpoint: 'vectorStore',
+          message: 'Unexpected embedding shape',
+          metadata: { modelId, length: values?.length },
+        });
+        continue;
+      }
+
+      return values;
     }
-
-    const data = await res.json() as { embedding?: { values?: number[] } };
-    const values = data?.embedding?.values;
-
-    if (!Array.isArray(values) || values.length !== EMBEDDING_DIMS) {
-      logger.warn({ endpoint: 'vectorStore', message: 'Unexpected embedding shape', metadata: { length: values?.length } });
-      return null;
-    }
-
-    return values;
+    return null;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.warn({ endpoint: 'vectorStore', message: 'embedText failed', error: msg });

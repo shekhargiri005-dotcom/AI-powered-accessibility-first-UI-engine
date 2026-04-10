@@ -94,6 +94,7 @@ export default function HomePage() {
   const [pendingPrompt, setPendingPrompt] = useState('');
   const [pendingMode, setPendingMode] = useState<GenerationMode>('component');
   const [liveClassification, setLiveClassification] = useState<IntentClassification | null>(null);
+  const [lastIntentConfidence, setLastIntentConfidence] = useState<number>(0.8);
   const [thinkingPlan, setThinkingPlan] = useState<ThinkingPlan | null>(null);
   const [isThinkingLoading, setIsThinkingLoading] = useState(false);
 
@@ -303,13 +304,19 @@ export default function HomePage() {
         if (data.success) {
           classification = data.classification;
           setLiveClassification(data.classification);
+          setLastIntentConfidence(typeof data.classification?.confidence === 'number' ? data.classification.confidence : 0.8);
         } else {
           console.warn('[classify] API error:', data.error);
           classification = null;
+          setLastIntentConfidence(0.8);
         }
       } catch {
         console.warn('[classify] Network error. Proceeding with default.');
+        setLastIntentConfidence(0.8);
       }
+    }
+    if (classification?.confidence !== undefined) {
+      setLastIntentConfidence(classification.confidence);
     }
 
     setStage('thinking');
@@ -456,6 +463,7 @@ export default function HomePage() {
             isRefining={isRunning}
             projectId={activeProjectId}
             feedbackMeta={generationMeta}
+            intentConfidence={lastIntentConfidence}
             aiConfig={aiConfig ? {
               model:    aiConfig.model,
               provider: aiConfig.provider,

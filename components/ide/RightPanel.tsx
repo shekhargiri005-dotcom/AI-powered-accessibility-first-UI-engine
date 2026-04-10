@@ -48,6 +48,8 @@ interface RightPanelProps {
   projectId?:  string | null;
   /** Feedback metadata from the last generation — enables the FeedbackBar */
   feedbackMeta?: FeedbackMeta | null;
+  /** Intent classifier confidence (0..1) used in unified engine confidence score */
+  intentConfidence?: number;
   /** AI config passed through so Final Round can call the same model */
   aiConfig?: {
     model: string;
@@ -132,6 +134,7 @@ export default function RightPanel({
   isRefining,
   projectId,
   feedbackMeta,
+  intentConfidence = 0.8,
   aiConfig,
 }: RightPanelProps) {
   const [activeTab,       setActiveTab]       = useState<TabId>('preview');
@@ -164,6 +167,55 @@ export default function RightPanel({
   const finalRoundFiredForRef = useRef<string>('');
 
   const activeV = versions.find((v) => v.version === currentVersion) ?? versions[versions.length - 1];
+  const intentScore = Math.round(Math.max(0, Math.min(1, intentConfidence)) * 100);
+  const a11yScore = activeV.a11yReport?.score ?? feedbackMeta?.a11yScore ?? 0;
+  const critiqueScore = feedbackMeta?.critiqueScore ?? 0;
+  const feedbackSuccessRate = feedbackStats ? Math.round((feedbackStats.successRate ?? 0) * 100) : undefined;
+
+  const engineConfidence = (() => {
+    // Base weights
+    const wi = 0.20;
+    let wa = 0.30;
+    let wc = 0.35;
+    let wf = 0.15;
+
+    const hasCritique = critiqueScore > 0;
+    const hasFeedback = typeof feedbackSuccessRate === 'number' && (feedbackStats?.total ?? 0) >= 5;
+
+    // If critique is unavailable, redistribute its weight to deterministic signals
+    if (!hasCritique) {
+      wa += 0.20;
+      wf += 0.15;
+      wc = 0;
+    }
+
+    // If feedback is too sparse or unavailable, redistribute to a11y + critique
+    if (!hasFeedback) {
+      wa += wf * 0.6;
+      wc += wf * 0.4;
+      wf = 0;
+    }
+
+    let score =
+      (wi * intentScore) +
+      (wa * a11yScore) +
+      (wc * critiqueScore) +
+      (wf * (feedbackSuccessRate ?? 0));
+
+    // Penalize unresolved final-round states to avoid overconfidence
+    if (finalRoundStatus === 'skipped') score -= 6;
+    if (finalRoundStatus === 'error') score -= 10;
+
+    return Math.max(0, Math.min(100, Math.round(score)));
+  })();
+  const confidenceLabel =
+    engineConfidence >= 85 ? 'Ready to ship' :
+    engineConfidence >= 70 ? 'Needs minor refinement' :
+    'Regenerate or repair first';
+  const confidenceColor =
+    engineConfidence >= 85 ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10' :
+    engineConfidence >= 70 ? 'text-amber-300 border-amber-500/30 bg-amber-500/10' :
+    'text-rose-300 border-rose-500/30 bg-rose-500/10';
 
   // Reset Final Round when a new project/generation comes in
   useEffect(() => {
@@ -172,7 +224,6 @@ export default function RightPanel({
     setFinalRoundError(undefined);
     setFinalRoundCodeReplaced(false);
     finalRoundFiredForRef.current = '';
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProject.id, initialProject.timestamp]);
 
   // Reset on new project
@@ -387,6 +438,9 @@ export default function RightPanel({
             v{currentVersion}
           </span>
           <IntentBadge intentType={currentVersion > 1 ? 'ui_refinement' : 'ui_generation'} size="sm" showLabel={false} />
+          <div className={`px-2.5 py-1 rounded-full border text-[10px] font-semibold ${confidenceColor}`}>
+            Engine Confidence {engineConfidence}% · {confidenceLabel}
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 p-1 bg-gray-900/50 rounded-lg border border-gray-800">
