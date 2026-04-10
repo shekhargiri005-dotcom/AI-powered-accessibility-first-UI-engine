@@ -122,6 +122,8 @@ interface ParsedImport {
 }
 
 const IMPORT_REGEX = /^import\s+([\s\S]*?)\s+from\s+['"]([^'"]+)['"]\s*;?$/gm;
+/** Side-effect only imports: import 'foo' or import "foo" — no bindings, no `from` */
+const SIDE_EFFECT_IMPORT_REGEX = /^import\s+['"]([^'"]+)['"]\s*;?$/gm;
 
 function parseImports(code: string): ParsedImport[] {
   const results: ParsedImport[] = [];
@@ -166,9 +168,21 @@ function parseImports(code: string): ParsedImport[] {
  */
 export function sanitizeImports(code: string): { code: string; replaced: string[] } {
   const replaced: string[] = [];
-  const imports = parseImports(code);
-
   let sanitized = code;
+
+  // ── Pass 0: Remove side-effect imports from unknown packages ─────────────
+  // e.g. import 'swiper/css'; import 'some-pkg/styles.css';
+  // These have no bindings — if the package isn't in the allow-list, just drop the line.
+  SIDE_EFFECT_IMPORT_REGEX.lastIndex = 0;
+  sanitized = sanitized.replace(SIDE_EFFECT_IMPORT_REGEX, (fullMatch, source) => {
+    const isAllowed = ALLOWED_PREFIXES.some((prefix) => source.startsWith(prefix));
+    if (isAllowed) return fullMatch;  // keep allowed side-effect imports
+    replaced.push(source);
+    return `// [sanitized] removed side-effect import: '${source}'`;
+  });
+
+  // ── Pass 1: Process binding imports (import X from '...') ────────────────
+  const imports = parseImports(sanitized);
 
   for (const imp of imports) {
     const isAllowed = ALLOWED_PREFIXES.some((prefix) => imp.source.startsWith(prefix));

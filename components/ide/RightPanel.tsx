@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Eye, Code, GitCommit, ScrollText, Sparkles, AlertCircle, Maximize2, X,
-  TrendingUp, TrendingDown, Minus, Activity,
+  TrendingUp, TrendingDown, Minus, Activity, Wand2, ChevronRight, Loader2,
 } from 'lucide-react';
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 import type { ProjectVersion } from '@/lib/projects/projectStore';
@@ -210,6 +210,11 @@ export default function RightPanel({
   /** Tracks which generation has had Final Round run (prevents double-firing) */
   const finalRoundFiredForRef = useRef<string>('');
 
+  // ─── AI Suggestions state ───────────────────────────────────────────────
+  const [suggestions,     setSuggestions]     = useState<string[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const suggestionsKeyRef = useRef<string>('');
+
   const activeV = versions.find((v) => v.version === currentVersion) ?? versions[versions.length - 1];
   const intentScore = Math.round(Math.max(0, Math.min(1, intentConfidence)) * 100);
   const a11yScore = activeV.a11yReport?.score ?? feedbackMeta?.a11yScore ?? 0;
@@ -265,6 +270,54 @@ export default function RightPanel({
     setFinalRoundError(undefined);
     setFinalRoundCodeReplaced(false);
     finalRoundFiredForRef.current = '';
+  }, [initialProject.id, initialProject.timestamp]);
+
+  // ─── AI Suggestions auto-fetch ────────────────────────────────────────────
+  useEffect(() => {
+    const key = initialProject.id + initialProject.timestamp;
+    if (suggestionsKeyRef.current === key || !initialProject.intent?.componentName) return;
+    suggestionsKeyRef.current = key;
+    setSuggestions([]);
+
+    const codeSnippet = typeof initialProject.code === 'string'
+      ? initialProject.code.slice(0, 2000)
+      : Object.values(initialProject.code)[0]?.slice(0, 2000) ?? '';
+
+    const suggestionPrompt = `You are a senior UI/UX designer reviewing a generated React component called "${initialProject.intent.componentName}". 
+Based on this code snippet, suggest exactly 3 short, specific, and actionable UI refinements the user could apply.
+Each suggestion should be a single sentence, max 12 words, phrased as an instruction (e.g. "Add a glowing gradient to the hero title").
+Focus on: visual aesthetics, micro-interactions, spacing, color vibrancy, typography, or accessibility.
+Return ONLY a JSON array of 3 strings. No markdown, no explanation.
+
+CODE:
+${codeSnippet}`;
+
+    setSuggestionsLoading(true);
+    fetch('/api/think', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: suggestionPrompt,
+        ...(aiConfig?.model ? { model: aiConfig.model, provider: aiConfig.provider, apiKey: aiConfig.apiKey, baseUrl: aiConfig.baseUrl } : {}),
+      }),
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        const raw: string = data.thinking ?? data.plan ?? data.result ?? '';
+        // Extract JSON array from response
+        const match = raw.match(/\[[\s\S]*?\]/);
+        if (match) {
+          try {
+            const parsed = JSON.parse(match[0]) as string[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSuggestions(parsed.slice(0, 3).filter((s) => typeof s === 'string' && s.length > 5));
+            }
+          } catch { /* ignore parse errors */ }
+        }
+      })
+      .catch(() => { /* non-blocking */ })
+      .finally(() => setSuggestionsLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialProject.id, initialProject.timestamp]);
 
   // Reset on new project
@@ -698,25 +751,69 @@ export default function RightPanel({
       </div>
 
       {/* ── Persistent Bottom Editing Bar ─────────────────────────────────── */}
-      <div className="flex-shrink-0 p-4 bg-gray-950 border-t border-gray-800/80 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
-        <div className="flex items-center gap-3 w-full bg-gray-900/60 p-2 rounded-2xl border border-gray-700/50 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-500/50 transition-all">
-          <input
-            type="text"
-            value={refinementPrompt}
-            onChange={(e) => setRefinementPrompt(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleRefineSubmit()}
-            placeholder="Targeted edit... (e.g. 'Make the hero title larger and add a violet glow')"
-            disabled={isRefining}
-            className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none"
-          />
-          <button
-            onClick={handleRefineSubmit}
-            disabled={!refinementPrompt.trim() || isRefining}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg shadow-blue-500/20"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            {isRefining ? 'Applying' : 'Refine'}
-          </button>
+      <div className="flex-shrink-0 bg-gray-950 border-t border-gray-800/80 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
+
+        {/* ✨ AI Suggestion Chips */}
+        {(suggestions.length > 0 || suggestionsLoading) && (
+          <div className="px-4 pt-3 pb-1">
+            <div className="flex items-center gap-2 mb-2">
+              <Wand2 className="w-3 h-3 text-violet-400" />
+              <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/80">
+                AI Suggestions
+              </span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {suggestionsLoading && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-800/60 border border-gray-700/40 text-[11px] text-gray-500">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Generating ideas…
+                </div>
+              )}
+              {suggestions.map((s, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setRefinementPrompt(s)}
+                  disabled={isRefining}
+                  title={s}
+                  className="
+                    flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
+                    bg-violet-500/10 border border-violet-500/30 text-violet-300
+                    hover:bg-violet-500/20 hover:border-violet-400/50 hover:text-violet-200
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500
+                    max-w-[220px] truncate
+                  "
+                >
+                  <ChevronRight className="w-3 h-3 flex-shrink-0" />
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Refine Input */}
+        <div className="flex items-center gap-3 w-full p-4">
+          <div className="flex items-center gap-3 w-full bg-gray-900/60 p-2 rounded-2xl border border-gray-700/50 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-500/50 transition-all">
+            <input
+              type="text"
+              value={refinementPrompt}
+              onChange={(e) => setRefinementPrompt(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleRefineSubmit()}
+              placeholder="Targeted edit... (e.g. 'Make the hero title larger and add a violet glow')"
+              disabled={isRefining}
+              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none"
+            />
+            <button
+              onClick={handleRefineSubmit}
+              disabled={!refinementPrompt.trim() || isRefining}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg shadow-blue-500/20"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isRefining ? 'Applying' : 'Refine'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
