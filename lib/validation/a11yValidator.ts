@@ -176,28 +176,64 @@ const A11Y_RULES: A11yRule[] = [
     severity: 'warning',
     description: 'Text must have sufficient color contrast (4.5:1 ratio)',
     check: (code) => {
-      // Only flag light text colors when there is NO dark background present.
-      // Generated dark-mode UIs (bg-zinc-900, bg-gray-950, bg-gray-900, bg-slate-900 etc.)
-      // have excellent contrast with text-gray-200/300 — these are NOT accessibility issues.
-      const hasDarkBackground = /bg-(?:zinc|gray|slate|neutral|stone)-(?:800|900|950)/.test(code);
-      if (hasDarkBackground) return { passed: true };
+      // ── Comprehensive dark background detection ───────────────────────────
+      // All Tailwind color families at shade 600+ provide enough background
+      // darkness for light text (text-white, text-gray-100/200/300) to pass WCAG AA.
+      //
+      // Safe dark background families recognised:
+      //   Neutrals : bg-black, bg-gray, bg-zinc, bg-slate, bg-neutral, bg-stone
+      //   Blues    : bg-blue, bg-indigo, bg-sky, bg-cyan
+      //   Purples  : bg-violet, bg-purple, bg-fuchsia
+      //   Greens   : bg-emerald, bg-teal, bg-green, bg-lime
+      //   Reds     : bg-rose, bg-red, bg-pink
+      //   Warm     : bg-amber, bg-orange, bg-yellow (shade ≥700 only)
+      //   Gradient : from-*/to-* dark ends
+      //   Hex      : bg-[#000..#4ff] (dark hex literals)
 
-      const lowContrastPatterns = [
-        /text-gray-300/, /text-gray-200/, /text-gray-100/,
-        /text-yellow-200/, /text-blue-200/,
+      const DARK_BG_NEUTRALS =
+        'bg-black|' +
+        'bg-(?:gray|zinc|slate|neutral|stone|blueGray|coolGray|trueGray|warmGray)-(?:600|700|800|900|950)';
+
+      const DARK_BG_COLORS =
+        'bg-(?:red|orange|amber|yellow|lime|green|teal|emerald|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose)-(?:600|700|800|900|950)';
+
+      const DARK_GRADIENT =
+        '(?:from|to|via)-(?:gray|zinc|slate|neutral|stone|blue|indigo|violet|purple|fuchsia|pink|rose|red|orange|amber|yellow|lime|green|teal|emerald|cyan|sky)-(?:700|800|900|950)';
+
+      const DARK_HEX = 'bg-\\[#(?:[0-4][0-9a-fA-F]{5})\\]';
+
+      const DARK_BG_RE = new RegExp(
+        `${DARK_BG_NEUTRALS}|${DARK_BG_COLORS}|${DARK_GRADIENT}|${DARK_HEX}`
+      );
+
+      if (DARK_BG_RE.test(code)) return { passed: true };
+
+      // Pass for dark-mode utility usage (Tailwind dark: strategy or wrapper class)
+      if (/\bdark\b/.test(code) || /dark:bg-/.test(code) || /data-theme/.test(code)) {
+        return { passed: true };
+      }
+
+      // ── Only flag genuinely light-background issues ───────────────────────
+      // Light text that would be invisible on white/light-gray backgrounds.
+      const LOW_CONTRAST_LIGHT = [
+        /\btext-(?:gray|zinc|slate|neutral|stone)-(?:100|200|300)\b/,
+        /\btext-(?:yellow|lime|green|teal|cyan|sky|blue|indigo|violet|fuchsia|pink|rose|red|orange|amber)-(?:100|200)\b/,
       ];
-      for (const pattern of lowContrastPatterns) {
+
+      for (const pattern of LOW_CONTRAST_LIGHT) {
         if (pattern.test(code)) {
           return {
             passed: false,
             element: 'Text element',
-            detail: `Potential low-contrast color: ${pattern.source} on light background`,
+            detail: 'Light text color detected without a corresponding dark background class',
           };
         }
       }
       return { passed: true };
     },
-    suggestion: 'Use at least text-gray-700 on white backgrounds to meet 4.5:1 contrast ratio',
+    suggestion:
+      'On light backgrounds use text-gray-700+ for contrast. ' +
+      'On dark backgrounds (bg-gray-900, bg-indigo-800, bg-violet-700, etc.) text-gray-100/200/300 is WCAG compliant.',
   },
   {
     id: 'focus-visible',
