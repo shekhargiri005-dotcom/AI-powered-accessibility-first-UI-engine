@@ -235,20 +235,36 @@ export default function CaptureWrapper({ children }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    const handleMessage = async (e) => {
-      if (e.data?.type === 'REQUEST_SNAPSHOT') {
-        try {
-          if (!ref.current) return;
-          const canvas = await html2canvas(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
-          const base64 = canvas.toDataURL('image/jpeg', 0.5);
-          window.parent.postMessage({ type: 'SNAPSHOT_RESULT', payload: base64 }, '*');
-        } catch (err) {
-          window.parent.postMessage({ type: 'SNAPSHOT_ERROR', payload: err.message }, '*');
-        }
+    let captured = false;
+    
+    const takeSnapshot = async () => {
+      if (captured) return;
+      try {
+        if (!ref.current) return;
+        captured = true;
+        const canvas = await html2canvas(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
+        const base64 = canvas.toDataURL('image/jpeg', 0.5);
+        window.top.postMessage({ type: 'SNAPSHOT_RESULT', payload: base64 }, '*');
+      } catch (err) {
+        window.top.postMessage({ type: 'SNAPSHOT_ERROR', payload: err.message }, '*');
       }
     };
+
+    // Auto-capture 3.5 seconds after mount to guarantee RightPanel catches it
+    const timer = setTimeout(takeSnapshot, 3500);
+
+    const handleMessage = async (e) => {
+      if (e.data?.type === 'REQUEST_SNAPSHOT') {
+        takeSnapshot();
+      }
+    };
+    
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    
+    return () => {
+      window.removeEventListener('message', handleMessage);
+      clearTimeout(timer);
+    };
   }, []);
 
   return <div ref={ref} className="w-full min-h-screen bg-gray-50 flex flex-col">{children}</div>;

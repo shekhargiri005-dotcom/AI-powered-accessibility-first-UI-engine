@@ -81,9 +81,26 @@ function SuccessRateBadge({ rate }: { rate: number }) {
 }
 
 // ─── html2canvas capture helper ─────────────────────────────────────────────
-// Uses the postMessage protocol that CaptureWrapper (injected into every
-// Sandpack preview) already implements. Returns null on timeout / error.
+// CaptureWrapper proactively broadcasts SNAPSHOT_RESULT out of the sandboxed iframe
+let globalSandpackSnapshot: string | null = null;
+if (typeof window !== 'undefined') {
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'SNAPSHOT_RESULT') {
+      globalSandpackSnapshot = e.data.payload;
+    }
+  });
+}
+
+// Returns null on timeout / error.
 async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> {
+  // 1. If it was already auto-captured and cached, consume it immediately
+  if (globalSandpackSnapshot) {
+    const snap = globalSandpackSnapshot;
+    globalSandpackSnapshot = null;
+    return snap;
+  }
+
+  // 2. Otherwise safely wait for it to arrive
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
       window.removeEventListener('message', handler);
@@ -94,6 +111,7 @@ async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> 
       if (e.data?.type === 'SNAPSHOT_RESULT') {
         clearTimeout(timer);
         window.removeEventListener('message', handler);
+        globalSandpackSnapshot = null;
         resolve(e.data.payload as string);
       } else if (e.data?.type === 'SNAPSHOT_ERROR') {
         clearTimeout(timer);
@@ -103,17 +121,6 @@ async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> 
     }
 
     window.addEventListener('message', handler);
-
-    const iframe = document.querySelector<HTMLIFrameElement>(
-      'iframe[title="Sandpack Preview"], iframe[class*="sandpack"], .sp-preview-frame',
-    );
-    if (!iframe?.contentWindow) {
-      clearTimeout(timer);
-      window.removeEventListener('message', handler);
-      resolve(null);
-      return;
-    }
-    iframe.contentWindow.postMessage({ type: 'REQUEST_SNAPSHOT' }, '*');
   });
 }
 
