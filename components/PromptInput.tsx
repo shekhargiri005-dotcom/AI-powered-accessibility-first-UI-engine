@@ -380,7 +380,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             <textarea
               id="component-prompt"
               name="component-prompt"
-              rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : mode === 'app' ? 4 : 5}
+              rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : scopeMode === 'app' ? 4 : 5}
               className="
                 w-full resize-y bg-transparent text-zinc-100
                 placeholder-zinc-500 text-sm sm:text-base leading-relaxed
@@ -393,7 +393,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               onBlur={() => setIsFocused(false)}
               disabled={isLoading}
               maxLength={maxChars + 100}
-              aria-label={mode === 'app' ? 'App description' : 'Component description'}
+              aria-label={scopeMode === 'app' ? 'App description' : 'Component description'}
               aria-required="true"
             />
 
@@ -484,16 +484,16 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
               <button
                 type="submit"
                 disabled={!isPromptValid || isLoading || isOverLimit || isProcessingImage}
-                aria-label={isLoading ? 'Generating, please wait' : mode === 'app' ? 'Generate full app' : 'Generate component'}
+                aria-label={isLoading ? 'Generating, please wait' : scopeMode === 'app' ? 'Generate full app' : 'Generate component'}
                 className={`
                   flex items-center justify-center px-4 py-1.5 rounded-lg
                   transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121]
-                  ${mode === 'app' ? 'focus:ring-violet-500' : mode === 'depth_ui' ? 'focus:ring-cyan-500' : 'focus:ring-white'}
+                  ${scopeMode === 'app' ? 'focus:ring-violet-500' : depthUi ? 'focus:ring-cyan-500' : 'focus:ring-white'}
                   ${isLoading || !isPromptValid
                     ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
-                    : mode === 'app'
+                    : scopeMode === 'app'
                       ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 shadow-md shadow-violet-500/25 font-medium text-sm'
-                      : mode === 'depth_ui'
+                      : depthUi
                         ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-400 shadow-md shadow-cyan-500/25 font-medium text-sm'
                         : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
                   }
@@ -503,7 +503,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                 ) : (
                   <>
-                    <span className="mr-1.5">{mode === 'app' ? 'Build App' : mode === 'depth_ui' ? 'Depth UI' : 'Generate'}</span>
+                    <span className="mr-1.5">{scopeMode === 'app' ? 'Build App' : depthUi ? 'Depth UI' : 'Generate'}</span>
                     <Send className="w-3.5 h-3.5 block" aria-hidden="true" />
                   </>
                 )}
@@ -513,7 +513,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         </div>
 
         <p id="prompt-hint" className="sr-only">
-          {mode === 'app'
+          {scopeMode === 'app'
             ? 'Describe a full application to generate a complete multi-screen React app with navigation and mock data.'
             : 'Enter a description of the UI component you want to build, then click Generate.'}
         </p>
