@@ -52,37 +52,29 @@ export async function parseIntent(
     return { success: false, error: 'Input too short — describe a UI component or app' };
   }
   try {
-    let knowledge: string | null;
+    let rawKnowledge: string | null = null;
     let systemPrompt: string;
     let userPrompt: string;
 
     // ── Semantic knowledge retrieval (falls back to keyword matching internally) ──
     if (mode === 'depth_ui') {
-      knowledge = await findDepthUITemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
+      rawKnowledge = await findDepthUITemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
       systemPrompt = DEPTH_UI_INTENT_SYSTEM_PROMPT;
-      userPrompt = buildDepthUIModeIntentPrompt(userInput, knowledge);
     } else if (mode === 'app') {
-      knowledge = await findAppTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
+      rawKnowledge = await findAppTemplateSemantic(userInput) ?? await findRelevantKnowledgeSemantic(userInput);
       systemPrompt = APP_MODE_INTENT_SYSTEM_PROMPT;
-      userPrompt = buildAppModeIntentPrompt(userInput, knowledge);
     } else {
       // Semantic component search + RAG from past user corrections
       const [semanticKnowledge, feedbackContext] = await Promise.all([
         findRelevantKnowledgeSemantic(userInput),
         findRelevantFeedback(userInput),
       ]);
-      knowledge = [semanticKnowledge, feedbackContext].filter(Boolean).join('\n\n') || null;
+      rawKnowledge = [semanticKnowledge, feedbackContext].filter(Boolean).join('\n\n') || null;
       systemPrompt = INTENT_PARSER_SYSTEM_PROMPT;
-      userPrompt = buildIntentParsePrompt(userInput, knowledge);
     }
 
-    if (contextId) {
-      userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
-    }
-
-    // Resolve model + credentials — priority order:
-    //  1. Caller-supplied modelConfig (user's explicit UI selection — highest priority)
-    //  2. resolveDefaultAdapter checks purpose env var → any provider env key → Ollama
+    // Determine what to budget against (we do this early so we can truncate knowledge).
+    // Since intentParser allows override via modelConfig, we look at the provided model or the fallback.
     let cfg: AdapterConfig;
     if (modelConfig) {
       cfg = modelConfig;
@@ -90,6 +82,30 @@ export async function parseIntent(
       cfg = resolveDefaultAdapter('INTENT');
     }
 
+    // Ensure the knowledge string doesn't overflow the context limits of small/local models
+    const { fitContextToTierBudget, estimateTokens } = await import('./promptBudget');
+    
+    // Safe estimation: 500 system prompt tokens + user input tokens
+    const baseSystemTokens = 500 + estimateTokens(userInput);
+    // Rough mapping of model limits. Default to 'large' (3500 system tokens) for cloud models,
+    // and 'medium' (1800) for local/hf models without explicit token capacities.
+    const tier = /hf-|local|llama|mistral|gemma/i.test(cfg.model) ? 'medium' : 'large';
+    
+    const knowledge = fitContextToTierBudget(rawKnowledge, baseSystemTokens, tier);
+
+    if (mode === 'depth_ui') {
+      userPrompt = buildDepthUIModeIntentPrompt(userInput, knowledge);
+    } else if (mode === 'app') {
+      userPrompt = buildAppModeIntentPrompt(userInput, knowledge);
+    } else {
+      userPrompt = buildIntentParsePrompt(userInput, knowledge);
+    }
+
+    if (contextId) {
+      userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
+    }
+
+    // adapter logic (cfg is already resolved)
     const adapter = await getWorkspaceAdapter(cfg);
 
     // Look up model capacity — governs whether JSON mode is safe to enable.
