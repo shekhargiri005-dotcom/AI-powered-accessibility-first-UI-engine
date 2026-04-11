@@ -31,11 +31,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Use a lightweight model for classification to save tokens/time and prevent 429s from expensive models.
-    let fastModel = 'gpt-4o-mini';
-    if (provider === 'google') fastModel = 'gemini-2.0-flash';
+    let fastModel = model || 'gpt-4o-mini';
+    if (provider === 'openai') fastModel = 'gpt-4o-mini';
+    else if (provider === 'google') fastModel = 'gemini-2.0-flash';
     else if (provider === 'anthropic') fastModel = 'claude-3-haiku-20240307';
     else if (provider === 'groq') fastModel = 'llama-3.3-70b-versatile';
-    else if (provider === 'mistral') fastModel = 'mistral-small-latest';
+    else if (provider === 'huggingface') fastModel = 'meta-llama/Meta-Llama-3-8B-Instruct';
+    else if (provider === 'ollama' || provider === 'lmstudio') fastModel = model || 'llama3';
 
     // We keep the user's API key and provider so they can use their own custom keys,
     // but we forcibly override the heavy model (e.g. Gemini 3.1 Pro) to a fast one.
