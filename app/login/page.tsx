@@ -221,9 +221,14 @@ export default function LoginPage() {
 
             {/* Password field */}
             <div className="space-y-1.5">
-              <label htmlFor="login-password" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Access Password
-              </label>
+              <div className="flex justify-between items-center">
+                <label htmlFor="login-password" className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                  Access Password
+                </label>
+                <a href="/forgot-password" className="text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors" tabIndex={-1}>
+                  Forgot Password?
+                </a>
+              </div>
               <div className={`
                 relative flex items-center rounded-xl border bg-white/[0.02] transition-all duration-200 backdrop-blur-md
                 ${focusField === 'password'

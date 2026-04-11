@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
+import { prisma } from './prisma';
 
 // ── Owner credentials (set these in .env.local) ───────────────────────────────
 const OWNER_EMAIL        = process.env.OWNER_EMAIL        ?? '';
@@ -34,23 +35,39 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // ── Fallback: allow dev access when no hash is configured ──────────
-        if (!OWNER_PASSWORD_HASH) {
-          console.warn('[auth] OWNER_PASSWORD_HASH not set — rejecting all logins in production!');
-          return null;
+        const normalizedEmail = email.toLowerCase().trim();
+        let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+        let valid = false;
+
+        if (user?.passwordHash) {
+          valid = await bcrypt.compare(password, user.passwordHash);
+        } else {
+          // Fallback: allow legacy .env hashes and migrate them to the DB
+          if (!OWNER_PASSWORD_HASH) {
+            console.warn('[auth] OWNER_PASSWORD_HASH not set & no DB password — rejecting login.');
+            return null;
+          }
+          valid = await bcrypt.compare(password, OWNER_PASSWORD_HASH);
+          if (valid) {
+            user = await prisma.user.upsert({
+              where: { email: normalizedEmail },
+              create: { email: normalizedEmail, passwordHash: OWNER_PASSWORD_HASH, name: OWNER_NAME },
+              update: { passwordHash: OWNER_PASSWORD_HASH, name: OWNER_NAME },
+            });
+            console.log('[auth] Automatically migrated owner into DB auth system.');
+          }
         }
 
-        const valid = await bcrypt.compare(password, OWNER_PASSWORD_HASH);
         if (!valid) {
           console.error('[auth debug] Password mismatch');
           return null;
         }
 
         return {
-          id:    'owner',
-          email: OWNER_EMAIL,
-          name:  OWNER_NAME,
-          image: null,
+          id:    user?.id || 'owner',
+          email: user?.email || OWNER_EMAIL,
+          name:  user?.name || OWNER_NAME,
+          image: user?.image || null,
         };
       },
     }),
