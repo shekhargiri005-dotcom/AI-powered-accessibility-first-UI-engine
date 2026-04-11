@@ -117,7 +117,18 @@ export async function classifyIntent(
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(raw);
+      let cleanRaw = raw.trim();
+      const match = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (match) {
+        cleanRaw = match[1].trim();
+      } else {
+        const start = raw.indexOf('{');
+        const end = raw.lastIndexOf('}');
+        if (start !== -1 && end !== -1 && start < end) {
+          cleanRaw = raw.substring(start, end + 1);
+        }
+      }
+      parsed = JSON.parse(cleanRaw);
     } catch {
       return { success: false, error: 'Classifier returned malformed JSON' };
     }
