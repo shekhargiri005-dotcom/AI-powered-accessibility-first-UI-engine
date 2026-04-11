@@ -128,11 +128,19 @@ export async function generateComponent(
       !intent.isRefinement &&
       (pipelineConfig.promptStyle === 'freeform' || pipelineConfig.promptStyle === 'guided-freeform')
     ) {
-      // Estimate base system prompt size before optional blocks
-      const baseSystemTokens = estimateTokens(knowledge ?? '');
+      // 1. Estimate base system prompt (rules + intent string, roughly 1000 tokens)
+      const baseSystemTokens = 1000;
+      
+      // 2. Fit knowledge to tier budget FIRST
+      knowledge = fitContextToTierBudget(knowledge, baseSystemTokens, pipelineConfig.tier);
+
+      // 3. Track tokens consumed so far
+      const currentTokens = baseSystemTokens + estimateTokens(knowledge ?? '');
+
+      // 4. Fit cheat sheet to remaining budget
       const fittedCheatSheet = fitContextToTierBudget(
         UI_ECOSYSTEM_API_CHEAT_SHEET,
-        baseSystemTokens,
+        currentTokens,
         pipelineConfig.tier,
       );
       knowledge = knowledge
