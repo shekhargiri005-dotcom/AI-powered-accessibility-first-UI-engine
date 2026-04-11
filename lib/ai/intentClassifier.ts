@@ -87,12 +87,7 @@ export async function classifyIntent(
     let adapterConfig: AdapterConfig;
     if (!modelConfig) {
       // No model configured by user.
-      // If a CLASSIFIER_MODEL env var is set, use it. Otherwise return a
-      // safe default so classify is non-blocking (page.tsx continues anyway).
-      const envModel = process.env.CLASSIFIER_MODEL;
-      if (!envModel) {
-        return { success: false, error: 'No AI model configured for classification. Please configure a provider.' };
-      }
+      // delegate to resolveDefaultAdapter which checks generic DEFAULT_MODEL and fallback env keys
       adapterConfig = resolveDefaultAdapter('CLASSIFIER');
     } else if (typeof modelConfig === 'string') {
       adapterConfig = { model: modelConfig };

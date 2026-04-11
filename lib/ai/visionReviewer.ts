@@ -90,11 +90,19 @@ export async function runVisionRuntimeReview(sourceCode: string): Promise<Vision
       suggestedCode: visual?.suggestedCode,
     };
   } catch (error) {
-    logger.warn({
-      endpoint: 'visionReviewer',
-      message: 'Vision/runtime review unavailable; continuing without blocking.',
-      error: error instanceof Error ? error.message : String(error),
-    });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if (errorMsg.includes("Executable doesn't exist") || errorMsg.includes("playwright install")) {
+      logger.warn({
+        endpoint: 'visionReviewer',
+        message: 'Playwright Chromium missing (Vercel serverless environment) — skipping Vision UI review',
+      });
+    } else {
+      logger.warn({
+        endpoint: 'visionReviewer',
+        message: 'Vision/runtime review unavailable; continuing without blocking.',
+        error: errorMsg,
+      });
+    }
     return { runtimeOk: true };
   } finally {
     if (browser) {
