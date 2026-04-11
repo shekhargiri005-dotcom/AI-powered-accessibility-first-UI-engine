@@ -51,6 +51,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Destructure into concrete locals so TypeScript can narrow throughout
+  const userId    = session.user.id;
+  const userEmail = session.user.email ?? undefined;
+  const userName  = session.user.name  ?? 'Owner';
+
   let name: string;
   try {
     const body = await request.json();
@@ -74,12 +79,8 @@ export async function POST(request: NextRequest) {
     // The credentials provider returns id:'owner' — ensure the User row exists in DB
     // before creating the FK-dependent WorkspaceMember.
     await withReconnect(() => prisma.user.upsert({
-      where: { id: session.user.id },
-      create: {
-        id: session.user.id,
-        email: session.user.email ?? undefined,
-        name: session.user.name ?? 'Owner',
-      },
+      where:  { id: userId },
+      create: { id: userId, email: userEmail, name: userName },
       update: {},
     }));
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
         slug,
         members: {
           create: {
-            userId: session.user.id,
+            userId,
             role: 'OWNER',
           },
         },
