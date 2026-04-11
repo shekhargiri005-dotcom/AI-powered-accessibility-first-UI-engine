@@ -101,7 +101,7 @@ export default function Sidebar({
             className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-all duration-200 shadow-xl shadow-blue-600/20 hover:shadow-blue-500/30 active:scale-[0.98] border border-blue-400/20"
           >
             <Plus className="w-4 h-4 ml-0.5" />
-            New Workspace
+            New Project
           </button>
 
           <div className="relative group">
@@ -136,7 +136,7 @@ export default function Sidebar({
                 <Hash className="w-5 h-5 text-gray-600" />
               </div>
               <p className="text-sm font-medium text-gray-400">No projects found</p>
-              <p className="text-xs text-gray-600 mt-1">Create a new workspace to start designing.</p>
+              <p className="text-xs text-gray-600 mt-1">Create a new project to start designing.</p>
             </div>
           ) : (
             filtered.map((project) => {
