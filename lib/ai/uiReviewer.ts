@@ -83,11 +83,13 @@ export async function reviewGeneratedCode(
 
     const adapter = await getWorkspaceAdapter(cfg);
 
+    const unindentedCode = code.replace(/^[ \t]+/gm, '');
+
     const adapterResult = await adapter.generate({
       model: cfg.model,
       messages: [
         { role: 'system', content: REVIEWER_SYSTEM_PROMPT },
-        { role: 'user', content: `Original Intent Context:\n${intentContext}\n\nGenerated Code to Review:\n\`\`\`tsx\n${code}\n\`\`\`` },
+        { role: 'user', content: `Original Intent Context:\n${intentContext}\n\nGenerated Code to Review:\n\`\`\`tsx\n${unindentedCode}\n\`\`\`` },
       ],
       responseFormat: 'json_object',
       temperature: 0.1,

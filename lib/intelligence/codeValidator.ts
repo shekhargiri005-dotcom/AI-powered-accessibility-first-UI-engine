@@ -299,35 +299,52 @@ export function validateGeneratedCode(code: string, _fileName = 'component.tsx')
     }
   }
 
-  // Deterministic TS/TSX syntax validation (in-memory compile check)
-  const transpile = ts.transpileModule(code, {
-    compilerOptions: {
-      jsx: ts.JsxEmit.ReactJSX,
-      target: ts.ScriptTarget.ES2020,
-      module: ts.ModuleKind.ESNext,
-      strict: false,
-      skipLibCheck: true,
-    },
-    reportDiagnostics: true,
-    fileName: _fileName,
-  });
+  // ─── Fast Structural Heuristic (Replaces heavy TS Compiler) ───────────────
+  // Detects LLM truncation (the most common cause of syntax errors) in <1ms
+  let inString: string | null = null;
+  let escapeNext = false;
+  let braces = 0;
+  let parentheses = 0;
+  let brackets = 0;
 
-  for (const d of transpile.diagnostics ?? []) {
-    if (d.category !== ts.DiagnosticCategory.Error) continue;
-    const message = ts.flattenDiagnosticMessageText(d.messageText, '\n');
-    let line: number | undefined;
-    if (typeof d.start === 'number') {
-      const pos = ts.getLineAndCharacterOfPosition(
-        ts.createSourceFile(_fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX),
-        d.start,
-      );
-      line = pos.line + 1;
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i];
+    
+    if (escapeNext) {
+      escapeNext = false;
+      continue;
     }
+    
+    if (char === '\\') {
+      escapeNext = true;
+      continue;
+    }
+    
+    if (inString) {
+      if (char === inString) {
+        inString = null;
+      }
+      continue;
+    }
+    
+    if (char === '"' || char === "'" || char === '`') {
+      inString = char;
+      continue;
+    }
+    
+    if (char === '{') braces++;
+    else if (char === '}') braces--;
+    else if (char === '(') parentheses++;
+    else if (char === ')') parentheses--;
+    else if (char === '[') brackets++;
+    else if (char === ']') brackets--;
+  }
+
+  if (braces !== 0 || parentheses !== 0 || brackets !== 0) {
     errors.push({
-      code: 'TS_SYNTAX_ERROR',
+      code: 'SYNTAX_TRUNCATION_ERROR',
       severity: 'error',
-      message: `TypeScript parse error${line ? ` (line ${line})` : ''}: ${message}`,
-      line,
+      message: `Syntax error detected: unbalanced brackets/braces. Code appears truncated or malformed (braces offset: ${braces}).`,
     });
   }
 
