@@ -11,6 +11,8 @@ import { getWorkspaceAdapter } from './adapters/index';
 import type { AdapterConfig }  from './adapters/index';
 import { type UIIntent }       from '../validation/schemas';
 import { buildSemanticContext } from './semanticKnowledgeBase';
+import { getPipelineConfigForModel } from './tieredPipeline';
+import { fitContextToTierBudget, estimateTokens } from './promptBudget';
 
 export interface FileManifestItem {
   filename: string;
@@ -118,14 +120,26 @@ export async function generateFileChunk(
     'USER INTENT:\n' +
     JSON.stringify(intent) + '\n\n'; // Compact JSON — saves ~25% tokens
 
-  // Use pre-computed shared RAG context avoids N redundant embedding API calls
-  // Fallback to per-chunk query only if no shared context was supplied
-  const semanticContext = sharedSemanticContext
+  // Detect model tier for RAG budget capping — prevents overflow on 8K Llama/HuggingFace models
+  const chunkPipelineCfg = getPipelineConfigForModel(model);
+  const basePromptTokens  = estimateTokens(prompt);
+
+  // Use pre-computed shared RAG context — avoids N redundant embedding API calls.
+  // Fallback to per-chunk query only if no shared context was supplied.
+  const rawSemanticCtx = sharedSemanticContext
     ?? await buildSemanticContext(`${intent.description} ${targetFile}`, 'app');
-  if (semanticContext) {
+
+  // Budget-aware injection: trim the RAG block if it would overflow the model's context
+  const fittedSemanticCtx = fitContextToTierBudget(
+    rawSemanticCtx || null,
+    basePromptTokens,
+    chunkPipelineCfg.tier,
+  );
+
+  if (fittedSemanticCtx) {
     prompt += 'APPROVED BLUEPRINTS & COMPONENTS (RAG Context MUST BE USED):\n' +
               'Do NOT invent arbitrary solutions if an applicable pattern or component is listed below.\n\n' +
-              semanticContext + '\n\n';
+              fittedSemanticCtx + '\n\n';
   }
 
   prompt += 'REQUIREMENTS:\n' +

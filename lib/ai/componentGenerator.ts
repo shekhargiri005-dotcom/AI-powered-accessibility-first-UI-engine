@@ -22,6 +22,7 @@ import { DEFAULT_AGENT_TOOLS } from './agentTools';
 import { getRelevantExamples } from './memory';
 import { buildSemanticContext } from './semanticKnowledgeBase';
 import { UI_ECOSYSTEM_API_CHEAT_SHEET } from './uiCheatSheet';
+import { fitContextToTierBudget, estimateTokens } from './promptBudget';
 import { type UIIntent, type DepthUIModePreset } from '../validation/schemas';
 import { evaluateDepthExperience } from '../intelligence/depthEngine';
 import { selectBlueprint, formatBlueprintForPrompt } from '../intelligence/blueprintEngine';
@@ -117,15 +118,26 @@ export async function generateComponent(
 
     let knowledge: string | null = rawSemanticContext || null;
 
-    // Inject cheat sheet only for freeform/guided-freeform — smaller tiers
-    // receive it via their locked import block or structured template
+    // ── Token-budget-aware context injection ────────────────────────────────
+    // fitContextToTierBudget() measures remaining system prompt headroom before
+    // injecting each optional block. This prevents prompt overflow on models with
+    // small context windows (e.g. HuggingFace Llama 8K, TinyLlama 2K).
+    // RAG knowledge is trimmed first (lowest priority);
+    // cheat sheet is injected only when budget still allows it.
     if (
       !intent.isRefinement &&
       (pipelineConfig.promptStyle === 'freeform' || pipelineConfig.promptStyle === 'guided-freeform')
     ) {
+      // Estimate base system prompt size before optional blocks
+      const baseSystemTokens = estimateTokens(knowledge ?? '');
+      const fittedCheatSheet = fitContextToTierBudget(
+        UI_ECOSYSTEM_API_CHEAT_SHEET,
+        baseSystemTokens,
+        pipelineConfig.tier,
+      );
       knowledge = knowledge
-        ? `${knowledge}\n\n${UI_ECOSYSTEM_API_CHEAT_SHEET}`
-        : UI_ECOSYSTEM_API_CHEAT_SHEET;
+        ? fittedCheatSheet ? `${knowledge}\n\n${fittedCheatSheet}` : knowledge
+        : fittedCheatSheet ?? null;
     }
 
     // ─── Step 3.2: Depth UI Engine Evaluation ────────────────────────────────
@@ -194,6 +206,27 @@ export async function generateComponent(
         builtPrompt = {
           ...builtPrompt,
           system: ((builtPrompt.system ?? '') + '\n\n' + dnaAndContract).trimStart(),
+        };
+      }
+    }
+
+    // ── Step 4.9: Token Budget Enforcement ─────────────────────────────────
+    // After ALL prompt injections, enforce the tier's maxSystemPromptTokens cap.
+    // If the assembled system prompt exceeds the limit, trim optional sections
+    // progressively (lowest-value blocks first) until it fits.
+    const maxSysTok = pipelineConfig.maxSystemPromptTokens ?? Infinity;
+    if (isFinite(maxSysTok) && estimateTokens(builtPrompt.system ?? '') > maxSysTok) {
+      // Gracefully truncate: keep the first maxSysTok*4 chars (rough char budget)
+      const charBudget = maxSysTok * 4;
+      const sys = builtPrompt.system ?? '';
+      if (sys.length > charBudget) {
+        // Find last clean newline within budget to avoid cutting mid-sentence
+        const sliced = sys.slice(0, charBudget);
+        const lastNL = sliced.lastIndexOf('\n');
+        builtPrompt = {
+          ...builtPrompt,
+          system: (lastNL > 0 ? sliced.slice(0, lastNL) : sliced) +
+                  '\n// [SYSTEM PROMPT TRIMMED — TOKEN BUDGET ENFORCED]',
         };
       }
     }
