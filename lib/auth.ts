@@ -21,48 +21,57 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const email    = credentials?.email    as string | undefined;
-        const password = credentials?.password as string | undefined;
+        // Wrap entirely — bcrypt.compare throws on malformed hashes;
+        // Prisma throws on network issues. Both must return null, not crash.
+        try {
+          const email    = credentials?.email    as string | undefined;
+          const password = credentials?.password as string | undefined;
 
-        if (!email || !password) {
-          console.error('[auth debug] Missing email or password');
+          if (!email || !password) return null;
+
+          const normalizedEmail = email.toLowerCase().trim();
+          let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+          let valid = false;
+
+          if (user?.passwordHash) {
+            // DB user exists — compare against their stored hash
+            valid = await bcrypt.compare(password, user.passwordHash);
+          } else {
+            // No DB record yet — fall back to the env-supplied master hash
+            if (!OWNER_PASSWORD_HASH || !OWNER_PASSWORD_HASH.startsWith('$2')) {
+              // Guard: bcrypt.compare throws if hash is not a valid bcrypt string
+              console.warn('[auth] OWNER_PASSWORD_HASH not set or not a valid bcrypt hash.');
+              return null;
+            }
+            valid = await bcrypt.compare(password, OWNER_PASSWORD_HASH);
+            if (valid) {
+              // Auto-provision this email into the DB so future logins are DB-backed
+              try {
+                user = await prisma.user.upsert({
+                  where:  { email: normalizedEmail },
+                  create: { email: normalizedEmail, passwordHash: OWNER_PASSWORD_HASH, name: email.split('@')[0] },
+                  update: { passwordHash: OWNER_PASSWORD_HASH },
+                });
+                console.log(`[auth] Provisioned access for ${normalizedEmail}.`);
+              } catch (dbErr) {
+                // DB write failed — user is still authenticated for this session
+                console.error('[auth] DB upsert failed (non-fatal):', dbErr);
+              }
+            }
+          }
+
+          if (!valid) return null;
+
+          return {
+            id:    user?.id    || 'owner',
+            email: user?.email || normalizedEmail,
+            name:  user?.name  || OWNER_NAME,
+            image: user?.image || null,
+          };
+        } catch (err) {
+          console.error('[auth] Unexpected error in authorize (returning null):', err);
           return null;
         }
-
-        const normalizedEmail = email.toLowerCase().trim();
-        let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-        let valid = false;
-
-        if (user?.passwordHash) {
-          valid = await bcrypt.compare(password, user.passwordHash);
-        } else {
-          // Fallback: allow legacy .env hashes and migrate them to the DB
-          if (!OWNER_PASSWORD_HASH) {
-            console.warn('[auth] OWNER_PASSWORD_HASH not set & no DB password — rejecting login.');
-            return null;
-          }
-          valid = await bcrypt.compare(password, OWNER_PASSWORD_HASH);
-          if (valid) {
-            user = await prisma.user.upsert({
-              where: { email: normalizedEmail },
-              create: { email: normalizedEmail, passwordHash: OWNER_PASSWORD_HASH, name: email.split('@')[0] },
-              update: { passwordHash: OWNER_PASSWORD_HASH },
-            });
-            console.log(`[auth] Automatically provisioned access for ${normalizedEmail}.`);
-          }
-        }
-
-        if (!valid) {
-          console.error('[auth debug] Password mismatch');
-          return null;
-        }
-
-        return {
-          id:    user?.id || 'owner',
-          email: user?.email || OWNER_EMAIL,
-          name:  user?.name || OWNER_NAME,
-          image: user?.image || null,
-        };
       },
     }),
   ],
