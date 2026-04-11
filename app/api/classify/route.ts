@@ -30,13 +30,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
-    // CRITICAL: We intentionally IGNORE the user's selected UI model/provider here.
-    // Classification is an internal, fast, behind-the-scenes task. If we use the
-    // expensive/slow model the user selected (e.g. Gemini Pro, Opus), we waste 
-    // tokens and hit 429 rate limits instantly. 
-    // Passing undefined forces intentClassifier.ts to use resolveDefaultAdapter('CLASSIFIER')
-    reqLogger.debug('Classifying prompt intent (using default internal fast model)');
-    const result = await classifyIntent(prompt, hasActiveProject ?? false, undefined);
+    // Use a lightweight model for classification to save tokens/time and prevent 429s from expensive models.
+    let fastModel = 'gpt-4o-mini';
+    if (provider === 'google') fastModel = 'gemini-2.0-flash';
+    else if (provider === 'anthropic') fastModel = 'claude-3-haiku-20240307';
+    else if (provider === 'groq') fastModel = 'llama-3.3-70b-versatile';
+    else if (provider === 'mistral') fastModel = 'mistral-small-latest';
+
+    // We keep the user's API key and provider so they can use their own custom keys,
+    // but we forcibly override the heavy model (e.g. Gemini 3.1 Pro) to a fast one.
+    const modelConfig = (provider || apiKey || baseUrl || model)
+      ? { 
+          model: fastModel, 
+          provider: provider || (model?.includes('gemini') ? 'google' : undefined), 
+          apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, 
+          baseUrl 
+        }
+      : undefined;
+
+    reqLogger.debug('Classifying prompt intent', { hasActiveProject, forcedModel: fastModel, provider });
+    const result = await classifyIntent(prompt, hasActiveProject ?? false, modelConfig);
 
     if (!result.success) {
       reqLogger.warn('Classification failed', { error: result.error });
