@@ -59,43 +59,6 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'gsk_… — get one at console.groq.com/keys',
     docsUrl: 'https://console.groq.com/keys',
   },
-  openrouter: {
-    id: 'openrouter', name: 'OpenRouter',
-    color: 'from-violet-500 to-purple-600', accent: 'text-violet-400', icon: '◉',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    modelHint: 'openai/gpt-4o, anthropic/claude-3.5-sonnet…',
-    keyLabel: 'OpenRouter API Key',
-    keyHint: 'sk-or-… — get one at openrouter.ai/keys',
-    docsUrl: 'https://openrouter.ai/keys',
-  },
-  together: {
-    id: 'together', name: 'Together AI',
-    color: 'from-cyan-500 to-blue-600', accent: 'text-cyan-400', icon: '◆',
-    baseUrl: 'https://api.together.xyz/v1',
-    modelHint: 'meta-llama/Llama-3-70b-chat-hf, mistralai/Mixtral-8x7B…',
-    keyLabel: 'Together AI API Key',
-    keyHint: 'Get one at api.together.ai/settings/api-keys',
-    docsUrl: 'https://api.together.ai/settings/api-keys',
-  },
-  deepseek: {
-    id: 'deepseek', name: 'DeepSeek',
-    color: 'from-sky-500 to-indigo-500', accent: 'text-sky-400', icon: '🔭',
-    baseUrl: 'https://api.deepseek.com/v1',
-    modelHint: 'deepseek-chat, deepseek-coder…',
-    keyLabel: 'DeepSeek API Key',
-    keyHint: 'Get one at platform.deepseek.com/api_keys',
-    docsUrl: 'https://platform.deepseek.com/api_keys',
-  },
-  mistral: {
-    id: 'mistral', name: 'Mistral AI',
-    color: 'from-fuchsia-500 to-pink-600', accent: 'text-fuchsia-400', icon: '🌊',
-    baseUrl: 'https://api.mistral.ai/v1',
-    modelHint: 'mistral-large-latest, mistral-medium…',
-    keyLabel: 'Mistral API Key',
-    keyHint: 'Get one at console.mistral.ai/api-keys',
-    docsUrl: 'https://console.mistral.ai/api-keys',
-  },
-
   huggingface: {
     id: 'huggingface', name: 'Hugging Face',
     color: 'from-amber-400 to-yellow-600', accent: 'text-amber-400', icon: '🤗',
@@ -105,58 +68,14 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'hf_… — get one at huggingface.co/settings/tokens',
     docsUrl: 'https://huggingface.co/settings/tokens',
   },
-  // ── Dedicated adapter slots ──────────────────────────────────────────────
-  meta: {
-    id: 'meta', name: 'Meta / Llama',
-    color: 'from-blue-600 to-indigo-600', accent: 'text-blue-400', icon: '🦙',
-    baseUrl: 'https://api.together.xyz/v1',
-    modelHint: 'meta-llama/Llama-3.3-70B-Instruct, Llama-3.1-8B…',
-    keyLabel: 'Together AI or Groq API Key',
-    keyHint: 'Get one at api.together.ai or console.groq.com/keys',
-    docsUrl: 'https://api.together.ai/settings/api-keys',
-  },
-  qwen: {
-    id: 'qwen', name: 'Qwen (DashScope)',
-    color: 'from-violet-500 to-purple-600', accent: 'text-violet-400', icon: '🔮',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    modelHint: 'qwen-turbo, qwen-plus, qwen-coder-turbo…',
-    keyLabel: 'DashScope API Key',
-    keyHint: 'Get one at dashscope.aliyun.com',
-    docsUrl: 'https://dashscope.aliyun.com/',
-  },
-  gemma: {
-    id: 'gemma', name: 'Gemma (Google)',
-    color: 'from-sky-400 to-cyan-500', accent: 'text-sky-400', icon: '💎',
-    baseUrl: 'https://api.together.xyz/v1',
-    modelHint: 'google/gemma-2-27b-it, google/gemma-2-9b-it…',
-    keyLabel: 'Together AI or Groq API Key',
-    keyHint: 'Get one at api.together.ai or console.groq.com/keys',
-    docsUrl: 'https://api.together.ai/settings/api-keys',
-  },
-  custom: {
-    id: 'custom', name: 'Advanced / Custom',
-    color: 'from-gray-500 to-gray-600', accent: 'text-gray-400', icon: '⚙',
-    modelHint: 'Enter exact model name as expected by your API',
-    keyLabel: 'API Key',
-    keyHint: 'Enter your API key — used to generate UI components',
-    docsUrl: 'https://openai.com/api/',
-  },
 };
 
-// Provider order for the picker (local providers handled separately via tabs)
-// Row 1: major cloud · Row 2: open-model hosts · Row 3: adapter-specific · Row 4: utilities
+// Provider order for the picker — stable providers only
 const CLOUD_PROVIDER_ORDER = [
-  // Major cloud APIs
-  'openai', 'anthropic', 'google', 'deepseek',
-  // Dedicated adapter providers
-  'mistral', 'meta', 'qwen', 'gemma',
-  // Aggregators / fast inference
-  'groq', 'openrouter', 'together', 'huggingface',
-  // Catch-all
-  'custom',
+  'openai', 'anthropic', 'google', 'groq', 'huggingface',
 ];
 
-// ── All 24 models across 9 adapters ──────────────────────────────────────────
+// ── Suggested models per supported provider ───────────────────────────────────
 const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
   // ── OpenAI (4 models) ───────────────────────────────────────────────────
   openai:      ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini'],
@@ -164,23 +83,10 @@ const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
   anthropic:   ['claude-sonnet-4-5', 'claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022', 'claude-3-opus-20240229'],
   // ── Google Gemini (3 models) ─────────────────────────────────────────────
   google:      ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
-  // ── DeepSeek (2 models) ─────────────────────────────────────────────────
-  deepseek:    ['deepseek-chat', 'deepseek-coder'],
-  // ── Mistral AI (3 models) ───────────────────────────────────────────────
-  mistral:     ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest'],
-  // ── Meta / Llama (3 models via Together) ────────────────────────────────
-  meta:        ['meta-llama/Llama-3.3-70B-Instruct', 'meta-llama/Llama-3.1-8B-Instruct', 'meta-llama/Llama-3.2-3B-Instruct'],
-  // ── Qwen / DashScope (3 models) ─────────────────────────────────────────
-  qwen:        ['qwen-turbo', 'qwen-plus', 'qwen-coder-turbo'],
-  // ── Gemma / Google (2 models via Together/Groq) ─────────────────────────
-  gemma:       ['google/gemma-2-27b-it', 'google/gemma-2-9b-it'],
   // ── Groq fast inference (3 models) ──────────────────────────────────────
   groq:        ['llama-3.3-70b-versatile', 'gemma2-9b-it', 'mixtral-8x7b-32768'],
-  // ── Aggregators — curated picks (free text also supported) ───────────────
-  openrouter:  ['openai/gpt-4o', 'anthropic/claude-3.5-sonnet', 'meta-llama/llama-3.3-70b-instruct'],
-  together:    ['meta-llama/Llama-3.3-70B-Instruct', 'mistralai/Mixtral-8x7B-Instruct-v0.1', 'Qwen/Qwen2.5-Coder-32B-Instruct'],
+  // ── HuggingFace (1 curated model) ───────────────────────────────────────
   huggingface: ['meta-llama/Meta-Llama-3-8B-Instruct'],
-  custom:      [],
 };
 
 /**
@@ -190,18 +96,14 @@ const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
 function detectFromKey(key: string): ProviderInfo | null {
   const k = key.trim();
   if (!k) return null;
-  if (k.startsWith('sk-ant-'))                   return PROVIDERS.anthropic;
-  if (k.startsWith('AIzaSy'))                    return PROVIDERS.google;
-  if (k.startsWith('gsk_'))                      return PROVIDERS.groq;
-  if (k.startsWith('sk-or-'))                    return PROVIDERS.openrouter;
-  if (k.startsWith('hf_'))                       return PROVIDERS.huggingface;
+  if (k.startsWith('sk-ant-'))                               return PROVIDERS.anthropic;
+  if (k.startsWith('AIzaSy'))                                return PROVIDERS.google;
+  if (k.startsWith('gsk_'))                                  return PROVIDERS.groq;
+  if (k.startsWith('hf_'))                                   return PROVIDERS.huggingface;
   if (k.startsWith('sk-proj-') || k.startsWith('sk-svcacct-')) return PROVIDERS.openai;
-  // DeepSeek keys are specifically sk- followed by 32 hex chars
-  if (/^sk-[a-f0-9]{32}$/.test(k))               return PROVIDERS.deepseek;
-  if (k.length >= 32 && /^[a-f0-9]+$/i.test(k))  return PROVIDERS.together;
-  
-  // Ambiguous `sk-...` keys (legacy OpenAI, Mistral, etc.) won't force an auto-switch
-  return PROVIDERS.custom;
+  // Generic sk- → assume OpenAI compatible
+  if (k.startsWith('sk-'))                                   return PROVIDERS.openai;
+  return null;
 }
 
 // ─── Stored Config Shape ──────────────────────────────────────────────────────
