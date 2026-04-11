@@ -441,7 +441,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
             </div>
             <div>
               <h2 id="ges-title" className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                Generation Engine Setup
+                Env Variable Store
                 {sessionActive && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
