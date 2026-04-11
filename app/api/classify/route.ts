@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
-    // Build model config — if user passed all three, use them. Otherwise fall back to env.
-    const modelConfig = model
-      ? { model, provider, apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, baseUrl }
-      : undefined;
-
-    reqLogger.debug('Classifying prompt intent', { hasActiveProject, model, provider });
-    const result = await classifyIntent(prompt, hasActiveProject ?? false, modelConfig);
+    // CRITICAL: We intentionally IGNORE the user's selected UI model/provider here.
+    // Classification is an internal, fast, behind-the-scenes task. If we use the
+    // expensive/slow model the user selected (e.g. Gemini Pro, Opus), we waste 
+    // tokens and hit 429 rate limits instantly. 
+    // Passing undefined forces intentClassifier.ts to use resolveDefaultAdapter('CLASSIFIER')
+    reqLogger.debug('Classifying prompt intent (using default internal fast model)');
+    const result = await classifyIntent(prompt, hasActiveProject ?? false, undefined);
 
     if (!result.success) {
       reqLogger.warn('Classification failed', { error: result.error });
