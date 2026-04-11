@@ -116,7 +116,7 @@ export async function generateFileChunk(
     JSON.stringify(intent, null, 2) + '\n\n' +
     'REQUIREMENTS:\n' +
     `1. Write ONLY the raw TSX code for "${targetFile}". No markdown fences, no explanations.\n` +
-    '2. Use Tailwind CSS exclusively for styling.\n' +
+    '2. Use Tailwind CSS exclusively for styling. Enforce STRICT WCAG AA color contrast: use text-gray-700 or darker on light backgrounds, and text-white or text-gray-200 on dark backgrounds.\n' +
     '3. Import other components from "./[filename]" relative paths. Use DEFAULT IMPORTS: `import ComponentName from \'./ComponentName\';`\n' +
     '4. Export default the main component of this file: `export default function ComponentName() { ... }`.\n' +
     '5. If it is App.tsx, orchestrate the other components.\n' +

@@ -116,7 +116,8 @@ MANDATORY RULES:
    - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
 6. Vibrant Colors & Theming (CRITICAL):
    - Make the UI visually stunning by utilizing Tailwind's rich default color palettes natively (e.g., bg-blue-600, text-emerald-500, bg-zinc-900).
-   - ALWAYS respect WCAG AA contrast ratios.
+   - ALWAYS respect strict WCAG AA contrast rules: use text-gray-700 or darker on light backgrounds, and text-white or text-gray-100 on dark backgrounds.
+   - NEVER use low-contrast text like text-gray-300 on white backgrounds or text-gray-800 on dark backgrounds.
    - Use gradients (bg-gradient-to-r) and complementary text colors to ensure it is not monochromatic.
    - If the user manually specifies custom hex colors (e.g. #0f172a), you MUST map them directly to standard Tailwind arbitrary values (like \`bg-[#0f172a]\` or \`text-[#22c55e]\`).
    - NEVER write unstyled HTML elements. Every semantic element you create must be fully styled with Tailwind. Do NOT bypass Tailwind by using raw inline styles.
@@ -273,7 +274,7 @@ ARCHITECTURE & DESIGN (NON-NEGOTIABLE):
    - Never build a raw HTML button or card if \`@ui/core\` has one.
 3. COLORFUL & VIBRANT AESTHETICS (CRITICAL):
    - Make the UI visually breathtaking by using Tailwind's rich default color palettes natively (e.g., bg-indigo-600, text-violet-500, from-rose-500 to-orange-500).
-   - ALWAYS respect WCAG AA contrast ratios (at least 4.5:1 for normal text, 3:1 for large text). Combine light text on dark backgrounds or dark text on light backgrounds strictly.
+   - ALWAYS respect strict WCAG AA contrast rules: use text-gray-700+ on light backgrounds, and text-white/gray-100 on dark backgrounds. Avoid low-contrast text. Combine light text on dark backgrounds or dark text on light backgrounds strictly.
    - Avoid generic/monochrome styles. Every app should have a distinct, colorful personality.
    - DO NOT rely on uninitialized CSS variables like 'bg-[var(--primary)]' because they evaluate to transparent by default. ALWAYS use standard, fully-qualified Tailwind color utilities mapping directly to the design.
    - If you include a theme customization feature, ensure it falls back gracefully to these vibrant standard Tailwind classes.
