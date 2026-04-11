@@ -116,10 +116,11 @@ MANDATORY RULES:
    - All custom Tailwind classes MUST complement the \`@ui/*\` ecosystem (e.g. rounded-xl, shadow-sm, p-6).
 6. Vibrant Colors & Theming (CRITICAL):
    - Make the UI visually stunning by utilizing Tailwind's rich default color palettes natively (e.g., bg-blue-600, text-emerald-500, bg-zinc-900).
-   - ALWAYS respect WCAG AA contrast ratios (at least 4.5:1 for normal text, 3:1 for large text). Never use unreadable combinations like text-gray-400 on bg-gray-100 or text-blue-500 on bg-blue-600.
+   - ALWAYS respect WCAG AA contrast ratios.
    - Use gradients (bg-gradient-to-r) and complementary text colors to ensure it is not monochromatic.
-   - DO NOT use uninitialized CSS variables like 'bg-[var(--primary)]' unless you strictly initialize them on mount. It's much safer and preferred to use standard Tailwind utility classes directly for maximum color fidelity.
-   - If you include a theme picker, ensure it updates standard React state and applies classes dynamically, or initializes root CSS vars properly.
+   - If the user manually specifies custom hex colors (e.g. #0f172a), you MUST map them directly to standard Tailwind arbitrary values (like \`bg-[#0f172a]\` or \`text-[#22c55e]\`).
+   - NEVER write unstyled HTML elements. Every semantic element you create must be fully styled with Tailwind. Do NOT bypass Tailwind by using raw inline styles.
+   - DO NOT use uninitialized CSS variables like 'bg-[var(--primary)]' unless initialized.
 7. Realistic Logic & Mock Data:
    - Generate components with React hooks: useState for dynamic values, useEffect to simulate API calls (with setTimeout).
    - Include loading states (skeletons or spinners) and error handling. Example: \`const [rev, setRev] = useState(null); useEffect(() => { setTimeout(() => setRev(12345), 1000); }, []);\`

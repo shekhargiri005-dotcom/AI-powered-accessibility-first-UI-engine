@@ -30,9 +30,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Request body required' }, { status: 400 });
     }
 
-    const { componentName, codeSnippet, model, provider, apiKey, baseUrl } = body as {
+    const { componentName, codeSnippet, intentDescription, model, provider, apiKey, baseUrl } = body as {
       componentName?: string;
       codeSnippet?: string;
+      intentDescription?: string;
       model?: string;
       provider?: string;
       apiKey?: string;
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     const adapter = await getWorkspaceAdapter(cfg);
 
     const userPrompt = `Component: "${componentName ?? 'Unknown'}"
-
+${intentDescription ? `Original Goal: "${intentDescription}"\n` : ''}
 CODE (first 2000 chars):
 ${codeSnippet.slice(0, 2000)}
 

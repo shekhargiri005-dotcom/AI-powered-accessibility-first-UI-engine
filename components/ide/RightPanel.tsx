@@ -289,6 +289,7 @@ export default function RightPanel({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         componentName: initialProject.intent.componentName,
+        intentDescription: initialProject.intent.description,
         codeSnippet,
         ...(aiConfig?.model ? {
           model: aiConfig.model,
