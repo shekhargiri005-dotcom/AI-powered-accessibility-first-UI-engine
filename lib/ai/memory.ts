@@ -180,7 +180,7 @@ export async function getRelevantExamples(intent: UIIntent): Promise<MemoryEntry
       },
       include: { versions: { orderBy: { version: 'desc' }, take: 1 } },
       orderBy: { updatedAt: 'desc' },
-      take: 20,
+      take: 3, // We only ever use 2; fetch 3 as safety buffer
     });
 
     const entries: MemoryEntry[] = rows

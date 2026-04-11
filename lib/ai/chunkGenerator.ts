@@ -102,6 +102,8 @@ export async function generateFileChunk(
   provider?: string,
   apiKey?: string,
   baseUrl?: string,
+  /** Pre-computed RAG context (computed ONCE at manifest level — avoids N embedding queries) */
+  sharedSemanticContext?: string,
 ): Promise<string> {
   const cfg     = buildAdapterConfig(model, provider, apiKey, baseUrl);
   const adapter = await getWorkspaceAdapter(cfg);
@@ -114,10 +116,12 @@ export async function generateFileChunk(
     'APP MANIFEST (For Context / Imports):\n' +
     JSON.stringify(manifest, null, 2) + '\n\n' +
     'USER INTENT:\n' +
-    JSON.stringify(intent, null, 2) + '\n\n';
+    JSON.stringify(intent) + '\n\n'; // Compact JSON — saves ~25% tokens
 
-  // Perform Semantic RAG Retrieval (Top-K visual blueprints & registered components)
-  const semanticContext = await buildSemanticContext(`${intent.description} ${targetFile}`, 'app');
+  // Use pre-computed shared RAG context avoids N redundant embedding API calls
+  // Fallback to per-chunk query only if no shared context was supplied
+  const semanticContext = sharedSemanticContext
+    ?? await buildSemanticContext(`${intent.description} ${targetFile}`, 'app');
   if (semanticContext) {
     prompt += 'APPROVED BLUEPRINTS & COMPONENTS (RAG Context MUST BE USED):\n' +
               'Do NOT invent arbitrary solutions if an applicable pattern or component is listed below.\n\n' +

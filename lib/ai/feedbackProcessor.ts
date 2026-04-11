@@ -51,7 +51,11 @@ export async function enrichPromptWithFeedback(
   modelId: string,
 ): Promise<FeedbackEnrichment> {
   const intentType = (intent.componentType ?? 'component').toLowerCase();
-  const stats      = getFeedbackStats(modelId, intentType);
+  // Run both in parallel — stats is synchronous so wrap in Promise.resolve
+  const [stats, topRated] = await Promise.all([
+    Promise.resolve(getFeedbackStats(modelId, intentType)),
+    getTopRatedGenerations(intentType, 1),
+  ]);
 
   const lines: string[] = [];
   let warn       = false;
@@ -79,9 +83,7 @@ export async function enrichPromptWithFeedback(
     }
   }
 
-  // ── Signal: inject approved examples ──────────────────────────────────────────────────
-  const topRated = await getTopRatedGenerations(intentType, 1);
-
+  // ── Signal: inject approved examples (topRated already fetched in parallel above) ────
   if (topRated.length > 0) {
     // Prefer correctedCode (user-improved) over original generated code
     let snippet: string | null = topRated[0].correctedCode?.slice(0, SNIPPET_CHARS) ?? null;

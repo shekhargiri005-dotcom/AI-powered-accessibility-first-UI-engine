@@ -21,6 +21,7 @@ import { DEFAULT_AGENT_TOOLS } from './agentTools';
 
 import { getRelevantExamples } from './memory';
 import { buildSemanticContext } from './semanticKnowledgeBase';
+import { UI_ECOSYSTEM_API_CHEAT_SHEET } from './uiCheatSheet';
 import { type UIIntent, type DepthUIModePreset } from '../validation/schemas';
 import { evaluateDepthExperience } from '../intelligence/depthEngine';
 import { selectBlueprint, formatBlueprintForPrompt } from '../intelligence/blueprintEngine';
@@ -104,16 +105,27 @@ export async function generateComponent(
     const modelProfile = explicitProfile ?? getCloudFallbackProfile();
     const pipelineConfig = getPipelineConfig(modelProfile);
 
-    // ─── Step 3: Knowledge + memory lookup ───────────────────────────────────
-    // Phase 4: buildSemanticContext() runs all 5 sources in parallel:
-    //  template | registry | blueprint | motion (depth_ui only) | feedback
-    // Returns a single merged context block with graceful per-source fallbacks.
-    let knowledge: string | null = null;
-    const memory = await getRelevantExamples(intent);
+    // ─── Step 3: Knowledge + memory lookup (parallel) ────────────────────
+    // Runs both queries concurrently — they have zero dependency on each other.
+    // RAG is skipped entirely on refinements (code already in context).
+    const [memory, rawSemanticContext] = await Promise.all([
+      getRelevantExamples(intent),
+      intent.isRefinement
+        ? Promise.resolve('')
+        : buildSemanticContext(searchText, mode),
+    ]);
 
-    if (!intent.isRefinement) {
-      const semanticContext = await buildSemanticContext(searchText, mode);
-      knowledge = semanticContext || null;
+    let knowledge: string | null = rawSemanticContext || null;
+
+    // Inject cheat sheet only for freeform/guided-freeform — smaller tiers
+    // receive it via their locked import block or structured template
+    if (
+      !intent.isRefinement &&
+      (pipelineConfig.promptStyle === 'freeform' || pipelineConfig.promptStyle === 'guided-freeform')
+    ) {
+      knowledge = knowledge
+        ? `${knowledge}\n\n${UI_ECOSYSTEM_API_CHEAT_SHEET}`
+        : UI_ECOSYSTEM_API_CHEAT_SHEET;
     }
 
     // ─── Step 3.2: Depth UI Engine Evaluation ────────────────────────────────

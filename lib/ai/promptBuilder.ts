@@ -180,10 +180,11 @@ MANDATORY RULES:
 ${blueprintText}`;
 
   const requiredComp = intent.componentName || 'GeneratedComponent';
-  let user = `Build a React TypeScript component: "${requiredComp}"\n\nDescription: ${intent.description}\n\nRequired sections: ${blueprint.structuralSections.join(', ')}\n\nMust include these components: ${blueprint.requiredComponents.slice(0, 3).join(', ')}`;
+  // Compact JSON — no pretty-print for small models (saves ~25% tokens on intent payload)
+  let user = `Build a React TypeScript component: "${requiredComp}"\n\nDescription: ${intent.description}\n\nRequired sections: ${blueprint.structuralSections.join(', ')}\n\nMust include: ${blueprint.requiredComponents.slice(0, 3).join(', ')}\n\nIntent: ${JSON.stringify(intent)}`;
 
   if (knowledge) {
-    user += `\n\nKNOWLEDGE BASE:\n${knowledge.substring(0, 800)}`;
+    user += `\n\nKNOWLEDGE BASE:\n${knowledge.substring(0, 600)}`;
   }
 
   return { system, user };

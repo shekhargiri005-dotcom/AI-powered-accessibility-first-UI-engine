@@ -79,6 +79,8 @@ export interface PipelineConfig {
    * Null = use default REPAIR model from resolveDefaultAdapter().
    */
   repairModelId: string | null;
+  /** Maximum tokens allowed for the combined system prompt (guards small context models) */
+  maxSystemPromptTokens: number;
 }
 
 // ─── Tier Defaults ────────────────────────────────────────────────────────────
@@ -96,6 +98,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     maxToolRounds: 0,
     useJsonMode: false,
     useStreaming: false,
+    maxSystemPromptTokens: 400,
     extractionStrategy: 'aggressive',
     repairStrategy: 'ai-cheap',
     repairModelId: 'gpt-4o-mini',
@@ -113,6 +116,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     maxToolRounds: 0,
     useJsonMode: false,
     useStreaming: true,
+    maxSystemPromptTokens: 800,
     extractionStrategy: 'fence',
     repairStrategy: 'rules-only',
     repairModelId: null,
@@ -130,6 +134,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     maxToolRounds: 0,  // tools disabled globally — causes 400 on unknown/proxy endpoints
     useJsonMode: false,
     useStreaming: true,
+    maxSystemPromptTokens: 1800,
     extractionStrategy: 'fence',
     repairStrategy: 'rules-only',
     repairModelId: null,
@@ -147,6 +152,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     maxToolRounds: 0,  // tools disabled globally — causes 400 on unknown/proxy endpoints
     useJsonMode: false,
     useStreaming: true,
+    maxSystemPromptTokens: 3500,
     extractionStrategy: 'fence',
     repairStrategy: 'rules-only',
     repairModelId: null,
@@ -164,6 +170,7 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
     maxToolRounds: 0,        // tools disabled globally — causes silent 400 on proxy/unknown endpoints
     useJsonMode: false,      // overridden per-model below
     useStreaming: true,
+    maxSystemPromptTokens: Infinity,
     extractionStrategy: 'fence',
     repairStrategy: 'rules-only',
     repairModelId: null,     // rules-only for cloud — never call another LLM
