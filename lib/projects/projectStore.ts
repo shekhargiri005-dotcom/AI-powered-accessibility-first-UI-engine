@@ -136,7 +136,7 @@ export async function createProject(
         },
       },
       include: VERSION_INCLUDE,
-    });
+    }));
     return toProject(row as DbProject);
   } catch (e) {
     if (isTableMissingError(e)) {
@@ -170,7 +170,7 @@ export async function saveVersion(
     const existing = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
-    });
+    }));
     if (!existing) return null;
 
     const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
@@ -198,7 +198,7 @@ export async function saveVersion(
         },
       },
       include: VERSION_INCLUDE,
-    });
+    }));
     return toProject(row as DbProject);
   } catch (e) {
     if (isTableMissingError(e)) return null;
@@ -211,7 +211,7 @@ export async function getProject(id: string): Promise<Project | null> {
     const row = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
-    });
+    }));
     return row ? toProject(row as DbProject) : null;
   } catch {
     return null;
@@ -226,7 +226,7 @@ export async function listProjects(): Promise<ProjectSummary[]> {
         _count: { select: { versions: true } },
       },
       orderBy: { updatedAt: 'desc' },
-    });
+    }));
     return rows.map((p) => ({
       id: p.id,
       name: p.name,
@@ -247,7 +247,7 @@ export async function rollbackToVersion(id: string, targetVersion: number): Prom
     const existing = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
-    });
+    }));
     if (!existing) return null;
 
     const target = existing.versions.find((v) => v.version === targetVersion);
@@ -270,7 +270,7 @@ export async function rollbackToVersion(id: string, targetVersion: number): Prom
         },
       },
       include: VERSION_INCLUDE,
-    });
+    }));
     return toProject(row as DbProject);
   } catch (e) {
     if (isTableMissingError(e)) return null;

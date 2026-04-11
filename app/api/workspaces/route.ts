@@ -17,7 +17,7 @@ async function getWorkspaces(userId: string) {
       }
     },
     orderBy: { createdAt: 'asc' },
-  });
+  }));
 
   return memberships.map((m) => ({
     id: m.workspace.id,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
         name: session.user.name ?? 'Owner',
       },
       update: {},
-    });
+    }));
 
     // Atomic create: workspace + OWNER membership in one transaction
     const workspace = await withReconnect(() => prisma.workspace.create({
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           },
         },
       },
-    });
+    }));
 
     return NextResponse.json({
       success: true,
