@@ -29,12 +29,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        // ── Owner-only gate ────────────────────────────────────────────────
-        if (email.toLowerCase().trim() !== OWNER_EMAIL.toLowerCase().trim()) {
-          console.error(`[auth debug] Email mismatch. Received: "${email}", Expected: "${OWNER_EMAIL}"`);
-          return null;
-        }
-
         const normalizedEmail = email.toLowerCase().trim();
         let user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
         let valid = false;
@@ -51,10 +45,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (valid) {
             user = await prisma.user.upsert({
               where: { email: normalizedEmail },
-              create: { email: normalizedEmail, passwordHash: OWNER_PASSWORD_HASH, name: OWNER_NAME },
-              update: { passwordHash: OWNER_PASSWORD_HASH, name: OWNER_NAME },
+              create: { email: normalizedEmail, passwordHash: OWNER_PASSWORD_HASH, name: email.split('@')[0] },
+              update: { passwordHash: OWNER_PASSWORD_HASH },
             });
-            console.log('[auth] Automatically migrated owner into DB auth system.');
+            console.log(`[auth] Automatically provisioned access for ${normalizedEmail}.`);
           }
         }
 
