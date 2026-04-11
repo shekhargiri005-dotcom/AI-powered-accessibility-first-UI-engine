@@ -1,11 +1,11 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { prisma, withReconnect } from '@/lib/prisma';
 
 
 
 async function getWorkspaces(userId: string) {
-  const memberships = await prisma.workspaceMember.findMany({
+  const memberships = await withReconnect(() => prisma.workspaceMember.findMany({
     where: { userId },
     include: {
       workspace: {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     // The credentials provider returns id:'owner' — ensure the User row exists in DB
     // before creating the FK-dependent WorkspaceMember.
-    await prisma.user.upsert({
+    await withReconnect(() => prisma.user.upsert({
       where: { id: session.user.id },
       create: {
         id: session.user.id,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Atomic create: workspace + OWNER membership in one transaction
-    const workspace = await prisma.workspace.create({
+    const workspace = await withReconnect(() => prisma.workspace.create({
       data: {
         name,
         slug,

@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma';
+import { prisma, withReconnect } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
 import type { UIIntent, A11yReport } from '../validation/schemas';
 
@@ -116,7 +116,7 @@ export async function createProject(
   const now = new Date().toISOString();
 
   try {
-    const row = await prisma.project.create({
+    const row = await withReconnect(() => prisma.project.create({
       data: {
         id,
         name,
@@ -167,7 +167,7 @@ export async function saveVersion(
   metadata?: { thinkingPlan?: unknown; reviewData?: unknown },
 ): Promise<Project | null> {
   try {
-    const existing = await prisma.project.findUnique({
+    const existing = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
     });
@@ -180,7 +180,7 @@ export async function saveVersion(
     const linesChanged = Math.abs(newLines - prevLines);
     const newVersionNumber = existing.currentVersion + 1;
 
-    const row = await prisma.project.update({
+    const row = await withReconnect(() => prisma.project.update({
       where: { id },
       data: {
         currentVersion: newVersionNumber,
@@ -208,7 +208,7 @@ export async function saveVersion(
 
 export async function getProject(id: string): Promise<Project | null> {
   try {
-    const row = await prisma.project.findUnique({
+    const row = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
     });
@@ -220,7 +220,7 @@ export async function getProject(id: string): Promise<Project | null> {
 
 export async function listProjects(): Promise<ProjectSummary[]> {
   try {
-    const rows = await prisma.project.findMany({
+    const rows = await withReconnect(() => prisma.project.findMany({
       include: {
         versions: { orderBy: { version: 'desc' }, take: 1 },
         _count: { select: { versions: true } },
@@ -244,7 +244,7 @@ export async function listProjects(): Promise<ProjectSummary[]> {
 
 export async function rollbackToVersion(id: string, targetVersion: number): Promise<Project | null> {
   try {
-    const existing = await prisma.project.findUnique({
+    const existing = await withReconnect(() => prisma.project.findUnique({
       where: { id },
       include: VERSION_INCLUDE,
     });
@@ -254,7 +254,7 @@ export async function rollbackToVersion(id: string, targetVersion: number): Prom
     if (!target) return null;
 
     const newVersionNumber = existing.currentVersion + 1;
-    const row = await prisma.project.update({
+    const row = await withReconnect(() => prisma.project.update({
       where: { id },
       data: {
         currentVersion: newVersionNumber,
@@ -280,7 +280,7 @@ export async function rollbackToVersion(id: string, targetVersion: number): Prom
 
 export async function deleteProject(id: string): Promise<boolean> {
   try {
-    await prisma.project.delete({ where: { id } });
+    await withReconnect(() => prisma.project.delete({ where: { id } }));
     return true;
   } catch {
     return false;

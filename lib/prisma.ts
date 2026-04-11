@@ -33,26 +33,37 @@ globalForPrisma.prisma = prisma;
  * Usage:
  *   const result = await withReconnect(() => prisma.project.findMany());
  */
+const NEON_TRANSIENT = [
+  'kind: Closed',
+  'Connection closed',
+  'connection timeout',
+  'ECONNRESET',
+  'terminating connection',
+  'Connection pool timeout',
+  'Can\'t reach database server',
+];
+
+function isNeonTransient(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return NEON_TRANSIENT.some((s) => msg.includes(s));
+}
+
+/** Wait helper */
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Wraps a Prisma operation with automatic reconnection on Neon "kind: Closed" errors.
+ * Retries once after a 250ms pause to give Neon time to wake from idle.
+ */
 export async function withReconnect<T>(fn: () => Promise<T>): Promise<T> {
   try {
     return await fn();
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    // Neon/PG connection-closed errors — reconnect and retry once
-    if (
-      msg.includes('kind: Closed') ||
-      msg.includes('Connection closed') ||
-      msg.includes('connection timeout') ||
-      msg.includes('ECONNRESET') ||
-      msg.includes('terminating connection')
-    ) {
-      try {
-        await prisma.$connect();
-      } catch {
-        // If reconnect itself fails, fall through and let the original error surface
-      }
-      return await fn();
-    }
-    throw err;
+    if (!isNeonTransient(err)) throw err;
+
+    // Give Neon 250ms to wake, then reconnect and retry
+    await sleep(250);
+    try { await prisma.$connect(); } catch { /* ignore — next call will surface real error */ }
+    return await fn();
   }
 }
