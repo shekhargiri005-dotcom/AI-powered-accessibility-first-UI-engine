@@ -31,7 +31,13 @@ export async function runVisionRuntimeReview(sourceCode: string): Promise<Vision
   let browser: Browser | null = null;
   try {
     const playwright = await import('playwright');
-    browser = await playwright.chromium.launch({ headless: true });
+    
+    if (process.env.BROWSERLESS_API_KEY) {
+      const wsEndpoint = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`;
+      browser = await playwright.chromium.connect({ wsEndpoint });
+    } else {
+      browser = await playwright.chromium.launch({ headless: true });
+    }
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
 
     const runtimeErrors: string[] = [];

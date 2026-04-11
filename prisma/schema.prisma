@@ -198,7 +198,7 @@ model ComponentEmbedding {
   name        String
   keywords    String[]
   guidelines  String   @db.Text
-  /// Source tag — enables filtered retrieval by knowledge domain.
+  /// source — enables filtered retrieval by knowledge domain.
   /// Values: 'template' | 'registry' | 'blueprint' | 'motion' | 'feedback' | 'repair'
   source      String   @default("template")
   /// vector(768) — stored via raw SQL; Prisma treats as Unsupported

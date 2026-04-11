@@ -10,6 +10,7 @@
 import { getWorkspaceAdapter } from './adapters/index';
 import type { AdapterConfig }  from './adapters/index';
 import { type UIIntent }       from '../validation/schemas';
+import { buildSemanticContext } from './semanticKnowledgeBase';
 
 export interface FileManifestItem {
   filename: string;
@@ -113,8 +114,17 @@ export async function generateFileChunk(
     'APP MANIFEST (For Context / Imports):\n' +
     JSON.stringify(manifest, null, 2) + '\n\n' +
     'USER INTENT:\n' +
-    JSON.stringify(intent, null, 2) + '\n\n' +
-    'REQUIREMENTS:\n' +
+    JSON.stringify(intent, null, 2) + '\n\n';
+
+  // Perform Semantic RAG Retrieval (Top-K visual blueprints & registered components)
+  const semanticContext = await buildSemanticContext(`${intent.description} ${targetFile}`, 'app');
+  if (semanticContext) {
+    prompt += 'APPROVED BLUEPRINTS & COMPONENTS (RAG Context MUST BE USED):\n' +
+              'Do NOT invent arbitrary solutions if an applicable pattern or component is listed below.\n\n' +
+              semanticContext + '\n\n';
+  }
+
+  prompt += 'REQUIREMENTS:\n' +
     `1. Write ONLY the raw TSX code for "${targetFile}". No markdown fences, no explanations.\n` +
     '2. Use Tailwind CSS exclusively for styling. Enforce STRICT WCAG AA color contrast: use text-gray-700 or darker on light backgrounds, and text-white or text-gray-200 on dark backgrounds.\n' +
     '3. Import other components from "./[filename]" relative paths. Use DEFAULT IMPORTS: `import ComponentName from \'./ComponentName\';`\n' +
