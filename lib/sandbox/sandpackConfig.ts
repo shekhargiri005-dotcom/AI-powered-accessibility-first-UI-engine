@@ -80,6 +80,8 @@ function injectMissingFileStubs(files: SandpackFiles): void {
           `    </div>`,
           `  );`,
           `}`,
+          `// Export named as well in case the AI hallucinates a named import`,
+          `export { ${compName} };`
         ].join('\n'),
         active: false,
       };

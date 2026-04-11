@@ -83,7 +83,7 @@ MANDATORY RULES:
    - Advanced layout: \`import { Grid, Stack, Container } from '@ui/layout';\`
    - Motion/Animation: \`import { Motion } from '@ui/motion';\` // NEVER use <Motion.div>. Use <Motion animation="fade">. For <motion.div>, import from 'framer-motion'.
    - Forms/Validation: \`import { Form, Field } from '@ui/forms';\`
-   - Icons: \`import { Icon } from '@ui/icons';\` (uses Lucide perfectly)
+   - Icons: \`import { Icon } from '@ui/icons';\` (uses Lucide perfectly). CRITICAL: If you use 'lucide-react' directly, NEVER append 'Icon' to the name (e.g. use \`import { ArrowRight, Sparkles } from 'lucide-react'\`, NOT \`ArrowRightIcon\`).
    - Other available packages: \`@ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.
 3. NO EXTERNAL NPM PACKAGES: You are strictly forbidden from importing any external libraries like \`react-tsparticles\`, \`three\`, or arbitrary unlisted packages. Stick to the provided ecosystem.
 4. Tailwind CSS: Use Tailwind for layout glue, padding, margins, and custom overrides. The base components from \`@ui/*\` are already perfectly styled.
