@@ -5,6 +5,21 @@
   --font-mono: var(--font-mono);
 }
 
+/* ── Stitch Design Tokens ────────────────────────────────────── */
+:root {
+  --stitch-bg:         #0B0F19;
+  --stitch-surface:    rgba(255, 255, 255, 0.03);
+  --stitch-border:     rgba(255, 255, 255, 0.08);
+  --stitch-violet:     #8b5cf6;
+  --stitch-violet-dim: rgba(139, 92, 246, 0.15);
+  --stitch-warning:    #f97316;
+  --stitch-success:    #10b981;
+  --stitch-inactive:   #64748b;
+  --stitch-text-head:  #cbd5e1;
+  --stitch-text-label: #94a3b8;
+  --stitch-blur:       blur(16px);
+}
+
 /* ── Base Resets ──────────────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
@@ -16,25 +31,92 @@ html {
 
 body {
   font-family: var(--font-inter, 'Inter', system-ui, sans-serif);
-  background-color: #030712; /* gray-950 */
-  color: #f9fafb;            /* gray-50 */
+  background-color: var(--stitch-bg);
+  color: #f1f5f9;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ── Frosted Glass Surface ───────────────────────────────────── */
+.stitch-surface {
+  background: var(--stitch-surface);
+  backdrop-filter: var(--stitch-blur);
+  -webkit-backdrop-filter: var(--stitch-blur);
+  border: 1px solid var(--stitch-border);
+}
+
+/* ── Dot-Grid Background Pattern ────────────────────────────── */
+.stitch-dot-grid {
+  background-image: radial-gradient(circle, rgba(139, 92, 246, 0.06) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* ── Violet Orb Glow ─────────────────────────────────────────── */
+.stitch-orb {
+  background: radial-gradient(ellipse at center, rgba(139, 92, 246, 0.18) 0%, rgba(139, 92, 246, 0.04) 50%, transparent 70%);
+}
+
+/* ── Violet Glow on active elements ─────────────────────────── */
+.stitch-glow {
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.25), 0 0 40px rgba(139, 92, 246, 0.10);
+}
+.stitch-glow-sm {
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.20);
+}
+.stitch-glow-text {
+  text-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+}
+
 /* ── Custom Scrollbar ────────────────────────────────────────── */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
-::-webkit-scrollbar-track { background: #111827; }
-::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.25); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.45); }
 
-/* ── Focus Ring ──────────────────────────────────────────────── */
+/* ── Focus Ring — Stitch Violet ──────────────────────────────── */
 :focus-visible {
-  outline: 2px solid #3b82f6;
-  outline-offset: 2px;
+  outline: 2px solid #8b5cf6;
+  outline-offset: 3px;
+}
+
+/* ── Stitch Card ─────────────────────────────────────────────── */
+.stitch-card {
+  background: var(--stitch-surface);
+  backdrop-filter: var(--stitch-blur);
+  -webkit-backdrop-filter: var(--stitch-blur);
+  border: 1px solid var(--stitch-border);
+  border-radius: 1.75rem; /* 28px ≈ rounded-3xl */
+  transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stitch-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 32px rgba(139, 92, 246, 0.18);
+}
+.stitch-card:active {
+  transform: scale(0.98);
+}
+
+/* ── Pulsing Green Status Dot ────────────────────────────────── */
+@keyframes stitch-pulse-green {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  50%       { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0); }
+}
+.stitch-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #10b981;
+  animation: stitch-pulse-green 2s ease-in-out infinite;
+}
+
+/* ── Parallax Layers ─────────────────────────────────────────── */
+.stitch-parallax-layer {
+  will-change: transform;
+  pointer-events: none;
 }
 
 /* ── CodeMirror overrides ────────────────────────────────────── */
@@ -52,4 +134,22 @@ body {
 }
 .sp-layout {
   border: none !important;
+}
+
+/* ── Notification bell violet glow ──────────────────────────── */
+.stitch-bell-active {
+  filter: drop-shadow(0 0 6px rgba(139, 92, 246, 0.7));
+}
+
+/* ── Violet chip / pill ──────────────────────────────────────── */
+.stitch-chip {
+  background: rgba(139, 92, 246, 0.10);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  color: #c4b5fd;
+  border-radius: 9999px;
+  transition: background 150ms, border-color 150ms;
+}
+.stitch-chip:hover {
+  background: rgba(139, 92, 246, 0.20);
+  border-color: rgba(139, 92, 246, 0.45);
 }

@@ -22,10 +22,10 @@ import dynamic from 'next/dynamic';
 const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
   ssr: false,
   loading: () => (
-    <div className="flex-1 flex items-center justify-center bg-gray-950">
+    <div className="flex-1 flex items-center justify-center bg-[#0B0F19]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
-        <span className="text-gray-500 text-xs font-medium animate-pulse">Initializing Dev Environment...</span>
+        <div className="w-8 h-8 border-2 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
+        <span className="text-slate-500 text-xs font-medium animate-pulse">Initializing Dev Environment...</span>
       </div>
     </div>
   ),
@@ -508,33 +508,36 @@ export default function RightPanel({
 
   return (
     <div className={`
-      flex flex-col flex-1 min-h-0 bg-gray-950 border-t lg:border-t-0 lg:border-l border-gray-800/60 z-20
+      flex flex-col flex-1 min-h-0 bg-[#0B0F19] border-t lg:border-t-0 lg:border-l border-white/[0.08] z-20
       ${isFullscreen ? 'fixed inset-0 lg:left-72 z-50' : 'relative w-full'}
     `}>
       {/* ── Top Header ───────────────────────────────────────────────────── */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-gray-950/80 backdrop-blur-md border-b border-gray-800/60">
+      <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-[#0B0F19]/80 backdrop-blur-xl border-b border-white/[0.08]">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)] animate-pulse" />
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-50" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+            </span>
             <h2 className="text-sm font-bold text-white tracking-tight">{activeV.intent.componentName}</h2>
           </div>
-          <span className="px-2 py-0.5 rounded-full bg-gray-800 text-[10px] text-gray-400 font-mono border border-gray-700/50">
+          <span className="px-2 py-0.5 rounded-full bg-white/[0.05] text-[10px] text-slate-400 font-mono border border-white/[0.08]">
             v{currentVersion}
           </span>
           <IntentBadge intentType={currentVersion > 1 ? 'ui_refinement' : 'ui_generation'} size="sm" showLabel={false} />
           <ConfidenceGauge value={engineConfidence} label={confidenceLabel} />
         </div>
 
-        <div className="flex items-center gap-1.5 p-1 bg-gray-900/50 rounded-lg border border-gray-800">
+        <div className="flex items-center gap-1.5 p-1 bg-white/[0.04] rounded-xl border border-white/[0.08]">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`
-                flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all
+                flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
                 ${activeTab === t.id
-                  ? 'bg-blue-600/20 text-blue-400 shadow-sm border border-blue-500/30'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800 border border-transparent'
+                  ? 'bg-violet-600/20 text-violet-300 shadow-sm border border-violet-500/30'
+                  : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.06] border border-transparent'
                 }
               `}
             >
@@ -542,10 +545,10 @@ export default function RightPanel({
               <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
-          <div className="w-px h-4 bg-gray-700 mx-1" />
+          <div className="w-px h-4 bg-white/[0.10] mx-1" />
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
-            className="p-1.5 text-gray-400 hover:text-white rounded-md hover:bg-gray-800 transition"
+            className="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/[0.07] transition"
             title="Toggle fullscreen"
           >
             {isFullscreen ? <X className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
@@ -554,7 +557,7 @@ export default function RightPanel({
       </div>
 
       {/* ── Main Content Area ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/20 flex flex-col">
+      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/30 flex flex-col">
 
         {/* Preview Tab */}
         {activeTab === 'preview' && (
@@ -725,15 +728,15 @@ export default function RightPanel({
 
         {/* Refining overlay */}
         {isRefining && (
-          <div className="absolute inset-0 z-50 bg-gray-950/80 backdrop-blur-md flex items-center justify-center">
-            <div className="flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-gray-900 border border-gray-800 shadow-2xl">
+          <div className="absolute inset-0 z-50 bg-[#0B0F19]/85 backdrop-blur-md flex items-center justify-center">
+            <div className="flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-white/[0.04] border border-white/[0.08] shadow-2xl shadow-violet-500/10 backdrop-blur-xl">
               <div className="relative">
-                <div className="w-20 h-20 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin" />
-                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-blue-400 animate-pulse" />
+                <div className="w-20 h-20 border-4 border-violet-500/10 border-t-violet-500 rounded-full animate-spin" />
+                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-violet-400 animate-pulse" />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white tracking-tight mb-1">Evolving UI</h3>
-                <p className="text-sm text-gray-400">Applying intelligent targeted patches...</p>
+                <p className="text-sm text-slate-400">Applying intelligent targeted patches...</p>
               </div>
             </div>
           </div>
@@ -741,7 +744,7 @@ export default function RightPanel({
       </div>
 
       {/* ── Persistent Bottom Editing Bar ─────────────────────────────────── */}
-      <div className="flex-shrink-0 bg-gray-950 border-t border-gray-800/80 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-20">
+      <div className="flex-shrink-0 bg-[#0B0F19]/95 border-t border-white/[0.08] shadow-[0_-10px_40px_rgba(139,92,246,0.08)] z-20 backdrop-blur-xl">
 
         {/* ✨ AI Suggestion Chips — lazy loaded on user request */}
         <div className="px-4 pt-3 pb-1">
@@ -800,7 +803,7 @@ export default function RightPanel({
 
         {/* Refine Input */}
         <div className="flex items-center gap-3 w-full p-4">
-          <div className="flex items-center gap-3 w-full bg-gray-900/60 p-2 rounded-2xl border border-gray-700/50 focus-within:ring-2 focus-within:ring-blue-500/40 focus-within:border-blue-500/50 transition-all">
+          <div className="flex items-center gap-3 w-full bg-white/[0.04] p-2 rounded-2xl border border-white/[0.08] focus-within:ring-2 focus-within:ring-violet-500/40 focus-within:border-violet-500/40 transition-all backdrop-blur-sm">
             <input
               type="text"
               value={refinementPrompt}
@@ -808,12 +811,12 @@ export default function RightPanel({
               onKeyDown={(e) => e.key === 'Enter' && handleRefineSubmit()}
               placeholder="Targeted edit... (e.g. 'Make the hero title larger and add a violet glow')"
               disabled={isRefining}
-              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-gray-500 focus:outline-none"
+              className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <button
               onClick={handleRefineSubmit}
               disabled={!refinementPrompt.trim() || isRefining}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg shadow-blue-500/20"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg shadow-violet-500/20"
             >
               <Sparkles className="w-3.5 h-3.5" />
               {isRefining ? 'Applying' : 'Refine'}

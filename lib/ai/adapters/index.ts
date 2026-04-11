@@ -168,8 +168,8 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
   const namedProviders = ['openai', 'anthropic', 'google', 'deepseek', 'ollama', 'lmstudio', 'meta', 'mistral', 'qwen', 'gemma'];
   const isCompat = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
-    const key = apiKey || process.env[`${provId.toUpperCase()}_API_KEY`] || process.env.OPENAI_API_KEY;
-    if (!key) throw new Error(`API key required for ${provId}. Configure it in the AI Engine Config panel.`);
+    const key = apiKey || process.env[`${provId.toUpperCase()}_API_KEY`] || process.env.OPENAI_API_KEY || 'dummy';
+    if (!key && provId !== 'custom') throw new Error(`API key required for ${provId}. Configure it in the AI Engine Config panel.`);
     return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
   }
 

@@ -327,9 +327,8 @@ export async function GET(request: NextRequest) {
       // Generic OpenAI-compat: try /v1/models with the provided baseUrl
       default: {
         if (!baseUrl) return NextResponse.json({ success: false, error: 'baseUrl required for custom providers' }, { status: 400 });
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.OPENAI_API_KEY; // Default fallback
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for custom provider' }, { status: 400 });
+        const key = apiKey === '••••' || apiKey === 'local' ? '' : apiKey;
+        const finalKey = key || process.env.OPENAI_API_KEY || 'dummy'; // Default fallback allows open networks to try
         models = await fetchOpenAIModels(finalKey, baseUrl);
         break;
       }

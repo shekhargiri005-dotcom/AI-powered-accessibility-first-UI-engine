@@ -240,14 +240,14 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
     <section aria-labelledby="prompt-heading">
       <div className="mb-4">
         <div className="flex items-center gap-2 mb-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-700 flex items-center justify-center shadow-lg shadow-violet-500/20">
             <Command className="w-4 h-4 text-white" />
           </div>
           <div>
             <h2 id="prompt-heading" className="text-lg font-semibold text-white">
               Describe Your UI
             </h2>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-500">
               Natural language → accessible React {scopeMode === 'app' ? 'application' : 'component'}
             </p>
           </div>
@@ -257,7 +257,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         <div
           role="group"
           aria-label="Generation mode"
-          className="inline-flex items-center gap-1 p-1 rounded-xl bg-gray-800/60 border border-gray-700/40 mb-3"
+          className="inline-flex items-center gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/[0.08] mb-3"
         >
           <button
             type="button"
@@ -265,11 +265,11 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:ring-offset-[#0B0F19]
               disabled:opacity-50 disabled:cursor-not-allowed
               ${scopeMode === 'component'
-                ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-md shadow-blue-500/25'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-md shadow-violet-500/25'
+                : 'text-slate-400 hover:text-white'
               }
             `}
           >
@@ -287,11 +287,11 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:ring-offset-1 focus:ring-offset-[#0B0F19]
               disabled:opacity-50 disabled:cursor-not-allowed
               ${scopeMode === 'app'
-                ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white shadow-md shadow-violet-500/25'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-md shadow-fuchsia-500/25'
+                : 'text-slate-400 hover:text-white'
               }
             `}
           >
@@ -308,42 +308,42 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             disabled={isLoading}
             className={`
               flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all duration-200
-              focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-1 focus:ring-offset-gray-800
+              focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1 focus:ring-offset-[#0B0F19]
               disabled:opacity-50 disabled:cursor-not-allowed
               ${depthUi
-                ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white shadow-md shadow-cyan-500/25'
-                : 'text-gray-400 hover:text-white'
+                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/25'
+                : 'text-slate-400 hover:text-white'
               }
             `}
           >
             <span role="img" aria-hidden="true" className="text-[14px] leading-none">✨</span>
             Depth UI
-            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-400/20 text-cyan-300 font-semibold">NEW</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-violet-400/20 text-violet-300 font-semibold">NEW</span>
           </button>
         </div>
 
         {/* Hints */}
         {scopeMode === 'app' && (
-          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20 mb-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-violet-400 flex-shrink-0 mt-0.5" aria-hidden="true">
+          <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/20 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-fuchsia-400 flex-shrink-0 mt-0.5" aria-hidden="true">
               <circle cx="12" cy="12" r="10" />
               <line x1="12" y1="8" x2="12" y2="12" />
               <line x1="12" y1="16" x2="12.01" y2="16" />
             </svg>
-            <p className="text-xs text-violet-300 leading-relaxed">
-              <span className="font-semibold text-violet-200">Full App Mode:</span> Generates a complete multi-screen application with navigation and mock data. Try: <span className="italic">&quot;Build an Instagram-like app&quot;</span>.
+            <p className="text-xs text-fuchsia-300 leading-relaxed">
+              <span className="font-semibold text-fuchsia-200">Full App Mode:</span> Generates a complete multi-screen application with navigation and mock data. Try: <span className="italic">&quot;Build an Instagram-like app&quot;</span>.
             </p>
           </div>
         )}
         {depthUi && (
-          <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-500/20 mb-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-cyan-400 flex-shrink-0 mt-0.5" aria-hidden="true">
+          <div className="flex items-start gap-2 px-3 py-2 rounded-xl bg-indigo-500/10 border border-indigo-500/20 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" aria-hidden="true">
               <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
               <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
               <line x1="12" y1="22.08" x2="12" y2="12" />
             </svg>
-            <p className="text-xs text-cyan-300 leading-relaxed">
-              <span className="font-semibold text-cyan-200">Depth UI Mode:</span> Generates visually rich, premium interfaces with functional floating elements, smooth parallax, and depth-layers. Try: <span className="italic">&quot;Build a startup hero layout with floating UI cards&quot;</span>.
+            <p className="text-xs text-indigo-300 leading-relaxed">
+              <span className="font-semibold text-indigo-200">Depth UI Mode:</span> Generates visually rich, premium interfaces with functional floating elements, smooth parallax, and depth-layers. Try: <span className="italic">&quot;Build a startup hero layout with floating UI cards&quot;</span>.
             </p>
           </div>
         )}
@@ -352,10 +352,10 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
       <form onSubmit={handleSubmit} aria-label="UI generation form" className="relative group">
         <div className={`
           relative flex flex-col w-full transition-all duration-300
-          bg-[#212121] backdrop-blur-md border border-[#303030] 
-          ${isFocused ? 'ring-1 ring-white/10 shadow-2xl' : 'hover:border-[#404040] shadow-xl'}
-          ${scopeMode === 'app' ? 'ring-1 ring-violet-500/20' : ''}
-          ${depthUi ? 'ring-1 ring-cyan-500/20' : ''}
+          bg-[#111827]/80 backdrop-blur-md border border-white/[0.08]
+          ${isFocused ? 'ring-1 ring-violet-500/30 shadow-2xl shadow-violet-500/10' : 'hover:border-white/[0.12] shadow-xl'}
+          ${scopeMode === 'app' ? 'ring-1 ring-fuchsia-500/20' : ''}
+          ${depthUi ? 'ring-1 ring-indigo-500/20' : ''}
           rounded-2xl overflow-hidden
         `}>
           
@@ -487,15 +487,15 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                 aria-label={isLoading ? 'Generating, please wait' : scopeMode === 'app' ? 'Generate full app' : 'Generate component'}
                 className={`
                   flex items-center justify-center px-4 py-1.5 rounded-lg
-                  transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#212121]
-                  ${scopeMode === 'app' ? 'focus:ring-violet-500' : depthUi ? 'focus:ring-cyan-500' : 'focus:ring-white'}
+                  transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#111827]
+                  ${scopeMode === 'app' ? 'focus:ring-fuchsia-500' : depthUi ? 'focus:ring-indigo-500' : 'focus:ring-violet-500'}
                   ${isLoading || !isPromptValid
-                    ? 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-50' 
+                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed opacity-50'
                     : scopeMode === 'app'
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-500 text-white hover:from-violet-500 hover:to-purple-400 shadow-md shadow-violet-500/25 font-medium text-sm'
+                      ? 'bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:from-fuchsia-500 hover:to-violet-500 shadow-md shadow-fuchsia-500/25 font-medium text-sm'
                       : depthUi
-                        ? 'bg-gradient-to-r from-cyan-600 to-blue-500 text-white hover:from-cyan-500 hover:to-blue-400 shadow-md shadow-cyan-500/25 font-medium text-sm'
-                        : 'bg-white text-black hover:bg-gray-200 shadow-md font-medium text-sm'
+                        ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:from-indigo-500 hover:to-violet-500 shadow-md shadow-indigo-500/25 font-medium text-sm'
+                        : 'bg-gradient-to-r from-violet-600 to-purple-600 text-white hover:from-violet-500 hover:to-purple-500 shadow-md shadow-violet-500/25 font-medium text-sm'
                   }
                 `}
               >
@@ -536,21 +536,21 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
                 aria-label={`Reuse history: ${item.componentName}`}
                 className="
                   flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs
-                  border border-blue-900/40 text-blue-400 bg-blue-500/10
-                  hover:border-blue-500/60 hover:text-blue-300 hover:bg-blue-500/20
+                  border border-violet-800/40 text-violet-400 bg-violet-500/10
+                  hover:border-violet-500/60 hover:text-violet-300 hover:bg-violet-500/20
                   disabled:opacity-50 disabled:cursor-not-allowed
                   transition-all duration-150
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-gray-950
+                  focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-1 focus:ring-offset-[#0B0F19]
                   flex-shrink-0 whitespace-nowrap
                 "
               >
                 <ChevronRight className="w-3 h-3 block flex-shrink-0" aria-hidden="true" />
-                <span className="font-semibold">{item.componentName}:</span> 
+                <span className="font-semibold">{item.componentName}:</span> 
                 <span className="truncate max-w-[200px]">{item.promptSnippet}</span>
               </button>
             ))
           ) : (
-            <div className="text-xs text-zinc-500 italic flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-full border border-white/5">
+            <div className="text-xs text-slate-600 italic flex items-center gap-2 bg-white/[0.03] px-3 py-1.5 rounded-full border border-white/[0.06]">
               Nothing here yet. Build your first component or app!
             </div>
           )}

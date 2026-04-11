@@ -95,24 +95,7 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'Get one at console.mistral.ai/api-keys',
     docsUrl: 'https://console.mistral.ai/api-keys',
   },
-  ollama: {
-    id: 'ollama', name: 'Ollama (Local)',
-    color: 'from-lime-500 to-green-600', accent: 'text-lime-400', icon: '🦙',
-    noKey: true,
-    modelHint: '',
-    keyLabel: '',
-    keyHint: '',
-    docsUrl: 'https://ollama.com/library',
-  },
-  lmstudio: {
-    id: 'lmstudio', name: 'LM Studio (Local)',
-    color: 'from-teal-500 to-cyan-600', accent: 'text-teal-400', icon: '🖥️',
-    noKey: true,
-    modelHint: '',
-    keyLabel: '',
-    keyHint: '',
-    docsUrl: 'https://lmstudio.ai',
-  },
+
   huggingface: {
     id: 'huggingface', name: 'Hugging Face',
     color: 'from-amber-400 to-yellow-600', accent: 'text-amber-400', icon: '🤗',
@@ -245,23 +228,6 @@ export function loadAIEngineConfig(): AIEngineConfig | null {
   } catch { return null; }
 }
 
-// ─── Local Model type ─────────────────────────────────────────────────────────
-
-interface LocalModel {
-  id: string;
-  label: string;
-  size?: string;
-  temperature: number;
-}
-
-interface LocalSource {
-  name: string;
-  provider: string;
-  v1BaseUrl: string;
-  running: boolean;
-  models: LocalModel[];
-}
-
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function Toggle({
@@ -322,11 +288,9 @@ interface Props {
   onDeactivated?: () => void;
 }
 
-type PanelMode = 'cloud' | 'local';
 type CloudStep = 1 | 2 | 3;
 
 export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeactivated }: Props) {
-  const [mode, setMode]                   = useState<PanelMode>('cloud');
 
   // Cloud mode — 3-step wizard state
   const [cloudStep, setCloudStep]         = useState<CloudStep>(1);
@@ -350,13 +314,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   const [testingConn, setTestingConn]     = useState(false);
   const [connStatus, setConnStatus]       = useState<'idle' | 'ok' | 'fail'>('idle');
 
-  // Local mode state
-  const [localSources, setLocalSources]   = useState<LocalSource[]>([]);
-  const [localLoading, setLocalLoading]   = useState(false);
-  const [localFetched, setLocalFetched]   = useState(false);
-  const [selectedLocalSource, setSelectedLocalSource] = useState<LocalSource | null>(null);
-  const [selectedLocalModel, setSelectedLocalModel]   = useState<LocalModel | null>(null);
-
   // Shared
   const [fullAppMode, setFullAppMode]     = useState(false);
   const [multiSlideMode, setMultiSlide]   = useState(false);
@@ -375,8 +332,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   // Derived
   const provider = PROVIDERS[selectedProviderId] ?? PROVIDERS.custom;
   const suggestedModels = PROVIDER_SUGGESTED_MODELS[selectedProviderId] ?? [];
-  const isLocal  = mode === 'local';
-  const anyLocalRunning = localSources.some(s => s.running);
 
   // The final model value
   const effectiveModel = useCustomModel ? customModelText.trim() : selectedModelId;
@@ -417,19 +372,13 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
 
     const stored = loadAIEngineConfig();
     if (stored) {
-      if (stored.isLocal) {
-        setMode('local');
-        fetchLocalModels();
-      } else {
-        setMode('cloud');
-        if (stored.provider && PROVIDERS[stored.provider]) {
-          setSelectedProviderId(stored.provider);
-        }
-        setCustomModelText(stored.model ?? '');
-        setUseCustomModel(true);
-        setTemperature(stored.temperature ?? 0.6);
-        setCustomBaseUrl(stored.baseUrl ?? '');
+      if (stored.provider && PROVIDERS[stored.provider]) {
+        setSelectedProviderId(stored.provider);
       }
+      setCustomModelText(stored.model ?? '');
+      setUseCustomModel(true);
+      setTemperature(stored.temperature ?? 0.6);
+      setCustomBaseUrl(stored.baseUrl ?? '');
       setFullAppMode(stored.fullAppMode ?? false);
       setMultiSlide(stored.multiSlideMode ?? false);
     }
@@ -443,118 +392,10 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     return () => window.removeEventListener('keydown', h);
   }, [isOpen, onClose]);
 
-  // ── Fetch local models ─────────────────────────────────────────────────
-  const fetchLocalModels = useCallback(async () => {
-    setLocalLoading(true);
-    setLocalSources([]);
-    setSelectedLocalSource(null);
-    setSelectedLocalModel(null);
-    
-    let activeSources: LocalSource[] = [];
 
-    try {
-      // 1. First attempt Next.js backend detection (Works if Next is run natively on host)
-      const res  = await fetch('/api/local-models?t=' + Date.now());
-      const data = await res.json() as { anyRunning: boolean; sources: LocalSource[] };
-      activeSources = data.sources || [];
-    } catch {
-      activeSources = [];
-    }
-
-    // 2. Direct Browser fallback: Bypasses Docker/WSL Network boundaries
-    // If backend found nothing, the Next.js process might be in an isolated container. 
-    // We can ping Ollama natively from the host's actual browser!
-    if (!activeSources.some(s => s.running)) {
-      // Try Ollama
-      try {
-        const directRes = await fetch('http://127.0.0.1:11434/api/tags');
-        if (directRes.ok) {
-           const data = await directRes.json() as { models?: Array<{ name?: string; id?: string; size?: number }> };
-           const models = (data.models || []).map((m) => {
-              const rawName = m.name || m.id || 'unknown';
-              const [base, tag] = rawName.split(':');
-              const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-              
-              let t = 0.6;
-              const n = rawName.toLowerCase();
-              if (n.includes('coder') || n.includes('code')) t = 0.3;
-              else if (n.includes('instruct') || n.includes('chat')) t = 0.5;
-
-              return {
-                 id: rawName,
-                 label: tag ? `${pretty} (${tag})` : pretty,
-                 size: m.size ? `${(m.size / 1073741824).toFixed(1)} GB` : undefined,
-                 temperature: t
-              };
-           });
-           
-           activeSources.push({
-             name: 'Ollama (Native Browser)',
-             provider: 'ollama',
-             v1BaseUrl: 'http://127.0.0.1:11434/v1',
-             running: true,
-             models
-           });
-        }
-      } catch {}
-
-      // Try LM Studio
-      try {
-        const directRes = await fetch('http://127.0.0.1:1234/v1/models');
-        if (directRes.ok) {
-           const data = await directRes.json() as { models?: Array<{ name?: string; id?: string; size?: number }>; data?: Array<{ name?: string; id?: string; size?: number }> };
-           const modelsList = Array.isArray(data.models) ? data.models : (Array.isArray(data.data) ? data.data : []);
-           const models = modelsList.map((m) => {
-              const rawName = m.name || m.id || 'unknown';
-              const [base, tag] = rawName.split(':');
-              const pretty = base.split(/[-_]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-              
-              let t = 0.6;
-              const n = rawName.toLowerCase();
-              if (n.includes('coder') || n.includes('code')) t = 0.3;
-              else if (n.includes('instruct') || n.includes('chat')) t = 0.5;
-
-              return {
-                 id: rawName,
-                 label: tag ? `${pretty} (${tag})` : pretty,
-                 size: m.size ? `${(m.size / 1073741824).toFixed(1)} GB` : undefined,
-                 temperature: t
-              };
-           });
-           
-           activeSources.push({
-             name: 'LM Studio (Native Browser)',
-             provider: 'lmstudio',
-             v1BaseUrl: 'http://127.0.0.1:1234/v1',
-             running: true,
-             models
-           });
-        }
-      } catch {}
-    }
-
-    setLocalSources(activeSources);
-    const first = activeSources.find(s => s.running);
-    if (first) {
-      setSelectedLocalSource(first);
-      setSelectedLocalModel(first.models[0] ?? null);
-    }
-
-    setLocalLoading(false);
-    setLocalFetched(true);
-  }, []);
-
-  const handleModeSwitch = (m: PanelMode) => {
-    setMode(m);
-    setError('');
-    setCloudStep(1);
-    if (m === 'local' && !localFetched) fetchLocalModels();
-  };
-
-  // ── Fetch Models from provider API ─────────────────────────────────────
   const fetchModels = useCallback(async () => {
     if (modelsFetching) return;
-    const key = provider.noKey ? 'local' : apiKey.trim();
+    const key = provider.noKey || (provider.id === 'custom' && !apiKey.trim()) ? 'local' : apiKey.trim();
     setModelsFetching(true);
     setModelsFetchError('');
     setFetchedModels([]);
@@ -603,61 +444,36 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   const handleSave = async () => {
     setError('');
 
-    if (mode === 'cloud') {
-      if (!selectedProviderId || !PROVIDERS[selectedProviderId]) {
-        setError('Choose a provider first.');
-        setCloudStep(1);
-        return;
-      }
-      if (!apiKey.trim() && !provider.noKey) {
-        setError('Enter API credentials before choosing a model.');
-        setCloudStep(2);
-        return;
-      }
-      if (!effectiveModel) {
-        setError('Choose a generation model or enter a custom one.');
-        setCloudStep(3);
-        return;
-      }
-    } else {
-      if (!selectedLocalSource) { setError('No local runtime selected.'); return; }
-      if (!selectedLocalModel) { setError('Select a model from the list.'); return; }
-      if (!selectedLocalSource.running) {
-        setError(`${selectedLocalSource.name} is not running. Start it and refresh.`);
-        return;
-      }
+    if (!selectedProviderId || !PROVIDERS[selectedProviderId]) {
+      setError('Choose a provider first.');
+      setCloudStep(1);
+      return;
+    }
+    if (!apiKey.trim() && !provider.noKey && provider.id !== 'custom') {
+      setError('Enter API credentials before choosing a model.');
+      setCloudStep(2);
+      return;
+    }
+    if (!effectiveModel) {
+      setError('Choose a generation model or enter a custom one.');
+      setCloudStep(3);
+      return;
     }
 
     setSaving(true);
     await new Promise(r => setTimeout(r, 500));
 
-    let config: AIEngineConfig;
-
-    if (mode === 'cloud') {
-      config = {
-        provider: provider.id,
-        providerName: provider.name,
-        model: effectiveModel,
-        apiKey: apiKey.trim(),
-        baseUrl: customBaseUrl.trim() || provider.baseUrl,
-        temperature,
-        fullAppMode,
-        multiSlideMode,
-        isLocal: false,
-      };
-    } else {
-      config = {
-        provider: selectedLocalSource!.provider,
-        providerName: selectedLocalSource!.name,
-        model: selectedLocalModel!.id,
-        apiKey: 'local',
-        baseUrl: selectedLocalSource!.v1BaseUrl,
-        temperature: selectedLocalModel!.temperature,
-        fullAppMode,
-        multiSlideMode,
-        isLocal: true,
-      };
-    }
+    const config: AIEngineConfig = {
+      provider: provider.id,
+      providerName: provider.name,
+      model: effectiveModel,
+      apiKey: apiKey.trim(),
+      baseUrl: customBaseUrl.trim() || provider.baseUrl,
+      temperature,
+      fullAppMode,
+      multiSlideMode,
+      isLocal: false,
+    };
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, apiKey: config.isLocal ? 'local' : '••••' }));
@@ -688,8 +504,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     setSaved(false);
     setApiKey('');
     setConnStatus('idle');
-    setSelectedLocalSource(null);
-    setSelectedLocalModel(null);
     setError('');
     setCloudStep(1);
     onDeactivated?.();
@@ -699,7 +513,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   if (!isOpen) return null;
 
   // ── Determine gradient for top bar / header icon ─────────────────────────
-  const headerGradient = isLocal ? 'from-lime-500 to-green-600' : provider.color;
+  const headerGradient = provider.color;
 
   return (
     <>
@@ -741,34 +555,10 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
           </button>
         </div>
 
-        {/* Mode tabs — Cloud vs Local */}
-        <div className="flex-shrink-0 flex gap-1 px-6 pt-4">
-          <button
-            onClick={() => handleModeSwitch('cloud')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
-              ${mode === 'cloud'
-                ? 'bg-blue-500/15 text-blue-300 border border-blue-500/30'
-                : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}
-          >
-            <Globe className="w-3.5 h-3.5" /> Cloud / API
-          </button>
-          <button
-            onClick={() => handleModeSwitch('local')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-sm font-semibold transition-all
-              ${mode === 'local'
-                ? 'bg-lime-500/15 text-lime-300 border border-lime-500/30'
-                : 'text-gray-500 hover:text-gray-300 border border-transparent'}`}
-          >
-            <HardDrive className="w-3.5 h-3.5" /> Local AI
-          </button>
-        </div>
-
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0">
 
-          {/* ══ CLOUD MODE ════════════════════════════════════════════════════ */}
-          {mode === 'cloud' && (
-            <>
+          {/* ══ ENGINE CONFIGURATION ════════════════════════════════════════════════════ */}
               {/* 3-step progress pills */}
               <div className="flex items-center gap-1 flex-wrap">
                 <StepPill step={1} label="Provider"    active={cloudStep === 1} done={cloudStep > 1} onClick={() => setCloudStep(1)} />
@@ -1102,168 +892,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                   )}
                 </div>
               )}
-            </>
-          )}
-
-          {/* ══ LOCAL MODE ════════════════════════════════════════════════════ */}
-          {mode === 'local' && (
-            <div className="space-y-4">
-              <SectionLabel icon={Cpu}>Detected Local Runtimes</SectionLabel>
-
-              {/* Scan status row */}
-              <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-gray-900/60 border border-gray-700/40">
-                <div className="flex items-center gap-2">
-                  {localLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
-                  ) : anyLocalRunning ? (
-                    <Wifi className="w-3.5 h-3.5 text-lime-400" />
-                  ) : localFetched ? (
-                    <WifiOff className="w-3.5 h-3.5 text-red-400" />
-                  ) : (
-                    <Loader2 className="w-3.5 h-3.5 text-gray-400 animate-spin" />
-                  )}
-                  <span className="text-xs font-semibold text-gray-300">
-                    {localLoading  ? 'Scanning localhost…' :
-                     anyLocalRunning ? `${localSources.filter(s => s.running).length} runtime(s) found` :
-                     localFetched ? 'No local AI runtime detected' :
-                     'Starting scan…'}
-                  </span>
-                </div>
-                <button
-                  onClick={fetchLocalModels} disabled={localLoading}
-                  className="p-1.5 rounded-lg text-gray-500 hover:text-lime-400 hover:bg-lime-500/10 transition-colors disabled:opacity-50"
-                  aria-label="Refresh"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${localLoading ? 'animate-spin' : ''}`} />
-                </button>
-              </div>
-
-              {/* Runtime list */}
-              {localSources.filter(s => s.running).length > 0 && localSources.filter(source => source.running).map(source => (
-                <div key={source.name} className="space-y-2">
-                  <div className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl border cursor-pointer transition-all
-                    ${source.running
-                      ? selectedLocalSource?.provider === source.provider
-                        ? 'bg-lime-500/15 border-lime-500/30'
-                        : 'bg-gray-900/60 border-gray-700/40 hover:border-gray-600'
-                      : 'bg-gray-900/30 border-gray-800/40 opacity-50 cursor-not-allowed'}`}
-                    onClick={() => {
-                      if (!source.running) return;
-                      setSelectedLocalSource(source);
-                      setSelectedLocalModel(source.models[0] ?? null);
-                      setError('');
-                    }}
-                  >
-                    {source.running
-                      ? <Wifi className="w-3.5 h-3.5 text-lime-400 shrink-0" />
-                      : <WifiOff className="w-3.5 h-3.5 text-red-400 shrink-0" />}
-                    <span className="text-sm font-semibold text-white">{source.name}</span>
-                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ml-1 ${source.running ? 'bg-lime-500/15 text-lime-400' : 'bg-red-500/15 text-red-400'}`}>
-                      {source.running ? `${source.models.length} model${source.models.length !== 1 ? 's' : ''}` : 'offline'}
-                    </span>
-                    {selectedLocalSource?.provider === source.provider && source.running && (
-                      <CheckCircle className="w-3.5 h-3.5 text-lime-400 ml-auto" />
-                    )}
-                  </div>
-
-                  {selectedLocalSource?.provider === source.provider && source.running && source.models.length > 0 && (
-                    <div className="ml-2 space-y-1 max-h-44 overflow-y-auto">
-                      {source.models.map(m => (
-                        <button
-                          key={m.id}
-                          onClick={() => { setSelectedLocalModel(m); setError(''); }}
-                          className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm text-left transition-colors
-                            ${selectedLocalModel?.id === m.id
-                              ? 'bg-lime-500/15 border border-lime-500/30 text-white'
-                              : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200 border border-transparent'}`}
-                        >
-                          <span className="font-mono text-xs flex-1 truncate">{m.id}</span>
-                          {m.size && <span className="text-[9px] text-gray-600 font-mono shrink-0">{m.size}</span>}
-                          {selectedLocalModel?.id === m.id && <CheckCircle className="w-3.5 h-3.5 text-lime-400 shrink-0" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedLocalSource?.provider === source.provider && source.running && source.models.length === 0 && (
-                    <p className="text-[10px] text-gray-500 px-4 pb-1">
-                      No models found. Download one first (e.g. <code className="text-lime-400 font-mono">ollama pull llama3</code>).
-                    </p>
-                  )}
-                </div>
-              ))}
-
-              {/* Local mode temperature (always shown) */}
-              <div className="border-t border-gray-800/60 pt-4 space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="ges-temp-local" className="text-[10px] font-semibold text-gray-500 flex items-center gap-1.5">
-                    <Thermometer className="w-3 h-3" /> Temperature
-                  </label>
-                  <span className="text-sm font-bold tabular-nums text-lime-400">
-                    {(selectedLocalModel ? selectedLocalModel.temperature : temperature).toFixed(2)}
-                  </span>
-                </div>
-                <input
-                  id="ges-temp-local" type="range" min={0} max={1} step={0.05}
-                  value={selectedLocalModel ? selectedLocalModel.temperature : temperature}
-                  onChange={e => {
-                    const v = parseFloat(e.target.value);
-                    if (selectedLocalModel) {
-                      setSelectedLocalModel({ ...selectedLocalModel, temperature: v });
-                    } else {
-                      setTemperature(v);
-                    }
-                  }}
-                  className="w-full h-1.5 appearance-none rounded-full bg-gray-800 cursor-pointer
-                    [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4
-                    [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white
-                    [&::-webkit-slider-thumb]:shadow-lg [&::-webkit-slider-thumb]:cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #84cc16 0%, #84cc16 ${(selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 ${(selectedLocalModel ? selectedLocalModel.temperature : temperature) * 100}%, #1f2937 100%)`
-                  }}
-                />
-                <div className="flex justify-between">
-                  <span className="text-[9px] text-gray-600">0.0 — Deterministic</span>
-                  <span className="text-[9px] text-gray-600">1.0 — Creative</span>
-                </div>
-              </div>
-
-              {/* Generation toggles for local */}
-              <div className="border-t border-gray-800/60 pt-4 space-y-3">
-                <SectionLabel icon={Layers}>Generation Settings</SectionLabel>
-
-                <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Settings2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                      <p className="text-sm font-semibold text-white">Full App Mode</p>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-violet-500/15 text-violet-400 border border-violet-500/20">Chunking</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 leading-relaxed">
-                      Bypasses token limits — generates a file manifest then builds each file separately.
-                    </p>
-                  </div>
-                  <Toggle id="gen-full-app-local" checked={fullAppMode} onChange={setFullAppMode} colorOn="bg-violet-600" />
-                </div>
-
-                <div className="flex items-center justify-between gap-4 px-4 py-3.5 bg-gray-900/60 border border-gray-700/40 rounded-2xl">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <Layers className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                      <p className="text-sm font-semibold text-white">Multi-slide Mode</p>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">Paginated</span>
-                    </div>
-                    <p className="text-[10px] text-gray-500 leading-relaxed">
-                      AI outputs a multi-view / multi-slide architecture instead of a single static component.
-                    </p>
-                  </div>
-                  <Toggle id="gen-multi-slide-local" checked={multiSlideMode} onChange={setMultiSlide} colorOn="bg-emerald-600" />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Error */}
           {error && (
             <div className="flex items-center gap-2 p-3 rounded-xl bg-red-900/20 border border-red-500/30">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
@@ -1277,10 +905,10 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
           <div className="flex items-center gap-3">
             <button
               onClick={() => {
-                if (mode === 'cloud' && cloudStep === 1) {
+                if (cloudStep === 1) {
                   setError('');
                   setCloudStep(2);
-                } else if (mode === 'cloud' && cloudStep === 2) {
+                } else if (cloudStep === 2) {
                   setError('');
                   setCloudStep(3);
                   if (!modelsFetched && !modelsFetching && (!provider.noKey && apiKey.trim())) {
@@ -1294,25 +922,23 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
               className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-sm font-bold transition-all shadow-lg active:scale-[0.98] disabled:cursor-not-allowed
                 ${saved
                   ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-                  : sessionActive && !saving && (mode !== 'cloud' || cloudStep === 3)
+                  : sessionActive && !saving && cloudStep === 3
                     ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:opacity-90'
-                    : isLocal
-                      ? 'bg-gradient-to-r from-lime-500 to-green-600 text-white hover:opacity-90'
-                      : `bg-gradient-to-r ${provider.color} text-white hover:opacity-90`
+                    : `bg-gradient-to-r ${provider.color} text-white hover:opacity-90`
                 }`}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
               {saved  && <CheckCircle className="w-4 h-4" />}
-              {!saving && !saved && sessionActive && (mode !== 'cloud' || cloudStep === 3) && (
+              {!saving && !saved && sessionActive && cloudStep === 3 && (
                 <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
               )}
               {saving
                 ? 'Saving…'
                 : saved
                   ? 'Saved! Starting…'
-                  : mode === 'cloud' && cloudStep === 1
+                  : cloudStep === 1
                     ? `Continue with ${provider.name} →`
-                  : mode === 'cloud' && cloudStep === 2
+                  : cloudStep === 2
                     ? 'Continue to Model Selection →'
                   : sessionActive
                     ? 'Engine Active — Update'

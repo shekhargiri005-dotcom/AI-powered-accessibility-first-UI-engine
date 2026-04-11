@@ -42,7 +42,7 @@ export default function RootLayout({
       lang="en"
       className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased dark`}
     >
-      <body className="min-h-full bg-gray-950 text-white font-sans">
+      <body className="min-h-full bg-[#0B0F19] text-white font-sans">
         <SessionProvider>
           <WorkspaceProvider>
             {children}
