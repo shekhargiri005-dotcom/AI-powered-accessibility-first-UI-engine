@@ -25,6 +25,7 @@ Hooks: simulateAutocomplete(query) -> Promise<string[]>
 
 [@ui/motion]
 <Motion>: children(node), preset?("fade"|"slideUp"|"slideRight"|"scale"|"pop"), delay?(number), className?(string)
+// CRITICAL: NEVER use <Motion.div>. If you need Framer Motion primitives, \`import { motion } from 'framer-motion'\`.
 
 [@ui/a11y]
 <FocusTrap>: children(node), active?(boolean)

@@ -81,7 +81,7 @@ MANDATORY RULES:
 2. UI ECOSYSTEM (CRITICAL): You MUST build this component by composing primitives from the built-in library ecosystem. DO NOT build raw HTML elements (like standard <button> or <input>) if a library equivalent exists.
    - Core primitives: \`import { Button, Card, Modal, Input } from '@ui/core';\`
    - Advanced layout: \`import { Grid, Stack, Container } from '@ui/layout';\`
-   - Motion/Animation: \`import { Motion } from '@ui/motion';\`
+   - Motion/Animation: \`import { Motion } from '@ui/motion';\` // NEVER use <Motion.div>. Use <Motion animation="fade">. For <motion.div>, import from 'framer-motion'.
    - Forms/Validation: \`import { Form, Field } from '@ui/forms';\`
    - Icons: \`import { Icon } from '@ui/icons';\` (uses Lucide perfectly)
    - Other available packages: \`@ui/typography, @ui/a11y, @ui/theming, @ui/charts, @ui/editor, @ui/dragdrop, @ui/command-palette, @ui/three\`.

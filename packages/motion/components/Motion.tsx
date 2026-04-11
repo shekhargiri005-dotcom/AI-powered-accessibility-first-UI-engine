@@ -181,6 +181,14 @@ export function Motion({
   );
 }
 
+// Playwright / UI Engine Fallback: AI sometimes hallucinates <Motion.div> 
+// instead of importing framer-motion directly. This prevents a catastrophic white-screen crash.
+(Motion as any).div = function MotionDivFallback(props: any) {
+  // We strip framer-motion specific props to prevent DOM warnings, but pass the rest
+  const { initial, animate, transition, variants, whileHover, whileTap, ...rest } = props;
+  return <div {...rest} />;
+};
+
 // ─── MotionGroup — staggered children ────────────────────────────────────────
 
 export interface MotionGroupProps {

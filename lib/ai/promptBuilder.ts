@@ -61,7 +61,7 @@ const LOCKED_IMPORTS = `import React, { useState, useEffect, useRef, useCallback
 import { Button, Card, Input, Modal } from '@ui/core';
 import { Grid, Stack, Container } from '@ui/layout';
 import { Icon } from '@ui/icons';
-import { Motion } from '@ui/motion';
+import { Motion } from '@ui/motion'; // NEVER use <Motion.div>
 import { cn } from '@ui/utils/cn';
 
 // TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*
