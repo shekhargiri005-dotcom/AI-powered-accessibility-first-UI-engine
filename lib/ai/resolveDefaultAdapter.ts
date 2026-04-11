@@ -35,12 +35,12 @@ export type AdapterPurpose =
 
 /** Default model names per provider for each purpose tier */
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
-  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-70b-chat-hf', openrouter: 'openai/gpt-4o', mistral: 'mistral-large-latest' },
-  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
-  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
-  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest' },
+  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
+  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-70b-chat-hf', openrouter: 'openai/gpt-4o', mistral: 'mistral-large-latest', huggingface: 'meta-llama/Meta-Llama-3-70B-Instruct' },
+  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
+  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
+  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', deepseek: 'deepseek-chat', together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini', mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
 };
 
 /** Ordered provider detection list — first one with an env key wins.
@@ -59,6 +59,7 @@ const PROVIDER_CHECKS: Array<{
   { id: 'deepseek',   envKey: 'DEEPSEEK_API_KEY' },
   { id: 'together',   envKey: 'TOGETHER_API_KEY',     baseUrl: 'https://api.together.xyz/v1' },
   { id: 'openrouter', envKey: 'OPENROUTER_API_KEY',   baseUrl: 'https://openrouter.ai/api/v1' },
+  { id: 'huggingface',envKey: 'HUGGINGFACE_API_KEY',  baseUrl: 'https://router.huggingface.co/hf-inference/v1' },
   { id: 'mistral',    envKey: 'MISTRAL_API_KEY' },
   // OpenAI last — free/trial keys exhaust quota quickly
   { id: 'openai',     envKey: 'OPENAI_API_KEY' },
@@ -130,6 +131,7 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     groq:       ['GROQ_API_KEY'],
     deepseek:   ['DEEPSEEK_API_KEY'],
     together:   ['TOGETHER_API_KEY'],
+    huggingface:['HUGGINGFACE_API_KEY'],
     openrouter: ['OPENROUTER_API_KEY'],
     mistral:    ['MISTRAL_API_KEY'],
     meta:       ['TOGETHER_API_KEY', 'GROQ_API_KEY'],
