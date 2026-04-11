@@ -1,8 +1,7 @@
-import { OpenAIAdapter } from '@/lib/ai/adapters/openai';
+import { OpenAIAdapter }    from '@/lib/ai/adapters/openai';
 import { AnthropicAdapter } from '@/lib/ai/adapters/anthropic';
-import { DeepSeekAdapter } from '@/lib/ai/adapters/deepseek';
-import { GoogleAdapter } from '@/lib/ai/adapters/google';
-import { OllamaAdapter } from '@/lib/ai/adapters/ollama';
+import { GoogleAdapter }    from '@/lib/ai/adapters/google';
+import { OllamaAdapter }    from '@/lib/ai/adapters/ollama';
 
 // ─── Mock: OpenAI SDK ─────────────────────────────────────────────────────────
 // Covers OpenAIAdapter, DeepSeekAdapter (extends OpenAI), and OllamaAdapter.
@@ -49,7 +48,6 @@ describe('AI Adapters Implementation', () => {
   beforeEach(() => {
     process.env.OPENAI_API_KEY    = 'test';
     process.env.ANTHROPIC_API_KEY = 'test';
-    process.env.DEEPSEEK_API_KEY  = 'test';
     process.env.GOOGLE_API_KEY    = 'test';
     jest.clearAllMocks();
     // Re-apply fetch mock after clearAllMocks() resets it
@@ -65,12 +63,6 @@ describe('AI Adapters Implementation', () => {
   it('AnthropicAdapter should return generated content', async () => {
     const adapter = new AnthropicAdapter('my-key');
     const result  = await adapter.generate({ model: 'claude-3-5-sonnet', messages: [] });
-    expect(result.content).toBe('mock-response');
-  });
-
-  it('DeepSeekAdapter should return generated content', async () => {
-    const adapter = new DeepSeekAdapter('my-key');
-    const result  = await adapter.generate({ model: 'deepseek-chat', messages: [] });
     expect(result.content).toBe('mock-response');
   });
 

@@ -92,12 +92,9 @@ export type ProviderName =
   | 'openai'
   | 'ollama'
   | 'anthropic'
-  | 'deepseek'
   | 'google'
-  | 'mistral'
-  | 'meta'
-  | 'qwen'
-  | 'gemma'
+  | 'groq'
+  | 'huggingface'
   | 'mock';
 
 // ─── Per-Provider Pricing ─────────────────────────────────────────────────────

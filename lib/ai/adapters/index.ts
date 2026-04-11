@@ -6,32 +6,25 @@
  * The engine uses EXACTLY what the user configured. On error → surface it clearly.
  * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * Supported adapters (8 total):
- *   Cloud:  OpenAIAdapter, AnthropicAdapter, GoogleAdapter, DeepSeekAdapter
- *           MetaAdapter, MistralAdapter, QwenAdapter, GemmaAdapter
- *   Local:  OllamaAdapter  (also handles LM Studio via configurable baseUrl)
+ * Supported adapters (4 total):
+ *   Cloud:  OpenAIAdapter, AnthropicAdapter, GoogleAdapter
+ *   Local:  OllamaAdapter  (also handles LM Studio / Groq / HuggingFace via baseUrl)
  */
 
 import type { AIAdapter, ProviderName } from './base';
 import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
-import { DeepSeekAdapter }  from './deepseek';
 import { OllamaAdapter }    from './ollama';
-import { MetaAdapter }      from './meta';
-import { MistralAdapter }   from './mistral';
-import { QwenAdapter }      from './qwen';
-import { GemmaAdapter }     from './gemma';
 import { getCache, generateCacheKey } from '../cache';
 
 // ─── OpenAI-compatible provider base URLs ─────────────────────────────────────
+// These providers speak the OpenAI REST protocol — no separate adapter needed.
 
 const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',
-  openrouter: 'https://openrouter.ai/api/v1',
-  together:   'https://api.together.xyz/v1',
-  lmstudio:   'http://localhost:1234/v1',
   huggingface:'https://router.huggingface.co/hf-inference/v1',
+  lmstudio:   'http://localhost:1234/v1',
 };
 
 // ─── Provider Detection (fallback only — prefer explicit provider from config) ─
@@ -42,19 +35,12 @@ const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
  */
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
-  if (m.includes('claude'))                       return 'anthropic';
-  if (m.includes('gemini'))                       return 'google';
-  if (m.includes('gpt-'))                        return 'openai';
-  if (/^o[13][\w.-]*$|^o1-/.test(m))            return 'openai';  // o1, o3-mini, etc.
-  if (m.includes('deepseek'))                     return 'deepseek';
-  if (m.includes('mistral') || m.includes('mixtral')) return 'mistral';
-  if (m.includes('qwen'))                         return 'qwen';
-  if (m.includes('gemma'))                        return 'gemma';
-  // Only route explicitly-namespaced HuggingFace slugs to the Meta cloud adapter.
-  // Bare names like 'llama3', 'llama2', 'codellama' are assumed to be local Ollama models.
-  if (m.startsWith('meta-llama/') || m.startsWith('meta/'))  return 'meta';
-  if (m.includes('codellama') || m.includes('llama')) return 'ollama';
-  return 'ollama'; // safe default for true local models
+  if (m.includes('claude'))                        return 'anthropic';
+  if (m.includes('gemini'))                        return 'google';
+  if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
+  // Groq / HuggingFace hosted models — serve via OpenAI-compat adapter
+  if (m.includes('llama') || m.includes('mixtral') || m.includes('gemma2')) return 'groq';
+  return 'ollama'; // safe local default for everything else
 }
 
 /** Pass-through — model names used verbatim as configured by the user. */
@@ -137,10 +123,10 @@ class CachedAdapter implements AIAdapter {
  * Returns the correct AIAdapter for the given config.
  *
  * Rules:
- *  1. If explicit provider given → use it, no guessing.
- *  2. If baseUrl given → use OpenAI-compat adapter pointed at that URL.
- *  3. Known OpenAI-compat providers (groq/openrouter/together/lmstudio) → OpenAIAdapter + baseUrl.
- *  4. Named adapters (anthropic/google/deepseek/meta/mistral/qwen/gemma/ollama) → specific adapter.
+ *  1. Explicit provider given → use it directly.
+ *  2. baseUrl given → OpenAI-compat adapter pointed at that URL.
+ *  3. Known OpenAI-compat providers (groq / huggingface / lmstudio) → OpenAIAdapter + baseUrl.
+ *  4. Named adapters (openai / anthropic / google / ollama) → specific adapter.
  *  5. No key + no env var → throw immediately with a clear message.
  *
  * No silent fallbacks. No mock adapters.
@@ -161,15 +147,18 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     ? config.apiKey
     : undefined;
 
-  // ── 1. Known OpenAI-compatible 3rd-party providers ───────────────────────
-  // These use the OpenAI SDK but with a different baseUrl.
-  // groq / openrouter / together / lmstudio / huggingface have entries in OPENAI_COMPAT_BASE_URLS.
+  // ── 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
+  // groq / huggingface / lmstudio (and any provider with an explicit baseUrl)
+  // all route through the standard OpenAI SDK — no separate files needed.
+  const namedProviders = ['openai', 'anthropic', 'google', 'ollama', 'lmstudio'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
-  const namedProviders = ['openai', 'anthropic', 'google', 'deepseek', 'ollama', 'lmstudio', 'meta', 'mistral', 'qwen', 'gemma'];
-  const isCompat = !!compatUrl && !namedProviders.includes(provId);
+  const isCompat  = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
-    const key = apiKey || process.env[`${provId.toUpperCase()}_API_KEY`] || process.env.OPENAI_API_KEY || 'dummy';
-    if (!key && provId !== 'custom') throw new Error(`API key required for ${provId}. Configure it in the AI Engine Config panel.`);
+    const key = apiKey
+      || process.env[`${provId.toUpperCase()}_API_KEY`]
+      || (provId === 'groq' ? process.env.GROQ_API_KEY : undefined)
+      || (provId === 'huggingface' ? process.env.HUGGINGFACE_API_KEY : undefined)
+      || 'dummy';
     return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
   }
 
@@ -193,36 +182,6 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
       const key = apiKey || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
       if (!key) throw new Error('Google API key required. Add it in the AI Engine Config panel.');
       adapter = new GoogleAdapter(key);
-      break;
-    }
-    case 'deepseek': {
-      const key = apiKey || process.env.DEEPSEEK_API_KEY;
-      if (!key) throw new Error('DeepSeek API key required. Add it in the AI Engine Config panel.');
-      adapter = new DeepSeekAdapter(key);
-      break;
-    }
-    case 'meta': {
-      const key = apiKey || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
-      if (!key) throw new Error('Meta/Llama requires a Together AI or Groq API key. Add it in the AI Engine Config panel.');
-      adapter = new MetaAdapter(key, baseUrl);
-      break;
-    }
-    case 'mistral': {
-      const key = apiKey || process.env.MISTRAL_API_KEY || process.env.TOGETHER_API_KEY;
-      if (!key) throw new Error('Mistral requires a Mistral AI or Together AI API key. Add it in the AI Engine Config panel.');
-      adapter = new MistralAdapter(key, baseUrl);
-      break;
-    }
-    case 'qwen': {
-      const key = apiKey || process.env.DASHSCOPE_API_KEY || process.env.TOGETHER_API_KEY;
-      if (!key) throw new Error('Qwen requires a DashScope or Together AI API key. Add it in the AI Engine Config panel.');
-      adapter = new QwenAdapter(key, baseUrl);
-      break;
-    }
-    case 'gemma': {
-      const key = apiKey || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
-      if (!key) throw new Error('Gemma requires a Together AI or Groq API key. Add it in the AI Engine Config panel.');
-      adapter = new GemmaAdapter(key, baseUrl);
       break;
     }
     case 'ollama':
@@ -249,7 +208,6 @@ export async function getWorkspaceAdapter(
   userId?: string,
 ): Promise<AIAdapter> {
   // Explicit apiKey provided — use it directly, skip DB lookup
-  // Treat masked and local keys as empty
   const explicitKey = typeof modelOrConfig !== 'string' &&
     modelOrConfig.apiKey &&
     modelOrConfig.apiKey !== 'local' &&
@@ -284,12 +242,7 @@ export async function getWorkspaceAdapter(
 export { OpenAIAdapter }    from './openai';
 export { AnthropicAdapter } from './anthropic';
 export { GoogleAdapter }    from './google';
-export { DeepSeekAdapter }  from './deepseek';
 export { OllamaAdapter }    from './ollama';
-export { MetaAdapter }      from './meta';
-export { MistralAdapter }   from './mistral';
-export { QwenAdapter }      from './qwen';
-export { GemmaAdapter }     from './gemma';
 
 export type { AIAdapter, ProviderName }                                         from './base';
 export type { GenerateOptions, GenerateResult, StreamChunk, Message, MessageRole } from './base';
