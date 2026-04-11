@@ -68,7 +68,8 @@ export async function reviewGeneratedCode(
         groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-haiku-20240307',
         google: 'gemini-2.0-flash', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
         together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini',
-        mistral: 'mistral-small-latest',
+        mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct',
+        qwen: 'qwen-turbo',
       } as Record<string, string>;
       cfg = {
         model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
@@ -143,7 +144,8 @@ export async function repairGeneratedCode(
         groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-5-sonnet-20241022',
         google: 'gemini-1.5-pro', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
         together: 'meta-llama/Llama-3-70b-chat-hf', openrouter: 'openai/gpt-4o',
-        mistral: 'mistral-large-latest',
+        mistral: 'mistral-large-latest', huggingface: 'meta-llama/Meta-Llama-3-70B-Instruct',
+        qwen: 'qwen-plus',
       } as Record<string, string>;
       cfg = {
         model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
