@@ -39,29 +39,11 @@ export async function POST(request: NextRequest) {
     const result = await classifyIntent(prompt, hasActiveProject ?? false, modelConfig);
 
     if (!result.success) {
-      // 'No model configured' is an expected state before the user sets up AI Engine.
-      // Log as debug, not warn, to avoid console noise on first load.
-      reqLogger.debug('Classification could not run', { error: result.error });
-      // Return a graceful 200 with a default classification so the UI isn't blocked.
-      return NextResponse.json({
-        success: true,
-        classification: {
-          intentType: 'ui_generation',
-          confidence: 0.5,
-          summary: 'Auto-classified — configure an AI provider to enable smart intent detection.',
-          suggestedMode: 'component',
-          needsClarification: false,
-          shouldGenerateCode: true,
-          purpose: 'unknown',
-          visualType: 'unknown',
-          complexity: 'medium',
-          platform: 'responsive',
-          layout: 'single-page',
-          motionLevel: 'subtle',
-          preferredStack: ['react', 'tailwind'],
-        },
-        _fallback: true,
-      });
+      reqLogger.warn('Classification failed', { error: result.error });
+      return NextResponse.json(
+        { success: false, error: result.error },
+        { status: 400 }
+      );
     }
 
     reqLogger.info('Classification successful', { classificationItem: result.classification });

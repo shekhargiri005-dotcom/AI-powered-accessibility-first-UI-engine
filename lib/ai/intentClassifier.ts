@@ -91,25 +91,7 @@ export async function classifyIntent(
       // safe default so classify is non-blocking (page.tsx continues anyway).
       const envModel = process.env.CLASSIFIER_MODEL;
       if (!envModel) {
-        return {
-          success: true,
-          classification: {
-            intentType: 'ui_generation' as const,
-            confidence: 0.5,
-            summary: 'UI generation request (auto-classified — no model configured)',
-            suggestedMode: 'component' as const,
-            needsClarification: false,
-            clarificationQuestion: undefined,
-            shouldGenerateCode: true,
-            purpose: 'unknown' as const,
-            visualType: 'unknown' as const,
-            complexity: 'medium' as const,
-            platform: 'responsive' as const,
-            layout: 'single-page' as const,
-            motionLevel: 'subtle' as const,
-            preferredStack: ['react', 'tailwind'],
-          },
-        };
+        return { success: false, error: 'No AI model configured for classification. Please configure a provider.' };
       }
       adapterConfig = resolveDefaultAdapter('CLASSIFIER');
     } else if (typeof modelConfig === 'string') {

@@ -348,7 +348,7 @@ export async function GET(request: NextRequest) {
     console.error(`[/api/models] provider=${provider} error:`, msg);
     return NextResponse.json(
       { success: false, error: `Failed to fetch models: ${msg}` },
-      { status: 502 },
+      { status: 400 },
     );
   }
 }
