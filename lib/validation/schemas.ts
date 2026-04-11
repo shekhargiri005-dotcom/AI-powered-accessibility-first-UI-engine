@@ -149,7 +149,11 @@ export const ThemeSchema = z.object({
 
 export const UIIntentSchema = z.object({
   componentType: z.string().catch('component'),
-  componentName: z.string().catch('GeneratedComponent'),
+  componentName: z.string().catch('GeneratedComponent').transform(val => {
+    let cleaned = val.replace(/[^a-zA-Z0-9]/g, '');
+    if (!cleaned || /^[0-9]/.test(cleaned)) cleaned = 'GeneratedComponent' + cleaned;
+    return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+  }),
   description: z.string().catch('UI Component'),
   fields: z.array(UIFieldSchema).catch([]),
   layout: LayoutSchema.catch({ type: 'single-column', maxWidth: 'md', alignment: 'left' }),
