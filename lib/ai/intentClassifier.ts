@@ -101,16 +101,37 @@ export async function classifyIntent(
     }
 
     const adapter = await getWorkspaceAdapter(adapterConfig);
-    const adapterResult = await adapter.generate({
-      model: adapterConfig.model,
-      messages: [
-        { role: 'system', content: CLASSIFIER_SYSTEM_PROMPT },
-        { role: 'user', content: `Classify this input:\n\n"${sanitized}"${contextHint}` },
-      ],
-      responseFormat: 'json_object',
-      temperature: 0.1,
-      maxTokens: 600,
-    });
+    
+    // Retry loop for 429 Rate Limit errors
+    let adapterResult;
+    let retries = 0;
+    const maxRetries = 3;
+    const baseDelayMs = 1000;
+
+    while (true) {
+      try {
+        adapterResult = await adapter.generate({
+          model: adapterConfig.model,
+          messages: [
+            { role: 'system', content: CLASSIFIER_SYSTEM_PROMPT },
+            { role: 'user', content: `Classify this input:\n\n"${sanitized}"${contextHint}` },
+          ],
+          responseFormat: 'json_object',
+          temperature: 0.1,
+          maxTokens: 600,
+        });
+        break; // Success
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('429') && retries < maxRetries) {
+          retries++;
+          console.warn(`[intentClassifier] 429 Rate Limit hit. Retrying (${retries}/${maxRetries}) in ${baseDelayMs * Math.pow(2, retries - 1)}ms...`);
+          await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
+          continue;
+        }
+        throw error; // Rethrow if not a 429 or out of retries
+      }
+    }
 
     const raw = adapterResult.content;
     if (!raw) return { success: false, error: 'Empty response from classifier' };

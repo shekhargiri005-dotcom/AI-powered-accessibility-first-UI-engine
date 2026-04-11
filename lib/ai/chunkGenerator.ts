@@ -72,13 +72,33 @@ export async function generateAppManifest(
       'Ensure your manifest implies a router or slide orchestrator component (usually App.tsx) that manages navigation between distinct feature screens/views.';
   }
 
-  const result = await adapter.generate({
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.3,
-    maxTokens: 2000,
-    responseFormat: 'json_object',
-  });
+  let result: any;
+  let retries = 0;
+  const maxRetries = 3;
+  const baseDelayMs = 1500;
+
+  while (true) {
+    try {
+      result = await adapter.generate({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        maxTokens: 2000,
+        responseFormat: 'json_object',
+      });
+      break;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('429') && retries < maxRetries) {
+        retries++;
+        console.warn(`[chunkGenerator] 429 Rate Limit hit in manifest. Retrying (${retries}/${maxRetries}) in ${baseDelayMs * Math.pow(2, retries - 1)}ms...`);
+        await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
+        continue;
+      }
+      // Return a safe default instead of throwing to avoid breaking the whole pipeline
+      return [{ filename: 'App.tsx', description: 'Main application entry point' }];
+    }
+  }
 
   const raw = result.content || '[]';
   try {
@@ -172,12 +192,31 @@ export async function generateFileChunk(
 
   prompt += 'RETURN ONLY THE RAW CODE.';
 
-  const result = await adapter.generate({
-    model,
-    messages: [{ role: 'user', content: prompt }],
-    temperature: 0.5,
-    maxTokens: maxTokens || 4000,
-  });
+  let result: any;
+  let retries = 0;
+  const maxRetries = 3;
+  const baseDelayMs = 2000;
+
+  while (true) {
+    try {
+      result = await adapter.generate({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.5,
+        maxTokens: maxTokens || 4000,
+      });
+      break;
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('429') && retries < maxRetries) {
+        retries++;
+        console.warn(`[chunkGenerator] 429 Rate Limit hit in chunk ${targetFile}. Retrying (${retries}/${maxRetries})...`);
+        await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
+        continue;
+      }
+      throw error;
+    }
+  }
 
   let rawContent = result.content || '';
 
