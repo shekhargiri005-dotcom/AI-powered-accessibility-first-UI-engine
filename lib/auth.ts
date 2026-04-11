@@ -9,6 +9,13 @@ const OWNER_PASSWORD_HASH = process.env.OWNER_PASSWORD_HASH ?? '';
 const OWNER_NAME         = process.env.OWNER_NAME         ?? 'Shekhar Giri';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // ── Secret — REQUIRED for JWT signing ─────────────────────────────────────
+  // Auth.js v5 uses AUTH_SECRET. Fall back to NEXTAUTH_SECRET for legacy setups.
+  // trustHost: true lets the app accept any Vercel preview/production URL
+  // without needing NEXTAUTH_URL to be pinned to a specific domain.
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  trustHost: true,
+
   // ── JWT-only sessions (required for CredentialsProvider) ─────────────────
   session: { strategy: 'jwt', maxAge: 7 * 24 * 60 * 60 }, // 7 days
 
