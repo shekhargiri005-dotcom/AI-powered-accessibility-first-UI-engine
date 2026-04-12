@@ -105,8 +105,9 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. Fallback (last resort) ─────────────────────────
-  return { model: 'gpt-4o-mini', provider: 'openai' };
+  // ── 4. Fallback (Waiting Socket) ─────────────────────────
+  // A generic socket that safely informs the client to inject a configuration.
+  return { model: 'unconfigured', provider: 'unconfigured' };
 }
 
 /**

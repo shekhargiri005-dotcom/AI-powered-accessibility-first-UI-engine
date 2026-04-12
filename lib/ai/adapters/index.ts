@@ -16,6 +16,7 @@ import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
 import { OllamaAdapter }    from './ollama';
+import { UnconfiguredAdapter } from './unconfigured';
 import { getCache, generateCacheKey } from '../cache';
 
 // ─── OpenAI-compatible provider base URLs ─────────────────────────────────────
@@ -182,6 +183,10 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
       adapter = new GoogleAdapter(key);
       break;
     }
+    case 'unconfigured': {
+      adapter = new UnconfiguredAdapter();
+      break;
+    }
     case 'ollama':
     case 'lmstudio':
     default: {
@@ -241,6 +246,7 @@ export { OpenAIAdapter }    from './openai';
 export { AnthropicAdapter } from './anthropic';
 export { GoogleAdapter }    from './google';
 export { OllamaAdapter }    from './ollama';
+export { UnconfiguredAdapter } from './unconfigured';
 
 export type { AIAdapter, ProviderName }                                         from './base';
 export type { GenerateOptions, GenerateResult, StreamChunk, Message, MessageRole } from './base';

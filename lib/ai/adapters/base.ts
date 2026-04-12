@@ -95,7 +95,8 @@ export type ProviderName =
   | 'google'
   | 'groq'
   | 'huggingface'
-  | 'mock';
+  | 'mock'
+  | 'unconfigured';
 
 // ─── Per-Provider Pricing ─────────────────────────────────────────────────────
 
