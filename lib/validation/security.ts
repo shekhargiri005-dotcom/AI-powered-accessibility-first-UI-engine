@@ -93,7 +93,7 @@ export function sanitizeGeneratedCode(code: string): string {
   // Replace:  () => /* ... */    →  () => {}
   // Replace:  ={/* ... */}       →  ={undefined}   (avoids parse error; component still renders)
 
-  // Arrow functions whose entire body is a block comment
+  // Arrow functions whose entire body is a block comment (single-line)
   sanitized = sanitized.replace(/=>\s*\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, '=> {}');
 
   // JSX attribute values that are solely a block comment  ={/* ... */}
@@ -102,6 +102,27 @@ export function sanitizeGeneratedCode(code: string): string {
   // Inline TODO/placeholder comments left inside JSX attribute strings
   // e.g.  onClick={/* TODO */}  or  value={/* placeholder */}
   sanitized = sanitized.replace(/\{\s*\/\*\s*(?:TODO|FIXME|placeholder|debug removed|handler|stub)[^*]*\*+(?:[^/*][^*]*\*+)*\/\s*\}/gi, '{undefined}');
+
+  // ── Multiline comment artifact repair ────────────────────────────────────────
+  // When the original AI code was:
+  //   onClick={() => /* [debug removed] */
+  //   };
+  // Our replacement gives:
+  //   onClick={() => {}     ← `{` from JSX attr still open
+  //   };                    ← `}` closes JSX attr, `;` is stray = Babel error
+  //
+  // Fix 1: collapse `=> {}\n<whitespace>};` → `=> {}}` (merges the JSX close brace back in)
+  sanitized = sanitized.replace(/=>\s*\{\}\s*\n\s*\};/g, '=> {}}');
+
+  // Fix 2: collapse `=> {}\n<whitespace>}` → `=> {}}` (same but without stray semicolon)
+  // Only safe when the `}` line has ONLY whitespace + `}` (i.e., it IS the JSX attr closer)
+  sanitized = sanitized.replace(/=>\s*\{\}([ \t]*)\n([ \t]*)\}(?=[^}])/g, '=> {}}\n$2');
+
+  // Fix 3: general stray `;` after a standalone `}` line where the `}` closes a JSX expression.
+  // e.g. a line that is ONLY indentation + `};` after a valid JSX attribute expression.
+  // Replacing `\n<whitespace>};` with `\n<whitespace>}` is safe because in valid JSX you never
+  // use `;` to separate attributes — only whitespace is legal between attributes.
+  sanitized = sanitized.replace(/(\n[ \t]*)\};([ \t]*\n)/g, '$1}$2');
 
   return sanitized;
 }
