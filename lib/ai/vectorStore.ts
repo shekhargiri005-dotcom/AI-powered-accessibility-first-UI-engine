@@ -48,7 +48,7 @@ function getSql() {
  */
 export async function embedText(text: string): Promise<number[] | null> {
   if (!GOOGLE_API_KEY) {
-    logger.warn({ endpoint: 'vectorStore', message: 'GOOGLE_API_KEY not set — skipping embedding' });
+    logger.debug({ endpoint: 'vectorStore', message: 'GOOGLE_API_KEY not set — graceful skip of semantic embedding' });
     return null;
   }
 
