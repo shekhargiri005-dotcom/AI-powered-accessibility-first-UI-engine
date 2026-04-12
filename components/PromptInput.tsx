@@ -208,7 +208,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
       } catch { /* ignore */ } finally {
         setIsClassifying(false);
       }
-    }, 2000); // Increased debounce to 2000ms to prevent rapid API quota drain during typing
+    }, 1000); // 1000ms is the sweet spot for snappiness + quota safety
   }, [hasActiveProject, onIntentDetected, aiPayload]);
 
   const handleSubmit = (e: React.FormEvent) => {
