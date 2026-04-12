@@ -57,18 +57,13 @@ export interface BuiltPrompt {
  * Injected into tiny/small model prompts to prevent import hallucination.
  * These are the only imports the model is allowed to use.
  */
-const LOCKED_IMPORTS = `import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Button, Card, Input, Modal } from '@ui/core';
-import { Grid, Stack, Container } from '@ui/layout';
-import { Icon } from '@ui/icons';
-import { Motion } from '@ui/motion'; // NEVER use <Motion.div>
-import { cn } from '@ui/utils/cn';
+const LOCKED_IMPORTS = `import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { BarChart, LineChart, PieChart, Bar, Line, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Plus, Edit, Trash2, Eye, Filter, TrendingUp, TrendingDown, Activity, BarChart2, Target, Award, MessageSquare, AlertCircle, Info, CheckCircle, XCircle, Clock, Calendar, Mail, Phone, Globe, Lock, Shield, Zap } from 'lucide-react';
 
-// TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*
-// ALLOWED PACKAGES: @ui/core, @ui/layout, @ui/icons, @ui/motion, @ui/theming, @ui/typography,
-//   @ui/charts, @ui/forms, @ui/a11y, @ui/dragdrop, @ui/editor, @ui/command-palette
-//   lucide-react, framer-motion, recharts, react-router-dom
-// DO NOT import packages not in the list above. They do not exist in the sandbox.`.trim();
+// TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*, hover:*, focus:*
+// DO NOT import ANY other packages — they do not exist in the sandbox.`.trim();
 
 // ─── Fill-in-Blank Template (tiny models) ────────────────────────────────────
 
