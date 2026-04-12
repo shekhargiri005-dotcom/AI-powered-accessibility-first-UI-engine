@@ -178,16 +178,27 @@ async function fetchMistralModels(apiKey: string): Promise<ModelInfo[]> {
 }
 
 async function fetchOllamaModels(baseUrl = 'http://localhost:11434'): Promise<ModelInfo[]> {
-  const res = await fetch(`${baseUrl}/api/tags`, {
-    signal: AbortSignal.timeout(4000),
-  });
-  if (!res.ok) throw new Error(`Ollama /api/tags → HTTP ${res.status}`);
-  const data = await res.json();
-  const models: { name: string; details?: { parameter_size?: string } }[] = data.models ?? [];
-  return models.map((m) => ({
-    id: m.name,
-    name: `${m.name}${m.details?.parameter_size ? ` (${m.details.parameter_size})` : ''}`,
-  }));
+  try {
+    const res = await fetch(`${baseUrl}/api/tags`, {
+      signal: AbortSignal.timeout(4000),
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const models: { name: string; details?: { parameter_size?: string } }[] = data.models ?? [];
+    return models.map((m) => ({
+      id: m.name,
+      name: `${m.name}${m.details?.parameter_size ? ` (${m.details.parameter_size})` : ''}`,
+    }));
+  } catch {
+    // Fallback if Vercel can't reach localhost or Ollama is offline
+    return [
+      { id: 'llama3.3:latest', name: 'llama3.3:latest', isFeatured: true },
+      { id: 'qwen2.5-coder:14b', name: 'qwen2.5-coder:14b', isFeatured: true },
+      { id: 'llama3:latest', name: 'llama3:latest' },
+      { id: 'mistral:latest', name: 'mistral:latest' },
+      { id: 'phi3:mini', name: 'phi3:mini' },
+    ];
+  }
 }
 
 // ─── Route handler ────────────────────────────────────────────────────────────
