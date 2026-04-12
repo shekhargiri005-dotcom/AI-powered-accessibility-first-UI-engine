@@ -54,7 +54,10 @@ export async function runVisionRuntimeReview(sourceCode: string): Promise<Vision
       playwright = await import('playwright');
       browser = await playwright.chromium.launch({ headless: true });
     }
+    // At this point both branches above must have assigned browser — guard for TS
+    if (!browser) throw new Error('Browser failed to initialise');
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
+
 
     const runtimeErrors: string[] = [];
     page.on('pageerror', (err: Error) => runtimeErrors.push(err.message));
