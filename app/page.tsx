@@ -442,6 +442,7 @@ export default function HomePage() {
           onPromptSubmit={handlePromptSubmit}
           isLoading={isRunning}
           hasActiveProject={!!activeProjectId}
+          aiPayload={aiPayload()}
           onIntentDetected={setLiveClassification}
           stage={isDirectRefining ? 'complete' : stage}
           pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
@@ -465,7 +466,7 @@ export default function HomePage() {
               const res = await fetch('/api/think', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: pendingPrompt, intentType }),
+                body: JSON.stringify({ prompt: pendingPrompt, intentType, ...aiPayload() }),
               });
               const data = await res.json();
               if (data.success) setThinkingPlan(data.plan);

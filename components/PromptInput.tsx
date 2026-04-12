@@ -36,9 +36,10 @@ interface PromptInputProps {
   isLoading: boolean;
   onIntentDetected?: (classification: IntentClassification) => void;
   hasActiveProject?: boolean;
+  aiPayload?: Record<string, any>;
 }
 
-export default function PromptInput({ onSubmit, isLoading, onIntentDetected, hasActiveProject }: PromptInputProps) {
+export default function PromptInput({ onSubmit, isLoading, onIntentDetected, hasActiveProject, aiPayload }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   const [scopeMode, setScopeMode] = useState<'component' | 'app'>('component');
   const [depthUi, setDepthUi] = useState(false);
@@ -195,7 +196,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         const res = await fetch('/api/classify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt: text, hasActiveProject: hasActiveProject ?? false }),
+          body: JSON.stringify({ prompt: text, hasActiveProject: hasActiveProject ?? false, ...(aiPayload || {}) }),
         });
         const data = await res.json();
         if (data.success && data.classification) {
@@ -209,7 +210,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
         setIsClassifying(false);
       }
     }, 600);
-  }, [hasActiveProject, onIntentDetected]);
+  }, [hasActiveProject, onIntentDetected, aiPayload]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

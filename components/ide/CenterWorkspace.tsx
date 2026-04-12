@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useRef, useEffect } from 'react';
 import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw } from 'lucide-react';
@@ -15,6 +15,7 @@ interface CenterWorkspaceProps {
   onPromptSubmit: (prompt: string, mode: GenerationMode, options?: SubmitOptions) => void;
   isLoading: boolean;
   hasActiveProject: boolean;
+  aiPayload?: Record<string, any>;
   onIntentDetected: (classification: IntentClassification | null) => void;
   stage: string;
   pipelineStep: PipelineStep;
@@ -34,6 +35,7 @@ export default function CenterWorkspace({
   onPromptSubmit,
   isLoading,
   hasActiveProject,
+  aiPayload,
   onIntentDetected,
   stage,
   pipelineStep,
@@ -67,6 +69,7 @@ export default function CenterWorkspace({
       <PromptInput
         onSubmit={onPromptSubmit}
         isLoading={isLoading}
+        aiPayload={aiPayload}
         onIntentDetected={onIntentDetected}
         hasActiveProject={hasActiveProject}
       />
