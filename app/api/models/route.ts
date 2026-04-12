@@ -85,6 +85,7 @@ async function fetchGroqModels(apiKey: string): Promise<ModelInfo[]> {
     headers: { Authorization: `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(8000),
   });
+  if (res.status === 401) throw new Error('AUTH_INVALID:Groq API key is invalid or expired. Add a valid GROQ_API_KEY in Vercel → Settings → Environment Variables.');
   if (!res.ok) throw new Error(`Groq /v1/models → HTTP ${res.status}`);
   const data = await res.json();
   const models: { id: string; context_window?: number }[] = data.data ?? [];
@@ -321,9 +322,12 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Unknown error';
     console.error(`[/api/models] provider=${provider} error:`, msg);
+    // Surface auth failures with a distinct 401 so the client can show the right error state
+    const isAuthError = msg.startsWith('AUTH_INVALID:');
+    const cleanMsg = isAuthError ? msg.replace('AUTH_INVALID:', '') : `Failed to fetch models: ${msg}`;
     return NextResponse.json(
-      { success: false, error: `Failed to fetch models: ${msg}` },
-      { status: 400 },
+      { success: false, error: cleanMsg, authError: isAuthError },
+      { status: isAuthError ? 401 : 400 },
     );
   }
 }
