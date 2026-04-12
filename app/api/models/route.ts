@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
    * Returns null if none found.
    */
   async function resolveKey(clientKey: string, providerEnvKeys: (string | undefined)[]): Promise<string | null> {
-    const clean = clientKey && clientKey !== '••••' ? clientKey.trim() : '';
+    const clean = clientKey && clientKey !== '••••' && clientKey !== 'ENV_FALLBACK' ? clientKey.trim() : '';
     if (clean) return clean;
     // DB lookup (reads encrypted key saved via /api/engine-config)
     const dbKey = await getWorkspaceApiKey(provider).catch(() => null);
@@ -228,84 +228,192 @@ export async function GET(request: NextRequest) {
     return null;
   }
 
+  const STATIC_FALLBACKS: Record<string, ModelInfo[]> = {
+    openai: [
+      { id: 'gpt-4o', name: 'gpt-4o (Cloud Optimized)', isFeatured: true },
+      { id: 'gpt-4o-mini', name: 'gpt-4o-mini (Faster)', isFeatured: true },
+      { id: 'o3-mini', name: 'o3-mini (Advanced Reasoning)', isFeatured: true },
+      { id: 'o1', name: 'o1 (Complex Problem Solving)', isFeatured: true },
+      { id: 'gpt-4-turbo', name: 'gpt-4-turbo' },
+    ],
+    anthropic: [
+      { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', isFeatured: true },
+      { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', isFeatured: true },
+      { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus' },
+    ],
+    google: [
+      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', isFeatured: true },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', isFeatured: true },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+    ],
+    groq: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B (Groq)', isFeatured: true },
+      { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
+      { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
+    ],
+    deepseek: [
+      { id: 'deepseek-chat', name: 'DeepSeek V3 (Chat)', isFeatured: true },
+      { id: 'deepseek-reasoner', name: 'DeepSeek R1 (Reasoner)', isFeatured: true },
+      { id: 'deepseek-coder', name: 'DeepSeek Coder' },
+    ],
+    mistral: [
+      { id: 'mistral-large-latest', name: 'Mistral Large', isFeatured: true },
+      { id: 'codestral-latest', name: 'Codestral' },
+    ],
+  };
+
   try {
     let models: ModelInfo[] = [];
 
     switch (provider) {
       case 'openai': {
         const finalKey = await resolveKey(apiKey, [process.env.OPENAI_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No OpenAI key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchOpenAIModels(finalKey, baseUrl || undefined);
+        if (!finalKey) {
+           return NextResponse.json({ success: true, models: STATIC_FALLBACKS.openai });
+        }
+        try {
+          models = await fetchOpenAIModels(finalKey, baseUrl || undefined);
+        } catch {
+          models = STATIC_FALLBACKS.openai;
+        }
         break;
       }
 
       case 'anthropic': {
         const finalKey = await resolveKey(apiKey, [process.env.ANTHROPIC_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Anthropic key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchAnthropicModels(finalKey);
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.anthropic });
+        }
+        try {
+          models = await fetchAnthropicModels(finalKey);
+        } catch {
+          models = STATIC_FALLBACKS.anthropic;
+        }
         break;
       }
 
       case 'google': {
         const finalKey = await resolveKey(apiKey, [process.env.GOOGLE_API_KEY, process.env.GEMINI_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Google key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchGoogleModels(finalKey);
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.google });
+        }
+        try {
+          models = await fetchGoogleModels(finalKey);
+        } catch {
+          models = STATIC_FALLBACKS.google;
+        }
         break;
       }
 
       case 'groq': {
         const finalKey = await resolveKey(apiKey, [process.env.GROQ_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Groq key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchGroqModels(finalKey);
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.groq });
+        }
+        try {
+          models = await fetchGroqModels(finalKey);
+        } catch {
+          models = STATIC_FALLBACKS.groq;
+        }
         break;
       }
 
       case 'openrouter': {
         const finalKey = await resolveKey(apiKey, [process.env.OPENROUTER_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No OpenRouter key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchOpenRouterModels(finalKey);
+        if (!finalKey) {
+          // OpenRouter is too diverse for a small static list, but we give common ones
+          return NextResponse.json({ success: true, models: [
+            { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)', isFeatured: true },
+            { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', isFeatured: true },
+            { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash' },
+          ]});
+        }
+        try {
+          models = await fetchOpenRouterModels(finalKey);
+        } catch {
+          models = [ { id: 'openai/gpt-4o', name: 'GPT-4o (Fallback)', isFeatured: true } ];
+        }
         break;
       }
 
       case 'together': {
         const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Together AI key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchTogetherModels(finalKey);
+        if (!finalKey) {
+           return NextResponse.json({ success: true, models: [
+             { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B', isFeatured: true },
+             { id: 'mistralai/Mixtral-8x22B-Instruct-v0.1', name: 'Mixtral 8x22B' },
+           ]});
+        }
+        try {
+          models = await fetchTogetherModels(finalKey);
+        } catch {
+          models = [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B (Fallback)', isFeatured: true } ];
+        }
         break;
       }
 
       case 'deepseek': {
         const finalKey = await resolveKey(apiKey, [process.env.DEEPSEEK_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No DeepSeek key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchDeepSeekModels(finalKey);
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.deepseek });
+        }
+        try {
+          models = await fetchDeepSeekModels(finalKey);
+        } catch {
+          models = STATIC_FALLBACKS.deepseek;
+        }
         break;
       }
 
       case 'mistral': {
         const finalKey = await resolveKey(apiKey, [process.env.MISTRAL_API_KEY, process.env.TOGETHER_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Mistral key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchMistralModels(finalKey);
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.mistral });
+        }
+        try {
+          models = await fetchMistralModels(finalKey);
+        } catch {
+          models = STATIC_FALLBACKS.mistral;
+        }
         break;
       }
 
       case 'meta': {
         const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Meta/Llama key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B', isFeatured: true } ] });
+        }
+        try {
+          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        } catch {
+          models = [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B (Fallback)', isFeatured: true } ];
+        }
         break;
       }
 
       case 'qwen': {
         const finalKey = await resolveKey(apiKey, [process.env.DASHSCOPE_API_KEY, process.env.TOGETHER_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Qwen key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+        if (!finalKey) {
+           return NextResponse.json({ success: true, models: [ { id: 'qwen-max', name: 'Qwen Max', isFeatured: true } ] });
+        }
+        try {
+          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
+        } catch {
+          models = [ { id: 'qwen-max', name: 'Qwen Max (Fallback)', isFeatured: true } ];
+        }
         break;
       }
 
       case 'gemma': {
         const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
-        if (!finalKey) return NextResponse.json({ success: false, error: 'No Gemma key found. Save one via the AI Engine Config panel.' }, { status: 400 });
-        models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        if (!finalKey) {
+          return NextResponse.json({ success: true, models: [ { id: 'gemma-2-27b-it', name: 'Gemma 2 27B', isFeatured: true } ] });
+        }
+        try {
+          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
+        } catch {
+          models = [ { id: 'gemma-2-27b-it', name: 'Gemma 2 27B (Fallback)', isFeatured: true } ];
+        }
         break;
       }
 

@@ -364,11 +364,10 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
       setCloudStep(1);
       return;
     }
-    if (!apiKey.trim() && !provider.noKey && provider.id !== 'custom') {
-      setError('Enter API credentials before choosing a model.');
-      setCloudStep(2);
-      return;
-    }
+    // If the user leaves the API key empty, we bypass strict validation to allow
+    // the backend to seamlessly fall back to protected environment variables (e.g. process.env.OPENAI_API_KEY)
+    const effectiveKey = apiKey.trim() ? apiKey.trim() : (provider.noKey ? 'local' : 'ENV_FALLBACK');
+
     if (!effectiveModel) {
       setError('Choose a generation model or enter a custom one.');
       setCloudStep(3);
@@ -384,7 +383,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
         body: JSON.stringify({
           provider: provider.id,
           model: effectiveModel,
-          apiKey: apiKey.trim() || undefined,
+          apiKey: effectiveKey,
           temperature,
           fullAppMode,
           multiSlideMode,

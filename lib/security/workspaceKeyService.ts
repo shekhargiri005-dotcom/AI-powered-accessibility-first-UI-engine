@@ -58,9 +58,13 @@ export async function getWorkspaceApiKey(
       },
     });
 
-    const decrypted = settings?.encryptedApiKey
+    let decrypted = settings?.encryptedApiKey
       ? encryptionService.decrypt(settings.encryptedApiKey)
       : null;
+
+    if (decrypted === 'ENV_FALLBACK') {
+      decrypted = null;
+    }
 
     keyCache.set(cKey, { value: decrypted, expiresAt: Date.now() + CACHE_TTL_MS });
     return decrypted;
