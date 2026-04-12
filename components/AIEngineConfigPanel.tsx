@@ -60,13 +60,13 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     docsUrl: 'https://console.groq.com/keys',
   },
   ollama: {
-    id: 'ollama', name: 'Local / Custom Server',
-    color: 'from-gray-500 to-gray-400', accent: 'text-gray-200', icon: '💻',
+    id: 'ollama', name: 'Ollama',
+    color: 'from-gray-500 to-gray-400', accent: 'text-gray-200', icon: '🦙',
     baseUrl: 'http://127.0.0.1:11434/v1',
     modelHint: 'llama3, mistral, custom-model…',
-    keyLabel: 'No target API Key required',
-    keyHint: 'Connects to your local adapter or custom endpoint.',
-    docsUrl: '#',
+    keyLabel: 'No Target API Key Required',
+    keyHint: 'Connects to your background Ollama app process on localhost.',
+    docsUrl: 'https://ollama.com',
     noKey: true,
   },
 };
