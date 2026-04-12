@@ -190,13 +190,18 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     case 'ollama':
     case 'lmstudio':
     default: {
-      // Only allow Ollama/local adapters when the user explicitly chose ollama/lmstudio.
-      // Any other provider reaching this branch means a key is missing — surface it clearly
-      // instead of silently trying localhost:11434 which always fails on Vercel.
+      // Any unknown provider reaching this branch means a key is missing — surface it.
       if (provId !== 'ollama' && provId !== 'lmstudio' && provId !== 'unconfigured') {
         throw new Error(
           `API key required for provider "${provId}". Add it in the AI Engine Config panel or set the ${provId.toUpperCase()}_API_KEY environment variable in Vercel.`
         );
+      }
+      // On Vercel, local daemons (Ollama / LM Studio) are physically unreachable.
+      // Return UnconfiguredAdapter so the caller gets a graceful "configure me" response
+      // instead of a raw ECONNREFUSED / "Connection error."
+      if (process.env.VERCEL) {
+        adapter = new UnconfiguredAdapter();
+        break;
       }
       const url = baseUrl ?? (provId === 'lmstudio' ? OPENAI_COMPAT_BASE_URLS.lmstudio : undefined);
       adapter = new OllamaAdapter(url);
@@ -230,29 +235,6 @@ export async function getWorkspaceAdapter(
   let provId = typeof modelOrConfig !== 'string'
     ? (modelOrConfig.provider ?? detectProvider(model))
     : detectProvider(model);
-
-  // Vercel Fallback: If the user's browser sends a payload for a local daemon
-  // (because they configured it locally) but they are talking to the Vercel cloud deployment,
-  // we physically cannot reach localhost. Transparently rewrite to the server's default adapter.
-  if (process.env.VERCEL) {
-    const isLocalUrl = typeof modelOrConfig !== 'string' && modelOrConfig.baseUrl && (modelOrConfig.baseUrl.includes('localhost') || modelOrConfig.baseUrl.includes('127.0.0.1'));
-    if (provId === 'ollama' || provId === 'lmstudio' || isLocalUrl) {
-      const { resolveDefaultAdapter } = require('../resolveDefaultAdapter');
-      const fallback = resolveDefaultAdapter('GENERATION');
-      if (fallback.provider && fallback.provider !== 'unconfigured') {
-         model = fallback.model;
-         provId = fallback.provider as ProviderName;
-         if (typeof modelOrConfig !== 'string') {
-           modelOrConfig.model = fallback.model;
-           modelOrConfig.provider = fallback.provider;
-           modelOrConfig.apiKey = fallback.apiKey;
-           modelOrConfig.baseUrl = fallback.baseUrl;
-         } else {
-           modelOrConfig = fallback;
-         }
-      }
-    }
-  }
 
   try {
     const { getWorkspaceApiKey } = await import('../../security/workspaceKeyService');
