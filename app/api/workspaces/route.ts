@@ -115,6 +115,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
+  const userId = session.user.id as string;
   const { searchParams } = new URL(request.url);
   const workspaceId = searchParams.get('id');
 
@@ -124,7 +125,7 @@ export async function DELETE(request: NextRequest) {
 
   // Ensure user is an OWNER before deleting
   const membership = await withReconnect(() => prisma.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId, userId: session.user.id } }
+    where: { workspaceId_userId: { workspaceId, userId } }
   }));
 
   if (!membership || membership.role !== 'OWNER') {
