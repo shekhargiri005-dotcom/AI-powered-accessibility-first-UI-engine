@@ -30,16 +30,16 @@ If visual quality/layout is poor, set passed=false and provide repaired TSX in s
 export async function runVisionRuntimeReview(sourceCode: string): Promise<VisionRuntimeReviewResult> {
   let browser: Browser | null = null;
   try {
+    if (!process.env.BROWSERLESS_API_KEY && (process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV)) {
+      throw new Error("Executable doesn't exist. Playwright cannot run locally on Vercel serverless without BROWSERLESS_API_KEY");
+    }
+
     const playwright = await import('playwright');
     
     if (process.env.BROWSERLESS_API_KEY) {
       const wsEndpoint = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`;
       browser = await playwright.chromium.connect({ wsEndpoint });
     } else {
-      // Attempting to launch local Chromium on Vercel Serverless will crash or hang the pipeline.
-      if (process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV) {
-        throw new Error("Executable doesn't exist. Playwright cannot run locally on Vercel serverless without BROWSERLESS_API_KEY");
-      }
       browser = await playwright.chromium.launch({ headless: true });
     }
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });
