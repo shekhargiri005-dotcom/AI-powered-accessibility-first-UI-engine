@@ -1099,3 +1099,35 @@ export function getModelsByTier(tier: ModelTier): ModelCapabilityProfile[] {
 export function getCloudFallbackProfile(): ModelCapabilityProfile {
   return MODEL_REGISTRY['gpt-4o-mini'];
 }
+
+/**
+ * Dynamically resolves the fastest/cheapest model available for a given provider.
+ * This saves CPU and tokens for background tasks without hardcoding model names in route handlers.
+ */
+export function getFastModelForProvider(provider: string | undefined): string | undefined {
+  if (!provider) return undefined;
+
+  const models = Object.values(MODEL_REGISTRY).filter(m => m.provider === provider);
+  if (models.length === 0) return undefined;
+
+  // 1. Try to find a local 'tiny' model
+  const tiny = models.find(m => m.tier === 'tiny');
+  if (tiny) return tiny.id;
+
+  // 2. Try to find a local 'small' model
+  const smallModels = models.filter(m => m.tier === 'small');
+  if (smallModels.length > 0) {
+    const preferred = smallModels.find(m => m.id.includes('8b') || m.id.includes('mini') || m.id.includes('mistral'));
+    return preferred ? preferred.id : smallModels[0].id;
+  }
+
+  // 3. For cloud providers, look for explicitly cheap keywords
+  const fastCloud = models.find(m => 
+    m.tier === 'cloud' && 
+    (m.id.includes('mini') || m.id.includes('haiku') || m.id.includes('flash') || m.id.includes('instant') || m.id.includes('8b'))
+  );
+  if (fastCloud) return fastCloud.id;
+
+  // Fallback to whatever we have for the provider
+  return models[0].id;
+}

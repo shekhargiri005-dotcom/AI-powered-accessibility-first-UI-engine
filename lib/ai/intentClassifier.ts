@@ -118,7 +118,7 @@ export async function classifyIntent(
           ],
           responseFormat: 'json_object',
           temperature: 0.1,
-          maxTokens: 600,
+          maxTokens: 150,
         });
         break; // Success
       } catch (error) {

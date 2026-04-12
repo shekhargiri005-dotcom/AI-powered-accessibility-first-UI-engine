@@ -239,7 +239,7 @@ export async function POST(request: NextRequest) {
     // adapterOverride ensures the engine uses the SAME provider the user selected in the UI
     // instead of re-resolving independently from env vars (which may point to an over-quota key).
     const adapterOverride: ReviewerAdapterOverride | undefined = provider
-      ? { provider, apiKey: effectiveApiKey, baseUrl }
+      ? { provider, apiKey: effectiveApiKey, baseUrl, model }
       : undefined;
 
     let critiqueData: unknown;

@@ -15,6 +15,8 @@ export interface ReviewerAdapterOverride {
   apiKey?: string;
   /** Custom base URL (OpenAI-compat providers) */
   baseUrl?: string;
+  /** The explicit model ID supplied by the user */
+  model?: string;
 }
 
 const ReviewSchema = z.object({
@@ -63,16 +65,9 @@ export async function reviewGeneratedCode(
       // Explicit purpose-specific env override always wins
       cfg = { model: purposeModel };
     } else if (adapterOverride?.provider) {
-      // Use the provider the user selected in the Generation Engine Setup UI
-      const defaults = {
-        groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-haiku-20240307',
-        google: 'gemini-2.0-flash', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
-        together: 'meta-llama/Llama-3-8b-chat-hf', openrouter: 'openai/gpt-4o-mini',
-        mistral: 'mistral-small-latest', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct',
-        qwen: 'qwen-turbo',
-      } as Record<string, string>;
+      // Use the provider and model the user selected in the Generation Engine Setup UI
       cfg = {
-        model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
+        model:    adapterOverride.model || 'gpt-4o', // fallback if perfectly unconfigured
         provider: adapterOverride.provider,
         apiKey:   adapterOverride.apiKey,
         baseUrl:  adapterOverride.baseUrl,
@@ -93,7 +88,7 @@ export async function reviewGeneratedCode(
       ],
       responseFormat: 'json_object',
       temperature: 0.1,
-      maxTokens: 500,
+      maxTokens: 200,
     });
 
     const raw = adapterResult.content;
@@ -142,15 +137,8 @@ export async function repairGeneratedCode(
     if (purposeModel) {
       cfg = { model: purposeModel };
     } else if (adapterOverride?.provider) {
-      const defaults = {
-        groq: 'llama-3.3-70b-versatile', anthropic: 'claude-3-5-sonnet-20241022',
-        google: 'gemini-1.5-pro', openai: 'gpt-4o-mini', deepseek: 'deepseek-chat',
-        together: 'meta-llama/Llama-3-70b-chat-hf', openrouter: 'openai/gpt-4o',
-        mistral: 'mistral-large-latest', huggingface: 'meta-llama/Meta-Llama-3-70B-Instruct',
-        qwen: 'qwen-plus',
-      } as Record<string, string>;
       cfg = {
-        model:    defaults[adapterOverride.provider] ?? 'llama-3.3-70b-versatile',
+        model:    adapterOverride.model || 'gpt-4o',
         provider: adapterOverride.provider,
         apiKey:   adapterOverride.apiKey,
         baseUrl:  adapterOverride.baseUrl,

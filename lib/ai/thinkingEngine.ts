@@ -222,7 +222,7 @@ export async function generateThinkingPlan(
       ],
       ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
       temperature: 0.3,
-      maxTokens: 1200,
+      maxTokens: 800,
     });
 
     const raw = result2.content;
