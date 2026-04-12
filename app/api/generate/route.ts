@@ -253,7 +253,8 @@ export async function POST(request: NextRequest) {
     if (!isLocalModel) {
       try {
         // BUG-02 FIX: Hard 10s escape hatch so Browserless cold-starts never block the pipeline.
-        const visionTimeout = new Promise<{ runtimeOk: true }>((resolve) =>
+        // Cast the timeout branch to VisionRuntimeReviewResult to avoid a union type mismatch.
+        const visionTimeout = new Promise<import('@/lib/ai/visionReviewer').VisionRuntimeReviewResult>((resolve) =>
           setTimeout(() => resolve({ runtimeOk: true }), 10_000)
         );
         const visionResult = await Promise.race([runVisionRuntimeReview(finalSourceCode), visionTimeout]);
