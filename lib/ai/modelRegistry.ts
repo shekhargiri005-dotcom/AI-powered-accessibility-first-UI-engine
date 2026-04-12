@@ -1107,6 +1107,10 @@ export function getCloudFallbackProfile(): ModelCapabilityProfile {
 export function getFastModelForProvider(provider: string | undefined): string | undefined {
   if (!provider) return undefined;
 
+  // BUG-07 FIX: Local providers have no registry entries — callers must use
+  // whatever model the user explicitly configured, so return undefined here.
+  if (provider === 'ollama' || provider === 'lmstudio') return undefined;
+
   const models = Object.values(MODEL_REGISTRY).filter(m => m.provider === provider);
   if (models.length === 0) return undefined;
 

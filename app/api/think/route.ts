@@ -40,11 +40,12 @@ export async function POST(request: NextRequest) {
     const result = await generateThinkingPlan(prompt, intentType, projectContext, modelConfig);
 
     if (!result.success) {
-      reqLogger.warn('Thinking plan generation failed', { error: result.error });
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 },
-      );
+      reqLogger.warn('Thinking plan generation failed — returning deterministic fallback plan', { error: result.error });
+      // BUG-08 FIX: Never return a 400 — the UI can always show a fallback plan
+      // and the user can still proceed to code generation.
+      const fallback = buildFallbackPlan(prompt, intentType);
+      reqLogger.end('Request completed with fallback plan');
+      return NextResponse.json({ success: true, plan: fallback, _fallback: true });
     }
 
     reqLogger.info('Thinking plan generated successfully');

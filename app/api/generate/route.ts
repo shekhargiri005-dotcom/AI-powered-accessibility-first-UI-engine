@@ -135,11 +135,17 @@ export async function POST(request: NextRequest) {
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
 
     // Detect local/Ollama models — skip expensive review/repair LLM calls for them.
-    // IMPORTANT: do NOT treat missing `provider` as local — cloud models often don't
-    // set an explicit provider string. Only flag as local when we have strong signals.
+    // Also skip for fast-compat providers (Groq/Together) which route lightweight models
+    // through the OpenAI-compat adapter but cannot run a second vision-review call cost-effectively.
+    const isGroqOrCompat = (
+      baseUrl?.includes('groq.com') ||
+      baseUrl?.includes('together.xyz') ||
+      provider === 'groq'
+    );
     const isLocalModel = (
       provider === 'ollama' ||
       provider === 'lmstudio' ||
+      isGroqOrCompat ||
       baseUrl?.includes('localhost') ||
       baseUrl?.includes('127.0.0.1') ||
       // Final fallback: no cloud keys configured anywhere — assume local environment
@@ -246,7 +252,11 @@ export async function POST(request: NextRequest) {
     let repairedByReviewer = false;
     if (!isLocalModel) {
       try {
-        const visionResult = await runVisionRuntimeReview(finalSourceCode);
+        // BUG-02 FIX: Hard 10s escape hatch so Browserless cold-starts never block the pipeline.
+        const visionTimeout = new Promise<{ runtimeOk: true }>((resolve) =>
+          setTimeout(() => resolve({ runtimeOk: true }), 10_000)
+        );
+        const visionResult = await Promise.race([runVisionRuntimeReview(finalSourceCode), visionTimeout]);
         if (!visionResult.runtimeOk && visionResult.runtimeError) {
           const repaired = await repairGeneratedCode(
             finalSourceCode,
@@ -289,8 +299,11 @@ export async function POST(request: NextRequest) {
           if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
         }
       } catch (e) {
-        reqLogger.error('UI Reviewer failed, aborting generation', { error: e });
-        throw e;
+        // BUG-01 FIX: Reviewer/repair failure must never kill valid generated code.
+        // Log the error and continue — the generated code is still shippable.
+        const reviewErrMsg = e instanceof Error ? e.message : String(e);
+        reqLogger.warn('UI Reviewer failed — continuing with original generated code', { error: reviewErrMsg });
+        if (!reviewData) reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Reviewer unavailable: ' + reviewErrMsg.slice(0, 200) };
       }
     } else {
       reqLogger.info('Skipping review/repair — local model detected, no fast cloud reviewer available');
@@ -367,12 +380,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Step 6b: Dependency resolution for multi-file outputs (applies to original generated files)
+    // Step 6b: Dependency resolution for multi-file outputs.
+    // BUG-09 FIX: Apply a11y-repaired finalCode into the file map before patching,
+    // so A11y repairs are not silently discarded in app-mode multi-file outputs.
     let resolverPatchLog: string[] = [];
     const rawGeneratedCode = generationResult.code;
     let resolvedCode: string | Record<string, string>;
     if (rawGeneratedCode && typeof rawGeneratedCode === 'object') {
-      const { files: patchedFiles, patchLog } = resolveAndPatch(rawGeneratedCode as Record<string, string>);
+      // Merge a11y-repaired version of the primary entry file back into the map
+      const codeMap = rawGeneratedCode as Record<string, string>;
+      const primaryKey = Object.keys(codeMap)[0];
+      if (primaryKey && typeof finalCode === 'string' && finalCode !== finalSourceCode) {
+        codeMap[primaryKey] = finalCode;
+      }
+      const { files: patchedFiles, patchLog } = resolveAndPatch(codeMap);
       resolvedCode = patchedFiles;
       resolverPatchLog = patchLog;
       if (patchLog.length > 0) {

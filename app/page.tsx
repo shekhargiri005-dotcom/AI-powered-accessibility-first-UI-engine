@@ -255,7 +255,8 @@ export default function HomePage() {
       const generateRes = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ intent, mode, depthUi: !!depthUi, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode }),
+        // BUG-05 FIX: Include thinkingPlan so generate route can use it for memory/metadata
+        body: JSON.stringify({ intent, mode, depthUi: !!depthUi, ...aiFields, maxTokens, isMultiSlide: isMultiSlideMode, thinkingPlan }),
       });
       const latencyMs   = Date.now() - t0;
       const generateData = await generateRes.json();
@@ -331,7 +332,10 @@ export default function HomePage() {
           setLiveClassification(data.classification);
           setLastIntentConfidence(typeof data.classification?.confidence === 'number' ? data.classification.confidence : 0.8);
         } else {
+          // BUG-04 FIX: Expose the classification error as a visible pipeline warning
+          // rather than silently swallowing it. The pipeline still continues with defaults.
           console.warn('[classify] API error:', data.error);
+          setPipelineError(`Intent classification failed (${data.error ?? 'unknown'}) — continuing with default settings.`);
           classification = null;
           setLastIntentConfidence(0.8);
         }

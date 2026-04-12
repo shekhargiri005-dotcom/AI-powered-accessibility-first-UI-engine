@@ -30,16 +30,28 @@ If visual quality/layout is poor, set passed=false and provide repaired TSX in s
 export async function runVisionRuntimeReview(sourceCode: string): Promise<VisionRuntimeReviewResult> {
   let browser: Browser | null = null;
   try {
-    if (!process.env.BROWSERLESS_API_KEY && (process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV)) {
+    const isVercel = process.env.VERCEL === '1' || process.env.NEXT_PUBLIC_VERCEL_ENV;
+    
+    if (!process.env.BROWSERLESS_API_KEY && isVercel) {
       throw new Error("Executable doesn't exist. Playwright cannot run locally on Vercel serverless without BROWSERLESS_API_KEY");
     }
 
-    const playwright = await import('playwright');
-    
+    let playwright: any;
     if (process.env.BROWSERLESS_API_KEY) {
+      try {
+        // Obfuscate import to prevent Next.js from bundling the massive Chromium binaries into the Edge Serverless chunk
+        const pkgName = isVercel ? 'playwright-core' : 'playwright';
+        playwright = await import(pkgName);
+      } catch (e) {
+        if (isVercel) throw new Error("playwright-core missing. Run 'npm install playwright-core' to use Browserless on Vercel.");
+        playwright = await import('playwright');
+      }
+      
       const wsEndpoint = `wss://chrome.browserless.io?token=${process.env.BROWSERLESS_API_KEY}`;
-      browser = await playwright.chromium.connect({ wsEndpoint });
+      // Give browserless connections an explicit timeout to prevent endless Serverless hanging
+      browser = await playwright.chromium.connect({ wsEndpoint, timeout: 15000 });
     } else {
+      playwright = await import('playwright');
       browser = await playwright.chromium.launch({ headless: true });
     }
     const page = await browser.newPage({ viewport: { width: 1366, height: 900 } });

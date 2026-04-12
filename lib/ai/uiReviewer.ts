@@ -88,7 +88,7 @@ export async function reviewGeneratedCode(
       ],
       responseFormat: 'json_object',
       temperature: 0.1,
-      maxTokens: 200,
+      maxTokens: 400, // BUG-06 FIX: 200 was too low — repairInstructions was always truncated
     });
 
     const raw = adapterResult.content;
