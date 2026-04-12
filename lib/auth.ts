@@ -24,18 +24,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const password = (credentials?.password as string | undefined)?.trim();
+        
+        // Clean up hash in case user accidentally pasted it with quotes in Vercel
+        let cleanHash = ACCESS_HASH.replace(/^["']|["']$/g, '').trim();
 
-        // Guard: need a password and a valid bcrypt hash in env
-        if (!password || !ACCESS_HASH.startsWith('$2')) return null;
+        console.log('[Auth] Attempting login...');
+        console.log(`[Auth] Provided PW length: ${password?.length || 0}`);
+        console.log(`[Auth] Env Hash preview: ${cleanHash.substring(0, 10)}... (Length: ${cleanHash.length})`);
+
+        if (!password) {
+          console.log('[Auth] Failed: No password provided');
+          return null;
+        }
+        
+        if (!cleanHash.startsWith('$2')) {
+          console.log('[Auth] Failed: OWNER_PASSWORD_HASH is missing or malformed in Vercel');
+          return null;
+        }
 
         try {
-          const valid = await bcrypt.compare(password, ACCESS_HASH);
-          if (!valid) return null;
+          const valid = await bcrypt.compare(password, cleanHash);
+          if (!valid) {
+            console.log('[Auth] Failed: Password does not match the stored hash');
+            return null;
+          }
 
-          // Any email + correct password = access granted
+          console.log('[Auth] Success: Password matches!');
           const email = ((credentials?.email as string | undefined) ?? OWNER_EMAIL).toLowerCase().trim();
           return { id: 'owner', email, name: OWNER_NAME, image: null };
-        } catch {
+        } catch (err) {
+          console.log('[Auth] Exception during bcrypt.compare:', err);
           return null;
         }
       },
