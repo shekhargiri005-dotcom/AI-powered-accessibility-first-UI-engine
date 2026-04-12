@@ -55,11 +55,15 @@ async function fetchAnthropicModels(apiKey: string): Promise<ModelInfo[]> {
 }
 
 async function fetchGoogleModels(apiKey: string): Promise<ModelInfo[]> {
+  const cleanKey = apiKey?.trim() ?? '';
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(cleanKey)}`,
     { signal: AbortSignal.timeout(8000) },
   );
-  if (!res.ok) throw new Error(`Google /v1beta/models → HTTP ${res.status}`);
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error(`Google /v1beta/models → HTTP ${res.status} ${errText}`);
+  }
   const data = await res.json();
   const models: { name: string; displayName?: string; inputTokenLimit?: number }[] = data.models ?? [];
   const FEATURED = ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'];
