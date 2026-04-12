@@ -105,8 +105,8 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. Ollama local (last resort — no key needed) ─────────────────────────
-  return { model: 'llama3', provider: 'ollama' };
+  // ── 4. Fallback (last resort) ─────────────────────────
+  return { model: 'gpt-4o-mini', provider: 'openai' };
 }
 
 /**
