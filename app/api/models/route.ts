@@ -310,7 +310,7 @@ export async function GET(request: NextRequest) {
         if (!baseUrl) return NextResponse.json({ success: false, error: 'baseUrl required for custom providers' }, { status: 400 });
         const finalKey = await resolveKey(apiKey, [process.env.OPENAI_API_KEY, 'dummy']);
 
-        models = await fetchOpenAIModels(finalKey, baseUrl);
+        models = await fetchOpenAIModels(finalKey ?? 'dummy', baseUrl);
         break;
       }
     }
