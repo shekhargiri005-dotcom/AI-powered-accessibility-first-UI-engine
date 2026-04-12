@@ -74,7 +74,7 @@ export async function getWorkspaceApiKey(
     if (!decrypted && workspaceId === DEFAULT_WORKSPACE) {
       try {
         const anySettings = await prisma.workspaceSettings.findFirst({
-          where: { provider, encryptedApiKey: { not: null } },
+          where: { provider, NOT: { encryptedApiKey: null } },
           orderBy: { updatedAt: 'desc' },
         });
         if (anySettings?.encryptedApiKey) {
