@@ -289,21 +289,8 @@ export async function POST(request: NextRequest) {
           if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
         }
       } catch (e) {
-        reqLogger.warn('UI Reviewer failed, proceeding with original code', { error: e });
-        const msg = e instanceof Error ? e.message : String(e);
-        if (msg.includes('insufficient_quota') || msg.includes('429')) {
-          reviewData = {
-            source: 'text-review',
-            passed: false,
-            reason: 'Reviewer quota exceeded (429 insufficient_quota). Generation continued without reviewer pass.',
-          };
-          critiqueData = {
-            passed: true,
-            score: 0,
-            critiques: ['Reviewer skipped due to quota limits.'],
-            repairInstructions: undefined,
-          };
-        }
+        reqLogger.error('UI Reviewer failed, aborting generation', { error: e });
+        throw e;
       }
     } else {
       reqLogger.info('Skipping review/repair — local model detected, no fast cloud reviewer available');

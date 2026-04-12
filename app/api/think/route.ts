@@ -40,14 +40,10 @@ export async function POST(request: NextRequest) {
     const result = await generateThinkingPlan(prompt, intentType, projectContext, modelConfig);
 
     if (!result.success) {
-      // The thinking panel is non-blocking — a 422 was blocking the user's entire generation
-      // flow for 60 seconds then failing visibly. Instead, synthesise a deterministic fallback
-      // plan so the UI always proceeds. _fallback: true lets the client show a subtle notice.
-      reqLogger.warn('Thinking plan generation failed — synthesising fallback', { error: result.error });
-      const fallbackPlan: ThinkingPlan = buildFallbackPlan(prompt, intentType);
+      reqLogger.warn('Thinking plan generation failed', { error: result.error });
       return NextResponse.json(
-        { success: true, plan: fallbackPlan, _fallback: true, _fallbackReason: result.error },
-        { status: 200 },
+        { success: false, error: result.error },
+        { status: 400 },
       );
     }
 

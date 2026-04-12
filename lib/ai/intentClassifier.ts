@@ -166,28 +166,8 @@ export async function classifyIntent(
         return { success: true, classification: retried.data };
       }
 
-      // Still failing — extract whatever valid fields we can, fill the rest with safe defaults
-      const intentRaw = typeof p.intentType === 'string' && ['ui_generation','ui_refinement','product_requirement','ideation','debug_fix','context_clarification'].includes(p.intentType)
-        ? p.intentType as IntentClassification['intentType']
-        : 'ui_generation';
-
-      const recovered = IntentClassificationSchema.parse({
-        intentType:  intentRaw,
-        confidence:  typeof p.confidence === 'number' ? p.confidence : 0.7,
-        summary:     typeof p.summary === 'string' ? p.summary : '',
-        suggestedMode: typeof p.suggestedMode === 'string' ? p.suggestedMode : 'component',
-        needsClarification: false,
-        shouldGenerateCode: typeof p.shouldGenerateCode === 'boolean' ? p.shouldGenerateCode : true,
-        purpose:     typeof p.purpose === 'string' ? p.purpose : 'unknown',
-        visualType:  typeof p.visualType === 'string' ? p.visualType : 'unknown',
-        complexity:  typeof p.complexity === 'string' ? p.complexity : 'medium',
-        platform:    typeof p.platform === 'string' ? p.platform : 'responsive',
-        layout:      typeof p.layout === 'string' ? p.layout : 'single-page',
-        motionLevel: typeof p.motionLevel === 'string' ? p.motionLevel : 'subtle',
-        preferredStack: Array.isArray(p.preferredStack) ? p.preferredStack : ['react', 'tailwind'],
-      });
-
-      return { success: true, classification: recovered };
+      const issues = retried.error ? retried.error.issues.map(i => i.message).join(', ') : 'Validation failed';
+      return { success: false, error: `Classifier output failed schema validation: ${issues}` };
     }
 
     return { success: true, classification: result.data };

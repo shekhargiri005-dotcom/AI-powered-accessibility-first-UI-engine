@@ -288,24 +288,7 @@ export async function generateComponent(
           }),
         });
       } catch (genErr: unknown) {
-        const errMsg = genErr instanceof Error ? genErr.message : String(genErr);
-        // If tools were injected and caused a 400, retry once without tools
-        // then disable tools for all remaining rounds (self-healing fallback).
-        if (toolsEnabled && errMsg.includes('400')) {
-          console.warn(
-            `[componentGenerator] Tool-call 400 on ${effectiveModel} (round ${round}). ` +
-            'Retrying without tools and disabling for remaining rounds.'
-          );
-          toolsEnabled = false;
-          result = await adapter.generate({
-            model:       effectiveModel,
-            messages,
-            temperature: pipelineConfig.temperature,
-            maxTokens:   Math.min(maxTokens || 5000, pipelineConfig.maxOutputTokens),
-          });
-        } else {
-          throw genErr;
-        }
+        throw genErr;
       }
 
       if (toolsEnabled && result.toolCalls && result.toolCalls.length > 0 && round < maxToolRounds) {
