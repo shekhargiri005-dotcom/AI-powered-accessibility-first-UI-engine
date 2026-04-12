@@ -208,15 +208,17 @@ DESIGN GUIDELINES:
 - Accessibility: WCAG 2.1 AA — all interactive elements need aria-labels, semantic HTML
 - Tailwind spacing scale: use only standard values (p-4, m-2, gap-6 — NOT p-[13px])
 
-UI ECOSYSTEM IMPORTS (preferred):
-- \`import { Button, Card, Input, Modal } from '@ui/core';\`
-- \`import { Grid, Stack, Container } from '@ui/layout';\`
-- \`import { Icon } from '@ui/icons';\`
-- \`import { Motion } from '@ui/motion';\`
+AVAILABLE IMPORTS (sandbox only — no other packages exist):
+- \`import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';\`
+- \`import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';\`
+- \`import { BarChart, LineChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';\`
+- \`import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Plus, Edit, Trash2, Eye, Filter, TrendingUp, TrendingDown, Activity } from 'lucide-react';\`
+DO NOT use @ui/* imports — they do not exist in this sandbox.
 
 ${blueprintText}
 
 OUTPUT: Return ONLY raw TSX code. No markdown. No explanation. Export default the main component.`;
+
 
   const userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, false);
 

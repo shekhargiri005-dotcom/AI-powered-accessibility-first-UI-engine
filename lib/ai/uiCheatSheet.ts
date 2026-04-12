@@ -1,63 +1,53 @@
+/**
+ * @file lib/ai/uiCheatSheet.ts
+ *
+ * Injected into AI prompts as a quick-reference for packages that are actually
+ * available in the Sandpack sandbox. Previously referenced phantom @ui/* packages
+ * that do not exist — replaced with real package API docs.
+ */
+
 export const UI_ECOSYSTEM_API_CHEAT_SHEET = `
-=== @ui/* API CHEAT SHEET (CRITICAL) ===
-You must strictly adhere to these props when composing components from your \`@ui/*\` ecosystem. DO NOT invent props.
+=== SANDBOX PACKAGE API REFERENCE ===
+These are the ONLY packages available. Do not import anything else.
 
-[@ui/core]
-<Button>: children(node), variant?("primary"|"secondary"|"danger"|"ghost"), size?("sm"|"md"|"lg"), isLoading?(boolean), disabled?(boolean), className?(string), onClick?(fn)
-<Card>: children(node), variant?("default"|"outlined"|"elevated"), className?(string)
-<Input>: label?(string), type?("text"|"password"|"email"|"number"), error?(string), askAI?(boolean), voiceActivation?(boolean), className?(string), ...htmlInputProps
-<Modal>: isOpen(boolean), onClose(fn), title(string), children(node)
+[framer-motion]
+import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform, useSpring } from 'framer-motion';
+<motion.div animate={{ opacity: 1 }} initial={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+<AnimatePresence> wraps conditionally rendered elements for exit animations.
+useReducedMotion() → boolean — MUST check before animating (a11y).
+useScroll({ target: ref, offset: ['start end', 'end start'] }) → { scrollYProgress }
+useTransform(scrollYProgress, [0, 1], ['0px', '-90px']) → MotionValue
 
-[@ui/layout]
-<Grid>: children(node), cols?(1|2|3|4|6|12), gap?(string, default:"4"), className?(string)
-<Stack>: children(node), direction?("row"|"col"), align?("start"|"center"|"end"|"stretch"), justify?("start"|"center"|"end"|"between"|"around"), gap?(string, default:"4"), wrap?(boolean), className?(string)
-<Container>: children(node), maxWidth?("sm"|"md"|"lg"|"xl"|"2xl"|"full"), className?(string)
+[recharts]
+import { BarChart, LineChart, PieChart, AreaChart, Bar, Line, Pie, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+<ResponsiveContainer width="100%" height={300}>
+  <LineChart data={data}>
+    <CartesianGrid strokeDasharray="3 3" />
+    <XAxis dataKey="name" />
+    <YAxis />
+    <Tooltip />
+    <Legend />
+    <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2} />
+  </LineChart>
+</ResponsiveContainer>
 
-[@ui/typography]
-<Heading>: children(node), level?(1|2|3|4|5|6), className?(string)
-<Text>: children(node), size?("sm"|"base"|"lg"), muted?(boolean), className?(string)
-<Caption>: children(node), className?(string)
+[lucide-react — available icons]
+import { ArrowRight, Check, X, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  Search, Bell, Settings, User, Users, Menu, Home, Star, Heart, Plus, Minus,
+  Edit, Edit2, Trash2, Eye, EyeOff, Download, Upload, Filter, RefreshCw,
+  ExternalLink, Clock, Calendar, Mail, Phone, Globe, Lock, Unlock,
+  Shield, Zap, TrendingUp, TrendingDown, Activity, BarChart2, PieChart,
+  Target, Award, Bookmark, Share2, MessageSquare, MessageCircle,
+  ThumbsUp, ThumbsDown, AlertCircle, AlertTriangle, Info,
+  CheckCircle, XCircle, HelpCircle, Loader, Loader2,
+  Image, File, FileText, Folder, FolderOpen,
+  Copy, Clipboard, Link, Maximize2, Minimize2,
+  Moon, Sun, LogIn, LogOut, Send, Save, Play, Pause, Stop,
+  ChevronFirst, ChevronLast, ArrowLeft, ArrowUp, ArrowDown
+} from 'lucide-react';
+Usage: <ArrowRight className="w-4 h-4" />  — NEVER append 'Icon' suffix.
 
-[@ui/forms]
-<Form>: children(node), onSubmit(fn), className?(string)
-<Field>: name(string), label(string), children(node), error?(string)
-Hooks: simulateAutocomplete(query) -> Promise<string[]>
-
-[@ui/motion]
-<Motion>: children(node), preset?("fade"|"slideUp"|"slideRight"|"scale"|"pop"), delay?(number), className?(string)
-// CRITICAL: NEVER use <Motion.div>. If you need Framer Motion primitives, \`import { motion } from 'framer-motion'\`.
-
-[@ui/a11y]
-<FocusTrap>: children(node), active?(boolean)
-<SkipLink>: targetId?(string, default:"main-content")
-Hooks: useAnnouncer() -> (message: string, politeness?: "polite"|"assertive") => void
-
-[@ui/theming]
-<ThemeProvider>: children(node), defaultTheme?("light"|"dark"|"system")
-Hooks: useTheme() -> { theme: string, setTheme: (t: string) => void } // Theme affects data-theme on html
-
-[@ui/icons]
-<Icon>: name(string - any lucide icon name like "Home", "User", "Settings"), size?(number|string), color?(string), className?(string)
-
-[@ui/charts]
-<BarChart>: data(any[]), className?(string)
-<LineChart>: data(any[]), className?(string)
-<PieChart>: data(any[]), className?(string)
-
-[@ui/editor]
-<RichTextEditor>: initialValue?(string), onAnalyze?(fn(text)) -> void
-
-[@ui/command-palette]
-<CommandPalette>: isOpen(boolean), onClose(fn), children(node)
-
-[@ui/dragdrop]
-<Draggable>: id(string), children(node)
-<Droppable>: onDrop(fn(id)), children(node)
-<SortableList>: items(string[]), onSort?(fn)
-
-[@ui/three]
-<Scene3D>: children(node), className?(string)
-<AnimatedModel>: url(string), scale?(number), currentAction?(string)
-<ParticleSystem>: amount(number), color(string)
+[react hooks]
+useState, useEffect, useRef, useCallback, useMemo, useContext, useReducer, useId
 =====================================
 `.trim();
