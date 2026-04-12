@@ -107,3 +107,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to create workspace' }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await auth();
+
+  if (!session?.user?.id) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const workspaceId = searchParams.get('id');
+
+  if (!workspaceId) {
+    return NextResponse.json({ success: false, error: 'Workspace ID required' }, { status: 400 });
+  }
+
+  // Ensure user is an OWNER before deleting
+  const membership = await withReconnect(() => prisma.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId, userId: session.user.id } }
+  }));
+
+  if (!membership || membership.role !== 'OWNER') {
+    return NextResponse.json({ success: false, error: 'Must be workspace owner to delete' }, { status: 403 });
+  }
+
+  try {
+    await withReconnect(() => prisma.workspace.delete({
+      where: { id: workspaceId }
+    }));
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('[workspace DELETE] Failed', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete workspace' }, { status: 500 });
+  }
+}

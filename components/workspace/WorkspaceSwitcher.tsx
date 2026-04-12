@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useWorkspace } from './WorkspaceProvider';
-import { ChevronDown, Check, Building2, Plus, Loader2, X } from 'lucide-react';
+import { ChevronDown, Check, Building2, Plus, Loader2, X, Trash2 } from 'lucide-react';
 
 export default function WorkspaceSwitcher() {
   const {
@@ -13,6 +13,7 @@ export default function WorkspaceSwitcher() {
     isLoading,
     isCreating,
     createWorkspace,
+    deleteWorkspace,
   } = useWorkspace();
 
   const [isOpen, setIsOpen]           = useState(false);
@@ -40,6 +41,16 @@ export default function WorkspaceSwitcher() {
       setIsOpen(false);
     } else {
       setCreateError('Failed to create workspace. Please try again.');
+    }
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+    e.stopPropagation();
+    if (window.confirm(`Are you sure you want to delete workspace "${name}"?\nThis action cannot be undone and will delete all associated projects.`)) {
+      await deleteWorkspace(id);
+      if (workspaces.length === 1 && activeWorkspaceId === id) {
+        setIsOpen(false);
+      }
     }
   };
 
@@ -94,26 +105,36 @@ export default function WorkspaceSwitcher() {
                 </p>
                 <div className="max-h-[220px] overflow-y-auto space-y-0.5 p-1.5">
                   {workspaces.map((workspace) => (
-                    <button
-                      key={workspace.id}
-                      id={`workspace-item-${workspace.id}`}
-                      onClick={() => { setActiveWorkspaceId(workspace.id); setIsOpen(false); }}
-                      className={`
-                        w-full flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-colors
-                        ${activeWorkspaceId === workspace.id
-                          ? 'bg-blue-500/10 text-blue-400'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
-                        }
-                      `}
-                    >
-                      <div className="text-left min-w-0">
-                        <span className="truncate pr-4 block font-medium">{workspace.name}</span>
-                        <span className="text-[10px] capitalize opacity-60">{workspace.role.toLowerCase()}</span>
-                      </div>
-                      {activeWorkspaceId === workspace.id && (
-                        <Check className="w-3.5 h-3.5 shrink-0" />
+                    <div key={workspace.id} className="relative group/ws flex items-center w-full">
+                      <button
+                        id={`workspace-item-${workspace.id}`}
+                        onClick={() => { setActiveWorkspaceId(workspace.id); setIsOpen(false); }}
+                        className={`
+                          flex-1 flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-colors
+                          ${activeWorkspaceId === workspace.id
+                            ? 'bg-blue-500/10 text-blue-400'
+                            : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
+                          }
+                        `}
+                      >
+                        <div className="text-left min-w-0 pr-8">
+                          <span className="truncate block font-medium">{workspace.name}</span>
+                          <span className="text-[10px] capitalize opacity-60">{workspace.role.toLowerCase()}</span>
+                        </div>
+                        {activeWorkspaceId === workspace.id && (
+                          <Check className="w-3.5 h-3.5 shrink-0" />
+                        )}
+                      </button>
+                      {workspace.role === 'OWNER' && (
+                        <button
+                          onClick={(e) => handleDelete(e, workspace.id, workspace.name)}
+                          className="absolute right-2 opacity-0 group-hover/ws:opacity-100 p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-all"
+                          title="Delete Workspace"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
-                    </button>
+                    </div>
                   ))}
                 </div>
               </>

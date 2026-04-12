@@ -19,6 +19,7 @@ interface WorkspaceContextType {
   isCreating: boolean;
   refreshWorkspaces: () => Promise<void>;
   createWorkspace: (name: string) => Promise<Workspace | null>;
+  deleteWorkspace: (id: string) => Promise<boolean>;
 }
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
@@ -53,6 +54,34 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       return null;
     } finally {
       setIsCreating(false);
+    }
+  }, []);
+
+  // ── Delete a workspace ───────────────────────────────────────────────────
+  const deleteWorkspace = useCallback(async (id: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`/api/workspaces?id=${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWorkspaces((prev) => {
+          const updated = prev.filter((w) => w.id !== id);
+          // If we deleted the active workspace, switch to another one (or null)
+          setActiveWorkspaceId((currentActive) => {
+            if (currentActive === id) {
+              return updated[0]?.id ?? null;
+            }
+            return currentActive;
+          });
+          return updated;
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('[WorkspaceProvider] delete error:', error);
+      return false;
     }
   }, []);
 
@@ -109,6 +138,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       isCreating,
       refreshWorkspaces,
       createWorkspace,
+      deleteWorkspace,
     }}>
       {children}
     </WorkspaceContext.Provider>
