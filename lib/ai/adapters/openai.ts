@@ -92,7 +92,7 @@ export class OpenAIAdapter implements AIAdapter {
       }
     }
 
-    const isGroq = finalBaseUrl.includes('groq.com');
+    const isGroq = this.effectiveBaseURL.includes('groq.com');
     // response_format: skip for reasoning models, aggregators, Groq, and HuggingFace
     const safeResponseFormat = (options.responseFormat && !isAggregator && !isHuggingFace && !isReasoning && !isGroq)
       ? { response_format: { type: options.responseFormat } }
