@@ -59,11 +59,21 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'gsk_… — get one at console.groq.com/keys',
     docsUrl: 'https://console.groq.com/keys',
   },
+  ollama: {
+    id: 'ollama', name: 'Ollama (Local)',
+    color: 'from-gray-500 to-gray-400', accent: 'text-gray-200', icon: '🦙',
+    baseUrl: 'http://127.0.0.1:11434/v1',
+    modelHint: 'llama3, mistral, deepseek-coder…',
+    keyLabel: 'No target API Key required',
+    keyHint: 'Uses your local machine specs.',
+    docsUrl: 'https://ollama.com',
+    noKey: true,
+  },
 };
 
 // Provider order for the picker — stable providers only
 const CLOUD_PROVIDER_ORDER = [
-  'openai', 'anthropic', 'google', 'groq',
+  'openai', 'anthropic', 'google', 'groq', 'ollama',
 ];
 
 // ── Suggested models per supported provider ───────────────────────────────────
