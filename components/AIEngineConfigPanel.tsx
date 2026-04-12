@@ -264,25 +264,39 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiKey]);
 
-  // ── Restore from localStorage ───────────────────────────────────────────
+  // ── Restore from server on open ────────────────────────────────────────
   useEffect(() => {
     if (!isOpen) return;
     setSaved(false);
     setError('');
     setCloudStep(1);
 
-    const stored = loadAIEngineConfig();
-    if (stored) {
-      if (stored.provider && PROVIDERS[stored.provider]) {
-        setSelectedProviderId(stored.provider);
-      }
-      setCustomModelText(stored.model ?? '');
-      setUseCustomModel(true);
-      setTemperature(stored.temperature ?? 0.6);
-      setCustomBaseUrl(stored.baseUrl ?? '');
-      setFullAppMode(stored.fullAppMode ?? false);
-      setMultiSlide(stored.multiSlideMode ?? false);
-    }
+    // Load from server (non-sensitive fields only — key stays encrypted on server)
+    fetch('/api/engine-config')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.config) {
+          const { provider: p, model: m } = data.config;
+          if (p && PROVIDERS[p]) setSelectedProviderId(p);
+          if (m) { setCustomModelText(m); setUseCustomModel(true); }
+          setSessionActive(true);
+          // Mark session active if server has a stored config
+          sessionStorage.setItem('uiEngine_active', '1');
+        }
+      })
+      .catch(() => {
+        // Fallback: check localStorage for legacy config
+        const stored = loadAIEngineConfig();
+        if (stored) {
+          if (stored.provider && PROVIDERS[stored.provider]) setSelectedProviderId(stored.provider);
+          setCustomModelText(stored.model ?? '');
+          setUseCustomModel(true);
+          setTemperature(stored.temperature ?? 0.6);
+          setCustomBaseUrl(stored.baseUrl ?? '');
+          setFullAppMode(stored.fullAppMode ?? false);
+          setMultiSlide(stored.multiSlideMode ?? false);
+        }
+      });
   }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Escape key ─────────────────────────────────────────────────────────
@@ -341,7 +355,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     }
   };
 
-  // ── Save ────────────────────────────────────────────────────────────────
+  // ── Save to server ──────────────────────────────────────────────────────
   const handleSave = async () => {
     setError('');
 
@@ -362,45 +376,63 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
     }
 
     setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-
-    const config: AIEngineConfig = {
-      provider: provider.id,
-      providerName: provider.name,
-      model: effectiveModel,
-      apiKey: apiKey.trim(),
-      baseUrl: customBaseUrl.trim() || provider.baseUrl,
-      temperature,
-      fullAppMode,
-      multiSlideMode,
-      isLocal: false,
-    };
-
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...config, apiKey: config.isLocal ? 'local' : '••••' }));
+      // POST key + config to server — key is AES-256 encrypted at rest in DB
+      const res = await fetch('/api/engine-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: provider.id,
+          model: effectiveModel,
+          apiKey: apiKey.trim() || undefined,
+          temperature,
+          fullAppMode,
+          multiSlideMode,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error ?? 'Save failed');
+
+      // Only store non-sensitive display info in localStorage
+      const displayConfig: AIEngineConfig = {
+        provider: provider.id,
+        providerName: provider.name,
+        model: effectiveModel,
+        apiKey: '••••', // NEVER store real key client-side
+        baseUrl: customBaseUrl.trim() || provider.baseUrl,
+        temperature,
+        fullAppMode,
+        multiSlideMode,
+        isLocal: provider.noKey ?? false,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(displayConfig));
       localStorage.setItem('uiEngine_fullAppMode', String(fullAppMode));
       localStorage.setItem('uiEngine_multiSlideMode', String(multiSlideMode));
       sessionStorage.setItem('uiEngine_active', '1');
       setSessionActive(true);
       setSaved(true);
-      onSaved(config);
+      onSaved({ ...displayConfig, apiKey: apiKey.trim() });
       setTimeout(onClose, 1100);
-    } catch {
-      setError('Failed to save configuration.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save configuration.');
     } finally {
       setSaving(false);
     }
   };
 
-  // ── Deactivate (stop the engine) ──────────────────────────────────────────
-  const handleDeactivate = () => {
+  // ── Deactivate (stop the engine) ────────────────────────────────────────
+  const handleDeactivate = async () => {
+    try {
+      // Delete from server (clears encrypted key from DB + invalidates cache)
+      await fetch('/api/engine-config', { method: 'DELETE' });
+    } catch { /* ignore network errors on deactivate */ }
+    // Clear local display state
     try {
       localStorage.removeItem(STORAGE_KEY);
       localStorage.removeItem('uiEngine_fullAppMode');
       localStorage.removeItem('uiEngine_multiSlideMode');
       sessionStorage.removeItem('uiEngine_active');
     } catch { /* ignore */ }
-    // Reset all local state
     setSessionActive(false);
     setSaved(false);
     setApiKey('');
@@ -440,7 +472,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
             </div>
             <div>
               <h2 id="ges-title" className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                Env Variable Store
+                AI Engine Config
                 {sessionActive && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -569,7 +601,7 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
                     )}
 
                     <p className="text-[10px] text-gray-600">
-                      Key travels over HTTPS per-request only — never stored on our servers.
+                      Key saved AES-256 encrypted on our server — never in your browser.
                       <a href={provider.docsUrl} target="_blank" rel="noopener noreferrer" className="ml-1 text-gray-500 hover:text-gray-300 transition-colors">Get a key ↗</a>
                     </p>
                   </div>
