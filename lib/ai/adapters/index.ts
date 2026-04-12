@@ -226,10 +226,33 @@ export async function getWorkspaceAdapter(
     return getAdapter(modelOrConfig);
   }
 
-  const model  = typeof modelOrConfig === 'string' ? modelOrConfig : modelOrConfig.model;
-  const provId = typeof modelOrConfig !== 'string'
+  let model  = typeof modelOrConfig === 'string' ? modelOrConfig : modelOrConfig.model;
+  let provId = typeof modelOrConfig !== 'string'
     ? (modelOrConfig.provider ?? detectProvider(model))
     : detectProvider(model);
+
+  // Vercel Fallback: If the user's browser sends a payload for a local daemon
+  // (because they configured it locally) but they are talking to the Vercel cloud deployment,
+  // we physically cannot reach localhost. Transparently rewrite to the server's default adapter.
+  if (process.env.VERCEL) {
+    const isLocalUrl = typeof modelOrConfig !== 'string' && modelOrConfig.baseUrl && (modelOrConfig.baseUrl.includes('localhost') || modelOrConfig.baseUrl.includes('127.0.0.1'));
+    if (provId === 'ollama' || provId === 'lmstudio' || isLocalUrl) {
+      const { resolveDefaultAdapter } = require('../resolveDefaultAdapter');
+      const fallback = resolveDefaultAdapter('GENERATION');
+      if (fallback.provider && fallback.provider !== 'unconfigured') {
+         model = fallback.model;
+         provId = fallback.provider as ProviderName;
+         if (typeof modelOrConfig !== 'string') {
+           modelOrConfig.model = fallback.model;
+           modelOrConfig.provider = fallback.provider;
+           modelOrConfig.apiKey = fallback.apiKey;
+           modelOrConfig.baseUrl = fallback.baseUrl;
+         } else {
+           modelOrConfig = fallback;
+         }
+      }
+    }
+  }
 
   try {
     const { getWorkspaceApiKey } = await import('../../security/workspaceKeyService');
