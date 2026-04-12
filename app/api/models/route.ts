@@ -1,4 +1,5 @@
 import { NextResponse, NextRequest } from 'next/server';
+import { getWorkspaceApiKey } from '@/lib/security/workspaceKeyService';
 
 export const maxDuration = 15; // model listing should be fast
 
@@ -201,98 +202,101 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'provider query param required' }, { status: 400 });
   }
 
+  /**
+   * Resolve the API key: client-supplied → DB-stored → env var.
+   * Returns null if none found.
+   */
+  async function resolveKey(clientKey: string, providerEnvKeys: (string | undefined)[]): Promise<string | null> {
+    const clean = clientKey && clientKey !== '••••' ? clientKey.trim() : '';
+    if (clean) return clean;
+    // DB lookup (reads encrypted key saved via /api/engine-config)
+    const dbKey = await getWorkspaceApiKey(provider).catch(() => null);
+    if (dbKey) return dbKey;
+    // Env var fallbacks
+    for (const k of providerEnvKeys) { if (k) return k; }
+    return null;
+  }
+
   try {
     let models: ModelInfo[] = [];
 
     switch (provider) {
       case 'openai': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.OPENAI_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenAI' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.OPENAI_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No OpenAI key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchOpenAIModels(finalKey, baseUrl || undefined);
         break;
       }
 
       case 'anthropic': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.ANTHROPIC_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Anthropic' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.ANTHROPIC_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Anthropic key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchAnthropicModels(finalKey);
         break;
       }
 
       case 'google': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Google' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.GOOGLE_API_KEY, process.env.GEMINI_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Google key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchGoogleModels(finalKey);
         break;
       }
 
       case 'groq': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.GROQ_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Groq' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.GROQ_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Groq key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchGroqModels(finalKey);
         break;
       }
 
       case 'openrouter': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.OPENROUTER_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for OpenRouter' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.OPENROUTER_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No OpenRouter key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchOpenRouterModels(finalKey);
         break;
       }
 
       case 'together': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.TOGETHER_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Together AI' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Together AI key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchTogetherModels(finalKey);
         break;
       }
 
       case 'deepseek': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.DEEPSEEK_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for DeepSeek' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.DEEPSEEK_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No DeepSeek key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchDeepSeekModels(finalKey);
         break;
       }
 
       case 'mistral': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.MISTRAL_API_KEY || process.env.TOGETHER_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Mistral' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.MISTRAL_API_KEY, process.env.TOGETHER_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Mistral key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchMistralModels(finalKey);
         break;
       }
 
       case 'meta': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Meta/Llama' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Meta/Llama key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
         break;
       }
 
       case 'qwen': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.DASHSCOPE_API_KEY || process.env.TOGETHER_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Qwen' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.DASHSCOPE_API_KEY, process.env.TOGETHER_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Qwen key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchOpenAIModels(finalKey, baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
         break;
       }
 
       case 'gemma': {
-        const key = apiKey === '••••' ? '' : apiKey;
-        const finalKey = key || process.env.TOGETHER_API_KEY || process.env.GROQ_API_KEY;
-        if (!finalKey) return NextResponse.json({ success: false, error: 'apiKey required for Gemma' }, { status: 400 });
+        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
+        if (!finalKey) return NextResponse.json({ success: false, error: 'No Gemma key found. Save one via the AI Engine Config panel.' }, { status: 400 });
         models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
         break;
       }
-
 
       case 'ollama':
       case 'lmstudio': {
@@ -304,8 +308,8 @@ export async function GET(request: NextRequest) {
       // Generic OpenAI-compat: try /v1/models with the provided baseUrl
       default: {
         if (!baseUrl) return NextResponse.json({ success: false, error: 'baseUrl required for custom providers' }, { status: 400 });
-        const key = apiKey === '••••' || apiKey === 'local' ? '' : apiKey;
-        const finalKey = key || process.env.OPENAI_API_KEY || 'dummy'; // Default fallback allows open networks to try
+        const finalKey = await resolveKey(apiKey, [process.env.OPENAI_API_KEY, 'dummy']);
+
         models = await fetchOpenAIModels(finalKey, baseUrl);
         break;
       }
