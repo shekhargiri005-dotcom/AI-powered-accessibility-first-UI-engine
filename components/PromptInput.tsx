@@ -205,6 +205,7 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             setConfidenceHistory((prev) => [...prev, data.classification.confidence].slice(-8));
           }
           onIntentDetected?.(data.classification);
+        }
       } catch { /* ignore */ } finally {
         setIsClassifying(false);
       }
