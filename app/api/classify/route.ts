@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (provider === 'openai') fastModel = 'gpt-4o-mini';
     else if (provider === 'google') fastModel = 'gemini-2.0-flash';
     else if (provider === 'anthropic') fastModel = 'claude-3-haiku-20240307';
-    else if (provider === 'groq') fastModel = 'llama-3.3-70b-versatile';
+    else if (provider === 'groq') fastModel = 'llama-3.1-8b-instant';
     else if (provider === 'huggingface') fastModel = 'meta-llama/Meta-Llama-3-8B-Instruct';
     else if (provider === 'ollama' || provider === 'lmstudio') fastModel = model || 'llama3';
 

@@ -205,11 +205,10 @@ export default function PromptInput({ onSubmit, isLoading, onIntentDetected, has
             setConfidenceHistory((prev) => [...prev, data.classification.confidence].slice(-8));
           }
           onIntentDetected?.(data.classification);
-        }
       } catch { /* ignore */ } finally {
         setIsClassifying(false);
       }
-    }, 600);
+    }, 2000); // Increased debounce to 2000ms to prevent rapid API quota drain during typing
   }, [hasActiveProject, onIntentDetected, aiPayload]);
 
   const handleSubmit = (e: React.FormEvent) => {
