@@ -190,7 +190,14 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     case 'ollama':
     case 'lmstudio':
     default: {
-      // Local providers — no key needed
+      // Only allow Ollama/local adapters when the user explicitly chose ollama/lmstudio.
+      // Any other provider reaching this branch means a key is missing — surface it clearly
+      // instead of silently trying localhost:11434 which always fails on Vercel.
+      if (provId !== 'ollama' && provId !== 'lmstudio' && provId !== 'unconfigured') {
+        throw new Error(
+          `API key required for provider "${provId}". Add it in the AI Engine Config panel or set the ${provId.toUpperCase()}_API_KEY environment variable in Vercel.`
+        );
+      }
       const url = baseUrl ?? (provId === 'lmstudio' ? OPENAI_COMPAT_BASE_URLS.lmstudio : undefined);
       adapter = new OllamaAdapter(url);
       break;

@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       ? { 
           model: fastModel, 
           provider: provider || (model?.includes('gemini') ? 'google' : undefined), 
-          apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, 
+          apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined, 
           baseUrl 
         }
       : undefined;

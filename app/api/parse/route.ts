@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       ? {
           model,
           provider,
-          apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined,
+          apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined,
           baseUrl,
         }
       : undefined;

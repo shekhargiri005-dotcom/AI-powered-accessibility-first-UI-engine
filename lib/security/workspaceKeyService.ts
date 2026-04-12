@@ -66,6 +66,26 @@ export async function getWorkspaceApiKey(
       decrypted = null;
     }
 
+    // ── Global fallback ────────────────────────────────────────────────────
+    // When called with the generic 'default' workspaceId and no key was found,
+    // scan ALL workspaces for the first real key for this provider.
+    // This lets pipeline routes (parse/classify/think) work even though they
+    // don't have access to the caller's session workspace ID.
+    if (!decrypted && workspaceId === DEFAULT_WORKSPACE) {
+      try {
+        const anySettings = await prisma.workspaceSettings.findFirst({
+          where: { provider, encryptedApiKey: { not: null } },
+          orderBy: { updatedAt: 'desc' },
+        });
+        if (anySettings?.encryptedApiKey) {
+          const anyDecrypted = encryptionService.decrypt(anySettings.encryptedApiKey);
+          if (anyDecrypted && anyDecrypted !== 'ENV_FALLBACK') {
+            decrypted = anyDecrypted;
+          }
+        }
+      } catch { /* ignore — env var fallback will handle it */ }
+    }
+
     keyCache.set(cKey, { value: decrypted, expiresAt: Date.now() + CACHE_TTL_MS });
     return decrypted;
   } catch (err) {

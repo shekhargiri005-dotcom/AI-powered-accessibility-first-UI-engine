@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     const modelConfig = model
-      ? { model, provider, apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined, baseUrl }
+      ? { model, provider, apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined, baseUrl }
       : undefined;
 
     reqLogger.debug('Generating thinking plan', { intentType, model, provider });
