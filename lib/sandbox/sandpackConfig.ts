@@ -187,7 +187,7 @@ if (document.readyState === 'loading') {
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Inter', sans-serif; line-height: 1.5; color: #111827; background: #f9fafb; }
+body { font-family: 'Inter', sans-serif; line-height: 1.5; color: #f3f4f6; background: #0c0c0e; }
 
 /* Base form styles */
 input, textarea, select {
@@ -294,7 +294,7 @@ export default function CaptureWrapper({ children }) {
     };
   }, []);
 
-  return <div ref={ref} className="w-full min-h-screen bg-gray-50 flex flex-col">{children}</div>;
+  return <div ref={ref} className="w-full min-h-screen bg-[#0c0c0e] flex flex-col">{children}</div>;
 }`,
     active: false,
   };
