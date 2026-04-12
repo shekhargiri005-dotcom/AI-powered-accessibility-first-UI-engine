@@ -32,12 +32,12 @@ export type AdapterPurpose =
 
 /** Default model names per provider for each purpose tier */
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
-  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-70B-Instruct' },
-  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
-  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
-  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', huggingface: 'meta-llama/Meta-Llama-3-8B-Instruct' },
+  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3:8b' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3:8b' },
+  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.3:70b' },
+  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3:8b' },
+  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3:8b' },
+  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3:8b' },
 };
 
 /** Ordered provider detection list — first one with an env key wins. */
@@ -50,7 +50,7 @@ const PROVIDER_CHECKS: Array<{
   { id: 'google',      envKey: 'GOOGLE_API_KEY' },
   { id: 'google',      envKey: 'GEMINI_API_KEY' },
   { id: 'anthropic',   envKey: 'ANTHROPIC_API_KEY' },
-  { id: 'huggingface', envKey: 'HUGGINGFACE_API_KEY', baseUrl: 'https://router.huggingface.co/hf-inference/v1' },
+
   // OpenAI last — free/trial keys exhaust quota quickly
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
 ];
@@ -119,7 +119,6 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     anthropic:  ['ANTHROPIC_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
-    huggingface:['HUGGINGFACE_API_KEY'],
   };
   const vars = map[provider.toLowerCase()] ?? [];
   for (const v of vars) {

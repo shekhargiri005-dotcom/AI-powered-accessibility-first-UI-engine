@@ -188,30 +188,6 @@ async function fetchOllamaModels(baseUrl = 'http://localhost:11434'): Promise<Mo
   }));
 }
 
-/** Curated list of popular HuggingFace Inference API models (Hub search is too broad to page through live) */
-function getHuggingFaceModels(): ModelInfo[] {
-  return [
-    { id: 'meta-llama/Meta-Llama-3-8B-Instruct',    name: 'Llama 3 8B Instruct',            contextWindow: 8192,   isFeatured: true  },
-    { id: 'meta-llama/Meta-Llama-3-70B-Instruct',   name: 'Llama 3 70B Instruct',           contextWindow: 8192,   isFeatured: true  },
-    { id: 'meta-llama/Llama-3.1-8B-Instruct',       name: 'Llama 3.1 8B Instruct',          contextWindow: 131072, isFeatured: true  },
-    { id: 'meta-llama/Llama-3.1-70B-Instruct',      name: 'Llama 3.1 70B Instruct',         contextWindow: 131072, isFeatured: true  },
-    { id: 'meta-llama/Llama-3.2-3B-Instruct',       name: 'Llama 3.2 3B Instruct',          contextWindow: 131072                     },
-    { id: 'meta-llama/Llama-3.3-70B-Instruct',      name: 'Llama 3.3 70B Instruct',         contextWindow: 131072, isFeatured: true  },
-    { id: 'mistralai/Mistral-7B-Instruct-v0.3',     name: 'Mistral 7B Instruct v0.3',       contextWindow: 32768                     },
-    { id: 'mistralai/Mixtral-8x7B-Instruct-v0.1',   name: 'Mixtral 8x7B Instruct',          contextWindow: 32768, isFeatured: true  },
-    { id: 'Qwen/Qwen2.5-72B-Instruct',              name: 'Qwen 2.5 72B Instruct',          contextWindow: 131072, isFeatured: true  },
-    { id: 'Qwen/Qwen2.5-Coder-32B-Instruct',        name: 'Qwen 2.5 Coder 32B',             contextWindow: 131072, isFeatured: true  },
-    { id: 'microsoft/Phi-3.5-mini-instruct',         name: 'Phi 3.5 Mini Instruct',          contextWindow: 131072                    },
-    { id: 'microsoft/Phi-3-medium-4k-instruct',      name: 'Phi 3 Medium 4k',                contextWindow: 4096                      },
-    { id: 'google/gemma-2-9b-it',                    name: 'Gemma 2 9B IT',                  contextWindow: 8192                      },
-    { id: 'google/gemma-2-27b-it',                   name: 'Gemma 2 27B IT',                 contextWindow: 8192                      },
-    { id: 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B', name: 'DeepSeek R1 Distill Llama 70B', contextWindow: 131072, isFeatured: true },
-    { id: 'deepseek-ai/DeepSeek-V2.5',              name: 'DeepSeek V2.5',                  contextWindow: 131072                    },
-    { id: 'NousResearch/Hermes-3-Llama-3.1-8B',     name: 'Hermes 3 Llama 3.1 8B',          contextWindow: 131072                    },
-    { id: 'HuggingFaceH4/zephyr-7b-beta',           name: 'Zephyr 7B Beta',                 contextWindow: 32768                     },
-  ];
-}
-
 // ─── Route handler ────────────────────────────────────────────────────────────
 
 export async function GET(request: NextRequest) {
@@ -316,10 +292,6 @@ export async function GET(request: NextRequest) {
         break;
       }
 
-      case 'huggingface':
-        // HuggingFace returns a curated list — no live API call needed for model listing
-        models = getHuggingFaceModels();
-        break;
 
       case 'ollama':
       case 'lmstudio': {

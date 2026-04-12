@@ -59,20 +59,21 @@ const PROVIDERS: Record<string, ProviderInfo> = {
     keyHint: 'gsk_… — get one at console.groq.com/keys',
     docsUrl: 'https://console.groq.com/keys',
   },
-  huggingface: {
-    id: 'huggingface', name: 'Hugging Face',
-    color: 'from-amber-400 to-yellow-600', accent: 'text-amber-400', icon: '🤗',
-    baseUrl: 'https://router.huggingface.co/v1',
-    modelHint: 'meta-llama/Meta-Llama-3-8B-Instruct',
-    keyLabel: 'Hugging Face Token',
-    keyHint: 'hf_… — get one at huggingface.co/settings/tokens',
-    docsUrl: 'https://huggingface.co/settings/tokens',
+  ollama: {
+    id: 'ollama', name: 'Ollama (Local)',
+    color: 'from-gray-500 to-gray-700', accent: 'text-gray-400', icon: '🦙',
+    baseUrl: 'http://localhost:11434',
+    modelHint: 'llama3.3, qwen2.5-coder…',
+    keyLabel: 'Ollama API Key or Host',
+    keyHint: 'API Key (if exposed behind auth) or leave blank',
+    noKey: true,
+    docsUrl: 'https://ollama.com/',
   },
 };
 
 // Provider order for the picker — stable providers only
 const CLOUD_PROVIDER_ORDER = [
-  'openai', 'anthropic', 'google', 'groq', 'huggingface',
+  'openai', 'anthropic', 'google', 'groq', 'ollama',
 ];
 
 // ── Suggested models per supported provider ───────────────────────────────────
@@ -85,8 +86,8 @@ const PROVIDER_SUGGESTED_MODELS: Record<string, string[]> = {
   google:      ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
   // ── Groq fast inference (3 models) ──────────────────────────────────────
   groq:        ['llama-3.3-70b-versatile', 'gemma2-9b-it', 'mixtral-8x7b-32768'],
-  // ── HuggingFace (1 curated model) ───────────────────────────────────────
-  huggingface: ['meta-llama/Meta-Llama-3-8B-Instruct'],
+  // ── Ollama (3 curated types) ───────────────────────────────────────
+  ollama: ['llama3.3', 'qwen2.5-coder:32b', 'deepseek-coder-v2'],
 };
 
 /**
@@ -99,7 +100,7 @@ function detectFromKey(key: string): ProviderInfo | null {
   if (k.startsWith('sk-ant-'))                               return PROVIDERS.anthropic;
   if (k.startsWith('AIzaSy'))                                return PROVIDERS.google;
   if (k.startsWith('gsk_'))                                  return PROVIDERS.groq;
-  if (k.startsWith('hf_'))                                   return PROVIDERS.huggingface;
+
   if (k.startsWith('sk-proj-') || k.startsWith('sk-svcacct-')) return PROVIDERS.openai;
   // Generic sk- → assume OpenAI compatible
   if (k.startsWith('sk-'))                                   return PROVIDERS.openai;

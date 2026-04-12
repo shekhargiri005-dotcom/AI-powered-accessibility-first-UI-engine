@@ -23,7 +23,6 @@ import { getCache, generateCacheKey } from '../cache';
 
 const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
   groq:       'https://api.groq.com/openai/v1',
-  huggingface:'https://router.huggingface.co/hf-inference/v1',
   lmstudio:   'http://localhost:1234/v1',
 };
 
@@ -38,7 +37,7 @@ export function detectProvider(model: string): ProviderName {
   if (m.includes('claude'))                        return 'anthropic';
   if (m.includes('gemini'))                        return 'google';
   if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
-  // Groq / HuggingFace hosted models — serve via OpenAI-compat adapter
+  // Groq hosted models — serve via OpenAI-compat adapter
   if (m.includes('llama') || m.includes('mixtral') || m.includes('gemma2')) return 'groq';
   return 'ollama'; // safe local default for everything else
 }
@@ -147,8 +146,8 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     ? config.apiKey
     : undefined;
 
-  // ── 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
-  // groq / huggingface / lmstudio (and any provider with an explicit baseUrl)
+  // 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
+  // groq / lmstudio (and any provider with an explicit baseUrl)
   // all route through the standard OpenAI SDK — no separate files needed.
   const namedProviders = ['openai', 'anthropic', 'google', 'ollama', 'lmstudio'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
@@ -157,7 +156,6 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
     const key = apiKey
       || process.env[`${provId.toUpperCase()}_API_KEY`]
       || (provId === 'groq' ? process.env.GROQ_API_KEY : undefined)
-      || (provId === 'huggingface' ? process.env.HUGGINGFACE_API_KEY : undefined)
       || 'dummy';
     return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
   }
