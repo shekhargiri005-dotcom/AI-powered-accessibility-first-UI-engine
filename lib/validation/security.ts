@@ -80,5 +80,28 @@ export function sanitizeGeneratedCode(code: string): string {
   }
 
   // Remove any stray carriage returns
-  return result.replace(/\r/g, '');
+  let sanitized = result.replace(/\r/g, '');
+
+  // ── AI Comment Artifact Sanitizer ────────────────────────────────────────────
+  // Models sometimes emit debug comments as placeholders that cause Babel parse
+  // errors in Sandpack's nodebox environment:
+  //
+  //   onClick={() => /* [debug removed] */}   ← arrow fn body is a comment = invalid
+  //   onClick={() => /* handler */}
+  //   onChange={/* handler */}                ← JSX attr value is a comment = invalid
+  //
+  // Replace:  () => /* ... */    →  () => {}
+  // Replace:  ={/* ... */}       →  ={undefined}   (avoids parse error; component still renders)
+
+  // Arrow functions whose entire body is a block comment
+  sanitized = sanitized.replace(/=>\s*\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\//g, '=> {}');
+
+  // JSX attribute values that are solely a block comment  ={/* ... */}
+  sanitized = sanitized.replace(/=\{\s*\/\*[^*]*\*+(?:[^/*][^*]*\*+)*\/\s*\}/g, '={undefined}');
+
+  // Inline TODO/placeholder comments left inside JSX attribute strings
+  // e.g.  onClick={/* TODO */}  or  value={/* placeholder */}
+  sanitized = sanitized.replace(/\{\s*\/\*\s*(?:TODO|FIXME|placeholder|debug removed|handler|stub)[^*]*\*+(?:[^/*][^*]*\*+)*\/\s*\}/gi, '{undefined}');
+
+  return sanitized;
 }

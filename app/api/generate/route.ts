@@ -251,60 +251,72 @@ export async function POST(request: NextRequest) {
     let critiqueData: unknown;
     let repairedByReviewer = false;
     if (!isLocalModel) {
-      try {
-        // BUG-02 FIX: Hard 10s escape hatch so Browserless cold-starts never block the pipeline.
-        // Cast the timeout branch to VisionRuntimeReviewResult to avoid a union type mismatch.
-        const visionTimeout = new Promise<import('@/lib/ai/visionReviewer').VisionRuntimeReviewResult>((resolve) =>
-          setTimeout(() => resolve({ runtimeOk: true }), 10_000)
-        );
-        const visionResult = await Promise.race([runVisionRuntimeReview(finalSourceCode), visionTimeout]);
-        if (!visionResult.runtimeOk && visionResult.runtimeError) {
-          const repaired = await repairGeneratedCode(
+      // Wrap the entire review+repair phase in a 60s aggregate timeout.
+      // Each repair call can take 30-60s — without this the chain can exceed
+      // Vercel's 300s maxDuration when multiple repairs trigger in sequence.
+      const reviewPhaseTimeout = new Promise<void>((resolve) => setTimeout(resolve, 60_000));
+      const reviewPhase = (async () => {
+        try {
+          // BUG-02 FIX: Hard 10s escape hatch so Browserless cold-starts never block the pipeline.
+          // Cast the timeout branch to VisionRuntimeReviewResult to avoid a union type mismatch.
+          const visionTimeout = new Promise<import('@/lib/ai/visionReviewer').VisionRuntimeReviewResult>((resolve) =>
+            setTimeout(() => resolve({ runtimeOk: true }), 10_000)
+          );
+          const visionResult = await Promise.race([runVisionRuntimeReview(finalSourceCode), visionTimeout]);
+          if (!visionResult.runtimeOk && visionResult.runtimeError) {
+            const repaired = await repairGeneratedCode(
+              finalSourceCode,
+              `Runtime crash detected in headless render. Fix this error:\n${visionResult.runtimeError}`,
+              adapterOverride,
+            );
+            if (repaired && repaired.length > 100) {
+              finalSourceCode = repaired;
+              repairedByReviewer = true;
+              reviewData = { source: 'runtime', passed: false, reason: visionResult.runtimeError };
+            }
+          } else if (visionResult.visualPassed === false && visionResult.suggestedCode) {
+            finalSourceCode = visionResult.suggestedCode;
+            repairedByReviewer = true;
+            reviewData = { source: 'vision', passed: false, reason: visionResult.visualCritique ?? 'Vision critique failed.' };
+          }
+
+          const reviewResult = await reviewGeneratedCode(
             finalSourceCode,
-            `Runtime crash detected in headless render. Fix this error:\n${visionResult.runtimeError}`,
+            JSON.stringify({ ...intent, mode, model }),
             adapterOverride,
           );
-          if (repaired && repaired.length > 100) {
-            finalSourceCode = repaired;
-            repairedByReviewer = true;
-            reviewData = { source: 'runtime', passed: false, reason: visionResult.runtimeError };
-          }
-        } else if (visionResult.visualPassed === false && visionResult.suggestedCode) {
-          finalSourceCode = visionResult.suggestedCode;
-          repairedByReviewer = true;
-          reviewData = { source: 'vision', passed: false, reason: visionResult.visualCritique ?? 'Vision critique failed.' };
-        }
+          critiqueData = reviewResult;
 
-        const reviewResult = await reviewGeneratedCode(
-          finalSourceCode,
-          JSON.stringify({ ...intent, mode, model }),
-          adapterOverride,
-        );
-        critiqueData = reviewResult;
-
-        if (!reviewResult.passed && reviewResult.repairInstructions) {
-          reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
-          const repairedCode = await repairGeneratedCode(
-            finalSourceCode,
-            reviewResult.repairInstructions,
-            adapterOverride,
-          );
-          if (repairedCode && repairedCode.length > 200) {
-            reqLogger.info('Repair success. UI improved by agent.');
-            finalSourceCode = repairedCode;
-            repairedByReviewer = true;
-            reviewData = { source: 'text-review', passed: false, reason: reviewResult.repairInstructions };
+          if (!reviewResult.passed && reviewResult.repairInstructions) {
+            reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
+            const repairedCode = await repairGeneratedCode(
+              finalSourceCode,
+              reviewResult.repairInstructions,
+              adapterOverride,
+            );
+            if (repairedCode && repairedCode.length > 200) {
+              reqLogger.info('Repair success. UI improved by agent.');
+              finalSourceCode = repairedCode;
+              repairedByReviewer = true;
+              reviewData = { source: 'text-review', passed: false, reason: reviewResult.repairInstructions };
+            }
+          } else {
+            reqLogger.info('Critique passed', { score: reviewResult.score });
+            if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
           }
-        } else {
-          reqLogger.info('Critique passed', { score: reviewResult.score });
-          if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
+        } catch (e) {
+          // BUG-01 FIX: Reviewer/repair failure must never kill valid generated code.
+          const reviewErrMsg = e instanceof Error ? e.message : String(e);
+          reqLogger.warn('UI Reviewer failed — continuing with original generated code', { error: reviewErrMsg });
+          if (!reviewData) reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Reviewer unavailable: ' + reviewErrMsg.slice(0, 200) };
         }
-      } catch (e) {
-        // BUG-01 FIX: Reviewer/repair failure must never kill valid generated code.
-        // Log the error and continue — the generated code is still shippable.
-        const reviewErrMsg = e instanceof Error ? e.message : String(e);
-        reqLogger.warn('UI Reviewer failed — continuing with original generated code', { error: reviewErrMsg });
-        if (!reviewData) reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Reviewer unavailable: ' + reviewErrMsg.slice(0, 200) };
+      })();
+
+      // Race: review phase vs 60s aggregate wall-clock timeout
+      await Promise.race([reviewPhase, reviewPhaseTimeout]);
+      if (!reviewData) {
+        reqLogger.warn('Review phase timed out after 60s — continuing with generated code as-is');
+        reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Review phase exceeded 60s budget' };
       }
     } else {
       reqLogger.info('Skipping review/repair — local model detected, no fast cloud reviewer available');
