@@ -11,6 +11,7 @@ import Sidebar from '@/components/ide/Sidebar';
 import CenterWorkspace from '@/components/ide/CenterWorkspace';
 import RightPanel from '@/components/ide/RightPanel';
 import ParallaxBackground from '@/components/ParallaxBackground';
+import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 
 interface GenerationOutput {
   code: string | Record<string, string>;
@@ -45,6 +46,7 @@ async function hashPromptClient(prompt: string): Promise<string> {
 }
 
 export default function HomePage() {
+  const { activeWorkspaceId } = useWorkspace();
   const [stage, setStage] = useState<Stage>('idle');
   const [pipelineStep, setPipelineStep] = useState<PipelineStep>('idle');
   const [pipelineError, setPipelineError] = useState<string | undefined>();
@@ -125,11 +127,12 @@ export default function HomePage() {
           id: projectId, name, componentType, code, intent, a11yReport,
           changeDescription: intent.description || 'Generated',
           isNewProject,
+          workspaceId: activeWorkspaceId,
         }),
       });
       if (isNewProject) setActiveProjectId(projectId);
     } catch { /* Error non-fatal for local UI */ }
-  }, [activeProjectId]);
+  }, [activeProjectId, activeWorkspaceId]);
 
   // ─── Load Project ─────────────────────────────────────────────────────────
   const loadProject = useCallback(async (id: string) => {

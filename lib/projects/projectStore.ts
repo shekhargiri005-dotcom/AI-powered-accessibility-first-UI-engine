@@ -109,7 +109,7 @@ export async function createProject(
   code: string | Record<string, string>,
   intent: UIIntent,
   a11yReport: A11yReport,
-  metadata?: { thinkingPlan?: unknown; reviewData?: unknown },
+  metadata?: { thinkingPlan?: unknown; reviewData?: unknown; workspaceId?: string },
 ): Promise<Project> {
   const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
   const linesChanged = typeof code === 'string' ? code.split('\n').length : 0;
@@ -121,6 +121,7 @@ export async function createProject(
         id,
         name,
         componentType,
+        workspaceId: metadata?.workspaceId,
         currentVersion: 1,
         versions: {
           create: {
@@ -218,9 +219,10 @@ export async function getProject(id: string): Promise<Project | null> {
   }
 }
 
-export async function listProjects(): Promise<ProjectSummary[]> {
+export async function listProjects(workspaceId?: string): Promise<ProjectSummary[]> {
   try {
     const rows = await withReconnect(() => prisma.project.findMany({
+      where: workspaceId ? { workspaceId } : undefined,
       include: {
         versions: { orderBy: { version: 'desc' }, take: 1 },
         _count: { select: { versions: true } },

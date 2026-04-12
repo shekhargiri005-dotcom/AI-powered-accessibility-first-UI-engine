@@ -5,8 +5,11 @@ import {
 import type { UIIntent, A11yReport } from '@/lib/validation/schemas';
 
 // GET /api/projects — list all projects
-export async function GET() {
-  const projects = await listProjects();
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const workspaceId = searchParams.get('workspaceId') || undefined;
+  
+  const projects = await listProjects(workspaceId);
   return NextResponse.json({ success: true, projects });
 }
 
@@ -21,6 +24,7 @@ export async function POST(request: NextRequest) {
     const {
       id, name, componentType, code, intent, a11yReport,
       changeDescription, isNewProject, thinkingPlan, reviewData,
+      workspaceId,
     } = body as {
       id: string;
       name: string;
@@ -32,6 +36,7 @@ export async function POST(request: NextRequest) {
       isNewProject?: boolean;
       thinkingPlan?: unknown;
       reviewData?: unknown;
+      workspaceId?: string;
     };
 
     if (!id || !code || !intent) {
@@ -47,7 +52,7 @@ export async function POST(request: NextRequest) {
         id, name || intent.componentName,
         componentType || 'component',
         code, intent, a11yReport,
-        { thinkingPlan, reviewData },
+        { thinkingPlan, reviewData, workspaceId },
       );
     } else {
       project = await saveVersion(
@@ -64,7 +69,7 @@ export async function POST(request: NextRequest) {
           id, name || intent.componentName,
           componentType || 'component',
           code, intent, a11yReport,
-          { thinkingPlan, reviewData },
+          { thinkingPlan, reviewData, workspaceId },
         );
       }
     }

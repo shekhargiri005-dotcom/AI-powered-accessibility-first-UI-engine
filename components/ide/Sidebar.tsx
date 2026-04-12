@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -8,6 +8,7 @@ import {
 import type { ProjectSummary } from '@/lib/projects/projectStore';
 import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
 import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
+import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import UserNav from '@/components/auth/UserNav';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
 
@@ -40,14 +41,16 @@ export default function Sidebar({
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const { activeWorkspaceId } = useWorkspace();
 
   useEffect(() => {
     fetchProjects();
-  }, [activeProjectId]); // Refetch when active changes (it might have been saved)
+  }, [activeProjectId, activeWorkspaceId]); // Refetch when active project OR workspace changes
 
   const fetchProjects = async () => {
     try {
-      const res = await fetch('/api/projects');
+      const qs = activeWorkspaceId ? `?workspaceId=${activeWorkspaceId}` : '';
+      const res = await fetch(`/api/projects${qs}`);
       const data = await res.json();
       setProjects(data.projects || []);
     } catch { /* ignore */ } finally {
