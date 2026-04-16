@@ -51,10 +51,18 @@ export default function CenterWorkspace({
   headerControls
 }: CenterWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isUserScrolledUp = useRef(false);
 
-  // Auto-scroll when feed content changes
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
+    // If the user scrolls up more than 50px from the bottom, we consider them "looking back"
+    isUserScrolledUp.current = scrollTop + clientHeight < scrollHeight - 50;
+  };
+
+  // Auto-scroll when feed content changes, provided the user hasn't scrolled up to read history
   useEffect(() => {
-    if (scrollRef.current && (isThinkingLoading || thinkingPlan || stage !== 'idle')) {
+    if (scrollRef.current && !isUserScrolledUp.current && (isThinkingLoading || thinkingPlan || stage !== 'idle')) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [isThinkingLoading, thinkingPlan, stage, pipelineStep]);
@@ -125,7 +133,8 @@ export default function CenterWorkspace({
       {/* Scrollable Feed â€” contains all content including prompt input */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto min-h-0 p-6 scrollbar-hide flex flex-col relative z-0"
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto min-h-0 p-6 flex flex-col relative z-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-violet-500/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-violet-500/30 transition-all"
       >
         {!showFeed ? (
           /* â”€â”€ Idle / Empty State: "Welcome Home, Buddy" greeting â”€â”€ */

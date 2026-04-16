@@ -65,6 +65,42 @@ export default function HomePage() {
   // True while RightPanel bottom-bar refine is running; suppresses center workspace
   const [isDirectRefining, setIsDirectRefining] = useState(false);
 
+  // ─── Auto-Reset on Inactivity ─────────────────────────────────────────────
+  // Reset LLM config after 30 minutes of inactivity (user must re-auth and re-select model)
+  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  const lastActivityRef = useRef<number>(0);
+  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const resetLLMConfig = useCallback(async () => {
+    // Clear AI config from state
+    setAiConfig(null);
+    setProviderCredentials({});
+    setIsFullAppMode(false);
+    setIsMultiSlideMode(false);
+    
+    // Clear from localStorage/sessionStorage
+    localStorage.removeItem('aiEngineConfig');
+    localStorage.removeItem('uiEngine_fullAppMode');
+    localStorage.removeItem('uiEngine_multiSlideMode');
+    sessionStorage.removeItem('uiEngine_active');
+    
+    // Call server to clear session config
+    try {
+      await fetch('/api/engine-config', { method: 'DELETE' });
+    } catch {
+      // Ignore errors - client-side cleanup is sufficient
+    }
+    
+    // Redirect to login (user must re-authenticate)
+    window.location.href = '/login';
+  }, []);
+
+  const updateActivity = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      lastActivityRef.current = Date.now();
+    }
+  }, []);
+
   // Check for existing AI config on mount - show ModelSelectionGate if none exists
   useEffect(() => {
     const checkExistingConfig = async () => {
@@ -90,6 +126,9 @@ export default function HomePage() {
           
           // Mark this provider as having credentials
           setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
+          
+          // Start inactivity monitoring
+          updateActivity();
         } else {
           // No config - show the model selection gate
           setShowModelGate(true);
@@ -103,7 +142,42 @@ export default function HomePage() {
     };
 
     checkExistingConfig();
-  }, []);
+  }, [updateActivity]);
+
+  // Inactivity monitoring effect
+  useEffect(() => {
+    if (!aiConfig) return; // Only monitor when user is logged in with LLM config
+
+    const checkInactivity = () => {
+      // Skip if activity hasn't been initialized yet
+      if (lastActivityRef.current === 0) return;
+      
+      const inactiveTime = Date.now() - lastActivityRef.current;
+      if (inactiveTime >= INACTIVITY_TIMEOUT) {
+        resetLLMConfig();
+      }
+    };
+
+    // Check every minute
+    inactivityTimerRef.current = setInterval(checkInactivity, 60000);
+
+    // Track user activity events
+    const activityEvents = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove'];
+    const handleActivity = () => updateActivity();
+    
+    activityEvents.forEach(event => {
+      window.addEventListener(event, handleActivity, { passive: true });
+    });
+
+    return () => {
+      if (inactivityTimerRef.current) {
+        clearInterval(inactivityTimerRef.current);
+      }
+      activityEvents.forEach(event => {
+        window.removeEventListener(event, handleActivity);
+      });
+    };
+  }, [aiConfig, resetLLMConfig, updateActivity]);
 
   // Called when the user saves AI Engine Config
   // SECURITY: The config passed here has apiKey='••••' (masked) - real key is stored server-side
