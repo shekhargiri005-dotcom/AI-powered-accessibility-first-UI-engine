@@ -17,7 +17,6 @@ interface ProviderConfig {
   placeholder: string;
   models: string[];
   docsUrl: string;
-  isLocal?: boolean;
 }
 
 const PROVIDERS: ProviderConfig[] = [
@@ -271,9 +270,6 @@ export default function WorkspaceSettingsPanel({ isOpen, onClose }: WorkspaceSet
                         <CheckCircle className="w-2.5 h-2.5" /> Saved
                       </p>
                     )}
-                    {p.isLocal && !saved && (
-                      <p className="text-[9px] text-orange-400 mt-0.5">No key needed</p>
-                    )}
                   </div>
                   {activeProvider === p.id && <ChevronRight className="w-3 h-3 text-blue-400 flex-shrink-0" />}
                 </button>
@@ -332,18 +328,6 @@ export default function WorkspaceSettingsPanel({ isOpen, onClose }: WorkspaceSet
               </div>
             )}
 
-            {/* Ollama note */}
-            {provider.isLocal && (
-              <div className="p-3 rounded-xl bg-orange-900/20 border border-orange-500/20">
-                <p className="text-xs text-orange-300 font-semibold mb-1">🦙 No API key required</p>
-                <p className="text-[11px] text-orange-400/80">
-                  Ollama runs locally. Make sure the Ollama server is running at{' '}
-                  <code className="text-orange-300">http://localhost:11434</code>. 
-                  Set <code className="text-orange-300">OLLAMA_BASE_URL</code> in .env.local to change the URL.
-                </p>
-              </div>
-            )}
-
             {/* Available models */}
             <div>
               <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-widest mb-2">Available Models</p>
@@ -356,64 +340,62 @@ export default function WorkspaceSettingsPanel({ isOpen, onClose }: WorkspaceSet
               </div>
             </div>
 
-            {/* Key input — hide for local providers */}
-            {!provider.isLocal && (
-              <div className="space-y-2">
-                <label htmlFor={`key-${provider.id}`} className="text-xs font-semibold text-gray-300">
-                  {hasSavedKey ? 'Replace API Key' : 'API Key'}
-                </label>
-                <div className="relative group">
-                  <input
-                    id={`key-${provider.id}`}
-                    type={showKey[provider.id] ? 'text' : 'password'}
-                    value={inputKeys[provider.id] ?? ''}
-                    onChange={e => setInputKeys(k => ({ ...k, [provider.id]: e.target.value }))}
-                    placeholder={hasSavedKey ? 'Enter new key to replace…' : provider.placeholder}
-                    autoComplete="off"
-                    className="w-full px-4 py-3 pr-24 bg-gray-900 border border-gray-700/60 rounded-xl text-sm
-                      text-white placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/50
-                      focus:border-blue-500/50 transition-all group-hover:border-gray-600/80"
-                    onKeyDown={e => { if (e.key === 'Enter') handleSave(provider.id); }}
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setShowKey(s => ({ ...s, [provider.id]: !s[provider.id] }))}
-                      className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
-                      aria-label={showKey[provider.id] ? 'Hide key' : 'Show key'}
-                    >
-                      {showKey[provider.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
+            {/* Key input */}
+            <div className="space-y-2">
+              <label htmlFor={`key-${provider.id}`} className="text-xs font-semibold text-gray-300">
+                {hasSavedKey ? 'Replace API Key' : 'API Key'}
+              </label>
+              <div className="relative group">
+                <input
+                  id={`key-${provider.id}`}
+                  type={showKey[provider.id] ? 'text' : 'password'}
+                  value={inputKeys[provider.id] ?? ''}
+                  onChange={e => setInputKeys(k => ({ ...k, [provider.id]: e.target.value }))}
+                  placeholder={hasSavedKey ? 'Enter new key to replace…' : provider.placeholder}
+                  autoComplete="off"
+                  className="w-full px-4 py-3 pr-24 bg-gray-900 border border-gray-700/60 rounded-xl text-sm
+                    text-white placeholder-gray-600 font-mono focus:outline-none focus:ring-2 focus:ring-blue-500/50
+                    focus:border-blue-500/50 transition-all group-hover:border-gray-600/80"
+                  onKeyDown={e => { if (e.key === 'Enter') handleSave(provider.id); }}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowKey(s => ({ ...s, [provider.id]: !s[provider.id] }))}
+                    className="p-1.5 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+                    aria-label={showKey[provider.id] ? 'Hide key' : 'Show key'}
+                  >
+                    {showKey[provider.id] ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
                 </div>
-
-                {/* Error */}
-                {error && (
-                  <p className="text-xs text-red-400 flex items-center gap-1.5 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                    {error}
-                  </p>
-                )}
-
-                {/* Save button */}
-                <button
-                  onClick={() => handleSave(provider.id)}
-                  disabled={isProcessing || !inputKeys[provider.id]?.trim()}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
-                    bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed
-                    text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
-                >
-                  {status === 'testing'  && <Loader2    className="w-4 h-4 animate-spin" />}
-                  {status === 'saved'    && <CheckCircle className="w-4 h-4 text-emerald-300" />}
-                  {status === 'error'    && <RotateCcw   className="w-4 h-4" />}
-                  {status === 'testing'  ? 'Validating & Saving…'
-                    : status === 'saved'  ? '✓ Saved!'
-                    : status === 'error'  ? 'Retry'
-                    : hasSavedKey         ? 'Replace Key'
-                    : 'Save & Validate'}
-                </button>
               </div>
-            )}
+
+              {/* Error */}
+              {error && (
+                <p className="text-xs text-red-400 flex items-center gap-1.5 mt-1">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                  {error}
+                </p>
+              )}
+
+              {/* Save button */}
+              <button
+                onClick={() => handleSave(provider.id)}
+                disabled={isProcessing || !inputKeys[provider.id]?.trim()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl
+                  bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed
+                  text-white text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98]"
+              >
+                {status === 'testing'  && <Loader2    className="w-4 h-4 animate-spin" />}
+                {status === 'saved'    && <CheckCircle className="w-4 h-4 text-emerald-300" />}
+                {status === 'error'    && <RotateCcw   className="w-4 h-4" />}
+                {status === 'testing'  ? 'Validating & Saving…'
+                  : status === 'saved'  ? '✓ Saved!'
+                  : status === 'error'  ? 'Retry'
+                  : hasSavedKey         ? 'Replace Key'
+                  : 'Save & Validate'}
+              </button>
+            </div>
 
             {/* Env var hint */}
             <div className="p-3 rounded-xl bg-gray-900/60 border border-gray-800/60 space-y-1">

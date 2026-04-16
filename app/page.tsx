@@ -84,7 +84,6 @@ export default function HomePage() {
             temperature: config.temperature || 0.6,
             fullAppMode: config.fullAppMode || false,
             multiSlideMode: config.multiSlideMode || false,
-            isLocal: config.isLocal || false,
           });
           setIsFullAppMode(config.fullAppMode || false);
           setIsMultiSlideMode(config.multiSlideMode || false);

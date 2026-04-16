@@ -117,7 +117,6 @@ export interface AIEngineConfig {
   temperature: number;
   fullAppMode: boolean;
   multiSlideMode: boolean;
-  isLocal?: boolean;      // Optional: true for local LLM providers
 }
 
 const STORAGE_KEY = 'aiEngineConfig';
@@ -403,7 +402,6 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
         temperature,
         fullAppMode,
         multiSlideMode,
-        isLocal: provider.noKey ?? false,
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(displayConfig));
       localStorage.setItem('uiEngine_fullAppMode', String(fullAppMode));

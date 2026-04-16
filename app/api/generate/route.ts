@@ -131,23 +131,8 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
 
-    // Detect local/Ollama models — skip expensive review/repair LLM calls for them.
-    // Also skip for fast-compat providers (Groq/Together) which route lightweight models
-    // through the OpenAI-compat adapter but cannot run a second vision-review call cost-effectively.
-    const isGroqOrCompat = provider === 'groq';
-    const isLocalModel = (
-      provider === 'ollama' ||
-      provider === 'lmstudio' ||
-      isGroqOrCompat ||
-      // Final fallback: no cloud keys configured anywhere — assume local environment
-      (
-        !provider &&
-        !process.env.OPENAI_API_KEY &&
-        !process.env.ANTHROPIC_API_KEY &&
-        !process.env.GOOGLE_API_KEY &&
-        !process.env.GROQ_API_KEY
-      )
-    );
+    // Skip vision review for Groq to avoid cost-prohibitive second API call
+    const skipVisionReview = provider === 'groq';
 
 
     // Step 0: Handle Refinement Context
@@ -237,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     let critiqueData: unknown;
     let repairedByReviewer = false;
-    if (!isLocalModel) {
+    if (!skipVisionReview) {
       // Wrap the entire review+repair phase in a 60s aggregate timeout.
       // Each repair call can take 30-60s — without this the chain can exceed
       // Vercel's 300s maxDuration when multiple repairs trigger in sequence.
