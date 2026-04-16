@@ -10,16 +10,12 @@ import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
 import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import UserNav from '@/components/auth/UserNav';
-import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
-
 interface SidebarProps {
   activeProjectId: string | null;
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
-  onConfigSaved?: (config: AIEngineConfig) => void;
-  onDeactivated?: () => void;
 }
 
 const TYPE_ICONS: Record<string, React.ReactNode> = {
@@ -34,8 +30,6 @@ export default function Sidebar({
   onNewProject,
   isMobileOpen,
   onCloseMobile,
-  onConfigSaved,
-  onDeactivated,
 }: SidebarProps) {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
@@ -200,7 +194,7 @@ export default function Sidebar({
 
         {/* Footer / User Settings */}
         <div className="p-3 mt-auto border-t border-white/[0.08] bg-white/[0.02] flex flex-col gap-2 shrink-0">
-          <UserNav onConfigSaved={onConfigSaved} onDeactivated={onDeactivated} />
+          <UserNav />
         </div>
       </aside>
 

@@ -524,8 +524,6 @@ export default function HomePage() {
         }}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        onConfigSaved={handleEngineConfigSaved}
-        onDeactivated={handleEngineDeactivated}
       />
 
       {/* Center AI Work Pane */}

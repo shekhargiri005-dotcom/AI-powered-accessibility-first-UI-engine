@@ -4,20 +4,18 @@ import React, { useState } from 'react';
 import { useSession, signOut, signIn } from 'next-auth/react';
 import Image from 'next/image';
 import {
-  Settings2, LogOut, User as UserIcon, MoreHorizontal,
-  Cpu, Lock, ShieldCheck, ChevronRight, X,
+  LogOut, User as UserIcon, MoreHorizontal,
+  Lock, ShieldCheck, ChevronRight, X,
 } from 'lucide-react';
-import AIEngineConfigPanel, { type AIEngineConfig } from '@/components/AIEngineConfigPanel';
 
 interface UserNavProps {
-  onConfigSaved?: (config: AIEngineConfig) => void;
+  onConfigSaved?: () => void;
   onDeactivated?: () => void;
 }
 
 export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) {
   const { data: session, status } = useSession();
   const [isOpen,       setIsOpen]       = useState(false);
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // ── Loading skeleton ──────────────────────────────────────────────────────
@@ -179,24 +177,6 @@ export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) 
 
             {/* Menu items */}
             <div className="p-1.5 space-y-0.5">
-              {/* Generation Engine */}
-              <button
-                role="menuitem"
-                onClick={() => { setIsOpen(false); setIsConfigOpen(true); }}
-                className="
-                  w-full flex items-center gap-2.5 px-3 py-2.5
-                  text-sm text-slate-400 hover:text-slate-100
-                  hover:bg-white/[0.06] rounded-xl transition-all duration-150
-                  group
-                "
-              >
-                <div className="p-1 rounded-lg bg-violet-500/10 group-hover:bg-violet-500/20 transition-colors">
-                  <Cpu className="w-3.5 h-3.5 text-violet-400" />
-                </div>
-                <span className="flex-1 text-left font-medium">Generation Engine</span>
-                <Settings2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-60 group-hover:rotate-45 transition-all duration-300" />
-              </button>
-
               {/* Profile Settings */}
               <button
                 role="menuitem"
@@ -279,20 +259,6 @@ export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) 
           </div>
         </>
       )}
-
-      {/* AI Engine Config panel */}
-      <AIEngineConfigPanel
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
-        onSaved={(config) => {
-          setIsConfigOpen(false);
-          onConfigSaved?.(config);
-        }}
-        onDeactivated={() => {
-          setIsConfigOpen(false);
-          onDeactivated?.();
-        }}
-      />
     </div>
   );
 }
