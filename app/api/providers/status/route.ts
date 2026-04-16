@@ -4,10 +4,11 @@
  * GET /api/providers/status → returns which providers have API keys configured
  * in environment variables (Vercel env vars)
  *
- * This allows the UI to show only the adapters the user has configured.
+ * This allows the UI to show only the adapters the user have configured.
  */
 
 import { NextResponse } from 'next/server';
+import { unstable_noStore } from 'next/cache';
 
 // Define provider configurations with their colors matching ProviderSelector
 export const PROVIDER_CONFIG = [
@@ -82,12 +83,23 @@ export interface ProviderStatus {
 // ─── GET — return provider status (which ones have env vars configured) ───────
 
 export async function GET() {
+  // Prevent caching - check env vars at runtime
+  unstable_noStore();
+  
   try {
     const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
+    
+    // Debug: Log all available env var keys (without values for security)
+    const allEnvKeys = Object.keys(process.env).filter(key => 
+      key.includes('API_KEY') || key.includes('OPENAI') || key.includes('ANTHROPIC') || 
+      key.includes('GOOGLE') || key.includes('GEMINI') || key.includes('GROQ')
+    );
+    console.log('[providers/status] Available env vars:', allEnvKeys);
 
     const providers: ProviderStatus[] = PROVIDER_CONFIG.map((provider) => {
       // Check if provider is configured via env var
       let configured = false;
+      let debugInfo: Record<string, boolean> = {};
       
       if (provider.localOnly) {
         // Ollama is only configured if NOT on Vercel (local only)
@@ -101,6 +113,15 @@ export async function GET() {
           : undefined;
         
         configured = !!(primaryKey || altKey);
+        
+        // Debug logging
+        if (provider.envVar) {
+          debugInfo[provider.envVar] = !!primaryKey;
+        }
+        if ('envVarAlt' in provider && provider.envVarAlt) {
+          debugInfo[provider.envVarAlt] = !!altKey;
+        }
+        console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
       }
 
       return {
@@ -117,11 +138,21 @@ export async function GET() {
       };
     });
 
+    const configuredCount = providers.filter(p => p.configured).length;
+    console.log(`[providers/status] Total configured: ${configuredCount}/${providers.length}`);
+
     return NextResponse.json({
       success: true,
       providers,
-      // Count of configured providers (for UI display)
-      configuredCount: providers.filter(p => p.configured).length,
+      configuredCount,
+      // Debug info (only in development)
+      ...(process.env.NODE_ENV === 'development' && {
+        debug: {
+          isVercel,
+          availableEnvVars: allEnvKeys,
+          nodeEnv: process.env.NODE_ENV,
+        }
+      }),
     });
   } catch (err) {
     console.error('[providers/status GET]', err);
