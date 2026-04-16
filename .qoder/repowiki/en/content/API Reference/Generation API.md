@@ -5,6 +5,7 @@
 - [route.ts](file://app/api/generate/route.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
 - [schemas.ts](file://lib/validation/schemas.ts)
 - [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
 - [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
@@ -22,10 +23,10 @@
 
 ## Update Summary
 **Changes Made**
-- Updated model selection logic to reflect the simplified provider set (removed DeepSeek, Groq, and Together references)
-- Revised API key requirement checking to align with current supported providers
-- Updated provider detection logic to reflect the current supported adapters
-- Removed references to now-deprecated provider configurations
+- Enhanced provider status API with detailed comments explaining creative optimization rationale
+- Updated PROVIDER_SETTINGS object documentation to reflect optimized settings for aesthetic UI generation with higher temperatures (0.7-0.9) and increased token limits (8k-16k)
+- Added comprehensive provider configuration documentation with optimized settings for maximum creativity and aesthetic UI generation
+- Updated provider ecosystem documentation to reflect current supported providers (openai, anthropic, google, groq, ollama)
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -143,7 +144,7 @@ The request body is a JSON object with the following fields:
 - mode (optional): One of component, app, depth_ui. Defaults to component.
 - model (optional): Provider/model identifier. Required for streaming.
 - maxTokens (optional): Number. Maximum tokens for generation.
-- provider (optional): Provider name (openai, anthropic, google, ollama, groq, lmstudio).
+- provider (optional): Provider name (openai, anthropic, google, groq, ollama).
 - isMultiSlide (optional): Boolean. For multi-file outputs.
 - prompt (optional): Text prompt to validate and augment generation.
 - stream (optional): Boolean. Enables SSE streaming of raw tokens.
@@ -206,15 +207,57 @@ Mode selection influences blueprint, design rules, and downstream processing (e.
 
 ### Model Configuration and Adapter Resolution
 - Provider and model are resolved server-side via getWorkspaceAdapter.
-- Supports named providers (openai, anthropic, google, ollama) and OpenAI-compatible providers (groq, lmstudio).
+- Supports named providers (openai, anthropic, google, groq) and OpenAI-compatible providers (groq, lmstudio).
 - Credentials are resolved from workspace settings or environment variables.
 - For local models (ollama, lmstudio) or fast-compatible providers (groq), expert review is skipped to reduce cost and latency.
 
-**Updated** Simplified provider set to remove DeepSeek, Groq, and Together references. The current supported providers are openai, anthropic, google, ollama, and lmstudio.
+**Updated** Enhanced provider status API with detailed comments explaining creative optimization rationale. The PROVIDER_SETTINGS object now reflects optimized settings for aesthetic UI generation with higher temperatures (0.7-0.9) and increased token limits (8k-16k).
 
 **Section sources**
 - [route.ts:137-152](file://app/api/generate/route.ts#L137-L152)
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+
+### Provider Status API and Optimized Settings
+
+#### Enhanced Provider Status Endpoint
+The `/api/providers/status` endpoint provides comprehensive provider configuration information with detailed optimization rationale:
+
+```mermaid
+graph TB
+Status["GET /api/providers/status"] --> Providers["Provider Configurations"]
+Providers --> OpenAI["OpenAI (GPT-4o)"]
+Providers --> Anthropic["Anthropic (Claude 3.5 Sonnet)"]
+Providers --> Google["Google (Gemini 2.0 Flash)"]
+Providers --> Groq["Groq (Llama 3.3)"]
+Providers --> Ollama["Ollama (Local Models)"]
+OpenAI --> Settings["Optimized Settings"]
+Anthropic --> Settings
+Google --> Settings
+Groq --> Settings
+Ollama --> Settings
+```
+
+**Diagram sources**
+- [providers/status/route.ts:126-203](file://app/api/providers/status/route.ts#L126-L203)
+
+#### Optimized Provider Settings for Creative UI Generation
+The PROVIDER_SETTINGS object defines optimized parameters for maximum creativity and aesthetic UI generation:
+
+**Creative Optimization Rationale:**
+- Higher temperatures (0.7-0.9) for creative, visually stunning components
+- Increased token limits (8k-16k) for full applications with depth UI
+- Tailored settings for different provider strengths and capabilities
+
+**Provider-Specific Settings:**
+- **OpenAI**: Temperature 0.85, 16k maxTokens, topP 0.95, frequencyPenalty 0.2, presencePenalty 0.2
+- **Anthropic**: Temperature 0.8, 8k maxTokens, topP 0.95  
+- **Google**: Temperature 0.85, 16k maxTokens, topP 0.95
+- **Groq**: Temperature 0.75, 8k maxTokens, topP 0.92
+- **Ollama**: Temperature 0.9, 4k maxTokens, topP 0.95
+
+**Section sources**
+- [providers/status/route.ts:13-59](file://app/api/providers/status/route.ts#L13-L59)
+- [providers/status/route.ts:126-203](file://app/api/providers/status/route.ts#L126-L203)
 
 ### Multi-Stage Generation Pipeline
 
@@ -318,7 +361,7 @@ Mode selection influences blueprint, design rules, and downstream processing (e.
 - a11yReport: {passed: true, score: 95, violations: [], suggestions: []}
 - tests: {rtl: "...", playwright: "..."}
 - mode: "component"
-- generatorMeta: {blueprint: {...}, validationWarnings: [], repairsApplied: [], feedbackEnriched: false}
+- generatorMeta: {blueprint: {...}, validationWarnings: [], repairsApplied: [], feedbackEnriched: false
 
 #### Example Error Responses
 - 400: "Invalid JSON in request body"
@@ -349,6 +392,7 @@ Route --> VR["lib/ai/visionReviewer.ts"]
 Route --> MEM["lib/ai/memory.ts"]
 Route --> SC["lib/validation/schemas.ts"]
 Route --> TY["lib/ai/types.ts"]
+Route --> PS["app/api/providers/status/route.ts"]
 ```
 
 **Diagram sources**
@@ -362,6 +406,7 @@ Route --> TY["lib/ai/types.ts"]
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 **Section sources**
 - [route.ts:1-23](file://app/api/generate/route.ts#L1-L23)
@@ -398,4 +443,4 @@ Common issues and resolutions:
 ## Conclusion
 The /api/generate endpoint provides a robust, secure, and extensible pipeline for generating high-quality, accessible React components and applications. It integrates workspace-specific AI adapters, performs multi-layer validation and repair, and offers both synchronous and streaming generation modes. The documented schemas and flows enable reliable client integration and predictable behavior across environments.
 
-**Updated** The provider ecosystem has been simplified to focus on core AI providers (openai, anthropic, google, ollama) and local/LM Studio compatibility, removing references to previously supported but now deprecated providers (DeepSeek, Groq, Together). This simplification reduces complexity while maintaining essential functionality for workspace-specific AI adapter integration.
+**Updated** The provider ecosystem has been enhanced with detailed creative optimization rationale and optimized settings for aesthetic UI generation. The PROVIDER_SETTINGS object now reflects higher temperatures (0.7-0.9) and increased token limits (8k-16k) for maximum creativity, while the provider status API provides comprehensive configuration information with detailed optimization explanations. The current supported providers include openai, anthropic, google, groq, and ollama, with simplified configuration and enhanced performance characteristics for UI generation workflows.

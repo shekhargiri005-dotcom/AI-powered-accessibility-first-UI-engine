@@ -21,10 +21,11 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced credential resolution system with universal LLM_KEY fallback mechanism
-- Updated factory pattern to include fourth fallback option for universal API key
-- Added comprehensive documentation for universal key support across all providers
-- Updated troubleshooting guide to include universal key configuration
+- Updated adapter architecture to focus exclusively on cloud-based providers (OpenAI, Anthropic, Google, Groq)
+- Removed OllamaAdapter and LM Studio compatibility handling from factory logic
+- Updated factory pattern to streamline credential resolution for cloud providers only
+- Revised troubleshooting guide to reflect cloud-only deployment model
+- Updated project structure diagram to remove Ollama references
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -39,12 +40,12 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the universal AI adapter system that powers the AI engine. It explains how the adapter pattern isolates provider-specific logic behind a shared interface, how the factory resolves credentials securely, and how standardized request/response formats unify interactions across providers. The system now includes enhanced credential resolution with universal LLM_KEY support that works across all providers as a fourth fallback mechanism. It also covers configuration management, authentication handling, streaming and caching, error handling, fallback mechanisms, and practical guidance for adding new providers and extending the system.
+This document describes the universal AI adapter system that powers the AI engine. The system has been streamlined to focus exclusively on cloud-based AI providers, eliminating local model support while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. The adapter pattern now isolates provider-specific logic behind a shared interface for OpenAI, Anthropic, Google, and Groq providers. The factory resolves credentials securely through workspaceKeyService or environment variables, and the system maintains enhanced credential resolution with universal LLM_KEY support as a fourth fallback mechanism.
 
 ## Project Structure
 The AI adapter system lives under lib/ai and is composed of:
 - A base adapter interface and shared types
-- Provider-specific adapters (OpenAI, Anthropic, Google, Ollama)
+- Provider-specific adapters (OpenAI, Anthropic, Google, Groq)
 - A factory and registry that selects and instantiates adapters
 - A pluggable cache layer for generation results and streams
 - Tool definitions and conversion helpers for function calling
@@ -62,7 +63,6 @@ IDX["adapters/index.ts"]
 OA["adapters/openai.ts"]
 AA["adapters/anthropic.ts"]
 GA["adapters/google.ts"]
-OLA["adapters/ollama.ts"]
 UCA["adapters/unconfigured.ts"]
 CFG["config.ts"]
 RDA["resolveDefaultAdapter.ts"]
@@ -77,12 +77,10 @@ BASE --> IDX
 TYPES --> IDX
 TOOLS --> OA
 TOOLS --> GA
-TOOLS --> OLA
 CACHE --> IDX
 IDX --> OA
 IDX --> AA
 IDX --> GA
-IDX --> OLA
 IDX --> UCA
 CFG --> IDX
 RDA --> IDX
@@ -99,7 +97,6 @@ PS --> IDX
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
@@ -113,7 +110,7 @@ PS --> IDX
 ## Core Components
 - Base adapter interface: Defines the provider-agnostic contract for generating and streaming completions.
 - Shared types: Provide client-safe message, generation, streaming, and pricing types.
-- Provider adapters: Implementations for OpenAI, Anthropic, Google, and Ollama; plus a fallback adapter for unconfigured environments.
+- Provider adapters: Implementations for OpenAI, Anthropic, Google, and Groq cloud providers; plus a fallback adapter for unconfigured environments.
 - Factory and registry: Securely resolves credentials, detects provider, and instantiates adapters with universal LLM_KEY support.
 - Caching: Adds a pluggable cache around generation and streaming calls.
 - Tools: Canonical tool schema and conversion helpers for cross-provider function calling.
@@ -130,13 +127,13 @@ PS --> IDX
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ## Architecture Overview
-The system separates concerns with enhanced credential resolution:
+The system separates concerns with enhanced credential resolution focused on cloud providers:
 - Application code interacts with the AIAdapter interface.
 - The factory selects a concrete adapter based on configuration and environment.
 - Adapters normalize provider differences and expose a unified request/response model.
 - A caching layer improves performance and reduces costs.
 - Tools enable function calling across providers with a single canonical schema.
-- **Enhanced**: Universal LLM_KEY support provides a fourth fallback mechanism that works across all providers.
+- **Enhanced**: Universal LLM_KEY support provides a fourth fallback mechanism that works across all cloud providers.
 
 ```mermaid
 sequenceDiagram
@@ -145,7 +142,7 @@ participant Factory as "getWorkspaceAdapter()"
 participant Resolver as "workspaceKeyService"
 participant Registry as "createAdapter()"
 participant Cache as "CachedAdapter"
-participant Provider as "Provider Adapter"
+participant Provider as "Cloud Provider Adapter"
 Caller->>Factory : "providerId, modelId, workspaceId, userId"
 Factory->>Resolver : "getWorkspaceApiKey(...)"
 alt "Key found"
@@ -177,7 +174,7 @@ Provider-->>Caller : "GenerateResult/StreamChunk"
 - AIAdapter defines provider, generate(), and stream().
 - GenerateOptions and GenerateResult define the standardized request/response contract.
 - StreamChunk captures incremental deltas and optional usage on the final chunk.
-- ProviderName enumerates supported providers.
+- ProviderName enumerates supported providers (OpenAI, Anthropic, Google, Groq, unconfigured).
 - Pricing utilities estimate USD cost based on provider/model.
 
 ```mermaid
@@ -222,7 +219,7 @@ AIAdapter --> StreamChunk : "produces"
 
 ### Factory Pattern and Dynamic Adapter Instantiation
 - getWorkspaceAdapter resolves credentials from workspace storage or environment variables, then delegates to createAdapter.
-- **Enhanced**: Now includes universal LLM_KEY as the fourth fallback mechanism that works across all providers.
+- **Enhanced**: Now includes universal LLM_KEY as the fourth fallback mechanism that works across all cloud providers.
 - createAdapter detects provider from config or model name, validates API keys, and returns a CachedAdapter-wrapped provider adapter.
 - For unknown providers, it falls back to UnconfiguredAdapter to avoid hard failures.
 - Legacy getAdapter remains for backward compatibility but should be migrated to getWorkspaceAdapter.
@@ -244,12 +241,9 @@ Detect --> Compat{"OpenAI-compatible?"}
 Compat -- Yes --> OpenAI["CachedAdapter(new OpenAIAdapter(key, compatUrl))"]
 Compat -- No --> Named{"Named provider?"}
 Named -- Yes --> NewAdapter["new ProviderAdapter(keyOrUrl)"]
-Named -- No --> Local{"Local provider?"}
-Local -- Yes --> Ollama["new OllamaAdapter(url)"]
-Local -- No --> Unconfigured["new UnconfiguredAdapter()"]
+Named -- No --> Unconfigured["new UnconfiguredAdapter()"]
 OpenAI --> CacheWrap["wrap with CachedAdapter"]
 NewAdapter --> CacheWrap
-Ollama --> CacheWrap
 CacheWrap --> End(["AIAdapter"])
 ```
 
@@ -262,19 +256,19 @@ CacheWrap --> End(["AIAdapter"])
 ### Enhanced Credential Resolution System
 
 #### Universal LLM_KEY Support
-The system now supports a universal LLM_KEY environment variable that works across all providers as the fourth fallback mechanism:
+The system now supports a universal LLM_KEY environment variable that works across all cloud providers as the fourth fallback mechanism:
 
 **Credential Resolution Hierarchy (Enhanced):**
 1. **Database Check**: Workspace-scoped keys via workspaceKeyService
 2. **Environment Variable Check**: Provider-specific keys (e.g., OPENAI_API_KEY)
 3. **Provider-Specific Fallback**: Alternative environment variables (Google/Gemini)
-4. **Universal LLM_KEY Fallback**: Single universal key for all providers
+4. **Universal LLM_KEY Fallback**: Single universal key for all cloud providers
 5. **Failure**: UnconfiguredAdapter for graceful degradation
 
 **Universal Key Implementation:**
 - The universal LLM_KEY is checked after provider-specific environment variables
 - When found, it's logged with a console message indicating universal key usage
-- Works transparently across all providers (OpenAI, Anthropic, Google, Groq, Ollama)
+- Works transparently across all cloud providers (OpenAI, Anthropic, Google, Groq)
 - Provides simplified deployment configuration for teams using single credentials
 
 ```mermaid
@@ -355,13 +349,6 @@ AA-->>App : "StreamChunk (delta/done)"
 
 **Section sources**
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-
-#### OllamaAdapter
-- Uses OpenAI-compatible endpoint of local Ollama daemon.
-- Supports tool calling when the model supports it.
-
-**Section sources**
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 
 #### UnconfiguredAdapter
 - Graceful fallback when no credentials are available.
@@ -475,16 +462,13 @@ graph LR
 TYPES["types.ts"] --> BASE["adapters/base.ts"]
 TYPES --> OA["adapters/openai.ts"]
 TYPES --> GA["adapters/google.ts"]
-TYPES --> OLA["adapters/ollama.ts"]
 TOOLS["tools.ts"] --> OA
 TOOLS --> GA
-TOOLS --> OLA
 BASE --> IDX["adapters/index.ts"]
 CACHE["cache.ts"] --> IDX
 IDX --> OA
 IDX --> AA["adapters/anthropic.ts"]
 IDX --> GA
-IDX --> OLA
 IDX --> UCA["adapters/unconfigured.ts"]
 CFG["config.ts"] --> IDX
 RDA["resolveDefaultAdapter.ts"] --> IDX
@@ -501,7 +485,6 @@ PS["api/providers/status/route.ts"] --> IDX
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
@@ -516,14 +499,14 @@ PS["api/providers/status/route.ts"] --> IDX
 - Tune temperature and maxTokens to balance quality and cost.
 - Use streaming for long-form generation to improve perceived latency.
 - Monitor token usage via pricing utilities and metrics.
-- For local providers, ensure the daemon is reachable; otherwise use cloud providers or UnconfiguredAdapter for graceful UX.
+- For cloud providers, ensure network connectivity to provider endpoints; otherwise use UnconfiguredAdapter for graceful UX.
 - **Enhanced**: Universal LLM_KEY reduces configuration overhead and deployment complexity.
 
 ## Troubleshooting Guide
 - Missing API key: Expect ConfigurationError or UnconfiguredAdapter behavior. Configure provider key in workspace settings or environment variables.
-- **Enhanced**: Universal LLM_KEY configuration: Set LLM_KEY environment variable to use a single key across all providers.
+- **Enhanced**: Universal LLM_KEY configuration: Set LLM_KEY environment variable to use a single key across all cloud providers.
 - Provider-specific constraints: Some providers reject certain parameters (e.g., response_format, tools, temperature). The adapters normalize these differences.
-- Network connectivity: Local Ollama/LM Studio may be unreachable on serverless platforms; UnconfiguredAdapter will guide users to configure cloud providers.
+- Network connectivity: Cloud providers require internet access; local Ollama/LM Studio support has been removed from the system.
 - Tool execution: Ensure tool names match and parameters conform to the declared schema; mismatches are handled gracefully.
 - **Enhanced**: Universal key debugging: Check console logs for "[getWorkspaceAdapter] Using universal LLM_KEY for [provider]" messages.
 
@@ -561,14 +544,14 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 ### Universal LLM_KEY Configuration Guide
 **Setting Up Universal Key:**
 1. Set the LLM_KEY environment variable in your deployment platform
-2. The key will automatically work for all providers (OpenAI, Anthropic, Google, Groq, Ollama)
+2. The key will automatically work for all cloud providers (OpenAI, Anthropic, Google, Groq)
 3. Universal key takes precedence over provider-specific keys
 4. Check console logs for confirmation: "[getWorkspaceAdapter] Using universal LLM_KEY for [provider]"
 
 **Benefits:**
 - Simplified deployment configuration
 - Reduced environment variable management
-- Transparent fallback across all providers
+- Transparent fallback across all cloud providers
 - Easier team onboarding and credential sharing
 
 **Section sources**

@@ -15,6 +15,14 @@
 - [adapterIndex.test.ts](file://__tests__/adapterIndex.test.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Removed OllamaAdapter implementation details as local model support has been eliminated
+- Updated provider-specific implementations to reflect cloud-first approach with OpenAI, Anthropic, Google, and Groq as primary providers
+- Updated factory configuration to reflect removal of OllamaAdapter from supported adapters
+- Revised architecture diagrams to remove OllamaAdapter references
+- Updated troubleshooting guide to remove Ollama-related configurations
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -27,7 +35,9 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the AI provider implementations and their adapter classes that power the UI engine. It covers the base AIAdapter interface, the concrete adapters for OpenAI, Anthropic, Google, Ollama, and the UnconfiguredAdapter. It also documents how OpenAI-compatible providers (Groq, LM Studio) are handled via the OpenAI adapter, and how the UnconfiguredAdapter provides graceful degradation when no credentials are available. The guide highlights provider-specific parameters, authentication flows, response handling, error management, and unique features such as tool calls and streaming.
+This document explains the AI provider implementations and their adapter classes that power the UI engine. It covers the base AIAdapter interface, the concrete adapters for OpenAI, Anthropic, Google, and the UnconfiguredAdapter. It also documents how OpenAI-compatible providers (Groq) are handled via the OpenAI adapter, and how the UnconfiguredAdapter provides graceful degradation when no credentials are available. The guide highlights provider-specific parameters, authentication flows, response handling, error management, and unique features such as tool calls and streaming.
+
+**Updated** The system now operates on a cloud-first approach with OpenAI, Anthropic, Google, and Groq as the primary supported providers. Local model support through Ollama has been eliminated in favor of fully cloud-based AI services.
 
 ## Project Structure
 The AI adapter system is organized under lib/ai/adapters with a central factory and registry in index.ts. Each provider has its own adapter file implementing the shared AIAdapter interface. Supporting types and tool schemas live in lib/ai/types.ts and lib/ai/tools.ts respectively.
@@ -39,7 +49,6 @@ Base["AIAdapter Interface<br/>base.ts"]
 OA["OpenAIAdapter<br/>openai.ts"]
 AA["AnthropicAdapter<br/>anthropic.ts"]
 GA["GoogleAdapter<br/>google.ts"]
-OA2["OllamaAdapter<br/>ollama.ts"]
 UA["UnconfiguredAdapter<br/>unconfigured.ts"]
 end
 subgraph "Registry & Factory"
@@ -52,32 +61,28 @@ end
 IDX --> OA
 IDX --> AA
 IDX --> GA
-IDX --> OA2
 IDX --> UA
 OA --- TOOL
 AA --- TOOL
 GA --- TOOL
-OA2 --- TOOL
+UA --- TOOL
 Base --> OA
 Base --> AA
 Base --> GA
-Base --> OA2
 Base --> UA
 IDX --- TYP
 OA --- TYP
 AA --- TYP
 GA --- TYP
-OA2 --- TYP
 UA --- TYP
 ```
 
 **Diagram sources**
-- [index.ts:140-215](file://lib/ai/adapters/index.ts#L140-L215)
+- [index.ts:10-13](file://lib/ai/adapters/index.ts#L10-L13)
 - [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
 - [openai.ts:36-222](file://lib/ai/adapters/openai.ts#L36-L222)
 - [anthropic.ts:71-208](file://lib/ai/adapters/anthropic.ts#L71-L208)
 - [google.ts:24-89](file://lib/ai/adapters/google.ts#L24-L89)
-- [ollama.ts:21-86](file://lib/ai/adapters/ollama.ts#L21-L86)
 - [unconfigured.ts:13-98](file://lib/ai/adapters/unconfigured.ts#L13-L98)
 - [types.ts:19-55](file://lib/ai/types.ts#L19-L55)
 - [tools.ts:47-79](file://lib/ai/tools.ts#L47-L79)
@@ -101,7 +106,7 @@ These types enable the rest of the application to remain provider-agnostic while
 - [types.ts:59-67](file://lib/ai/types.ts#L59-L67)
 
 ## Architecture Overview
-The adapter factory resolves credentials securely from workspace storage or environment variables, selects the appropriate adapter, and wraps it in a caching layer. OpenAI-compatible providers (Groq, LM Studio) are routed through the OpenAI adapter with provider-specific base URLs. Anthropic uses a native fetch-based API. Google leverages an OpenAI-compatible endpoint. Ollama targets a local OpenAI-compatible server. UnconfiguredAdapter provides graceful fallback when no credentials are present.
+The adapter factory resolves credentials securely from workspace storage or environment variables, selects the appropriate adapter, and wraps it in a caching layer. OpenAI-compatible providers (Groq) are routed through the OpenAI adapter with provider-specific base URLs. Anthropic uses a native fetch-based API. Google leverages an OpenAI-compatible endpoint. UnconfiguredAdapter provides graceful fallback when no credentials are present.
 
 ```mermaid
 sequenceDiagram
@@ -219,10 +224,10 @@ AA-->>Caller : StreamChunk deltas
 - [anthropic.ts:147-207](file://lib/ai/adapters/anthropic.ts#L147-L207)
 
 ### GoogleAdapter
-- Purpose: Uses Google AI Studio’s OpenAI-compatible endpoint to call Gemini models.
+- Purpose: Uses Google AI Studio's OpenAI-compatible endpoint to call Gemini models.
 - Authentication: Uses GOOGLE_API_KEY or GEMINI_API_KEY; base URL is fixed.
 - Special handling:
-  - Google’s proxy rejects response_format; it is omitted when passed.
+  - Google's proxy rejects response_format; it is omitted when passed.
   - Tool calling is supported via OpenAI-compatible tool definitions.
 - Streaming: Uses OpenAI SDK streaming.
 
@@ -249,28 +254,15 @@ AIAdapter <|.. GoogleAdapter
 - [google.ts:71-88](file://lib/ai/adapters/google.ts#L71-L88)
 
 ### OllamaAdapter
-- Purpose: Connects to a local OpenAI-compatible server exposed by Ollama/LM Studio/Groq/HuggingFace via base URL.
-- Authentication: Uses a placeholder API key; relies on baseURL pointing to a local service.
-- Special handling:
-  - Supports response_format and tool calling when the underlying model supports them.
-  - Works with any model pulled via Ollama.
-- Streaming: Uses OpenAI SDK streaming.
+- Purpose: **Removed** - Local model support has been eliminated from the system.
+- Historical Functionality: Connected to a local OpenAI-compatible server exposed by Ollama/LM Studio/Groq/HuggingFace via base URL.
+- Historical Special handling:
+  - Supported response_format and tool calling when the underlying model supported them.
+  - Worked with any model pulled via Ollama.
+  - Used OpenAI SDK streaming.
+- Current Status: The adapter file still exists but is no longer part of the supported provider ecosystem.
 
-```mermaid
-classDiagram
-class OllamaAdapter {
-+provider = "ollama"
--client : OpenAI
-+constructor(baseURL?)
-+generate(options) GenerateResult
-+stream(options) AsyncGenerator~StreamChunk~
-}
-AIAdapter <|.. OllamaAdapter
-```
-
-**Diagram sources**
-- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
-- [ollama.ts:21-86](file://lib/ai/adapters/ollama.ts#L21-L86)
+**Updated** OllamaAdapter has been removed as part of the cloud-first approach. The system now exclusively supports cloud-based AI providers.
 
 **Section sources**
 - [ollama.ts:1-9](file://lib/ai/adapters/ollama.ts#L1-L9)
@@ -282,7 +274,7 @@ AIAdapter <|.. OllamaAdapter
 - Purpose: Graceful fallback when no API keys are available. Prevents server crashes and surfaces actionable guidance to the user.
 - Behavior:
   - JSON mode: Returns a structured JSON suitable for intent/thinking schemas with clear guidance.
-  - Non-JSON mode: Returns a React component as a string to render a friendly “configure me” UI.
+  - Non-JSON mode: Returns a React component as a string to render a friendly "configure me" UI.
   - Streaming: Emits a minimal React component piece by piece.
 - Role: Ensures the system remains usable even without credentials, guiding users to the settings panel.
 
@@ -305,10 +297,12 @@ UIPath --> Done
 - [unconfigured.ts:76-97](file://lib/ai/adapters/unconfigured.ts#L76-L97)
 
 ### Adapter Factory and Provider Routing
-- Provider detection: Explicit provider selection is preferred; otherwise detects from model name (supports OpenAI, Anthropic, Google, Groq, and defaults to Ollama).
-- OpenAI-compatible providers: Groq and LM Studio are routed through the OpenAI adapter with provider-specific base URLs.
+- Provider detection: Explicit provider selection is preferred; otherwise detects from model name (supports OpenAI, Anthropic, Google, Groq, and defaults to OpenAI).
+- OpenAI-compatible providers: Groq is routed through the OpenAI adapter with provider-specific base URLs.
 - Credential resolution: Workspace keys take precedence; environment variables are the fallback; missing keys trigger a ConfigurationError or return UnconfiguredAdapter.
 - Caching: All adapters are wrapped in a CachedAdapter that caches results and streams, emitting metrics.
+
+**Updated** The factory configuration has been updated to reflect the removal of OllamaAdapter. The system now supports only four cloud providers: OpenAI, Anthropic, Google, and Groq.
 
 ```mermaid
 flowchart TD
@@ -318,7 +312,7 @@ B --> |No| D{"Env var key exists?"}
 D --> |Yes| C
 D --> |No| E["Return UnconfiguredAdapter"]
 C --> F{"Provider is named or compatible?"}
-F --> |Named| G["Create specific adapter (OpenAI/Anthropic/Google/Ollama)"]
+F --> |Named| G["Create specific adapter (OpenAI/Anthropic/Google)"]
 F --> |Compatible| H["Create OpenAIAdapter with provider base URL"]
 G --> I["Wrap in CachedAdapter"]
 H --> I
@@ -342,26 +336,26 @@ I --> J["Return adapter"]
 - Cohesion: Each adapter encapsulates provider-specific logic and conversions.
 - Coupling: Adapters depend on shared types and tool schemas; the factory manages provider selection and credentials.
 - External integrations:
-  - OpenAI SDK for OpenAIAdapter, GoogleAdapter, and OllamaAdapter.
+  - OpenAI SDK for OpenAIAdapter and GoogleAdapter.
   - Native fetch for AnthropicAdapter.
   - Environment variables for credentials.
 - Circular dependencies: None observed among adapters and the factory.
+
+**Updated** The dependency graph has been simplified to exclude OllamaAdapter, reflecting the removal of local model support.
 
 ```mermaid
 graph LR
 IDX["index.ts"] --> OA["openai.ts"]
 IDX --> AA["anthropic.ts"]
 IDX --> GA["google.ts"]
-IDX --> OA2["ollama.ts"]
 IDX --> UA["unconfigured.ts"]
 OA --- TOOL["tools.ts"]
 AA --- TOOL
 GA --- TOOL
-OA2 --- TOOL
+UA --- TOOL
 OA --- TYPES["types.ts"]
 AA --- TYPES
 GA --- TYPES
-OA2 --- TYPES
 UA --- TYPES
 ```
 
@@ -370,7 +364,6 @@ UA --- TYPES
 - [openai.ts:15-21](file://lib/ai/adapters/openai.ts#L15-L21)
 - [anthropic.ts:16-17](file://lib/ai/adapters/anthropic.ts#L16-L17)
 - [google.ts:16-22](file://lib/ai/adapters/google.ts#L16-L22)
-- [ollama.ts:13-19](file://lib/ai/adapters/ollama.ts#L13-L19)
 - [types.ts:14-26](file://lib/ai/types.ts#L14-L26)
 
 **Section sources**
@@ -378,7 +371,6 @@ UA --- TYPES
 - [openai.ts:15-21](file://lib/ai/adapters/openai.ts#L15-L21)
 - [anthropic.ts:16-17](file://lib/ai/adapters/anthropic.ts#L16-L17)
 - [google.ts:16-22](file://lib/ai/adapters/google.ts#L16-L22)
-- [ollama.ts:13-19](file://lib/ai/adapters/ollama.ts#L13-L19)
 - [types.ts:14-26](file://lib/ai/types.ts#L14-L26)
 
 ## Performance Considerations
@@ -386,8 +378,6 @@ UA --- TYPES
 - Streaming: Providers that support usage injection (OpenAIAdapter) yield usage on the final chunk; others omit it.
 - Token caps: Provider-specific caps (Anthropic, HuggingFace) prevent 400 errors and reduce retries.
 - Tool calls: Conversion overhead is minimal; adapters convert tool definitions and normalize tool calls uniformly.
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 - Missing API key:
@@ -397,12 +387,14 @@ UA --- TYPES
   - Ensure ANTHROPIC_API_KEY is set; the adapter validates presence and throws a clear error if missing.
   - JSON mode is not natively supported; the adapter appends a JSON-only instruction to the system prompt.
 - OpenAI-compatible providers:
-  - For Groq/LM Studio/HuggingFace/OpenRouter/Together.ai, confirm the base URL and key.
+  - For Groq/OpenRouter/Together.ai, confirm the base URL and key.
   - HuggingFace endpoints are auto-migrated; ensure the correct router endpoint is used.
 - Streaming issues:
   - OpenAIAdapter requires stream_options; AnthropicAdapter expects SSE-like events; ensure the client consumes the stream properly.
 - Local models:
-  - OllamaAdapter depends on a reachable local server; on platforms where local daemons are unreachable, UnconfiguredAdapter is returned.
+  - **Removed** - OllamaAdapter support has been eliminated. The system now operates exclusively with cloud-based AI providers.
+
+**Updated** Troubleshooting guidance has been updated to remove references to OllamaAdapter and local model configurations.
 
 **Section sources**
 - [index.ts:159-162](file://lib/ai/adapters/index.ts#L159-L162)
@@ -413,4 +405,6 @@ UA --- TYPES
 - [index.ts:204-207](file://lib/ai/adapters/index.ts#L204-L207)
 
 ## Conclusion
-The adapter system provides a robust, provider-agnostic interface for multiple AI backends. Each adapter encapsulates provider-specific quirks, ensuring consistent input/output semantics and reliable streaming. The factory enforces secure credential resolution and graceful fallback, while caching improves performance. OpenAI-compatible providers are unified under the OpenAI adapter with careful parameter normalization, and Anthropic’s native API is supported via direct fetch. UnconfiguredAdapter ensures usability without credentials by returning helpful guidance and UI components.
+The adapter system provides a robust, provider-agnostic interface for multiple AI backends. Each adapter encapsulates provider-specific quirks, ensuring consistent input/output semantics and reliable streaming. The factory enforces secure credential resolution and graceful fallback, while caching improves performance. OpenAI-compatible providers are unified under the OpenAI adapter with careful parameter normalization, and Anthropic's native API is supported via direct fetch. UnconfiguredAdapter ensures usability without credentials by returning helpful guidance and UI components.
+
+**Updated** The system has evolved to a cloud-first architecture with OpenAI, Anthropic, Google, and Groq as the primary supported providers. The elimination of local model support through OllamaAdapter reflects the project's commitment to fully cloud-based AI services, simplifying the architecture while maintaining robust provider-agnostic functionality.

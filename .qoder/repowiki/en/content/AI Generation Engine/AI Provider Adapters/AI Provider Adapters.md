@@ -6,7 +6,6 @@
 - [openai.ts](file://lib/ai/adapters/openai.ts)
 - [anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [google.ts](file://lib/ai/adapters/google.ts)
-- [ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [index.ts](file://lib/ai/adapters/index.ts)
 - [types.ts](file://lib/ai/types.ts)
 - [tools.ts](file://lib/ai/tools.ts)
@@ -21,14 +20,12 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced ModelSelectionGate component documentation with new streamlined visual design featuring violet color scheme and provider brand color integration
-- Updated ProviderSelector component documentation with comprehensive provider definitions and model selection
-- Removed AIEngineConfigPanel component documentation sections as the three-step wizard interface was dropped in favor of streamlined configuration
-- Updated ProviderStatus API documentation with automatic provider detection and server-side security
-- Enhanced credential management documentation with automatic provider detection and server-side encryption
-- Updated encryption service documentation with AES-256-GCM implementation and fallback mechanisms
-- Expanded workspace key service documentation with global fallback capabilities and cache invalidation
-- Updated troubleshooting guide with new credential management workflows and automatic provider detection
+- Removed OllamaAdapter documentation as local model support has been completely eliminated
+- Updated factory pattern documentation to reflect streamlined adapter creation without Ollama/LM Studio support
+- Updated supported providers list to reflect the current 4 cloud providers (OpenAI, Anthropic, Google, Groq)
+- Removed Ollama-related sections from architecture diagrams and component analyses
+- Updated pricing information to remove Ollama local model pricing entries
+- Removed Ollama references from troubleshooting guide and configuration sections
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -44,7 +41,9 @@
 11. [Appendices](#appendices)
 
 ## Introduction
-This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Anthropic, Google, DeepSeek (via OpenAI-compatible mode), and Ollama. The system now features an enhanced credential management system with streamlined provider selection workflow, automatic provider detection, and comprehensive server-side security with AES-256-GCM encryption.
+This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Anthropic, Google, and Groq (OpenAI-compatible). The system now features an enhanced credential management system with streamlined provider selection workflow, automatic provider detection, and comprehensive server-side security with AES-256-GCM encryption.
+
+**Updated** The system has been streamlined to support only cloud-based providers, eliminating local model support including Ollama/LM Studio. This simplifies the architecture while maintaining comprehensive security and seamless provider switching capabilities.
 
 ## Project Structure
 The AI adapter system is organized under lib/ai/adapters with a central factory and per-provider adapters. Enhanced UI components provide guided configuration experiences with automatic provider detection and secure credential management. Supporting modules define shared types, tool schemas, encryption services, and workspace key management with global fallback capabilities.
@@ -56,7 +55,6 @@ BASE["base.ts<br/>AIAdapter interface"]
 OA["openai.ts<br/>OpenAIAdapter"]
 AA["anthropic.ts<br/>AnthropicAdapter"]
 GA["google.ts<br/>GoogleAdapter"]
-OLA["ollama.ts<br/>OllamaAdapter"]
 IDX["index.ts<br/>Factory + Registry"]
 UNC["unconfigured.ts<br/>UnconfiguredAdapter"]
 END
@@ -77,7 +75,6 @@ END
 IDX --> OA
 IDX --> AA
 IDX --> GA
-IDX --> OLA
 IDX --> UNC
 MSG --> PS
 MSG --> WKS
@@ -85,10 +82,8 @@ PS --> WKS
 OA --> TYPES
 AA --> TYPES
 GA --> TYPES
-OLA --> TYPES
 OA --> TOOLS
 GA --> TOOLS
-OLA --> TOOLS
 IDX --> WKS
 WKS --> ENC
 API --> ENC
@@ -96,12 +91,11 @@ PSTATUS --> ENC
 ```
 
 **Diagram sources**
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
 - [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
-- [ollama.ts:1-87](file://lib/ai/adapters/ollama.ts#L1-L87)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
 - [unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
@@ -113,7 +107,7 @@ PSTATUS --> ENC
 - [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
 
 **Section sources**
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
@@ -125,7 +119,7 @@ PSTATUS --> ENC
 
 ## Core Components
 - AIAdapter interface: Defines the provider-agnostic contract with generate() and stream().
-- Provider adapters: Implementations for OpenAI, Anthropic, Google, and Ollama; DeepSeek is supported via OpenAI-compatible mode.
+- Provider adapters: Implementations for OpenAI, Anthropic, Google, and Groq (OpenAI-compatible); DeepSeek is supported via OpenAI-compatible mode.
 - Factory and registry: Centralized creation logic with workspace-aware resolution and fallbacks.
 - Enhanced UI components: ModelSelectionGate provides streamlined 2-step configuration flow with automatic provider detection; ProviderSelector offers intuitive provider and model selection with comprehensive provider definitions.
 - Comprehensive security system: Server-side credential management with AES-256-GCM encryption, workspace-scoped keys, caching, and global fallback capabilities.
@@ -283,35 +277,14 @@ AIAdapter <|.. GoogleAdapter
 - [google.ts:28-69](file://lib/ai/adapters/google.ts#L28-L69)
 - [google.ts:71-88](file://lib/ai/adapters/google.ts#L71-L88)
 
-### Ollama Adapter
-Provides local inference via the OpenAI-compatible API exposed by Ollama/LM Studio/Groq/HuggingFace routes. Supports tools and streaming.
-
-```mermaid
-classDiagram
-class OllamaAdapter {
-+string provider
--client OpenAI
-+constructor(baseURL?)
-+generate(options) GenerateResult
-+stream(options) AsyncGenerator~StreamChunk~
-}
-AIAdapter <|.. OllamaAdapter
-```
-
-**Diagram sources**
-- [ollama.ts:21-87](file://lib/ai/adapters/ollama.ts#L21-L87)
-- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
-
-**Section sources**
-- [ollama.ts:25-66](file://lib/ai/adapters/ollama.ts#L25-L66)
-- [ollama.ts:68-85](file://lib/ai/adapters/ollama.ts#L68-L85)
-
 ### Adapter Factory and Registry
 Central factory with:
 - detectProvider(model): Heuristic to infer provider from model name.
 - createAdapter(cfg): Builds the appropriate adapter, validates credentials, and wraps with CachedAdapter for metrics and caching.
 - getWorkspaceAdapter(providerId, modelId, workspaceId, userId?): Secure resolution via workspaceKeyService, env vars, or returns UnconfiguredAdapter.
 - CachedAdapter: Adds caching and metrics for generate() and stream().
+
+**Updated** The factory now supports only 4 cloud providers: OpenAI, Anthropic, Google, and Groq (OpenAI-compatible). Ollama support has been completely removed from the factory pattern.
 
 ```mermaid
 flowchart TD
@@ -320,7 +293,7 @@ B --> |found| C["createAdapter({provider, model, apiKey})"]
 B --> |not found| D["process.env[PROVIDER_API_KEY]"]
 D --> |found| C
 D --> |not found| E["return UnconfiguredAdapter"]
-C --> F{"provId in ['openai','anthropic','google','ollama','lmstudio']?"}
+C --> F{"provId in ['openai','anthropic','google']?"}
 F --> |yes| G["new NamedAdapter(...)"]
 F --> |no| H["OpenAIAdapter(key, compatUrl)"]
 G --> I["CachedAdapter(...)"]
@@ -385,6 +358,8 @@ ToolCall <.. Tools
 ### Types and Pricing
 Client-safe types define messages, generation options/results, and streaming chunks. Pricing utilities estimate costs per provider/model.
 
+**Updated** Pricing information has been updated to remove Ollama local model entries, reflecting the elimination of local model support.
+
 **Section sources**
 - [types.ts:10-55](file://lib/ai/types.ts#L10-L55)
 - [types.ts:71-130](file://lib/ai/types.ts#L71-L130)
@@ -398,7 +373,7 @@ The ModelSelectionGate provides a streamlined 2-step configuration experience wi
 - Fetches configured providers from `/api/providers/status` which checks environment variables
 - Shows only providers with API keys configured in Vercel environment variables
 - Interactive provider cards with security badges and recommended provider highlighting
-- Local provider support (Ollama) automatically enabled when not on Vercel
+- **Updated** No local provider support - Ollama/LM Studio is no longer available as a configuration option
 - **Updated** Enhanced visual design featuring violet color scheme with provider brand color integration
 
 **Step 2: Model Confirmation**
@@ -431,8 +406,7 @@ The ProviderSelector offers intuitive provider and model selection with comprehe
 - OpenAI: GPT-4o, GPT-4o-mini, o3-mini with automatic key detection
 - Anthropic: Claude 3.5 Sonnet, Claude 3 Opus with automatic key detection
 - Google Gemini: Gemini 2.0 Flash, Gemini 1.5 Pro with automatic key detection
-- Groq: Llama 3.3, Mixtral - ultra-fast inference with automatic key detection
-- Ollama: Local models, 100% private (no API key required)
+- **Updated** Groq: Llama 3.3, Mixtral - ultra-fast inference with automatic key detection (OpenAI-compatible)
 
 **Features**
 - Security badges for each provider with credential status indicators
@@ -440,7 +414,7 @@ The ProviderSelector offers intuitive provider and model selection with comprehe
 - Feature lists for each provider with context window information
 - Model suggestion grids with automatic provider matching
 - Workspace-scoped credential status with automatic validation
-- Local provider support with Vercel environment detection
+- **Updated** No local provider support - Ollama/LM Studio removed from options
 
 **Section sources**
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
@@ -451,14 +425,14 @@ The `/api/providers/status` endpoint provides automatic provider detection based
 **Automatic Provider Detection Logic**
 - Checks Vercel environment variables for configured providers
 - Handles Google Gemini with dual environment variable support (GOOGLE_API_KEY and GEMINI_API_KEY)
-- Supports local-only providers (Ollama) when not deployed on Vercel
+- **Updated** No local-only providers support - Ollama/LM Studio removed from detection logic
 - Returns filtered provider list showing only configured providers
 
 **Provider Configuration Schema**
 - Provider definitions with colors, gradients, and model lists matching UI components
 - Environment variable mapping for automatic credential detection
 - Recommended provider flags for UI prioritization
-- Local-only provider support for Ollama
+- **Updated** No local-only provider support for Ollama
 
 **Section sources**
 - [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
@@ -498,19 +472,18 @@ The system implements comprehensive server-side credential management with autom
 - Provider status API depends on environment variables for automatic provider detection.
 - Encryption service provides secure key storage for all credential management flows.
 
+**Updated** Dependencies have been simplified with the removal of Ollama-related components and references.
+
 ```mermaid
 graph LR
 TYPES["types.ts"] --> OA["openai.ts"]
 TYPES --> AA["anthropic.ts"]
 TYPES --> GA["google.ts"]
-TYPES --> OLA["ollama.ts"]
 TOOLS["tools.ts"] --> OA
 TOOLS --> GA
-TOOLS --> OLA
 IDX["index.ts"] --> OA
 IDX --> AA
 IDX --> GA
-IDX --> OLA
 IDX --> UNC["unconfigured.ts"]
 IDX --> WKS["workspaceKeyService.ts"]
 WKS --> ENC["encryption.ts"]
@@ -522,7 +495,7 @@ CFG["AIEngineConfigPanel.tsx"] --> IDX
 ```
 
 **Diagram sources**
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
@@ -533,7 +506,7 @@ CFG["AIEngineConfigPanel.tsx"] --> IDX
 - [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
 
 **Section sources**
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
@@ -548,6 +521,7 @@ CFG["AIEngineConfigPanel.tsx"] --> IDX
 - Workspace caching: 5-minute TTL reduces database lookups while maintaining security.
 - Model selection optimization: Predefined model lists reduce API calls for model discovery.
 - Automatic provider detection: Environment variable checks are performed server-side, avoiding client-side complexity.
+- **Updated** Simplified architecture reduces adapter instantiation overhead and improves performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -555,13 +529,14 @@ Common issues and resolutions:
 - Provider mismatch: Use explicit provider selection in configuration to avoid heuristic detection errors.
 - Tool-calling not working: Some providers ignore tools; verify provider support and remove tools for incompatible providers.
 - Streaming failures: Ensure provider supports streaming and that the adapter is using the correct endpoint/baseURL.
-- Local providers unreachable on Vercel: The factory returns UnconfiguredAdapter to avoid connection errors.
+- **Updated** Local providers unreachable: No longer applicable - Ollama/LM Studio support has been removed.
 - Encryption key issues: Check ENCRYPTION_SECRET environment variable format and length.
 - Cache invalidation: WorkspaceKeyService automatically invalidates cache on configuration changes.
 - Model selection problems: Use ProviderSelector component for guided model selection with credential validation.
 - Security warnings: The system provides non-fatal warnings during build phase to prevent deployment failures.
 - Provider detection failures: Check Vercel environment variables for proper provider configuration.
 - Automatic provider detection not working: Verify environment variables match expected naming conventions.
+- **Updated** Configuration problems: Use streamlined ModelSelectionGate workflow - no more Ollama configuration steps.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
@@ -576,6 +551,8 @@ Common issues and resolutions:
 
 ## Conclusion
 The AI adapter system provides a robust, provider-agnostic abstraction over multiple AI providers with comprehensive security enhancements and streamlined configuration workflows. The addition of ModelSelectionGate creates a guided 2-step configuration experience with automatic provider detection, while the enhanced credential management system ensures secure, workspace-scoped API key storage using AES-256-GCM encryption. The automatic provider detection system eliminates manual API key entry by leveraging environment variables, and the global fallback capabilities enable seamless operation across different deployment scenarios. By centralizing credential resolution, enforcing server-only secrets, and normalizing provider differences, it enables seamless switching between models and providers with enterprise-grade security and user-friendly configuration.
+
+**Updated** The system has been streamlined to focus exclusively on cloud-based providers, improving reliability and reducing complexity while maintaining comprehensive security and seamless provider switching capabilities.
 
 ## Appendices
 
@@ -596,7 +573,7 @@ References:
 ### Configuring Provider Credentials
 - **ModelSelectionGate**: Streamlined 2-step configuration with automatic provider detection and server-side encryption
 - **ProviderSelector**: Interactive provider and model selection with credential status and automatic validation
-- **Removed** AIEngineConfigPanel: Three-step wizard interface with advanced settings and manual provider detection (dropped in favor of streamlined approach)
+- **Updated** No AIEngineConfigPanel: Three-step wizard interface with advanced settings and manual provider detection (dropped in favor of streamlined approach)
 - **Automatic Provider Detection**: Environment variable-based provider availability checking
 - **Workspace-level**: Store encrypted keys in workspace settings; retrieved via workspaceKeyService with global fallback
 - **Environment Variables**: Set provider-specific environment variables for automatic credential detection
@@ -630,21 +607,25 @@ References:
 - Model constraints: Adapters handle provider-specific limitations (e.g., reasoning models, response_format, token caps).
 - Model selection: Use ProviderSelector for guided model selection with workspace validation and automatic provider detection.
 
+**Updated** Provider-specific features have been updated to reflect the current supported providers (OpenAI, Anthropic, Google, Groq).
+
 References:
 - [tools.ts:47-79](file://lib/ai/tools.ts#L47-L79)
 - [openai.ts:64-157](file://lib/ai/adapters/openai.ts#L64-L157)
 - [anthropic.ts:89-145](file://lib/ai/adapters/anthropic.ts#L89-L145)
 - [google.ts:35-69](file://lib/ai/adapters/google.ts#L35-L69)
-- [ollama.ts:32-66](file://lib/ai/adapters/ollama.ts#L32-L66)
 - [ProviderSelector.tsx:259-282](file://components/ProviderSelector.tsx#L259-L282)
 
 ### Example Workflows and Tests
-- Adapter usage and streaming are validated in tests for OpenAI, Anthropic, Google, and Ollama.
+- Adapter usage and streaming are validated in tests for OpenAI, Anthropic, and Google.
+- **Updated** Ollama tests removed - local model support has been eliminated.
 - Tests demonstrate tool-calling and streaming behavior.
 - Encryption service tests validate AES-256-GCM implementation with fallback mechanisms.
 - Adapter index tests cover provider detection and configuration resolution.
 - Provider status API tests validate environment variable-based provider detection.
 - ModelSelectionGate tests validate automatic provider detection and streamlined configuration workflow.
+
+**Updated** Example workflows now reflect the streamlined adapter system with 4 supported providers.
 
 References:
 - [adapters.test.ts:1-109](file://__tests__/adapters.test.ts#L1-L109)
