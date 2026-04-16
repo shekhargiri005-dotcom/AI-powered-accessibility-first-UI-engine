@@ -117,7 +117,7 @@ export interface AIEngineConfig {
   temperature: number;
   fullAppMode: boolean;
   multiSlideMode: boolean;
-  isLocal: boolean;
+  isLocal?: boolean;      // Optional: true for local LLM providers
 }
 
 const STORAGE_KEY = 'aiEngineConfig';

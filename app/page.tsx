@@ -457,7 +457,7 @@ export default function HomePage() {
       temperature: 0.6,
       fullAppMode: false,
       multiSlideMode: false,
-      isLocal: config.provider === 'ollama',
+
     });
     setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
     setShowModelGate(false);
