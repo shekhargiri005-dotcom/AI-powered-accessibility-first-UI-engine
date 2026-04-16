@@ -11,12 +11,26 @@ import {
   Loader2,
   Settings,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Cpu,
+  Globe,
+  Server
 } from 'lucide-react';
-import ProviderSelector, { PROVIDER_OPTIONS, PROVIDER_MODELS } from './ProviderSelector';
-import type { ProviderOption } from './ProviderSelector';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+export interface ProviderStatus {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  gradient: string;
+  bgColor: string;
+  configured: boolean;
+  models: string[];
+  recommended?: boolean;
+  localOnly?: boolean;
+}
 
 export interface ModelSelectionGateProps {
   isOpen: boolean;
@@ -29,7 +43,16 @@ export interface ModelSelectionGateProps {
   hasCredentials?: Record<string, boolean>;
 }
 
-type GateStep = 'provider' | 'credentials' | 'model' | 'confirm';
+type GateStep = 'loading' | 'provider' | 'confirm' | 'error';
+
+// Icon mapping for providers
+const PROVIDER_ICONS: Record<string, React.ReactNode> = {
+  openai: <Sparkles className="w-8 h-8" />,
+  anthropic: <Cpu className="w-8 h-8" />,
+  google: <Globe className="w-8 h-8" />,
+  groq: <Zap className="w-8 h-8" />,
+  ollama: <Server className="w-8 h-8" />,
+};
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -37,64 +60,69 @@ export default function ModelSelectionGate({
   isOpen,
   onComplete,
   onSkip,
-  hasCredentials = {},
 }: ModelSelectionGateProps) {
-  const [step, setStep] = useState<GateStep>('provider');
-  const [selectedProvider, setSelectedProvider] = useState<string>('');
+  const [step, setStep] = useState<GateStep>('loading');
+  const [configuredProviders, setConfiguredProviders] = useState<ProviderStatus[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState<ProviderStatus | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  // Reset state when opened
+  // Fetch configured providers on mount
   useEffect(() => {
-    if (isOpen) {
-      setStep('provider');
-      setSelectedProvider('');
-      setSelectedModel('');
+    if (!isOpen) return;
+
+    const fetchProviders = async () => {
+      setStep('loading');
       setError('');
-      setApiKey('');
-    }
+      
+      try {
+        const res = await fetch('/api/providers/status');
+        const data = await res.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to load providers');
+        }
+
+        // Filter to only configured providers
+        const configured = data.providers.filter((p: ProviderStatus) => p.configured);
+        setConfiguredProviders(configured);
+
+        if (configured.length === 0) {
+          setStep('error');
+          setError('No AI providers are configured. Please add API keys to your environment variables (Vercel).');
+        } else {
+          setStep('provider');
+        }
+      } catch (err) {
+        setStep('error');
+        setError(err instanceof Error ? err.message : 'Failed to load providers');
+      }
+    };
+
+    fetchProviders();
   }, [isOpen]);
 
-  const currentProvider = PROVIDER_OPTIONS.find(p => p.id === selectedProvider);
-  const needsCredentials = currentProvider?.requiresKey && !hasCredentials[selectedProvider];
-
-  const handleProviderSelect = (providerId: string, model: string) => {
-    setSelectedProvider(providerId);
-    setSelectedModel(model);
-    
-    const provider = PROVIDER_OPTIONS.find(p => p.id === providerId);
-    
-    // If provider needs credentials and none exist, go to credentials step
-    if (provider?.requiresKey && !hasCredentials[providerId]) {
-      setStep('credentials');
-    } else {
-      // Skip credentials, go directly to confirm
-      setStep('confirm');
-    }
+  const handleProviderSelect = (provider: ProviderStatus) => {
+    setSelectedProvider(provider);
+    setSelectedModel(provider.models[0] || 'default');
+    setStep('confirm');
   };
 
-  const handleCredentialSubmit = async () => {
-    if (!apiKey.trim() && needsCredentials) {
-      setError('Please enter an API key');
-      return;
-    }
+  const handleComplete = async () => {
+    if (!selectedProvider) return;
 
     setIsSaving(true);
-    setError('');
-
+    
     try {
-      // Save credentials to server
+      // Save the selection to server
       const res = await fetch('/api/engine-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: selectedProvider,
+          provider: selectedProvider.id,
           model: selectedModel,
-          apiKey: apiKey.trim() || 'ENV_FALLBACK',
+          apiKey: 'ENV_FALLBACK', // Server will use env var
           temperature: 0.6,
           fullAppMode: false,
           multiSlideMode: false,
@@ -106,27 +134,24 @@ export default function ModelSelectionGate({
         throw new Error(data.error || 'Failed to save configuration');
       }
 
-      // Move to confirmation step
-      setStep('confirm');
+      onComplete({
+        provider: selectedProvider.id,
+        model: selectedModel,
+        providerName: selectedProvider.name,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save credentials');
+      setError(err instanceof Error ? err.message : 'Failed to save configuration');
+      setStep('error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleComplete = () => {
-    if (!currentProvider) return;
-    
-    onComplete({
-      provider: selectedProvider,
-      model: selectedModel,
-      providerName: currentProvider.name,
-    });
-  };
-
-  const handleModelChange = (model: string) => {
-    setSelectedModel(model);
+  const handleBack = () => {
+    setSelectedProvider(null);
+    setSelectedModel('');
+    setStep('provider');
+    setError('');
   };
 
   if (!isOpen) return null;
@@ -152,7 +177,7 @@ export default function ModelSelectionGate({
           </h1>
           <p className="text-gray-400 max-w-lg mx-auto">
             Select the AI provider that will power your UI generation. 
-            You can change this anytime in settings.
+            Only providers configured in your environment variables are shown.
           </p>
         </div>
 
@@ -171,52 +196,138 @@ export default function ModelSelectionGate({
         {/* Step Indicator */}
         <div className="flex items-center justify-center gap-2 mb-8">
           {[
-            { id: 'provider', label: 'Provider' },
-            { id: 'credentials', label: 'Credentials' },
+            { id: 'provider', label: 'Select Provider' },
             { id: 'confirm', label: 'Confirm' },
-          ].map((s, idx, arr) => (
-            <React.Fragment key={s.id}>
-              <div className={`
-                flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all
-                ${step === s.id 
-                  ? 'bg-violet-500 text-white' 
-                  : arr.findIndex(x => x.id === step) > idx
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-gray-800 text-gray-500'
-                }
-              `}>
-                {arr.findIndex(x => x.id === step) > idx ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">
-                    {idx + 1}
-                  </span>
+          ].map((s, idx, arr) => {
+            const isActive = step === s.id || (step === 'loading' && s.id === 'provider') || (step === 'error' && s.id === 'provider');
+            const isCompleted = (step === 'confirm' && s.id === 'provider');
+            
+            return (
+              <React.Fragment key={s.id}>
+                <div className={`
+                  flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all
+                  ${isActive 
+                    ? 'bg-violet-500 text-white' 
+                    : isCompleted
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : 'bg-gray-800 text-gray-500'
+                  }
+                `}>
+                  {isCompleted ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">
+                      {idx + 1}
+                    </span>
+                  )}
+                  {s.label}
+                </div>
+                {idx < arr.length - 1 && (
+                  <ChevronRight className="w-4 h-4 text-gray-600" />
                 )}
-                {s.label}
-              </div>
-              {idx < arr.length - 1 && (
-                <ChevronRight className="w-4 h-4 text-gray-600" />
-              )}
-            </React.Fragment>
-          ))}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Content Card */}
         <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-6 sm:p-8">
+          {/* Loading State */}
+          {step === 'loading' && (
+            <div className="flex flex-col items-center justify-center py-12">
+              <Loader2 className="w-12 h-12 text-violet-400 animate-spin mb-4" />
+              <p className="text-gray-400">Checking configured providers...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {step === 'error' && (
+            <div className="max-w-md mx-auto text-center space-y-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/20 mb-4">
+                <AlertCircle className="w-10 h-10 text-red-400" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-white mb-2">
+                  No Providers Configured
+                </h2>
+                <p className="text-gray-400 mb-4">
+                  {error || 'Please add API keys to your environment variables to use the AI UI Engine.'}
+                </p>
+                <div className="bg-gray-950 rounded-xl p-4 text-left text-sm text-gray-400 space-y-2">
+                  <p className="font-medium text-gray-300">Required environment variables:</p>
+                  <ul className="space-y-1 font-mono text-xs">
+                    <li>• OPENAI_API_KEY - for OpenAI models</li>
+                    <li>• ANTHROPIC_API_KEY - for Claude models</li>
+                    <li>• GOOGLE_API_KEY - for Gemini models</li>
+                    <li>• GROQ_API_KEY - for Groq inference</li>
+                  </ul>
+                </div>
+              </div>
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  Skip for now →
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Step 1: Provider Selection */}
           {step === 'provider' && (
             <div className="space-y-6">
-              <ProviderSelector
-                selectedProvider={selectedProvider}
-                selectedModel={selectedModel}
-                onProviderSelect={handleProviderSelect}
-                onConfigureCredentials={(provider) => {
-                  setSelectedProvider(provider);
-                  setStep('credentials');
-                }}
-                hasCredentials={hasCredentials}
-                isLoading={isLoading}
-              />
+              <div className="text-center space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20">
+                  <Shield className="w-4 h-4 text-violet-400" />
+                  <span className="text-xs font-medium text-violet-300">Available Providers</span>
+                </div>
+                <p className="text-sm text-gray-400">
+                  These providers have API keys configured in your environment
+                </p>
+              </div>
+
+              {/* Provider Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {configuredProviders.map((provider) => (
+                  <button
+                    key={provider.id}
+                    onClick={() => handleProviderSelect(provider)}
+                    className={`
+                      relative group p-5 rounded-2xl border-2 transition-all duration-200 text-left
+                      bg-gray-900/50 border-gray-700/50 hover:border-gray-600 hover:bg-gray-800/50
+                      hover:scale-[1.02] active:scale-[0.98]
+                    `}
+                  >
+                    {/* Recommended Badge */}
+                    {provider.recommended && (
+                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full">
+                        RECOMMENDED
+                      </div>
+                    )}
+
+                    {/* Icon with provider color */}
+                    <div className={`mb-3 ${provider.color}`}>
+                      {PROVIDER_ICONS[provider.id] || <Sparkles className="w-8 h-8" />}
+                    </div>
+
+                    {/* Content */}
+                    <h3 className="font-semibold text-white mb-1">{provider.name}</h3>
+                    <p className="text-xs text-gray-400 mb-3">{provider.description}</p>
+
+                    {/* Features - show first model as default */}
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${provider.bgColor}`} />
+                      <span className="text-[10px] text-gray-500">
+                        Default: {provider.models[0]}
+                      </span>
+                    </div>
+
+                    {/* Hover Effect */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                  </button>
+                ))}
+              </div>
 
               {onSkip && (
                 <div className="text-center pt-4 border-t border-gray-800">
@@ -231,97 +342,8 @@ export default function ModelSelectionGate({
             </div>
           )}
 
-          {/* Step 2: Credentials */}
-          {step === 'credentials' && currentProvider && (
-            <div className="max-w-md mx-auto space-y-6">
-              <div className="text-center">
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${currentProvider.gradient} mb-4`}>
-                  <div className={currentProvider.color}>
-                    {currentProvider.icon}
-                  </div>
-                </div>
-                <h2 className="text-xl font-semibold text-white mb-2">
-                  Enter {currentProvider.name} API Key
-                </h2>
-                <p className="text-sm text-gray-400">
-                  Your key is encrypted and stored securely on the server. 
-                  It will never be exposed to the client.
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
-                    {currentProvider.keyLabel || 'API Key'}
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showKey ? 'text' : 'password'}
-                      value={apiKey}
-                      onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={currentProvider.keyHint || 'Enter your API key...'}
-                      className="w-full px-4 py-3 bg-gray-950 border border-gray-700 rounded-xl text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 pr-12"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowKey(!showKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
-                    >
-                      {showKey ? 'Hide' : 'Show'}
-                    </button>
-                  </div>
-                </div>
-
-                {error && (
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                    <AlertCircle className="w-4 h-4" />
-                    {error}
-                  </div>
-                )}
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setStep('provider')}
-                    className="flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleCredentialSubmit}
-                    disabled={isSaving || !apiKey.trim()}
-                    className="flex-1 px-4 py-3 rounded-xl bg-violet-500 text-white font-medium hover:bg-violet-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        Continue
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <p className="text-xs text-gray-500 text-center">
-                  Don't have an API key?{' '}
-                  <a 
-                    href={currentProvider.docsUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-violet-400 hover:text-violet-300"
-                  >
-                    Get one from {currentProvider.name}
-                  </a>
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Confirm */}
-          {step === 'confirm' && currentProvider && (
+          {/* Step 2: Confirm */}
+          {step === 'confirm' && selectedProvider && (
             <div className="max-w-md mx-auto text-center space-y-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 mb-4">
                 <Check className="w-10 h-10 text-emerald-400" />
@@ -340,15 +362,29 @@ export default function ModelSelectionGate({
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Provider</span>
                   <div className="flex items-center gap-2">
-                    <div className={currentProvider.color}>
-                      {currentProvider.icon}
+                    <div className={selectedProvider.color}>
+                      {PROVIDER_ICONS[selectedProvider.id] || <Sparkles className="w-5 h-5" />}
                     </div>
-                    <span className="text-white font-medium">{currentProvider.name}</span>
+                    <span className="text-white font-medium">{selectedProvider.name}</span>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Model</span>
-                  <span className="text-white font-mono text-sm">{selectedModel}</span>
+                  <div className="flex flex-wrap gap-2 justify-end">
+                    {selectedProvider.models.slice(0, 3).map((model) => (
+                      <button
+                        key={model}
+                        onClick={() => setSelectedModel(model)}
+                        className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                          selectedModel === model
+                            ? 'bg-violet-500 text-white'
+                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                        }`}
+                      >
+                        {model}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Security</span>
@@ -361,17 +397,27 @@ export default function ModelSelectionGate({
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStep('provider')}
+                  onClick={handleBack}
                   className="flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors"
                 >
-                  Change
+                  Back
                 </button>
                 <button
                   onClick={handleComplete}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                  disabled={isSaving}
+                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <Zap className="w-4 h-4" />
-                  Start Generating
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Starting...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" />
+                      Start Engine
+                    </>
+                  )}
                 </button>
               </div>
             </div>
