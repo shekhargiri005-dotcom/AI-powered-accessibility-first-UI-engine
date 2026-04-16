@@ -20,12 +20,12 @@
 
 ## Update Summary
 **Changes Made**
-- Removed OllamaAdapter documentation as local model support has been completely eliminated
-- Updated factory pattern documentation to reflect streamlined adapter creation without Ollama/LM Studio support
-- Updated supported providers list to reflect the current 4 cloud providers (OpenAI, Anthropic, Google, Groq)
-- Removed Ollama-related sections from architecture diagrams and component analyses
-- Updated pricing information to remove Ollama local model pricing entries
-- Removed Ollama references from troubleshooting guide and configuration sections
+- Updated ModelSelectionGate documentation to reflect the streamlined single-panel interface with violet theme and gradient backgrounds
+- Enhanced provider status checking system documentation with universal LLM_KEY support
+- Updated provider configuration to reflect current supported providers (OpenAI, Anthropic, Google, Groq)
+- Removed references to Ollama and local model support
+- Updated visual design documentation to include violet theme, gradient backgrounds, and improved security measures
+- Enhanced provider status checking system documentation with optimized settings display
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -43,7 +43,7 @@
 ## Introduction
 This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Anthropic, Google, and Groq (OpenAI-compatible). The system now features an enhanced credential management system with streamlined provider selection workflow, automatic provider detection, and comprehensive server-side security with AES-256-GCM encryption.
 
-**Updated** The system has been streamlined to support only cloud-based providers, eliminating local model support including Ollama/LM Studio. This simplifies the architecture while maintaining comprehensive security and seamless provider switching capabilities.
+**Updated** The system has been streamlined to support only cloud-based providers, eliminating local model support including Ollama/LM Studio. The ModelSelectionGate now features a single-panel interface with enhanced visual design including violet theme and gradient backgrounds, providing a more intuitive configuration experience.
 
 ## Project Structure
 The AI adapter system is organized under lib/ai/adapters with a central factory and per-provider adapters. Enhanced UI components provide guided configuration experiences with automatic provider detection and secure credential management. Supporting modules define shared types, tool schemas, encryption services, and workspace key management with global fallback capabilities.
@@ -59,7 +59,7 @@ IDX["index.ts<br/>Factory + Registry"]
 UNC["unconfigured.ts<br/>UnconfiguredAdapter"]
 END
 subgraph "Enhanced UI Components"
-MSG["ModelSelectionGate.tsx<br/>Streamlined 2-step configuration"]
+MSG["ModelSelectionGate.tsx<br/>Streamlined single-panel configuration"]
 PS["ProviderSelector.tsx<br/>Provider + model selection"]
 END
 subgraph "Security & Encryption"
@@ -101,10 +101,10 @@ PSTATUS --> ENC
 - [unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
+- [route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 **Section sources**
 - [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
@@ -112,16 +112,16 @@ PSTATUS --> ENC
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
+- [route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 ## Core Components
 - AIAdapter interface: Defines the provider-agnostic contract with generate() and stream().
 - Provider adapters: Implementations for OpenAI, Anthropic, Google, and Groq (OpenAI-compatible); DeepSeek is supported via OpenAI-compatible mode.
 - Factory and registry: Centralized creation logic with workspace-aware resolution and fallbacks.
-- Enhanced UI components: ModelSelectionGate provides streamlined 2-step configuration flow with automatic provider detection; ProviderSelector offers intuitive provider and model selection with comprehensive provider definitions.
+- Enhanced UI components: ModelSelectionGate provides streamlined single-panel configuration flow with automatic provider detection; ProviderSelector offers intuitive provider and model selection with comprehensive provider definitions.
 - Comprehensive security system: Server-side credential management with AES-256-GCM encryption, workspace-scoped keys, caching, and global fallback capabilities.
 - Shared types: Client-safe message, generation options/results, streaming chunks, and pricing utilities.
 - Tools: Canonical tool schema and conversion helpers for provider-specific tool-calling formats.
@@ -133,7 +133,7 @@ PSTATUS --> ENC
 - [tools.ts:47-79](file://lib/ai/tools.ts#L47-L79)
 - [index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
 - [unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [workspaceKeyService.ts:19-95](file://lib/security/workspaceKeyService.ts#L19-L95)
 - [encryption.ts:27-69](file://lib/security/encryption.ts#L27-L69)
@@ -367,37 +367,49 @@ Client-safe types define messages, generation options/results, and streaming chu
 ## Enhanced Credential Management System
 
 ### ModelSelectionGate Component
-The ModelSelectionGate provides a streamlined 2-step configuration experience with automatic provider detection and server-side credential management:
+The ModelSelectionGate provides a streamlined single-panel configuration experience with automatic provider detection and server-side credential management:
 
-**Step 1: Provider Selection with Automatic Detection**
+**Single-Panel Interface with Violet Theme**
+- Features a sophisticated single-panel design with violet gradient backgrounds and dark overlay effects
+- Enhanced visual design including floating purple and emerald glow effects with backdrop blur
+- Improved security indicators with animated status dots and gradient accents
+- **Updated** Eliminated multi-step wizard - now uses streamlined single-panel interface
+- **Updated** Enhanced visual design featuring violet color scheme with provider brand color integration
+
+**Automatic Provider Detection**
 - Fetches configured providers from `/api/providers/status` which checks environment variables
 - Shows only providers with API keys configured in Vercel environment variables
 - Interactive provider cards with security badges and recommended provider highlighting
 - **Updated** No local provider support - Ollama/LM Studio is no longer available as a configuration option
-- **Updated** Enhanced visual design featuring violet color scheme with provider brand color integration
 
-**Step 2: Model Confirmation**
-- Final configuration review with security status indicators
-- Provider-specific model suggestions
-- Start generating button with loading states
+**Enhanced Provider Selection Experience**
+- Provider cards with brand-specific gradient backgrounds and color schemes
+- Recommended provider badges with prominent visual indicators
+- Model suggestions with provider-specific branding
+- Optimized settings display with temperature and token recommendations
+- Server-side security indicators with animated status dots
+
+**Streamlined Configuration Flow**
+- Direct provider selection without intermediate steps
+- One-click model confirmation with security review
+- Start generating button with loading states and gradient styling
 - **Updated** Streamlined workflow eliminating the intermediate credentials entry step
 
 ```mermaid
 stateDiagram-v2
 [*] --> ProviderDetection
 ProviderDetection --> ProviderSelection : Load configured providers
-ProviderSelection --> ModelConfirmation : Provider selected
-ModelConfirmation --> [*] : Start generating
+ProviderSelection --> Confirm : Provider selected
+Confirm --> [*] : Start generating
 ```
 
 **Diagram sources**
 - [ModelSelectionGate.tsx:69-102](file://components/ModelSelectionGate.tsx#L69-L102)
-- [ModelSelectionGate.tsx:104-108](file://components/ModelSelectionGate.tsx#L104-L108)
 - [ModelSelectionGate.tsx:110-146](file://components/ModelSelectionGate.tsx#L110-L146)
-- [ModelSelectionGate.tsx:148-153](file://components/ModelSelectionGate.tsx#L148-L153)
+- [ModelSelectionGate.tsx:300-405](file://components/ModelSelectionGate.tsx#L300-L405)
 
 **Section sources**
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 
 ### ProviderSelector Component
 The ProviderSelector offers intuitive provider and model selection with comprehensive provider definitions and automatic credential validation:
@@ -408,7 +420,14 @@ The ProviderSelector offers intuitive provider and model selection with comprehe
 - Google Gemini: Gemini 2.0 Flash, Gemini 1.5 Pro with automatic key detection
 - **Updated** Groq: Llama 3.3, Mixtral - ultra-fast inference with automatic key detection (OpenAI-compatible)
 
-**Features**
+**Enhanced Visual Design**
+- Violet-themed interface with gradient backgrounds and animated effects
+- Provider cards with brand-specific color schemes and visual indicators
+- Recommended provider highlighting with prominent badges
+- Feature lists for each provider with context window information
+- Model suggestion grids with automatic provider matching
+
+**Security and Validation Features**
 - Security badges for each provider with credential status indicators
 - Recommended provider highlighting based on configuration
 - Feature lists for each provider with context window information
@@ -422,20 +441,28 @@ The ProviderSelector offers intuitive provider and model selection with comprehe
 ### Provider Status API
 The `/api/providers/status` endpoint provides automatic provider detection based on environment variables:
 
-**Automatic Provider Detection Logic**
+**Universal LLM_KEY Support**
+- **Updated** Added support for universal LLM_KEY that works for all providers
 - Checks Vercel environment variables for configured providers
 - Handles Google Gemini with dual environment variable support (GOOGLE_API_KEY and GEMINI_API_KEY)
 - **Updated** No local-only providers support - Ollama/LM Studio removed from detection logic
 - Returns filtered provider list showing only configured providers
 
-**Provider Configuration Schema**
+**Enhanced Provider Configuration Schema**
 - Provider definitions with colors, gradients, and model lists matching UI components
 - Environment variable mapping for automatic credential detection
 - Recommended provider flags for UI prioritization
 - **Updated** No local-only provider support for Ollama
+- **Updated** Universal LLM_KEY fallback support for all providers
+
+**Debug and Development Features**
+- Debug logging for available environment variables
+- Development-only debug information display
+- Comprehensive provider configuration validation
+- Real-time provider status monitoring
 
 **Section sources**
-- [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
+- [route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 ### Server-Side Security Architecture
 The system implements comprehensive server-side credential management with automatic provider detection:
@@ -500,17 +527,17 @@ CFG["AIEngineConfigPanel.tsx"] --> IDX
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
+- [route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 **Section sources**
 - [index.ts:1-289](file://lib/ai/adapters/index.ts#L1-L289)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [route.ts:1-165](file://app/api/providers/status/route.ts#L1-L165)
+- [route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 ## Performance Considerations
 - Caching: CachedAdapter caches both full results and streaming chunks keyed by normalized options, reducing provider calls and enabling latency metrics.
@@ -522,6 +549,7 @@ CFG["AIEngineConfigPanel.tsx"] --> IDX
 - Model selection optimization: Predefined model lists reduce API calls for model discovery.
 - Automatic provider detection: Environment variable checks are performed server-side, avoiding client-side complexity.
 - **Updated** Simplified architecture reduces adapter instantiation overhead and improves performance.
+- **Updated** Single-panel UI reduces DOM complexity and improves rendering performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -537,6 +565,7 @@ Common issues and resolutions:
 - Provider detection failures: Check Vercel environment variables for proper provider configuration.
 - Automatic provider detection not working: Verify environment variables match expected naming conventions.
 - **Updated** Configuration problems: Use streamlined ModelSelectionGate workflow - no more Ollama configuration steps.
+- **Updated** Single-panel interface issues: Check browser console for UI rendering errors in the new violet-themed interface.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
@@ -550,9 +579,9 @@ Common issues and resolutions:
 - [route.ts:88-164](file://app/api/providers/status/route.ts#L88-L164)
 
 ## Conclusion
-The AI adapter system provides a robust, provider-agnostic abstraction over multiple AI providers with comprehensive security enhancements and streamlined configuration workflows. The addition of ModelSelectionGate creates a guided 2-step configuration experience with automatic provider detection, while the enhanced credential management system ensures secure, workspace-scoped API key storage using AES-256-GCM encryption. The automatic provider detection system eliminates manual API key entry by leveraging environment variables, and the global fallback capabilities enable seamless operation across different deployment scenarios. By centralizing credential resolution, enforcing server-only secrets, and normalizing provider differences, it enables seamless switching between models and providers with enterprise-grade security and user-friendly configuration.
+The AI adapter system provides a robust, provider-agnostic abstraction over multiple AI providers with comprehensive security enhancements and streamlined configuration workflows. The addition of ModelSelectionGate creates a guided single-panel configuration experience with automatic provider detection, while the enhanced credential management system ensures secure, workspace-scoped API key storage using AES-256-GCM encryption. The automatic provider detection system eliminates manual API key entry by leveraging environment variables, and the global fallback capabilities enable seamless operation across different deployment scenarios. By centralizing credential resolution, enforcing server-only secrets, and normalizing provider differences, it enables seamless switching between models and providers with enterprise-grade security and user-friendly configuration.
 
-**Updated** The system has been streamlined to focus exclusively on cloud-based providers, improving reliability and reducing complexity while maintaining comprehensive security and seamless provider switching capabilities.
+**Updated** The system has been streamlined to focus exclusively on cloud-based providers, improving reliability and reducing complexity while maintaining comprehensive security and seamless provider switching capabilities. The new single-panel ModelSelectionGate interface with violet theme and gradient backgrounds provides an enhanced user experience while maintaining the system's robust security and performance characteristics.
 
 ## Appendices
 
@@ -571,16 +600,16 @@ References:
 - [tools.ts:108-133](file://lib/ai/tools.ts#L108-L133)
 
 ### Configuring Provider Credentials
-- **ModelSelectionGate**: Streamlined 2-step configuration with automatic provider detection and server-side encryption
+- **ModelSelectionGate**: Streamlined single-panel configuration with automatic provider detection and server-side encryption
 - **ProviderSelector**: Interactive provider and model selection with credential status and automatic validation
 - **Updated** No AIEngineConfigPanel: Three-step wizard interface with advanced settings and manual provider detection (dropped in favor of streamlined approach)
-- **Automatic Provider Detection**: Environment variable-based provider availability checking
+- **Automatic Provider Detection**: Environment variable-based provider availability checking with universal LLM_KEY support
 - **Workspace-level**: Store encrypted keys in workspace settings; retrieved via workspaceKeyService with global fallback
 - **Environment Variables**: Set provider-specific environment variables for automatic credential detection
 - **Unconfigured fallback**: When no keys are found, UnconfiguredAdapter returns a helpful UI or JSON
 
 References:
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [route.ts:88-164](file://app/api/providers/status/route.ts#L88-L164)
 - [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
@@ -594,6 +623,7 @@ References:
 - **Non-Fatal Validation**: Build-time warnings instead of deployment failures with graceful fallback
 - **Environment Variable Integration**: Seamless fallback to environment variables with automatic provider detection
 - **Provider Status API**: Server-side provider availability checking with environment variable validation
+- **Universal LLM_KEY Support**: Single key that works across all providers for simplified configuration
 
 References:
 - [encryption.ts:27-69](file://lib/security/encryption.ts#L27-L69)
@@ -625,11 +655,11 @@ References:
 - Provider status API tests validate environment variable-based provider detection.
 - ModelSelectionGate tests validate automatic provider detection and streamlined configuration workflow.
 
-**Updated** Example workflows now reflect the streamlined adapter system with 4 supported providers.
+**Updated** Example workflows now reflect the streamlined adapter system with 4 supported providers and enhanced single-panel interface.
 
 References:
 - [adapters.test.ts:1-109](file://__tests__/adapters.test.ts#L1-L109)
 - [adapterIndex.test.ts:1-72](file://__tests__/adapterIndex.test.ts#L1-L72)
 - [encryption.test.ts:1-48](file://__tests__/encryption.test.ts#L1-L48)
 - [route.ts:88-164](file://app/api/providers/status/route.ts#L88-L164)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)

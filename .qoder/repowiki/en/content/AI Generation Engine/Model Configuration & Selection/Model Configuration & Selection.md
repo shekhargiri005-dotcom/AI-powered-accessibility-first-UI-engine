@@ -26,19 +26,13 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced provider status checking system with optimized settings display and universal LLM_KEY support
-- Added comprehensive Groq provider support with dedicated configuration and optimized settings
-- Improved provider configuration with temperature and maxTokens optimization for each provider
-- Implemented universal LLM_KEY fallback that works across all providers
-- Enhanced ModelSelectionGate component with major visual redesign featuring violet-themed color scheme
-- **Updated**: Removed Ollama as a selectable provider option - local model support has been eliminated
-- **Updated**: Updated API key environment variable listings to remove OLLAMA_API_KEY references
-- **Updated**: Removed references to DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers from environment variable configuration examples
-- Implemented gradient backgrounds and brand color integration throughout the component
-- Added improved hover effects with violet glow transitions and enhanced typography
-- Updated to reflect new streamlined configuration approach where AI engine configuration is now handled during startup via ModelSelectionGate
-- Integrated comprehensive styling system with violet orb glows and frosted glass effects
-- Enhanced provider selection interface with sophisticated visual feedback and animations
+- ModelSelectionGate simplified from three-step wizard to streamlined two-step process
+- Removed detailed provider comparison features and complex error handling with environment variable instructions
+- Eliminated skip functionality - ModelSelectionGate now acts as mandatory first-time setup
+- Enhanced visual design system with violet theme, gradient backgrounds, and improved provider selection interface
+- Updated to reflect new streamlined configuration approach where AI engine configuration is handled during startup via ModelSelectionGate
+- Removed Ollama provider from provider configuration - local model support has been eliminated
+- Updated environment variable configuration to remove OLLAMA_API_KEY references
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -58,18 +52,18 @@ This document describes the model configuration and selection system that powers
 - Model registry architecture with capability profiles, tier classifications, and capability flags
 - Tiered pipeline configuration that selects generation parameters based on model capabilities
 - Model resolution algorithm that chooses appropriate models based on intent complexity, workspace settings, and available resources
-- Streamlined three-step model selection flow with automatic provider discovery and credential resolution
-- **Enhanced**: Major visual redesign with violet-themed color scheme, gradient backgrounds, and brand color integration
-- **Enhanced**: Improved hover effects with violet glow transitions and enhanced typography with hover state animations
-- **Enhanced**: Universal LLM_KEY support for simplified credential management across all providers
-- **Enhanced**: Dedicated Groq provider configuration with optimized temperature and maxTokens settings
-- **Updated**: Eliminated Ollama as a selectable provider option - local model support has been completely removed
+- Streamlined two-step model selection flow with automatic provider discovery and credential resolution
+- Enhanced visual redesign with violet-themed color scheme, gradient backgrounds, and brand color integration
+- Improved hover effects with violet glow transitions and enhanced typography with hover state animations
+- Universal LLM_KEY support for simplified credential management across all providers
+- Dedicated Groq provider configuration with optimized temperature and maxTokens settings
+- Updated: Eliminated Ollama as a selectable provider option - local model support has been completely removed
 - Prompt style selection (structured, guided-freeform, freeform), token budget calculations, and fallback mechanisms
 - Examples for configuring custom models, optimizing for cost/performance, and handling model availability issues
 
 ## Project Structure
 The model configuration system spans several layers with enhanced streamlined selection flow and comprehensive visual design:
-- ModelSelectionGate for initial setup with automatic provider discovery, credential resolution, and major visual redesign
+- ModelSelectionGate for mandatory initial setup with automatic provider discovery, credential resolution, and major visual redesign
 - ProviderSelector for intuitive provider and model selection with enhanced visual feedback
 - UI panels for configuration and model discovery
 - Backend APIs for engine configuration, provider status, and model listing
@@ -131,9 +125,9 @@ RDA --> IDX
 ```
 
 **Diagram sources**
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 - [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
@@ -150,9 +144,9 @@ RDA --> IDX
 - [globals.css:1-156](file://app/globals.css#L1-L156)
 
 **Section sources**
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 - [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
@@ -174,11 +168,11 @@ RDA --> IDX
 - Adapter factory: Provider-neutral creation of adapters with secure credential resolution and fallbacks.
 - Workspace configuration: Persistent storage of provider, model, and encrypted API keys per workspace.
 - Model discovery: Dynamic listing of available models per provider with robust fallbacks.
-- **Enhanced**: ModelSelectionGate: Streamlined three-step wizard for initial model configuration with automatic provider discovery, credential resolution, and comprehensive visual redesign featuring violet theme, gradients, and brand color integration.
-- **Enhanced**: ProviderSelector: Intuitive provider selection component with model suggestions, secure credential management, and enhanced visual feedback.
-- **Enhanced**: Universal LLM_KEY support: Simplified credential management allowing a single universal key to work across all providers.
-- **Enhanced**: Groq provider integration: Dedicated configuration with optimized settings and OpenAI-compatible API support.
-- **Updated**: Eliminated Ollama provider: Ollama is no longer available as a selectable provider option - local model support has been completely removed from the system.
+- Enhanced ModelSelectionGate: Streamlined two-step wizard for mandatory initial model configuration with automatic provider discovery, credential resolution, and comprehensive visual redesign featuring violet theme, gradients, and brand color integration.
+- Enhanced ProviderSelector: Intuitive provider selection component with model suggestions, secure credential management, and enhanced visual feedback.
+- Universal LLM_KEY support: Simplified credential management allowing a single universal key to work across all providers.
+- Groq provider integration: Dedicated configuration with optimized settings and OpenAI-compatible API support.
+- Updated: Eliminated Ollama provider: Ollama is no longer available as a selectable provider option - local model support has been completely removed from the system.
 - Caching: Deterministic caching of generation results for performance and cost savings.
 
 **Section sources**
@@ -188,13 +182,13 @@ RDA --> IDX
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 - [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [resolveDefaultAdapter.ts:1-131](file://lib/ai/resolveDefaultAdapter.ts#L1-L131)
 
 ## Architecture Overview
 The system separates concerns across UI, persistence, adapters, and registry with enhanced streamlined selection flow and comprehensive visual design:
-- ModelSelectionGate provides initial setup with automatic provider discovery, credential resolution, and major visual redesign.
+- ModelSelectionGate provides mandatory initial setup with automatic provider discovery, credential resolution, and major visual redesign.
 - ProviderSelector offers intuitive provider and model selection with model suggestions and enhanced visual feedback.
 - UI panels collect provider, model, and optional credentials.
 - Provider status API dynamically discovers configured providers based on environment variables.
@@ -245,10 +239,10 @@ MSG-->>APP : Complete configuration
 The new `/api/providers/status` endpoint provides dynamic provider discovery with comprehensive configuration and optimized settings:
 - Defines provider configurations with colors, gradients, model lists, and optimized settings
 - Checks environment variables for provider configuration including universal LLM_KEY support
-- **Updated**: Removed Ollama from provider configuration - local model support has been eliminated
+- Updated: Removed Ollama from provider configuration - local model support has been eliminated
 - Returns configured provider count for UI display
-- **Enhanced**: Implements ProviderSettings interface with temperature, maxTokens, and other optimization parameters
-- **Enhanced**: Supports universal LLM_KEY fallback that works across all providers
+- Enhanced: Implements ProviderSettings interface with temperature, maxTokens, and other optimization parameters
+- Enhanced: Supports universal LLM_KEY fallback that works across all providers
 
 ```mermaid
 flowchart TD
@@ -269,21 +263,23 @@ NotConfigured --> ReturnStatus
 - [providers/status/route.ts:128-205](file://app/api/providers/status/route.ts#L128-L205)
 
 **Section sources**
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
-### Enhanced Model Selection Gate and Streamlined Wizard
-The ModelSelectionGate provides a streamlined three-step wizard for initial model configuration with comprehensive visual redesign:
+### Enhanced Model Selection Gate and Streamlined Two-Step Process
+The ModelSelectionGate provides a streamlined two-step wizard for mandatory initial model configuration with comprehensive visual redesign:
 - **Step 1: Loading** - Automatically fetches configured providers from the new `/api/providers/status` endpoint with animated loading states and optimized settings display
 - **Step 2: Provider Selection** - Displays only providers with configured API keys (filtered from environment variables) in an enhanced grid layout with gradient backgrounds, brand color integration, and optimized settings preview
 - **Step 3: Confirmation** - Reviews and confirms the selected configuration with automatic credential resolution, enhanced security indicators, and optimized settings visualization
 
 The new provider status API dynamically discovers configured providers based on environment variables:
 - Checks for provider-specific environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-- **Enhanced**: Supports universal LLM_KEY that works across all providers
+- Enhanced: Supports universal LLM_KEY that works across all providers
 - Filters providers to only show those with valid credentials configured
-- **Updated**: Excludes Ollama from provider list - local model support has been eliminated
+- Updated: Excludes Ollama from provider list - local model support has been eliminated
 - Supports alternative environment variables (e.g., GOOGLE_API_KEY and GEMINI_API_KEY)
-- **Enhanced**: Returns optimized settings (temperature, maxTokens) for each provider
+- Enhanced: Returns optimized settings (temperature, maxTokens) for each provider
+
+**Updated** Removed skip functionality - ModelSelectionGate now acts as mandatory first-time setup without skip option
 
 ```mermaid
 flowchart TD
@@ -305,16 +301,16 @@ Step4 --> ErrorDisplay["Show credential setup instructions<br/>with violet error
 - [ModelSelectionGate.tsx:112-148](file://components/ModelSelectionGate.tsx#L112-L148)
 
 **Section sources**
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 ### Enhanced Provider Status Discovery
 The new `/api/providers/status` endpoint provides dynamic provider discovery with comprehensive configuration:
 - Defines provider configurations with colors, gradients, and model lists
-- **Enhanced**: Adds ProviderSettings interface with optimized temperature and maxTokens values
-- **Enhanced**: Implements universal LLM_KEY support for simplified credential management
+- Enhanced: Adds ProviderSettings interface with optimized temperature and maxTokens values
+- Enhanced: Implements universal LLM_KEY support for simplified credential management
 - Checks environment variables for provider configuration
-- **Updated**: Removes Ollama provider configuration - local model support has been eliminated
+- Updated: Removes Ollama provider configuration - local model support has been eliminated
 - Returns configured provider count for UI display
 
 ```mermaid
@@ -336,13 +332,13 @@ NotConfigured --> ReturnStatus
 - [providers/status/route.ts:128-205](file://app/api/providers/status/route.ts#L128-L205)
 
 **Section sources**
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 
 ### Enhanced Adapter Factory and Credential Resolution
 The adapter factory creates provider-specific adapters with secure credential resolution and enhanced universal key support:
 - Resolves keys from workspace settings, environment variables, or returns an unconfigured adapter for graceful degradation
-- **Enhanced**: Supports universal LLM_KEY that works across all providers
-- **Enhanced**: Groq provider support with OpenAI-compatible API integration
+- Enhanced: Supports universal LLM_KEY that works across all providers
+- Enhanced: Groq provider support with OpenAI-compatible API integration
 - Supports OpenAI-compatible providers via base URLs
 - Wraps adapters with caching and metrics dispatch
 
@@ -392,7 +388,7 @@ RDA->>IDX : getWorkspaceAdapter with resolved config
 The model listing API:
 - Accepts provider and optional API key
 - Resolves keys from client, database, or environment variables
-- **Enhanced**: Groq provider support with dedicated model fetching and authentication
+- Enhanced: Groq provider support with dedicated model fetching and authentication
 - Queries provider endpoints or falls back to static lists
 - Sorts featured models and returns counts
 
@@ -646,8 +642,8 @@ The system exhibits clear separation of concerns with enhanced streamlined selec
 - Registry and pricing are independent data sources consumed by UI and adapters
 - Model listing API depends on provider endpoints and static fallbacks
 - Visual design system provides consistent theming across all components
-- **Enhanced**: Universal LLM_KEY support integrates across all components for simplified credential management
-- **Updated**: Removed Ollama dependencies - local model support has been eliminated from all components
+- Enhanced: Universal LLM_KEY support integrates across all components for simplified credential management
+- Updated: Removed Ollama dependencies - local model support has been eliminated from all components
 
 ```mermaid
 graph LR
@@ -675,9 +671,9 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 ```
 
 **Diagram sources**
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 - [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [adapters/index.ts:1-314](file://lib/ai/adapters/index.ts#L1-L314)
@@ -693,14 +689,14 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 
 **Section sources**
 - [adapters/index.ts:1-314](file://lib/ai/adapters/index.ts#L1-L314)
-- [providers/status/route.ts:1-206](file://app/api/providers/status/route.ts#L1-L206)
+- [providers/status/route.ts:1-204](file://app/api/providers/status/route.ts#L1-L204)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 - [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
-- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
+- [ModelSelectionGate.tsx:1-413](file://components/ModelSelectionGate.tsx#L1-L413)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [globals.css:1-156](file://app/globals.css#L1-L156)
 - [resolveDefaultAdapter.ts:1-131](file://lib/ai/resolveDefaultAdapter.ts#L1-L131)
@@ -711,25 +707,25 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 - Tune temperature and max tokens according to model profiles to balance quality and speed
 - Leverage static fallbacks for model discovery to avoid network timeouts
 - Monitor token usage and cost estimates to guide model selection
-- **Enhanced**: ModelSelectionGate reduces initial setup friction with streamlined three-step flow and optimized visual effects
-- **Enhanced**: Automatic provider discovery eliminates manual credential entry overhead with efficient API calls
-- **Enhanced**: Environment variable-based credential resolution improves security and reduces configuration complexity
-- **Enhanced**: Universal LLM_KEY support simplifies credential management across all providers
-- **Enhanced**: Visual redesign maintains performance through optimized gradient rendering and minimal DOM manipulation
-- **Updated**: Removed Ollama-related performance considerations - local model support has been eliminated
+- Enhanced: ModelSelectionGate reduces initial setup friction with streamlined two-step flow and optimized visual effects
+- Enhanced: Automatic provider discovery eliminates manual credential entry overhead with efficient API calls
+- Enhanced: Environment variable-based credential resolution improves security and reduces configuration complexity
+- Enhanced: Universal LLM_KEY support simplifies credential management across all providers
+- Enhanced: Visual redesign maintains performance through optimized gradient rendering and minimal DOM manipulation
+- Updated: Removed Ollama-related performance considerations - local model support has been eliminated
 
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Missing API keys: The provider status API filters out providers without configured credentials; check environment variables
-- **Enhanced**: Universal LLM_KEY not working: Verify LLM_KEY is properly set in environment variables and accessible to all providers
+- Enhanced: Universal LLM_KEY not working: Verify LLM_KEY is properly set in environment variables and accessible to all providers
 - Provider connectivity: Model listing API surfaces authentication errors distinctly; use the connection test in the settings panel
 - Silent failures: The registry returns null for unknown models; callers should fall back to a sensible default tier (cloud)
-- **Updated**: Local provider unavailability: Ollama is no longer available as a provider option - all providers now require API keys
-- **Enhanced**: Model gate showing error state: Check that environment variables are properly configured for desired providers with violet-themed error display
-- **Enhanced**: Provider not appearing: Verify environment variable naming conventions (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, etc.) with proper configuration detection
-- **Enhanced**: Automatic credential resolution failing: Ensure environment variables are set in the deployment platform (Vercel) with proper environment variable support
-- **Enhanced**: Visual effects not displaying: Verify globals.css is properly loaded and violet theme variables are accessible
-- **Enhanced**: Groq provider authentication issues: Verify GROQ_API_KEY is valid and has sufficient quota for model access
+- Updated: Local provider unavailability: Ollama is no longer available as a provider option - all providers now require API keys
+- Enhanced: Model gate showing error state: Check that environment variables are properly configured for desired providers with violet-themed error display
+- Enhanced: Provider not appearing: Verify environment variable naming conventions (OPENAI_API_KEY, ANTHROPIC_API_KEY, GROQ_API_KEY, etc.) with proper configuration detection
+- Enhanced: Automatic credential resolution failing: Ensure environment variables are set in the deployment platform (Vercel) with proper environment variable support
+- Enhanced: Visual effects not displaying: Verify globals.css is properly loaded and violet theme variables are accessible
+- Enhanced: Groq provider authentication issues: Verify GROQ_API_KEY is valid and has sufficient quota for model access
 
 **Section sources**
 - [adapters/index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
@@ -743,15 +739,16 @@ Common issues and resolutions:
 ## Conclusion
 The model configuration and selection system provides a robust, provider-agnostic framework for choosing and managing AI models. The enhanced streamlined ModelSelectionGate flow with automatic provider discovery, credential resolution, and comprehensive visual redesign significantly improves the initial setup experience while maintaining security and flexibility. The major visual redesign featuring violet-themed color schemes, gradient backgrounds, and brand color integration creates a cohesive and visually appealing user experience. 
 
-**Enhanced Features**:
+Enhanced Features:
 - Universal LLM_KEY support simplifies credential management across all providers
 - Dedicated Groq provider integration with optimized settings and OpenAI-compatible API
 - Enhanced provider status checking system with optimized settings display
 - Comprehensive visual design system with violet theme, gradient effects, and frosted glass aesthetics
 
-**Updated Features**:
+Updated Features:
 - **Eliminated Ollama provider**: Ollama is no longer available as a selectable provider option - local model support has been completely removed from the system
 - **Updated environment variable configuration**: Removed OLLAMA_API_KEY references and related local model configuration examples
+- **Simplified ModelSelectionGate**: Reduced from three-step wizard to streamlined two-step process with mandatory setup flow
 
 By combining a centralized registry, secure credential resolution, dynamic provider discovery, cost-aware pricing, and comprehensive visual design system, it enables teams to optimize for performance, cost, and reliability while maintaining a consistent developer experience with enhanced aesthetics.
 
@@ -773,8 +770,8 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - Select a tier appropriate for the task (e.g., small for structured templates)
 - Adjust temperature and token budgets according to model profiles
 - Enable caching to reduce repeated requests
-- **Enhanced**: Leverage universal LLM_KEY for simplified cost management across providers
-- **Updated**: Focus on cloud-based providers (OpenAI, Anthropic, Google, Groq) as Ollama is no longer available
+- Enhanced: Leverage universal LLM_KEY for simplified cost management across providers
+- Updated: Focus on cloud-based providers (OpenAI, Anthropic, Google, Groq) as Ollama is no longer available
 
 **Section sources**
 - [types.ts:79-129](file://lib/ai/types.ts#L79-L129)
@@ -786,8 +783,8 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - If a provider endpoint is down, the model listing API returns static fallbacks
 - If no keys are configured, the adapter factory returns an unconfigured adapter with helpful messaging
 - Use the settings panel to validate connections and manage keys
-- **Enhanced**: Universal LLM_KEY provides fallback option when provider-specific keys are unavailable
-- **Updated**: All providers now require API keys - Ollama is no longer available as a fallback option
+- Enhanced: Universal LLM_KEY provides fallback option when provider-specific keys are unavailable
+- Updated: All providers now require API keys - Ollama is no longer available as a fallback option
 
 **Section sources**
 - [models/route.ts:18-271](file://app/api/models/route.ts#L18-L271)
@@ -796,13 +793,13 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - [resolveDefaultAdapter.ts:1-131](file://lib/ai/resolveDefaultAdapter.ts#L1-L131)
 
 ### Example: Implement Streamlined Model Selection Gate
-- Integrate ModelSelectionGate into your main application as the initial setup flow
+- Integrate ModelSelectionGate into your main application as the mandatory initial setup flow
 - The component automatically handles provider discovery and credential resolution with visual feedback
 - Handle onComplete callback to receive selected provider, model, and providerName
-- Use onSkip callback for users who want to configure later
+- **Updated**: Removed skip functionality - ModelSelectionGate now acts as mandatory setup without skip option
 - Leverage the enhanced visual design system for consistent theming
-- **Enhanced**: Benefit from optimized settings display and universal LLM_KEY support
-- **Updated**: Provider list excludes Ollama - only cloud-based providers are available
+- Enhanced: Benefit from optimized settings display and universal LLM_KEY support
+- Updated: Provider list excludes Ollama - only cloud-based providers are available
 
 **Section sources**
 - [ModelSelectionGate.tsx:59-157](file://components/ModelSelectionGate.tsx#L59-L157)
@@ -813,8 +810,8 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - Configure PROVIDER_OPTIONS and PROVIDER_MODELS for your specific needs
 - Handle onProviderSelect callback to receive provider and model selections
 - Use onConfigureCredentials callback for credential management flows
-- **Enhanced**: Leverage universal LLM_KEY for simplified credential management
-- **Updated**: Provider list excludes Ollama - only cloud-based providers are available
+- Enhanced: Leverage universal LLM_KEY for simplified credential management
+- Updated: Provider list excludes Ollama - only cloud-based providers are available
 
 **Section sources**
 - [ProviderSelector.tsx:126-148](file://components/ProviderSelector.tsx#L126-L148)
@@ -825,11 +822,11 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - Set OPENAI_API_KEY for OpenAI models
 - Set ANTHROPIC_API_KEY for Claude models
 - Set GOOGLE_API_KEY or GEMINI_API_KEY for Gemini models
-- **Enhanced**: Set GROQ_API_KEY for Groq inference
-- **Updated**: Removed OLLAMA_API_KEY - Ollama is no longer supported
-- **Enhanced**: Set LLM_KEY for universal key across all providers
+- Enhanced: Set GROQ_API_KEY for Groq inference
+- Updated: Removed OLLAMA_API_KEY - Ollama is no longer supported
+- Enhanced: Set LLM_KEY for universal key across all providers
 
-**Updated** Removed references to DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers from environment variable configuration examples
+Updated: Removed references to DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers from environment variable configuration examples
 
 **Section sources**
 - [providers/status/route.ts:13-67](file://app/api/providers/status/route.ts#L13-L67)
@@ -873,13 +870,13 @@ By combining a centralized registry, secure credential resolution, dynamic provi
 - [resolveDefaultAdapter.ts:49-56](file://lib/ai/resolveDefaultAdapter.ts#L49-L56)
 
 ### Example: Updated Provider Configuration
-**Updated** The system now supports the following providers:
+Updated: The system now supports the following providers:
 - OpenAI (GPT-4o, GPT-4o-mini, o3-mini)
 - Anthropic (Claude 3.5 Sonnet, Claude 3 Opus)
 - Google Gemini (Gemini 2.0 Flash, Gemini 1.5 Pro)
 - Groq (Llama 3.3, Mixtral - ultra-fast inference)
 
-**Removed** Ollama provider support - local model functionality has been eliminated from the system.
+Removed: Ollama provider support - local model functionality has been eliminated from the system.
 
 **Section sources**
 - [providers/status/route.ts:62-109](file://app/api/providers/status/route.ts#L62-L109)

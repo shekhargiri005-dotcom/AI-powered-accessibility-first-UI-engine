@@ -13,7 +13,19 @@
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
+- [globals.css](file://app/globals.css)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated provider support to reflect current cloud-based providers (OpenAI, Anthropic, Google, Groq) with Ollama removed
+- Enhanced ModelSelectionGate component with streamlined configuration flow and improved provider status checking
+- Added universal LLM_KEY support for simplified credential management
+- Updated visual design system with violet theme and improved UI components
+- Revised adapter resolution to prioritize cloud providers over local Ollama support
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,6 +47,8 @@ This document explains the model resolution and configuration phase of the gener
 - Implementation specifics for capability detection, pipeline parameter mapping, and fallback mechanisms
 - Examples of model selection scenarios and troubleshooting configuration conflicts
 
+**Updated** Enhanced with streamlined ModelSelectionGate configuration flow, universal LLM_KEY support, and cloud-first provider prioritization
+
 ## Project Structure
 The model resolution system spans several modules:
 - Registry: central model capability metadata
@@ -43,6 +57,7 @@ The model resolution system spans several modules:
 - Resolver: chooses default adapters from environment and workspace settings
 - Workspace service: stores provider keys and preferred models per workspace
 - API routes: expose model lists and workspace settings
+- UI components: streamlined provider selection with violet theme
 
 ```mermaid
 graph TB
@@ -51,25 +66,32 @@ MR["modelRegistry.ts"]
 TP["tieredPipeline.ts"]
 RD["resolveDefaultAdapter.ts"]
 WS["workspaceKeyService.ts"]
+MSG["ModelSelectionGate.tsx"]
+PS["providers/status/route.ts"]
 end
 subgraph "Adapters"
 IDX["adapters/index.ts"]
 OA["adapters/openai.ts"]
-OL["adapters/ollama.ts"]
 BASE["adapters/base.ts"]
 end
 subgraph "API"
 MODELS["app/api/models/route.ts"]
 WSET["app/api/workspace/settings/route.ts"]
 end
+subgraph "UI Components"
+PS["ProviderSelector.tsx"]
+GCSS["globals.css"]
+end
 MR --> TP
 TP --> IDX
 RD --> IDX
 IDX --> OA
-IDX --> OL
 IDX --> BASE
 WSET --> WS
 MODELS --> IDX
+MSG --> PS
+PS --> IDX
+PS --> GCSS
 ```
 
 **Diagram sources**
@@ -78,11 +100,14 @@ MODELS --> IDX
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
+- [globals.css](file://app/globals.css)
 
 **Section sources**
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
@@ -92,15 +117,23 @@ MODELS --> IDX
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
+- [globals.css](file://app/globals.css)
 
 ## Core Components
 - Model Registry: defines capability profiles for all supported models, including context windows, output limits, temperature preferences, tool-call support, JSON mode support, streaming reliability, prompt strategies, extraction strategies, repair priorities, and timeouts. Provides partial matching and a cloud fallback profile.
 - Tiered Pipeline: transforms a capability profile into a concrete PipelineConfig with prompt style, token budgets, tool rounds, temperature, streaming, timeouts, and repair behavior.
 - Optimizer: provides per-model generation hyperparameters (temperature, max tokens) and reasoning model detection for special API handling.
-- Adapters: provider-agnostic factory and adapters for OpenAI-compatible providers, Anthropic, Google, and local Ollama/LM Studio. Handles credential resolution and safe parameter selection.
+- Adapters: provider-agnostic factory and adapters for OpenAI-compatible providers, Anthropic, Google, and Groq. Handles credential resolution and safe parameter selection.
 - Default Adapter Resolver: selects a provider/model based on environment variables and purpose, with explicit overrides and fallbacks.
 - Workspace Key Service: persists provider keys and preferred models per workspace and supports runtime retrieval and cache invalidation.
 - API Routes: expose model listings and workspace settings for UI consumption.
+- ModelSelectionGate: streamlined provider selection UI with violet theme and universal LLM_KEY support.
+- Provider Status API: checks environment variables for configured providers and returns optimized settings.
+
+**Updated** Removed Ollama provider support and enhanced with universal LLM_KEY credential management
 
 **Section sources**
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
@@ -111,6 +144,10 @@ MODELS --> IDX
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
+- [globals.css](file://app/globals.css)
 
 ## Architecture Overview
 The model resolution pipeline:
@@ -119,6 +156,8 @@ The model resolution pipeline:
 3. Select an adapter using workspace settings and environment variables.
 4. Execute generation with provider-specific parameter normalization and safety checks.
 
+**Updated** Enhanced with universal LLM_KEY support and streamlined provider selection flow
+
 ```mermaid
 sequenceDiagram
 participant Caller as "Caller"
@@ -126,14 +165,21 @@ participant MR as "modelRegistry.ts"
 participant TP as "tieredPipeline.ts"
 participant IDX as "adapters/index.ts"
 participant AD as "Provider Adapter"
+participant MSG as "ModelSelectionGate.tsx"
+participant PS as "providers/status/route.ts"
 Caller->>MR : getModelProfile(modelId)
 MR-->>Caller : ModelCapabilityProfile or null
 Caller->>TP : getPipelineConfig(profile or fallback)
 TP-->>Caller : PipelineConfig
 Caller->>IDX : getWorkspaceAdapter(provider, model, workspaceId, userId)
+IDX->>PS : Check provider status
+PS-->>IDX : Provider configuration
 IDX-->>Caller : AIAdapter
 Caller->>AD : generate/stream(options)
 AD-->>Caller : GenerateResult/StreamChunks
+MSG->>PS : Get configured providers
+PS-->>MSG : ProviderStatus[]
+MSG->>Caller : Provider selection UI
 ```
 
 **Diagram sources**
@@ -141,13 +187,15 @@ AD-->>Caller : GenerateResult/StreamChunks
 - [tieredPipeline.ts](file://lib/ai/tieredPipeline.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
 
 ## Detailed Component Analysis
 
 ### Model Registry
 The registry is the single source of truth for model capabilities. It:
 - Defines five tiers (tiny, small, medium, large, cloud) with distinct strategies and defaults
-- Supports partial matching for model identifiers (e.g., “gpt-4o-2024-08-06” matches “gpt-4o”)
+- Supports partial matching for model identifiers (e.g., "gpt-4o-2024-08-06" matches "gpt-4o")
 - Never silently fails; unknown models return null and callers must fall back to a sensible default tier
 - Provides a cloud fallback profile for unknown models
 - Includes provider-specific quirks (e.g., reasoning models, system prompt support, tool-call support, JSON mode, streaming reliability)
@@ -197,12 +245,13 @@ The resolver selects an adapter based on:
 - Purpose-specific environment overrides (e.g., INTENT_MODEL/PROVIDER/API_KEY)
 - Generic DEFAULT_MODEL/PROVIDER overrides
 - Provider API keys discovered in priority order (Groq, Google, Anthropic, OpenAI)
-- Local Ollama/LM Studio fallback when no cloud key is present
+- **Updated** Removed Ollama/LM Studio fallback - now prioritizes cloud providers
 - Unconfigured adapter as a graceful fallback
 
 Credential resolution:
 - Workspace-scoped keys via workspaceKeyService
 - Environment variables with provider-specific names
+- **Enhanced** Universal LLM_KEY support for all providers
 - OpenAI-compatible providers via base URLs
 
 ```mermaid
@@ -266,7 +315,8 @@ Optimizer <.. OpenAIAdapter : "detects reasoning models"
 
 ### Adapter Factory and Safety
 - Provider detection and base URL mapping for OpenAI-compatible providers
-- Strict credential resolution: never accept client-provided keys; resolve via workspace DB or environment
+- **Enhanced** Strict credential resolution: never accept client-provided keys; resolve via workspace DB or environment
+- **Updated** Removed Ollama adapter - now focuses on cloud providers only
 - Cached adapter wrapper for performance and metrics
 - Unconfigured adapter for graceful UI messaging when no credentials are available
 
@@ -283,25 +333,17 @@ class OpenAIAdapter {
 +generate(options) GenerateResult
 +stream(options) StreamChunk
 }
-class OllamaAdapter {
-+provider string
-+generate(options) GenerateResult
-+stream(options) StreamChunk
-}
 AIAdapter <|.. OpenAIAdapter
-AIAdapter <|.. OllamaAdapter
 ```
 
 **Diagram sources**
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 
 **Section sources**
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 
 ### Workspace Settings and Model Profiles
 - Workspace settings persist provider keys and preferred models per workspace
@@ -332,23 +374,84 @@ MR-->>UI : Profile or null (fallback to cloud)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 
+### ModelSelectionGate Component
+**New** Enhanced provider selection UI with streamlined configuration flow and violet theme
+
+The ModelSelectionGate provides an improved user experience for selecting AI providers:
+- **Enhanced** Streamlined configuration flow with provider status checking
+- **Updated** Visual design system with violet theme and gradient backgrounds
+- **New** Universal LLM_KEY support for simplified credential management
+- **Improved** Provider status checking via `/api/providers/status` endpoint
+- **Enhanced** Optimized settings display with temperature and token recommendations
+
+Key features:
+- Real-time provider availability checking
+- Optimized settings display per provider
+- Violet-themed UI with gradient backgrounds and glow effects
+- Universal LLM_KEY support for all providers
+- Graceful error handling and configuration guidance
+
+```mermaid
+flowchart TD
+Start(["ModelSelectionGate"]) --> Load["Load provider status"]
+Load --> Check{"Providers configured?"}
+Check --> |Yes| ShowProviders["Show configured providers grid"]
+Check --> |No| ShowError["Show configuration error with LLM_KEY guidance"]
+ShowProviders --> SelectProvider["User selects provider"]
+SelectProvider --> ShowConfirm["Show confirmation with optimized settings"]
+ShowConfirm --> SaveConfig["Save configuration to server"]
+SaveConfig --> Complete["Complete setup"]
+ShowError --> Guide["Display LLM_KEY configuration guide"]
+Guide --> Check
+```
+
+**Diagram sources**
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+
+**Section sources**
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [globals.css](file://app/globals.css)
+
+### Provider Status Checking System
+**New** Enhanced provider status checking with universal LLM_KEY support
+
+The provider status system checks environment variables for configured providers and returns optimized settings:
+- **Enhanced** Universal LLM_KEY support for all providers
+- **Improved** Debug logging and environment variable inspection
+- **Updated** Provider configuration with optimized settings
+- **New** Provider-specific environment variable fallbacks
+
+Key functionality:
+- Checks for universal LLM_KEY that works for all providers
+- Validates provider-specific API keys
+- Returns provider configuration with optimized settings
+- Provides debug information for development environments
+
+**Section sources**
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+
 ## Dependency Analysis
 - modelRegistry.ts depends on no external runtime services; it is the authoritative source for model capabilities
 - tieredPipeline.ts depends on modelRegistry.ts and constructs PipelineConfig instances
 - adapters/index.ts depends on workspaceKeyService.ts for workspace-scoped keys and environment variables for fallbacks
-- adapters/openai.ts and adapters/ollama.ts depend on provider SDKs and normalize parameters according to model/profile constraints
-- resolveDefaultAdapter.ts orchestrates environment-based selection and falls back to local providers
-- API routes depend on adapters and workspace services to expose model catalogs and settings
+- **Updated** adapters/openai.ts depends on provider SDKs and normalizes parameters according to model/profile constraints
+- **Removed** adapters/ollama.ts - Ollama support removed in favor of cloud providers
+- resolveDefaultAdapter.ts orchestrates environment-based selection and falls back to cloud providers
+- **Updated** API routes depend on adapters and workspace services to expose model catalogs and settings
+- **New** ModelSelectionGate depends on provider status API for real-time configuration
 
 ```mermaid
 graph LR
 MR["modelRegistry.ts"] --> TP["tieredPipeline.ts"]
 TP --> IDX["adapters/index.ts"]
 IDX --> OA["adapters/openai.ts"]
-IDX --> OL["adapters/ollama.ts"]
 RD["resolveDefaultAdapter.ts"] --> IDX
 WSR["workspace/settings/route.ts"] --> WKS["workspaceKeyService.ts"]
 MODELS["app/api/models/route.ts"] --> IDX
+MSG["ModelSelectionGate.tsx"] --> PS["providers/status/route.ts"]
+PS --> IDX
 ```
 
 **Diagram sources**
@@ -356,11 +459,12 @@ MODELS["app/api/models/route.ts"] --> IDX
 - [tieredPipeline.ts](file://lib/ai/tieredPipeline.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
 
 **Section sources**
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
@@ -370,15 +474,16 @@ MODELS["app/api/models/route.ts"] --> IDX
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
 
 ## Performance Considerations
-- Prefer local tiny/small models for background tasks to reduce latency and cost; use getFastModelForProvider to select the fastest available local model per provider
-- Use streaming for models with reliable streaming; otherwise, fall back to non-streaming generation
+- Prefer cloud providers (Groq, Google, Anthropic, OpenAI) for production workloads due to better reliability and cost efficiency
+- **Updated** Use streaming for models with reliable streaming; otherwise, fall back to non-streaming generation
 - Respect maxOutputTokens and blueprintTokenBudget to avoid context overflow and reduce retries
 - Cache adapter instances and leverage the built-in caching wrapper for generation and streaming responses
 - Avoid enabling JSON mode or tool calls for models that do not support them to prevent 400 errors
-
-[No sources needed since this section provides general guidance]
+- **New** Leverage universal LLM_KEY for simplified credential management across all providers
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -390,6 +495,7 @@ Common issues and resolutions:
 - Missing API key
   - Symptom: ConfigurationError thrown or UnconfiguredAdapter returned
   - Action: Set provider-specific environment variable; confirm workspace settings; verify Vercel environment variables
+  - **Updated** Try using universal LLM_KEY for all providers
   - Section sources
     - [adapters/index.ts](file://lib/ai/adapters/index.ts)
     - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
@@ -398,9 +504,21 @@ Common issues and resolutions:
   - Action: Ensure correct provider detection or explicitly set provider; verify base URL for OpenAI-compatible providers
   - Section sources
     - [adapters/index.ts](file://lib/ai/adapters/index.ts)
+- **New** Universal LLM_KEY configuration
+  - Symptom: Provider shows as configured but still fails
+  - Action: Verify LLM_KEY environment variable contains valid API key for target provider
+  - Section sources
+    - [providers/status/route.ts](file://app/api/providers/status/route.ts)
+    - [adapters/index.ts](file://lib/ai/adapters/index.ts)
+- **New** ModelSelectionGate provider issues
+  - Symptom: No providers available in selection UI
+  - Action: Check environment variables for provider keys or LLM_KEY; verify Vercel environment configuration
+  - Section sources
+    - [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+    - [providers/status/route.ts](file://app/api/providers/status/route.ts)
 - Reasoning model parameter errors
   - Symptom: 400 errors when sending temperature or response_format
-  - Action: Use optimizer’s reasoning detection; rely on adapter normalization; avoid unsupported params
+  - Action: Use optimizer's reasoning detection; rely on adapter normalization; avoid unsupported params
   - Section sources
     - [optimizer.ts](file://lib/ai/optimizer.ts)
     - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
@@ -424,4 +542,4 @@ Common issues and resolutions:
     - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 
 ## Conclusion
-The model resolution and configuration system centers on a static registry of model capabilities, a robust pipeline builder that maps profiles to runnable configurations, and a hardened adapter factory that enforces secure credential resolution and provider-specific parameter normalization. Together with default adapter resolution and workspace settings, it ensures predictable, efficient, and safe generation across diverse providers and model families, while gracefully handling unknown models and configuration conflicts.
+The model resolution and configuration system centers on a static registry of model capabilities, a robust pipeline builder that maps profiles to runnable configurations, and a hardened adapter factory that enforces secure credential resolution and provider-specific parameter normalization. **Updated** The system now prioritizes cloud providers (OpenAI, Anthropic, Google, Groq) with universal LLM_KEY support, streamlines provider selection through ModelSelectionGate, and enhances the visual design system with violet themes. Together with default adapter resolution and workspace settings, it ensures predictable, efficient, and safe generation across diverse providers and model families, while gracefully handling unknown models and configuration conflicts.

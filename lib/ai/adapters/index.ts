@@ -7,8 +7,9 @@
  * The engine uses EXACTLY what the user configured. On error → surface it clearly.
  * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * Supported adapters (4 cloud providers):
- *   OpenAIAdapter, AnthropicAdapter, GoogleAdapter, Groq (OpenAI-compatible)
+ * Supported adapters (5 providers):
+ *   Cloud: OpenAIAdapter, AnthropicAdapter, GoogleAdapter, Groq (OpenAI-compatible)
+ *   Local: OllamaAdapter
  */
 
 import 'server-only';
@@ -18,6 +19,7 @@ import type { ProviderName } from '../types';
 import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
+import { OllamaAdapter }    from './ollama';
 import { UnconfiguredAdapter } from './unconfigured';
 import { getCache, generateCacheKey } from '../cache';
 
@@ -57,6 +59,8 @@ export function detectProvider(model: string): ProviderName {
   if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
   // Groq hosted models — serve via OpenAI-compat adapter
   if (m.includes('llama') || m.includes('mixtral') || m.includes('gemma2')) return 'groq';
+  // Ollama local models
+  if (m.includes('ollama') || m.includes('local')) return 'ollama';
   return 'openai'; // default to openai for unknown models
 }
 
