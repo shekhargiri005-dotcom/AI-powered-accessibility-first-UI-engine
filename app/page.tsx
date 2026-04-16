@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import type { GenerationMode, SubmitOptions } from '@/components/PromptInput';
 import type { PipelineStep } from '@/components/PipelineStatus';
 import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
@@ -12,6 +12,7 @@ import CenterWorkspace from '@/components/ide/CenterWorkspace';
 import RightPanel from '@/components/ide/RightPanel';
 import ParallaxBackground from '@/components/ParallaxBackground';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
+import ModelSelectionGate from '@/components/ModelSelectionGate';
 
 interface GenerationOutput {
   code: string | Record<string, string>;
@@ -52,6 +53,11 @@ export default function HomePage() {
   const [pipelineError, setPipelineError] = useState<string | undefined>();
   const [output, setOutput] = useState<GenerationOutput | null>(null);
 
+  // ─── Model Selection Gate ─────────────────────────────────────────────────
+  const [showModelGate, setShowModelGate] = useState(false);
+  const [hasCheckedConfig, setHasCheckedConfig] = useState(false);
+  const [providerCredentials, setProviderCredentials] = useState<Record<string, boolean>>({});
+
   // ─── AI Engine Config ─────────────────────────────────────────────────────
   const [aiConfig, setAiConfig] = useState<AIEngineConfig | null>(null);
   const [isFullAppMode, setIsFullAppMode] = useState(false);
@@ -59,12 +65,55 @@ export default function HomePage() {
   // True while RightPanel bottom-bar refine is running; suppresses center workspace
   const [isDirectRefining, setIsDirectRefining] = useState(false);
 
+  // Check for existing AI config on mount - show ModelSelectionGate if none exists
+  useEffect(() => {
+    const checkExistingConfig = async () => {
+      try {
+        const res = await fetch('/api/engine-config');
+        const data = await res.json();
+        
+        if (data.success && data.config) {
+          // Config exists, load it
+          const config = data.config;
+          setAiConfig({
+            provider: config.provider,
+            providerName: config.providerName || config.provider,
+            model: config.model,
+            apiKey: '••••',
+            baseUrl: config.baseUrl,
+            temperature: config.temperature || 0.6,
+            fullAppMode: config.fullAppMode || false,
+            multiSlideMode: config.multiSlideMode || false,
+            isLocal: config.isLocal || false,
+          });
+          setIsFullAppMode(config.fullAppMode || false);
+          setIsMultiSlideMode(config.multiSlideMode || false);
+          
+          // Mark this provider as having credentials
+          setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
+        } else {
+          // No config - show the model selection gate
+          setShowModelGate(true);
+        }
+      } catch {
+        // Error checking config - show the gate to be safe
+        setShowModelGate(true);
+      } finally {
+        setHasCheckedConfig(true);
+      }
+    };
+
+    checkExistingConfig();
+  }, []);
+
   // Called when the user saves AI Engine Config
   // SECURITY: The config passed here has apiKey='••••' (masked) - real key is stored server-side
   const handleEngineConfigSaved = useCallback((config: AIEngineConfig) => {
     setAiConfig(config);
     setIsFullAppMode(config.fullAppMode);
     setIsMultiSlideMode(config.multiSlideMode);
+    // Hide the model gate if it was showing
+    setShowModelGate(false);
   }, []);
 
   // Called when the user clicks "Stop & Deactivate Engine"
@@ -398,8 +447,32 @@ export default function HomePage() {
 
   const isRunning = !isDirectRefining && ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
+  // Handle model selection gate completion
+  const handleModelGateComplete = useCallback((config: { provider: string; model: string; providerName: string }) => {
+    setAiConfig({
+      provider: config.provider,
+      providerName: config.providerName,
+      model: config.model,
+      apiKey: '••••',
+      temperature: 0.6,
+      fullAppMode: false,
+      multiSlideMode: false,
+      isLocal: config.provider === 'ollama',
+    });
+    setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
+    setShowModelGate(false);
+  }, []);
+
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-y-auto overflow-x-hidden lg:overflow-hidden bg-[#0B0F19] font-sans text-slate-100 selection:bg-violet-500/30 relative">
+      {/* Model Selection Gate - shown when no AI config exists */}
+      <ModelSelectionGate
+        isOpen={showModelGate}
+        onComplete={handleModelGateComplete}
+        onSkip={() => setShowModelGate(false)}
+        hasCredentials={providerCredentials}
+      />
+
       {/* Parallax visual background — purely decorative */}
       <ParallaxBackground />
 

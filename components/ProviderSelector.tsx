@@ -26,6 +26,9 @@ export interface ProviderOption {
   features: string[];
   recommended?: boolean;
   requiresKey: boolean;
+  keyLabel?: string;
+  keyHint?: string;
+  docsUrl?: string;
 }
 
 export const PROVIDER_OPTIONS: ProviderOption[] = [
@@ -39,6 +42,9 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     features: ['Best for UI generation', 'Multimodal vision', 'Fast inference'],
     recommended: true,
     requiresKey: true,
+    keyLabel: 'OpenAI API Key',
+    keyHint: 'sk-proj-... or sk-...',
+    docsUrl: 'https://platform.openai.com/api-keys',
   },
   {
     id: 'anthropic',
@@ -49,6 +55,9 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     gradient: 'from-amber-500/20 to-orange-500/20 border-amber-500/30',
     features: ['Excellent reasoning', 'Long context', 'Code expertise'],
     requiresKey: true,
+    keyLabel: 'Anthropic API Key',
+    keyHint: 'sk-ant-...',
+    docsUrl: 'https://console.anthropic.com/keys',
   },
   {
     id: 'google',
@@ -59,6 +68,9 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     gradient: 'from-blue-500/20 to-cyan-500/20 border-blue-500/30',
     features: ['Large context window', 'Fast processing', 'Vision capable'],
     requiresKey: true,
+    keyLabel: 'Google AI API Key',
+    keyHint: 'AIzaSy...',
+    docsUrl: 'https://aistudio.google.com/apikey',
   },
   {
     id: 'groq',
@@ -69,6 +81,9 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     gradient: 'from-orange-500/20 to-red-500/20 border-orange-500/30',
     features: ['Fastest inference', 'Open source models', 'Cost effective'],
     requiresKey: true,
+    keyLabel: 'Groq API Key',
+    keyHint: 'gsk_...',
+    docsUrl: 'https://console.groq.com/keys',
   },
   {
     id: 'ollama',
@@ -79,6 +94,9 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     gradient: 'from-gray-500/20 to-gray-400/20 border-gray-500/30',
     features: ['100% private', 'No API keys', 'Offline capable'],
     requiresKey: false,
+    keyLabel: 'No API Key Required',
+    keyHint: 'Connects to localhost:11434',
+    docsUrl: 'https://ollama.com',
   },
 ];
 
