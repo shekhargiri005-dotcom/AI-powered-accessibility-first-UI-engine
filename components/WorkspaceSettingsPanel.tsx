@@ -61,16 +61,6 @@ const PROVIDERS: ProviderConfig[] = [
     models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
     docsUrl: 'https://console.groq.com/keys',
   },
-  {
-    id: 'ollama',
-    name: 'Ollama',
-    color: 'from-gray-500 to-gray-400',
-    icon: '🦙',
-    envKey: 'OLLAMA_API_KEY',
-    placeholder: 'ollama-...',
-    models: ['llama3', 'mistral', 'codellama'],
-    docsUrl: 'https://ollama.com',
-  },
 ];
 
 // ─── Types ───────────────────────────────────────────────────────────────────

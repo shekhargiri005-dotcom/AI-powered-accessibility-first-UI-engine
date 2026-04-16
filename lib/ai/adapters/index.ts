@@ -7,9 +7,8 @@
  * The engine uses EXACTLY what the user configured. On error → surface it clearly.
  * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * Supported adapters (4 total):
- *   Cloud:  OpenAIAdapter, AnthropicAdapter, GoogleAdapter
- *   Local:  OllamaAdapter  (also handles LM Studio / Groq / HuggingFace via baseUrl)
+ * Supported adapters (4 cloud providers):
+ *   OpenAIAdapter, AnthropicAdapter, GoogleAdapter, Groq (OpenAI-compatible)
  */
 
 import 'server-only';
@@ -19,7 +18,6 @@ import type { ProviderName } from '../types';
 import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
-import { OllamaAdapter }    from './ollama';
 import { UnconfiguredAdapter } from './unconfigured';
 import { getCache, generateCacheKey } from '../cache';
 
@@ -43,8 +41,7 @@ export class ConfigurationError extends Error {
 // These providers speak the OpenAI REST protocol — no separate adapter needed.
 
 const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
-  groq:       'https://api.groq.com/openai/v1',
-  lmstudio:   'http://localhost:1234/v1',
+  groq: 'https://api.groq.com/openai/v1',
 };
 
 // ─── Provider Detection (fallback only — prefer explicit provider from config) ─
@@ -60,7 +57,7 @@ export function detectProvider(model: string): ProviderName {
   if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
   // Groq hosted models — serve via OpenAI-compat adapter
   if (m.includes('llama') || m.includes('mixtral') || m.includes('gemma2')) return 'groq';
-  return 'ollama'; // safe local default for everything else
+  return 'openai'; // default to openai for unknown models
 }
 
 /** Pass-through — model names used verbatim as configured by the user. */
@@ -149,7 +146,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
   const apiKey = cfg.apiKey;
 
   // 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
-  const namedProviders = ['openai', 'anthropic', 'google', 'ollama', 'lmstudio'];
+  const namedProviders = ['openai', 'anthropic', 'google'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
   const isCompat  = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
@@ -184,29 +181,9 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
       adapter = new GoogleAdapter(key);
       break;
     }
-    case 'unconfigured': {
-      adapter = new UnconfiguredAdapter();
-      break;
-    }
-    case 'ollama':
-    case 'lmstudio':
+    case 'unconfigured':
     default: {
-      // Any unknown provider reaching this branch means a key is missing — surface it.
-      if (provId !== 'ollama' && provId !== 'lmstudio' && provId !== 'unconfigured') {
-        throw new ConfigurationError(
-          provId,
-          `API key required for provider "${provId}". Add it in the AI Engine Config panel or set the ${provId.toUpperCase()}_API_KEY environment variable in Vercel.`
-        );
-      }
-      // On Vercel, local daemons (Ollama / LM Studio) are physically unreachable.
-      // Return UnconfiguredAdapter so the caller gets a graceful "configure me" response
-      // instead of a raw ECONNREFUSED / "Connection error."
-      if (process.env.VERCEL) {
-        adapter = new UnconfiguredAdapter();
-        break;
-      }
-      const url = baseUrl ?? (provId === 'lmstudio' ? OPENAI_COMPAT_BASE_URLS.lmstudio : undefined);
-      adapter = new OllamaAdapter(url);
+      adapter = new UnconfiguredAdapter();
       break;
     }
   }
@@ -264,7 +241,6 @@ export async function getWorkspaceAdapter(
     anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
-    ollama: process.env.OLLAMA_API_KEY,
   };
   
   const fallbackKey = providerEnvMap[providerId];
@@ -306,7 +282,6 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
 export { OpenAIAdapter }    from './openai';
 export { AnthropicAdapter } from './anthropic';
 export { GoogleAdapter }    from './google';
-export { OllamaAdapter }    from './ollama';
 export { UnconfiguredAdapter } from './unconfigured';
 
 export type { AIAdapter } from './base';

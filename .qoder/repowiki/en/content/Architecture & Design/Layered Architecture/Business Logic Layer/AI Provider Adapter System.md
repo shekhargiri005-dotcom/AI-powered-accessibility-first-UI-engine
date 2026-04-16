@@ -15,7 +15,16 @@
 - [lib/ai/cache.ts](file://lib/ai/cache.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
+- [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced credential resolution system with universal LLM_KEY fallback mechanism
+- Updated factory pattern to include fourth fallback option for universal API key
+- Added comprehensive documentation for universal key support across all providers
+- Updated troubleshooting guide to include universal key configuration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -30,7 +39,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the universal AI adapter system that powers the AI engine. It explains how the adapter pattern isolates provider-specific logic behind a shared interface, how the factory resolves credentials securely, and how standardized request/response formats unify interactions across providers. It also covers configuration management, authentication handling, streaming and caching, error handling, fallback mechanisms, and practical guidance for adding new providers and extending the system.
+This document describes the universal AI adapter system that powers the AI engine. It explains how the adapter pattern isolates provider-specific logic behind a shared interface, how the factory resolves credentials securely, and how standardized request/response formats unify interactions across providers. The system now includes enhanced credential resolution with universal LLM_KEY support that works across all providers as a fourth fallback mechanism. It also covers configuration management, authentication handling, streaming and caching, error handling, fallback mechanisms, and practical guidance for adding new providers and extending the system.
 
 ## Project Structure
 The AI adapter system lives under lib/ai and is composed of:
@@ -40,6 +49,7 @@ The AI adapter system lives under lib/ai and is composed of:
 - A pluggable cache layer for generation results and streams
 - Tool definitions and conversion helpers for function calling
 - Configuration shims and environment-based resolver utilities
+- Enhanced credential resolution with universal LLM_KEY support
 
 ```mermaid
 graph TB
@@ -57,6 +67,12 @@ UCA["adapters/unconfigured.ts"]
 CFG["config.ts"]
 RDA["resolveDefaultAdapter.ts"]
 end
+subgraph "Security Layer"
+WK["security/workspaceKeyService.ts"]
+end
+subgraph "API Routes"
+PS["api/providers/status/route.ts"]
+end
 BASE --> IDX
 TYPES --> IDX
 TOOLS --> OA
@@ -70,6 +86,8 @@ IDX --> OLA
 IDX --> UCA
 CFG --> IDX
 RDA --> IDX
+WK --> IDX
+PS --> IDX
 ```
 
 **Diagram sources**
@@ -85,6 +103,8 @@ RDA --> IDX
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
+- [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
 
 **Section sources**
 - [README.md](file://README.md)
@@ -94,10 +114,11 @@ RDA --> IDX
 - Base adapter interface: Defines the provider-agnostic contract for generating and streaming completions.
 - Shared types: Provide client-safe message, generation, streaming, and pricing types.
 - Provider adapters: Implementations for OpenAI, Anthropic, Google, and Ollama; plus a fallback adapter for unconfigured environments.
-- Factory and registry: Securely resolves credentials, detects provider, and instantiates adapters.
+- Factory and registry: Securely resolves credentials, detects provider, and instantiates adapters with universal LLM_KEY support.
 - Caching: Adds a pluggable cache around generation and streaming calls.
 - Tools: Canonical tool schema and conversion helpers for cross-provider function calling.
 - Configuration shims: Backward-compatible exports and environment-based adapter resolver.
+- Enhanced credential resolution: Four-tier fallback system including universal LLM_KEY support.
 
 **Section sources**
 - [lib/ai/adapters/base.ts](file://lib/ai/adapters/base.ts)
@@ -109,12 +130,13 @@ RDA --> IDX
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ## Architecture Overview
-The system separates concerns:
+The system separates concerns with enhanced credential resolution:
 - Application code interacts with the AIAdapter interface.
 - The factory selects a concrete adapter based on configuration and environment.
 - Adapters normalize provider differences and expose a unified request/response model.
 - A caching layer improves performance and reduces costs.
 - Tools enable function calling across providers with a single canonical schema.
+- **Enhanced**: Universal LLM_KEY support provides a fourth fallback mechanism that works across all providers.
 
 ```mermaid
 sequenceDiagram
@@ -133,6 +155,10 @@ Factory->>Factory : "check env vars"
 alt "Provider env key exists"
 Factory-->>Registry : "cfg {provider, model, apiKey}"
 else "No key"
+Factory->>Factory : "check universal LLM_KEY"
+alt "Universal key exists"
+Factory-->>Registry : "cfg {provider, model, LLM_KEY}"
+else "No universal key"
 Factory-->>Registry : "cfg {provider='unconfigured'}"
 end
 end
@@ -196,6 +222,7 @@ AIAdapter --> StreamChunk : "produces"
 
 ### Factory Pattern and Dynamic Adapter Instantiation
 - getWorkspaceAdapter resolves credentials from workspace storage or environment variables, then delegates to createAdapter.
+- **Enhanced**: Now includes universal LLM_KEY as the fourth fallback mechanism that works across all providers.
 - createAdapter detects provider from config or model name, validates API keys, and returns a CachedAdapter-wrapped provider adapter.
 - For unknown providers, it falls back to UnconfiguredAdapter to avoid hard failures.
 - Legacy getAdapter remains for backward compatibility but should be migrated to getWorkspaceAdapter.
@@ -208,7 +235,10 @@ Found -- Yes --> Create["createAdapter(cfg with apiKey)"]
 Found -- No --> Env["Check env vars for provider key"]
 Env --> HasKey{"Key found?"}
 HasKey -- Yes --> Create
-HasKey -- No --> Fallback["Return UnconfiguredAdapter"]
+HasKey -- No --> Universal["Check for universal LLM_KEY"]
+Universal --> UniFound{"Universal key found?"}
+UniFound -- Yes --> CreateUni["createAdapter(cfg with LLM_KEY)"]
+UniFound -- No --> Fallback["Return UnconfiguredAdapter"]
 Create --> Detect["detectProvider(model)"]
 Detect --> Compat{"OpenAI-compatible?"}
 Compat -- Yes --> OpenAI["CachedAdapter(new OpenAIAdapter(key, compatUrl))"]
@@ -221,6 +251,47 @@ OpenAI --> CacheWrap["wrap with CachedAdapter"]
 NewAdapter --> CacheWrap
 Ollama --> CacheWrap
 CacheWrap --> End(["AIAdapter"])
+```
+
+**Diagram sources**
+- [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
+
+**Section sources**
+- [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
+
+### Enhanced Credential Resolution System
+
+#### Universal LLM_KEY Support
+The system now supports a universal LLM_KEY environment variable that works across all providers as the fourth fallback mechanism:
+
+**Credential Resolution Hierarchy (Enhanced):**
+1. **Database Check**: Workspace-scoped keys via workspaceKeyService
+2. **Environment Variable Check**: Provider-specific keys (e.g., OPENAI_API_KEY)
+3. **Provider-Specific Fallback**: Alternative environment variables (Google/Gemini)
+4. **Universal LLM_KEY Fallback**: Single universal key for all providers
+5. **Failure**: UnconfiguredAdapter for graceful degradation
+
+**Universal Key Implementation:**
+- The universal LLM_KEY is checked after provider-specific environment variables
+- When found, it's logged with a console message indicating universal key usage
+- Works transparently across all providers (OpenAI, Anthropic, Google, Groq, Ollama)
+- Provides simplified deployment configuration for teams using single credentials
+
+```mermaid
+flowchart TD
+A["getWorkspaceAdapter(providerId, modelId, workspaceId, userId)"] --> B["DB lookup via workspaceKeyService"]
+B --> C{"Key found?"}
+C -- Yes --> D["createAdapter({provider, model, apiKey})"]
+C -- No --> E["Check process.env[PROVIDER_API_KEY]"]
+E --> F{"Key found?"}
+F -- Yes --> D
+F -- No --> G["Check provider-specific env fallbacks"]
+G --> H{"Key found?"}
+H -- Yes --> D
+H -- No --> I["Check universal LLM_KEY"]
+I --> J{"LLM_KEY found?"}
+J -- Yes --> K["createAdapter({provider, model, apiKey: LLM_KEY})"]
+J -- No --> L["Return UnconfiguredAdapter"]
 ```
 
 **Diagram sources**
@@ -258,7 +329,7 @@ OA-->>App : "GenerateResult"
 
 #### AnthropicAdapter
 - Uses the native Anthropic /v1/messages API via fetch.
-- Converts messages to Anthropic’s expected shape and enforces per-model output caps.
+- Converts messages to Anthropic's expected shape and enforces per-model output caps.
 - Streams via SSE-like events and yields delta chunks.
 
 ```mermaid
@@ -300,8 +371,9 @@ AA-->>App : "StreamChunk (delta/done)"
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ### Configuration Management and Authentication Handling
-- getWorkspaceAdapter prioritizes workspace-scoped keys, then environment variables, and finally returns UnconfiguredAdapter.
+- getWorkspaceAdapter prioritizes workspace-scoped keys, then environment variables, universal LLM_KEY, and finally returns UnconfiguredAdapter.
 - Environment variables are checked per provider, including Groq and Google/Gemini aliases.
+- **Enhanced**: Universal LLM_KEY is now checked as the fourth fallback mechanism.
 - ConfigurationError is thrown when a provider requires a key but none is found.
 
 ```mermaid
@@ -315,7 +387,10 @@ F -- Yes --> D
 F -- No --> G["Check provider-specific env fallbacks"]
 G --> H{"Key found?"}
 H -- Yes --> D
-H -- No --> I["Return UnconfiguredAdapter"]
+H -- No --> I["Check universal LLM_KEY"]
+I --> J{"Key found?"}
+J -- Yes --> K["createAdapter({provider, model, apiKey: LLM_KEY})"]
+J -- No --> L["Return UnconfiguredAdapter"]
 ```
 
 **Diagram sources**
@@ -338,6 +413,7 @@ H -- No --> I["Return UnconfiguredAdapter"]
 - UnconfiguredAdapter prevents server crashes and guides users to configure credentials.
 - Upstash Redis initialization failure is handled gracefully; cache writes are best-effort.
 - Provider adapters handle HTTP errors and malformed responses.
+- **Enhanced**: Universal LLM_KEY provides transparent fallback without ConfigurationError.
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -380,15 +456,17 @@ Metrics --> End(["return"])
 ### Environment-Based Defaults and Backward Compatibility
 - config.ts re-exports factory and resolver for backward compatibility.
 - resolveDefaultAdapter chooses the first available provider key based on priority tiers.
+- **Enhanced**: Universal LLM_KEY support extends across all provider configurations.
 
 **Section sources**
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ## Dependency Analysis
-The adapter system exhibits low coupling and high cohesion:
+The adapter system exhibits low coupling and high cohesion with enhanced credential resolution:
 - Adapters depend on shared types and tools.
 - The factory depends on workspace key service, environment variables, and adapters.
+- **Enhanced**: Universal LLM_KEY integration provides centralized credential management.
 - Caching is orthogonal and composable via decorator pattern.
 - Tools are isolated and converted at adapter boundaries.
 
@@ -410,6 +488,8 @@ IDX --> OLA
 IDX --> UCA["adapters/unconfigured.ts"]
 CFG["config.ts"] --> IDX
 RDA["resolveDefaultAdapter.ts"] --> IDX
+WK["security/workspaceKeyService.ts"] --> IDX
+PS["api/providers/status/route.ts"] --> IDX
 ```
 
 **Diagram sources**
@@ -425,6 +505,8 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
+- [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -435,14 +517,15 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 - Use streaming for long-form generation to improve perceived latency.
 - Monitor token usage via pricing utilities and metrics.
 - For local providers, ensure the daemon is reachable; otherwise use cloud providers or UnconfiguredAdapter for graceful UX.
-
-[No sources needed since this section provides general guidance]
+- **Enhanced**: Universal LLM_KEY reduces configuration overhead and deployment complexity.
 
 ## Troubleshooting Guide
 - Missing API key: Expect ConfigurationError or UnconfiguredAdapter behavior. Configure provider key in workspace settings or environment variables.
+- **Enhanced**: Universal LLM_KEY configuration: Set LLM_KEY environment variable to use a single key across all providers.
 - Provider-specific constraints: Some providers reject certain parameters (e.g., response_format, tools, temperature). The adapters normalize these differences.
 - Network connectivity: Local Ollama/LM Studio may be unreachable on serverless platforms; UnconfiguredAdapter will guide users to configure cloud providers.
 - Tool execution: Ensure tool names match and parameters conform to the declared schema; mismatches are handled gracefully.
+- **Enhanced**: Universal key debugging: Check console logs for "[getWorkspaceAdapter] Using universal LLM_KEY for [provider]" messages.
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -451,9 +534,7 @@ RDA["resolveDefaultAdapter.ts"] --> IDX
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ## Conclusion
-The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, and add provider-specific environment handling.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. **Enhanced** with universal LLM_KEY support, the system now provides a fourth fallback mechanism that simplifies deployment and reduces configuration complexity. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, and add provider-specific environment handling.
 
 ## Appendices
 
@@ -475,5 +556,21 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Wrap adapters with CachedAdapter to reduce latency and cost.
 - Validate tool schemas and handle tool execution errors.
 - Instrument metrics and logging for observability.
+- **Enhanced**: Consider universal LLM_KEY for simplified multi-provider deployments.
 
-[No sources needed since this section provides general guidance]
+### Universal LLM_KEY Configuration Guide
+**Setting Up Universal Key:**
+1. Set the LLM_KEY environment variable in your deployment platform
+2. The key will automatically work for all providers (OpenAI, Anthropic, Google, Groq, Ollama)
+3. Universal key takes precedence over provider-specific keys
+4. Check console logs for confirmation: "[getWorkspaceAdapter] Using universal LLM_KEY for [provider]"
+
+**Benefits:**
+- Simplified deployment configuration
+- Reduced environment variable management
+- Transparent fallback across all providers
+- Easier team onboarding and credential sharing
+
+**Section sources**
+- [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
+- [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)

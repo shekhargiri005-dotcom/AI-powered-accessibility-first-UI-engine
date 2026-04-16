@@ -57,7 +57,6 @@ const PROVIDER_ICONS: Record<string, React.ReactNode> = {
   anthropic: <Cpu className="w-8 h-8" />,
   google: <Globe className="w-8 h-8" />,
   groq: <Zap className="w-8 h-8" />,
-  ollama: <Server className="w-8 h-8" />,
 };
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -266,8 +265,8 @@ export default function ModelSelectionGate({
                   </ul>
                   <p className="text-xs text-gray-500 mt-2">Or use specific keys:</p>
                   <ul className="space-y-1 font-mono text-xs text-gray-500">
-                    <li>• OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY</li>
-                    <li>• GROQ_API_KEY, OLLAMA_API_KEY</li>
+                    <li>• OPENAI_API_KEY, ANTHROPIC_API_KEY</li>
+                    <li>• GOOGLE_API_KEY, GROQ_API_KEY</li>
                   </ul>
                 </div>
               </div>

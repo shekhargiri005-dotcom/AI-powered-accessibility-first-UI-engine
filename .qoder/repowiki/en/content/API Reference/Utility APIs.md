@@ -21,11 +21,13 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced Provider Status API with runtime environment variable checking and comprehensive debugging capabilities
+- Enhanced Provider Status API with comprehensive provider configuration, optimized settings display, and improved debugging capabilities
 - Added caching prevention using unstable_noStore() for immediate reflection of dynamic environment variable changes
 - Implemented development environment debug information with detailed provider configuration diagnostics
 - Updated ModelSelectionGate integration to leverage real-time provider status detection
 - Improved troubleshooting capabilities with detailed logging and diagnostic information
+- Added universal LLM_KEY support for simplified provider configuration
+- Enhanced provider settings optimization with provider-specific configuration profiles
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -41,10 +43,10 @@
 ## Introduction
 This document describes the utility APIs that power model discovery, history tracking, feedback collection, manifest generation, and provider configuration management. It covers request/response schemas, authentication requirements, integration patterns with the generation pipeline, and data persistence layers. These endpoints are essential for configuring AI providers, auditing generation history, collecting user insights for quality improvement, generating component metadata for multi-file applications, and managing provider credentials through a streamlined three-step configuration flow.
 
-**Updated** The provider status API now includes comprehensive runtime environment variable checking, debugging capabilities, and immediate reflection of dynamic configuration changes through caching prevention mechanisms.
+**Updated** The provider status API now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention with `unstable_noStore()`, universal LLM_KEY support, and development environment debug information. These enhancements provide immediate reflection of dynamic configuration changes, comprehensive troubleshooting capabilities, and seamless integration with the ModelSelectionGate component for streamlined provider setup.
 
 ## Project Structure
-The utility endpoints live under app/api and integrate with shared libraries for persistence, authentication, and AI adapters. The new providers/status endpoint centralizes provider detection from environment variables with enhanced debugging capabilities.
+The utility endpoints live under app/api and integrate with shared libraries for persistence, authentication, and AI adapters. The new providers/status endpoint centralizes provider detection from environment variables with enhanced debugging capabilities and optimized provider settings.
 
 ```mermaid
 graph TB
@@ -92,7 +94,7 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [providers/status/route.ts:1-167](file://app/api/providers/status/route.ts#L1-L167)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -100,7 +102,7 @@ PR --> SC
 - [chunkGenerator.ts:1-220](file://lib/ai/chunkGenerator.ts#L1-L220)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
-- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ModelSelectionGate.tsx:1-479](file://components/ModelSelectionGate.tsx#L1-L479)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 
 **Section sources**
@@ -109,7 +111,7 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [providers/status/route.ts:1-167](file://app/api/providers/status/route.ts#L1-L167)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -124,9 +126,9 @@ PR --> SC
 - Feedback endpoint: Accepts user signals and metrics, aggregates statistics, and persists structured feedback.
 - Manifest endpoint: Generates a file manifest for multi-file application scaffolding using the configured provider and model.
 - Engine config endpoint: Manages workspace-level provider/model selection and encrypted API key storage.
-- **Providers status endpoint**: Centralized provider detection with runtime environment variable checking, comprehensive debugging, and immediate configuration reflection.
+- **Providers status endpoint**: Centralized provider detection with runtime environment variable checking, comprehensive debugging, caching prevention, universal LLM_KEY support, and optimized provider settings.
 
-**Updated** The providers status endpoint now provides real-time environment variable detection with detailed debugging information and caching prevention for immediate configuration updates.
+**Updated** The providers status endpoint now provides real-time environment variable detection with detailed debugging information, caching prevention for immediate configuration updates, universal LLM_KEY support, and provider-specific optimized settings profiles.
 
 **Section sources**
 - [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -134,10 +136,10 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [providers/status/route.ts:1-167](file://app/api/providers/status/route.ts#L1-L167)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 
 ## Architecture Overview
-The utility APIs integrate with authentication, persistence, and AI adapters. The models endpoint resolves keys from client input, database, or environment variables. The history endpoint uses Prisma-backed memory. The feedback endpoint writes to both Redis-backed stats and Prisma. The manifest endpoint uses the unified adapter layer to generate manifests securely. The new providers/status endpoint centralizes provider configuration detection from environment variables with enhanced debugging capabilities.
+The utility APIs integrate with authentication, persistence, and AI adapters. The models endpoint resolves keys from client input, database, or environment variables. The history endpoint uses Prisma-backed memory. The feedback endpoint writes to both Redis-backed stats and Prisma. The manifest endpoint uses the unified adapter layer to generate manifests securely. The new providers/status endpoint centralizes provider configuration detection from environment variables with enhanced debugging capabilities, caching prevention, and universal LLM_KEY support.
 
 ```mermaid
 sequenceDiagram
@@ -149,6 +151,7 @@ participant Env as "Environment"
 Client->>Providers : GET /api/providers/status
 Providers->>Env : Check environment variables (runtime)
 Providers->>Providers : Debug logging with configuration info
+Providers->>Providers : Check universal LLM_KEY
 Providers-->>Client : {success, providers[], configuredCount, debug?}
 Client->>Engine : GET /api/engine-config
 Engine->>DB : Read workspace settings
@@ -162,7 +165,7 @@ Models-->>Client : {models, count}
 ```
 
 **Diagram sources**
-- [providers/status/route.ts:85-166](file://app/api/providers/status/route.ts#L85-L166)
+- [providers/status/route.ts:141-218](file://app/api/providers/status/route.ts#L141-L218)
 - [models/route.ts:206-456](file://app/api/models/route.ts#L206-L456)
 - [engine-config/route.ts:36-65](file://app/api/engine-config/route.ts#L36-L65)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
@@ -420,7 +423,7 @@ Invalidate --> Ok["Return {success:true}"]
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 
 ### Providers Status Endpoint
-Purpose: Centralized provider detection that automatically identifies configured providers from environment variables with comprehensive debugging capabilities and immediate configuration reflection.
+Purpose: Centralized provider detection that automatically identifies configured providers from environment variables with comprehensive debugging capabilities, caching prevention, universal LLM_KEY support, and optimized provider settings.
 
 - Method: GET
 - Path: /api/providers/status
@@ -441,37 +444,47 @@ Purpose: Centralized provider detection that automatically identifies configured
   - configured: boolean (environment variable detected)
   - models: string[] (available models)
   - recommended: boolean (featured provider)
-  - localOnly: boolean (Ollama local-only detection)
+  - settings: ProviderSettings (optimized settings profile)
 
-**Enhanced** The provider status endpoint now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention, and development environment diagnostics.
+**Enhanced** The provider status endpoint now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention, universal LLM_KEY support, and development environment diagnostics.
 
 Key behaviors:
 - **Runtime environment variable checking**: Uses `unstable_noStore()` to prevent caching and ensure immediate reflection of dynamic environment variable changes
 - **Comprehensive debugging**: Logs detailed provider configuration status with debug information including environment variable availability and Vercel deployment detection
-- **Development environment diagnostics**: Returns debug information only in development mode, including Vercel environment detection, available environment variables, and Node.js environment details
+- **Development environment diagnostics**: Returns debug information only in development mode, including available environment variables, Node.js environment details, and configuration status
+- **Universal LLM_KEY support**: Checks for universal LLM_KEY that works for all providers as a fallback option
 - **Immediate configuration reflection**: Prevents caching so configuration changes are reflected immediately without requiring server restarts
 - **Enhanced logging**: Provides detailed console logs for each provider's configuration status with debug information
+- **Provider settings optimization**: Includes optimized settings profiles for each provider with temperature, maxTokens, and other parameters
 
 Configuration detection logic:
 - Checks primary environment variable for each provider
 - Falls back to alternate environment variable when available (Google)
-- Ollama is considered configured only when NOT deployed on Vercel (local-only)
+- Uses universal LLM_KEY as a fallback for all providers
 - Returns boolean configured flag for each provider
 - Logs detailed debug information for troubleshooting provider configuration issues
+- Includes provider-specific optimized settings for UI/code generation
 
 Debug information includes:
-- Vercel deployment detection (`isVercel`)
 - Available environment variables for AI providers
 - Node.js environment type (`NODE_ENV`)
 - Per-provider configuration status with environment variable checks
+- Universal LLM_KEY presence indicator
+
+Provider settings profiles include:
+- Temperature: Lower (0.1-0.3) for deterministic code, higher (0.7-0.8) for creative tasks
+- Max tokens: Based on model context window and typical UI component size
+- Additional parameters: topP, frequencyPenalty, presencePenalty for provider-specific optimization
 
 ```mermaid
 flowchart TD
 Start(["GET /api/providers/status"]) --> PreventCache["Call unstable_noStore()<br/>Prevent caching for immediate updates"]
-PreventCache --> CheckVercel["Check VERCEL environment<br/>Detect Vercel deployment"]
-CheckVercel --> LogEnvVars["Log available AI env vars<br/>for debugging"]
+PreventCache --> CheckUniversal["Check universal LLM_KEY<br/>Works for all providers"]
+CheckUniversal --> LogEnvVars["Log available AI env vars<br/>for debugging"]
 LogEnvVars --> MapProviders["Map PROVIDER_CONFIG array"]
-MapProviders --> CheckLocal{"Local-only provider?"}
+MapProviders --> CheckUniversalKey{"Universal LLM_KEY exists?"}
+CheckUniversalKey --> |Yes| SetAllConfigured["All providers configured"]
+CheckUniversalKey --> |No| CheckLocal{"Local-only provider?"}
 CheckLocal --> |Yes| CheckNotVercel["configured = !isVercel<br/>Ollama local-only"]
 CheckLocal --> |No| CheckPrimary["Check primary env var"]
 CheckPrimary --> HasPrimary{"Primary key exists?"}
@@ -482,21 +495,22 @@ HasAlt --> |Yes| SetConfigured
 HasAlt --> |No| SetUnconfigured["configured = false"]
 SetConfigured --> LogProvider["Console log provider status<br/>with debug info"]
 SetUnconfigured --> LogProvider
+SetAllConfigured --> LogProvider
 CheckNotVercel --> LogProvider
-LogProvider --> BuildResponse["Build ProviderStatus[]"]
+LogProvider --> BuildResponse["Build ProviderStatus[]<br/>Include settings profiles"]
 BuildResponse --> CalcCount["Calculate configuredCount"]
 CalcCount --> CheckDev{"Development mode?"}
-CheckDev --> |Yes| AddDebug["Add debug info:<br/>isVercel, availableEnvVars,<br/>nodeEnv"]
+CheckDev --> |Yes| AddDebug["Add debug info:<br/>availableEnvVars,<br/>nodeEnv"]
 CheckDev --> |No| SkipDebug["Skip debug info"]
 AddDebug --> Return["Return {success, providers, configuredCount, debug}"}
 SkipDebug --> Return
 ```
 
 **Diagram sources**
-- [providers/status/route.ts:85-166](file://app/api/providers/status/route.ts#L85-L166)
+- [providers/status/route.ts:141-218](file://app/api/providers/status/route.ts#L141-L218)
 
 **Section sources**
-- [providers/status/route.ts:1-167](file://app/api/providers/status/route.ts#L1-L167)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 
 ## Dependency Analysis
 - Models endpoint depends on:
@@ -518,10 +532,12 @@ SkipDebug --> Return
   - Environment variables for provider configuration detection.
   - Runtime caching prevention via `unstable_noStore()`.
   - Static PROVIDER_CONFIG array for provider metadata.
+  - Universal LLM_KEY support for simplified configuration.
+  - Provider settings optimization profiles.
   - ModelSelectionGate component for UI integration.
   - Development environment debug logging for troubleshooting.
 
-**Updated** The providers status endpoint now includes runtime caching prevention and comprehensive debugging capabilities as dependencies.
+**Updated** The providers status endpoint now includes runtime caching prevention, universal LLM_KEY support, provider settings optimization, and comprehensive debugging capabilities as dependencies.
 
 ```mermaid
 graph LR
@@ -536,6 +552,8 @@ Engine["/api/engine-config"] --> Prisma
 Engine --> Crypto["Encryption Service"]
 Providers["/api/providers/status"] --> Env
 Providers --> Cache["unstable_noStore()"]
+Providers --> Universal["LLM_KEY Universal Key"]
+Providers --> Settings["Provider Settings Profiles"]
 Providers --> MSG["ModelSelectionGate"]
 Providers --> PSel["ProviderSelector"]
 Providers --> Debug["Development Debug Logging"]
@@ -548,7 +566,7 @@ Providers --> Debug["Development Debug Logging"]
 - [feedbackStore.ts:88-104](file://lib/ai/feedbackStore.ts#L88-L104)
 - [manifest/route.ts:21-36](file://app/api/manifest/route.ts#L21-L36)
 - [engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
-- [providers/status/route.ts:85-166](file://app/api/providers/status/route.ts#L85-L166)
+- [providers/status/route.ts:141-218](file://app/api/providers/status/route.ts#L141-L218)
 
 **Section sources**
 - [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -557,7 +575,7 @@ Providers --> Debug["Development Debug Logging"]
 - [feedbackStore.ts:1-356](file://lib/ai/feedbackStore.ts#L1-L356)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [providers/status/route.ts:1-167](file://app/api/providers/status/route.ts#L1-L167)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 
 ## Performance Considerations
 - Models endpoint:
@@ -578,9 +596,11 @@ Providers --> Debug["Development Debug Logging"]
   - Single environment variable checks per provider (minimal overhead).
   - Static PROVIDER_CONFIG array provides predictable performance.
   - **Enhanced** Development-only debug logging minimizes production overhead.
+  - **Enhanced** Universal LLM_KEY support adds minimal overhead with significant UX benefits.
+  - **Enhanced** Provider settings profiles are pre-computed and cached in memory.
   - **Enhanced** Comprehensive logging for troubleshooting without affecting performance.
 
-**Updated** The providers status endpoint now includes caching prevention and development-only debug logging for optimal performance.
+**Updated** The providers status endpoint now includes caching prevention, universal LLM_KEY support, provider settings optimization, and development-only debug logging for optimal performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -603,8 +623,10 @@ Common issues and resolutions:
   - **Enhanced** Check development console for debug information: `[providers/status] Available env vars:` and detailed provider configuration logs.
   - **Enhanced** Use browser developer tools to inspect network requests and verify caching is prevented with `unstable_noStore()`.
   - **Enhanced** Clear browser cache and reload to ensure immediate reflection of environment variable changes.
+  - **Enhanced** Test universal LLM_KEY configuration by setting LLM_KEY environment variable for all providers.
+  - **Enhanced** Verify provider settings optimization is working by checking the settings field in the response.
 
-**Enhanced** The troubleshooting guide now includes comprehensive debugging information for provider configuration issues, development environment diagnostics, and caching prevention verification.
+**Enhanced** The troubleshooting guide now includes comprehensive debugging information for provider configuration issues, development environment diagnostics, caching prevention verification, and universal LLM_KEY testing procedures.
 
 **Section sources**
 - [models/route.ts:445-455](file://app/api/models/route.ts#L445-L455)
@@ -612,11 +634,11 @@ Common issues and resolutions:
 - [feedbackStore.ts:106-139](file://lib/ai/feedbackStore.ts#L106-L139)
 - [manifest/route.ts:42-55](file://app/api/manifest/route.ts#L42-L55)
 - [engine-config/route.ts:123-126](file://app/api/engine-config/route.ts#L123-L126)
-- [providers/status/route.ts:85-166](file://app/api/providers/status/route.ts#L85-L166)
+- [providers/status/route.ts:141-218](file://app/api/providers/status/route.ts#L141-L218)
 
 ## Conclusion
 The utility APIs provide a cohesive foundation for model discovery, history tracking, feedback-driven improvements, and manifest generation. The new providers/status endpoint streamlines provider configuration by automatically detecting configured providers from environment variables, replacing the previous multi-step credential entry process with a streamlined three-step flow. 
 
-**Enhanced** The provider status API now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention with `unstable_noStore()`, and development environment debug information. These enhancements provide immediate reflection of dynamic environment variable changes, comprehensive troubleshooting capabilities, and seamless integration with the ModelSelectionGate component for streamlined provider setup. The API now offers robust debugging for provider configuration issues while maintaining optimal performance through development-only debug logging and caching prevention mechanisms.
+**Enhanced** The provider status API now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention with `unstable_noStore()`, universal LLM_KEY support, development environment debug information, and provider-specific optimized settings profiles. These enhancements provide immediate reflection of dynamic environment variable changes, comprehensive troubleshooting capabilities, and seamless integration with the ModelSelectionGate component for streamlined provider setup. The API now offers robust debugging for provider configuration issues while maintaining optimal performance through development-only debug logging, caching prevention mechanisms, and universal key support. The addition of provider settings optimization ensures that each provider is configured with the best parameters for UI/code generation tasks.
 
-**Updated** Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section, as they are no longer part of the streamlined configuration approach described in this document. The focus has shifted to the ModelSelectionGate component and the enhanced provider status discovery mechanism with comprehensive debugging capabilities for simplified provider setup and immediate configuration reflection.
+**Updated** Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section, as they are no longer part of the streamlined configuration approach described in this document. The focus has shifted to the ModelSelectionGate component and the enhanced provider status discovery mechanism with comprehensive debugging capabilities, universal LLM_KEY support, and optimized provider settings for simplified provider setup and immediate configuration reflection.

@@ -19,46 +19,42 @@ export interface ProviderSettings {
   presencePenalty?: number;
 }
 
-// Optimized settings for UI/code generation based on provider characteristics
-// Temperature: Lower (0.1-0.3) for deterministic code, higher (0.7-0.8) for creative tasks
-// Max tokens: Based on model context window and typical UI component size
+// Optimized settings for maximum creativity and aesthetic UI generation
+// Higher temperatures (0.7-0.9) for creative, visually stunning components
+// Max tokens: Set for full apps with depth UI (8k-16k)
 export const PROVIDER_SETTINGS: Record<string, ProviderSettings> = {
   openai: {
-    // GPT-4o: Excellent for code, lower temp for consistency
-    // Max 16k output, but 8k is plenty for most UI components
-    temperature: 0.2,
-    maxTokens: 8192,
+    // GPT-4o: High temp for creative designs, 16k for full apps
+    temperature: 0.85,
+    maxTokens: 16384,
     topP: 0.95,
-    frequencyPenalty: 0.1,
-    presencePenalty: 0.1,
+    frequencyPenalty: 0.2,
+    presencePenalty: 0.2,
   },
   anthropic: {
-    // Claude 3.5 Sonnet: Best for code, Amazon recommends 4k limit for optimal performance
-    // Slightly higher temp for natural language explanations
-    temperature: 0.3,
-    maxTokens: 4096,
-    topP: 0.9,
+    // Claude 3.5 Sonnet: High temp for aesthetic components
+    // 8k tokens for complex full apps with animations
+    temperature: 0.8,
+    maxTokens: 8192,
+    topP: 0.95,
   },
   google: {
-    // Gemini 2.0 Flash: 8k default output, fast and cost-effective
-    // Official recommended temp is 0.7, but lower for code generation
-    temperature: 0.3,
-    maxTokens: 8192,
+    // Gemini 2.0 Flash: High creativity, 16k output capacity
+    temperature: 0.85,
+    maxTokens: 16384,
     topP: 0.95,
   },
   groq: {
-    // Groq: Ultra-fast inference (300-1600 tokens/sec)
-    // Lower temp for speed + consistency, 8k for larger components
-    temperature: 0.1,
+    // Groq: Balanced creativity with speed, 8k for large components
+    temperature: 0.75,
     maxTokens: 8192,
-    topP: 0.9,
+    topP: 0.92,
   },
   ollama: {
-    // Local models: Higher temp compensates for smaller model size
-    // 4k context is typical for local setups, 2048 tokens sufficient
-    temperature: 0.7,
-    maxTokens: 2048,
-    topP: 0.9,
+    // Ollama: Maximum creativity for local models
+    temperature: 0.9,
+    maxTokens: 4096,
+    topP: 0.95,
   },
 };
 
@@ -109,17 +105,6 @@ export const PROVIDER_CONFIG = [
     envVar: 'GROQ_API_KEY',
     models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
     settings: PROVIDER_SETTINGS.groq,
-  },
-  {
-    id: 'ollama',
-    name: 'Ollama',
-    description: 'Run models locally on your machine',
-    color: 'text-gray-300',
-    gradient: 'from-gray-500/20 to-gray-400/20 border-gray-500/30',
-    bgColor: 'bg-gray-500',
-    envVar: 'OLLAMA_API_KEY',
-    models: ['llama3', 'mistral', 'codellama', 'custom'],
-    settings: PROVIDER_SETTINGS.ollama,
   },
 ];
 
