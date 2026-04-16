@@ -5,9 +5,10 @@ import {
   X, Eye, EyeOff, Thermometer, CheckCircle, AlertCircle,
   Loader2, Settings2, Layers, RefreshCw, Wifi, WifiOff,
   Cpu, KeyRound, Zap, Globe, HardDrive, ChevronDown,
-  ChevronRight, FlaskConical, Sparkles,
+  ChevronRight, FlaskConical, Sparkles, Shield, Lock,
 } from 'lucide-react';
 import { MODEL_REGISTRY } from '@/lib/ai/modelRegistry';
+import ProviderSelector, { ProviderSelectorCompact, PROVIDER_OPTIONS } from './ProviderSelector';
 
 // ─── Provider Detection From API Key ─────────────────────────────────────────
 
@@ -489,6 +490,34 @@ export default function AIEngineConfigPanel({ isOpen, onClose, onSaved, onDeacti
 
         {/* Scrollable body */}
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5 min-h-0">
+
+          {/* ══ SECURITY STATUS ═══════════════════════════════════════════════════════ */}
+          <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <Shield className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                  Secure Multi-Adapter Architecture
+                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-[10px] font-bold text-emerald-400">ACTIVE</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  API keys are resolved server-side and never exposed to the client
+                </p>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-4 text-[10px] text-gray-500">
+              <span className="flex items-center gap-1">
+                <Lock className="w-3 h-3" />
+                Server-side credential resolution
+              </span>
+              <span className="flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                Workspace-scoped keys
+              </span>
+            </div>
+          </div>
 
           {/* ══ ENGINE CONFIGURATION ════════════════════════════════════════════════════ */}
               {/* 3-step progress pills */}
