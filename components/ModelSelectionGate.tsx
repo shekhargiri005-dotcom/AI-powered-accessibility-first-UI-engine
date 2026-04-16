@@ -162,78 +162,19 @@ export default function ModelSelectionGate({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0F19]">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 overflow-hidden">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[#0B0F19] bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: "url('/model-bg.jpg')" }}
+    >
+      {/* Background Pattern & Dark Overlay */}
+      <div className="absolute inset-0 overflow-hidden bg-black/60 backdrop-blur-[2px]">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
       {/* Main Content */}
       <div className="relative w-full max-w-4xl mx-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 mb-6">
-            <Sparkles className="w-4 h-4 text-violet-400" />
-            <span className="text-sm font-medium text-violet-300">Welcome to AI UI Engine</span>
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-            Choose Your AI Engine
-          </h1>
-          <p className="text-gray-400 max-w-lg mx-auto">
-            Select the AI provider that will power your UI generation. 
-            Only providers configured in your environment variables are shown.
-          </p>
-        </div>
 
-        {/* Security Badge */}
-        <div className="flex items-center justify-center gap-6 mb-8 text-xs text-gray-500">
-          <span className="flex items-center gap-1.5">
-            <Shield className="w-4 h-4 text-emerald-400" />
-            Secure server-side credentials
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Lock className="w-4 h-4 text-emerald-400" />
-            API keys never exposed
-          </span>
-        </div>
-
-        {/* Step Indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {[
-            { id: 'provider', label: 'Select Provider' },
-            { id: 'confirm', label: 'Confirm' },
-          ].map((s, idx, arr) => {
-            const isActive = step === s.id || (step === 'loading' && s.id === 'provider') || (step === 'error' && s.id === 'provider');
-            const isCompleted = (step === 'confirm' && s.id === 'provider');
-            
-            return (
-              <React.Fragment key={s.id}>
-                <div className={`
-                  flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all
-                  ${isActive 
-                    ? 'bg-violet-500 text-white' 
-                    : isCompleted
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : 'bg-gray-800 text-gray-500'
-                  }
-                `}>
-                  {isCompleted ? (
-                    <Check className="w-4 h-4" />
-                  ) : (
-                    <span className="w-5 h-5 rounded-full bg-current/20 flex items-center justify-center text-xs">
-                      {idx + 1}
-                    </span>
-                  )}
-                  {s.label}
-                </div>
-                {idx < arr.length - 1 && (
-                  <ChevronRight className="w-4 h-4 text-gray-600" />
-                )}
-              </React.Fragment>
-            );
-          })}
-        </div>
 
         {/* Content Card */}
         <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 rounded-3xl p-6 sm:p-8">
@@ -464,13 +405,7 @@ export default function ModelSelectionGate({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-8 text-xs text-violet-400/50">
-          <p className="flex items-center justify-center gap-2">
-            <Sparkles className="w-3 h-3" />
-            Secure server-side AI generation
-          </p>
-        </div>
+
       </div>
     </div>
   );

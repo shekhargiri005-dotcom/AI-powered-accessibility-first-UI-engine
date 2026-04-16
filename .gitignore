@@ -49,3 +49,5 @@ next-env.d.ts
 # local data stores
 /data/projects/*.db
 /data/history.json
+*.db
+*.sqlite
