@@ -463,13 +463,23 @@ export default function HomePage() {
     setShowModelGate(false);
   }, []);
 
+  // Don't render the main UI until we've checked for existing config
+  // This ensures ModelSelectionGate is shown first for new users
+  if (!hasCheckedConfig) {
+    return (
+      <div className="flex items-center justify-center h-[100dvh] w-full bg-[#0B0F19]">
+        <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row h-[100dvh] w-full overflow-y-auto overflow-x-hidden lg:overflow-hidden bg-[#0B0F19] font-sans text-slate-100 selection:bg-violet-500/30 relative">
       {/* Model Selection Gate - shown when no AI config exists */}
+      {/* This blocks the UI until user selects a provider - no skip option */}
       <ModelSelectionGate
         isOpen={showModelGate}
         onComplete={handleModelGateComplete}
-        onSkip={() => setShowModelGate(false)}
         hasCredentials={providerCredentials}
       />
 
