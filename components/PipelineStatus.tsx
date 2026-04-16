@@ -4,7 +4,7 @@ import React from 'react';
 import { signIn } from 'next-auth/react';
 import {
   CheckCircle, Loader2, AlertCircle,
-  Brain, Code2, ShieldCheck, TestTube, Eye, Zap, Lock, LogIn,
+  Brain, Code2, ShieldCheck, TestTube, Eye, Zap, Lock, LogIn, Clock,
 } from 'lucide-react';
 
 export type PipelineStep =
@@ -29,6 +29,10 @@ interface Step {
 interface PipelineStatusProps {
   currentStep: PipelineStep;
   errorMessage?: string;
+  /** Estimated time remaining in seconds */
+  estimatedTimeRemaining?: number;
+  /** Start time of the pipeline (for calculating elapsed time) */
+  startTime?: number;
 }
 
 const STEPS: Step[] = [
@@ -74,8 +78,18 @@ const STEPS: Step[] = [
   },
 ];
 
-export default function PipelineStatus({ currentStep, errorMessage }: PipelineStatusProps) {
+export default function PipelineStatus({ currentStep, errorMessage, estimatedTimeRemaining, startTime }: PipelineStatusProps) {
   if (currentStep === 'idle') return null;
+
+  // Calculate elapsed time
+  const elapsedTime = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+  
+  // Format time as mm:ss
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const getStepState = (step: Step) => {
     if (currentStep === 'error') return 'error';
@@ -91,11 +105,30 @@ export default function PipelineStatus({ currentStep, errorMessage }: PipelineSt
       aria-label="Component generation pipeline status"
       aria-live="polite"
     >
-      <div className="flex items-center gap-2 mb-6">
-        <Zap className="w-4 h-4 text-blue-400" />
-        <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
-          Generation Pipeline
-        </span>
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-2">
+          <Zap className="w-4 h-4 text-blue-400" />
+          <span className="text-xs font-semibold text-blue-400 uppercase tracking-wider">
+            Generation Pipeline
+          </span>
+        </div>
+        
+        {/* Time display */}
+        {(estimatedTimeRemaining !== undefined || elapsedTime > 0) && (
+          <div className="flex items-center gap-3 text-xs text-gray-500">
+            {elapsedTime > 0 && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatTime(elapsedTime)}
+              </span>
+            )}
+            {estimatedTimeRemaining !== undefined && estimatedTimeRemaining > 0 && (
+              <span className="text-blue-400">
+                ~{formatTime(estimatedTimeRemaining)} remaining
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex items-start gap-0 relative">

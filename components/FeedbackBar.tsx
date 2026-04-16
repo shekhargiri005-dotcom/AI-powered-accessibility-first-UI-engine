@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   ThumbsUp, ThumbsDown, Pencil, Send, CheckCircle,
-  X, Loader2, AlertCircle,
+  X, Loader2, AlertCircle, History, BarChart3, TrendingUp, Clock,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -29,7 +29,27 @@ interface FeedbackBarProps extends FeedbackMeta {
   onFeedbackSubmitted?: (signal: string) => void;
 }
 
-type BarState = 'idle' | 'correcting' | 'submitting' | 'done' | 'error';
+type BarState = 'idle' | 'correcting' | 'submitting' | 'done' | 'error' | 'history' | 'analytics';
+
+interface FeedbackHistoryItem {
+  id: string;
+  signal: 'thumbs_up' | 'thumbs_down' | 'corrected' | 'discarded';
+  timestamp: string;
+  model: string;
+  provider: string;
+  intentType: string;
+}
+
+interface FeedbackAnalytics {
+  totalFeedback: number;
+  thumbsUpCount: number;
+  thumbsDownCount: number;
+  correctionCount: number;
+  satisfactionRate: number;
+  avgLatencyMs: number;
+  byProvider: Record<string, number>;
+  byModel: Record<string, number>;
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -41,6 +61,50 @@ export default function FeedbackBar({
   const [barState,      setBarState]      = useState<BarState>('idle');
   const [correctionNote, setCorrectionNote] = useState('');
   const [errorMsg,      setErrorMsg]      = useState('');
+  const [history,       setHistory]       = useState<FeedbackHistoryItem[]>([]);
+  const [analytics,     setAnalytics]     = useState<FeedbackAnalytics | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Load feedback history when entering history state
+  useEffect(() => {
+    if (barState === 'history') {
+      fetchFeedbackHistory();
+    }
+  }, [barState]);
+
+  // Load analytics when entering analytics state
+  useEffect(() => {
+    if (barState === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [barState]);
+
+  const fetchFeedbackHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const res = await fetch(`/api/feedback/history?workspaceId=${workspaceId || 'default'}&limit=20`);
+      if (res.ok) {
+        const data = await res.json();
+        setHistory(data.history || []);
+      }
+    } catch (e) {
+      console.error('Failed to load feedback history', e);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    try {
+      const res = await fetch(`/api/feedback/analytics?workspaceId=${workspaceId || 'default'}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAnalytics(data.analytics || null);
+      }
+    } catch (e) {
+      console.error('Failed to load analytics', e);
+    }
+  };
 
   const submit = useCallback(async (
     signal:        'thumbs_up' | 'thumbs_down' | 'corrected' | 'discarded',
@@ -90,6 +154,97 @@ export default function FeedbackBar({
         <span className="text-xs text-emerald-300 font-medium">
           Thanks — your signal will improve future generations.
         </span>
+      </div>
+    );
+  }
+
+  // ── History state ──────────────────────────────────────────────────────────
+  if (barState === 'history') {
+    return (
+      <div className="mx-4 mb-3 p-4 bg-gray-900/60 border border-gray-700/40 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-semibold text-white">Feedback History</span>
+          </div>
+          <button
+            onClick={() => setBarState('idle')}
+            className="p-1 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {loadingHistory ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          </div>
+        ) : history.length === 0 ? (
+          <p className="text-xs text-gray-500 text-center py-4">No feedback history yet.</p>
+        ) : (
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {history.map((item) => (
+              <div key={item.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-800/50">
+                <div className="flex items-center gap-2">
+                  {item.signal === 'thumbs_up' && <ThumbsUp className="w-3.5 h-3.5 text-emerald-400" />}
+                  {item.signal === 'thumbs_down' && <ThumbsDown className="w-3.5 h-3.5 text-red-400" />}
+                  {item.signal === 'corrected' && <Pencil className="w-3.5 h-3.5 text-blue-400" />}
+                  <span className="text-xs text-gray-300">{item.provider}/{item.model}</span>
+                </div>
+                <span className="text-[10px] text-gray-500">{new Date(item.timestamp).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Analytics state ────────────────────────────────────────────────────────
+  if (barState === 'analytics') {
+    return (
+      <div className="mx-4 mb-3 p-4 bg-gray-900/60 border border-gray-700/40 rounded-xl">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-violet-400" />
+            <span className="text-sm font-semibold text-white">Feedback Analytics</span>
+          </div>
+          <button
+            onClick={() => setBarState('idle')}
+            className="p-1 text-gray-500 hover:text-gray-300 rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {!analytics ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-lg bg-gray-800/50">
+              <div className="flex items-center gap-1.5 mb-1">
+                <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[10px] text-gray-500 uppercase">Satisfaction</span>
+              </div>
+              <p className="text-lg font-bold text-white">{analytics.satisfactionRate.toFixed(1)}%</p>
+            </div>
+            <div className="p-3 rounded-lg bg-gray-800/50">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Clock className="w-3.5 h-3.5 text-blue-400" />
+                <span className="text-[10px] text-gray-500 uppercase">Avg Latency</span>
+              </div>
+              <p className="text-lg font-bold text-white">{(analytics.avgLatencyMs / 1000).toFixed(1)}s</p>
+            </div>
+            <div className="p-3 rounded-lg bg-gray-800/50">
+              <span className="text-[10px] text-gray-500 uppercase">Thumbs Up</span>
+              <p className="text-lg font-bold text-emerald-400">{analytics.thumbsUpCount}</p>
+            </div>
+            <div className="p-3 rounded-lg bg-gray-800/50">
+              <span className="text-[10px] text-gray-500 uppercase">Corrections</span>
+              <p className="text-lg font-bold text-blue-400">{analytics.correctionCount}</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -206,6 +361,30 @@ export default function FeedbackBar({
         <span className="hidden sm:inline">
           {autoDetectedEdit ? 'Edit captured ✓' : 'I corrected it'}
         </span>
+      </button>
+
+      {/* History button */}
+      <button
+        onClick={() => setBarState('history')}
+        disabled={isSubmitting}
+        title="View feedback history"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-500
+          hover:text-blue-400 hover:bg-blue-500/10 border border-transparent
+          hover:border-blue-500/20 transition-all disabled:opacity-40 ml-2"
+      >
+        <History className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Analytics button */}
+      <button
+        onClick={() => setBarState('analytics')}
+        disabled={isSubmitting}
+        title="View analytics"
+        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs text-gray-500
+          hover:text-violet-400 hover:bg-violet-500/10 border border-transparent
+          hover:border-violet-500/20 transition-all disabled:opacity-40"
+      >
+        <BarChart3 className="w-3.5 h-3.5" />
       </button>
 
       {/* Error toast */}

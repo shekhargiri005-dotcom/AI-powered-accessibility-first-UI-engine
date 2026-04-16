@@ -5,12 +5,17 @@
 - [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
 - [providers/status/route.ts](file://app/api/providers/status/route.ts)
 - [engine-config/route.ts](file://app/api/engine-config/route.ts)
-- [models/route.ts](file://app/api/models/route.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
-- [page.tsx](file://app/page.tsx)
-- [ModelSwitcher.tsx](file://components/ModelSwitcher.tsx)
 - [encryption.ts](file://lib/security/encryption.ts)
+- [page.tsx](file://app/page.tsx)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added documentation for the new 'remember provider' toggle feature
+- Updated component architecture to reflect enhanced user experience optimizations
+- Enhanced security implementation details with localStorage integration
+- Updated workflow diagrams to show streamlined configuration process
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -18,16 +23,19 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Enhanced Features](#enhanced-features)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 
 The Model Selection Gate is a critical component in the AI-powered accessibility-first UI engine that serves as the primary entry point for configuring AI providers and models. This component provides a guided, secure, and user-friendly interface for users to select their preferred AI provider, configure model settings, and establish secure connections to external AI services.
 
 The gate operates as a modal overlay that appears when no existing AI configuration is detected, ensuring that users cannot proceed with the application until they have properly configured their AI provider settings. This design choice prioritizes security by preventing accidental operation without proper authentication and by providing clear guidance for API key configuration.
+
+**Updated** The component now includes a 'remember provider' toggle feature that enhances user experience by allowing users to persist their provider preferences across sessions, streamlining the configuration workflow for returning users.
 
 ## Project Structure
 
@@ -37,7 +45,7 @@ The Model Selection Gate is part of a larger ecosystem of components and service
 graph TB
 subgraph "UI Layer"
 MSG[ModelSelectionGate]
-MSW[ModelSwitcher]
+LS[LocalStorage Manager]
 end
 subgraph "API Layer"
 PS[Providers Status API]
@@ -55,21 +63,22 @@ end
 MSG --> PS
 MSG --> EC
 MSG --> ML
+MSG --> LS
 EC --> WKS
 WKS --> ENC
 WKS --> PRISMA
 PRISMA --> WS
-MSW --> MSG
+LS --> MSG
 ```
 
 **Diagram sources**
-- [ModelSelectionGate.tsx:65-414](file://components/ModelSelectionGate.tsx#L65-L414)
+- [ModelSelectionGate.tsx:76-81](file://components/ModelSelectionGate.tsx#L76-L81)
 - [providers/status/route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [engine-config/route.ts:69-154](file://app/api/engine-config/route.ts#L69-L154)
 
 **Section sources**
-- [ModelSelectionGate.tsx:1-414](file://components/ModelSelectionGate.tsx#L1-L414)
-- [page.tsx:476-484](file://app/page.tsx#L476-L484)
+- [ModelSelectionGate.tsx:1-437](file://components/ModelSelectionGate.tsx#L1-L437)
+- [page.tsx:551-557](file://app/page.tsx#L551-L557)
 
 ## Core Components
 
@@ -78,10 +87,11 @@ The Model Selection Gate system consists of several interconnected components th
 ### Primary Components
 
 **ModelSelectionGate Component**
-- Main modal interface for provider selection
-- Handles loading states and error conditions
-- Manages user interactions and form submissions
-- Integrates with the application's authentication system
+- Main modal interface for provider selection with enhanced user experience
+- Handles loading states, error conditions, and user interactions
+- Manages the new 'remember provider' toggle functionality
+- Integrates with localStorage for preference persistence
+- Provides streamlined configuration workflow
 
 **Provider Status API**
 - Returns configured providers based on environment variables
@@ -102,7 +112,7 @@ The Model Selection Gate system consists of several interconnected components th
 - Provides fallback mechanisms for key resolution
 
 **Section sources**
-- [ModelSelectionGate.tsx:65-414](file://components/ModelSelectionGate.tsx#L65-L414)
+- [ModelSelectionGate.tsx:65-437](file://components/ModelSelectionGate.tsx#L65-L437)
 - [providers/status/route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [engine-config/route.ts:69-154](file://app/api/engine-config/route.ts#L69-L154)
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
@@ -115,10 +125,13 @@ The Model Selection Gate implements a sophisticated multi-layered architecture t
 sequenceDiagram
 participant User as User
 participant MSG as ModelSelectionGate
+participant LS as LocalStorage
 participant API as Providers Status API
 participant DB as Database
 participant KeySvc as Workspace Key Service
 User->>MSG : Open Model Selection Gate
+MSG->>LS : Check remember provider preference
+LS-->>MSG : Return stored preference
 MSG->>API : GET /api/providers/status
 API->>API : Check environment variables
 API->>DB : Query workspace settings
@@ -127,7 +140,9 @@ API-->>MSG : Provider status information
 MSG->>User : Display available providers
 User->>MSG : Select provider
 MSG->>User : Show model selection
+User->>MSG : Toggle remember provider
 User->>MSG : Confirm selection
+MSG->>LS : Save remember preference
 MSG->>API : POST /api/engine-config
 API->>KeySvc : Store encrypted API key
 KeySvc->>DB : Save workspace settings
@@ -138,7 +153,8 @@ MSG->>User : Complete setup
 ```
 
 **Diagram sources**
-- [ModelSelectionGate.tsx:77-154](file://components/ModelSelectionGate.tsx#L77-L154)
+- [ModelSelectionGate.tsx:76-81](file://components/ModelSelectionGate.tsx#L76-L81)
+- [ModelSelectionGate.tsx:130-131](file://components/ModelSelectionGate.tsx#L130-L131)
 - [providers/status/route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
 
@@ -146,9 +162,11 @@ The architecture emphasizes several key principles:
 
 **Security-First Design**: API keys are never transmitted to the client and are stored securely in the database with encryption. The system uses a multi-layered approach to key management, including environment variables, database storage, and in-memory caching.
 
+**Enhanced User Experience**: The component now includes intelligent preference management through localStorage integration, allowing users to streamline their configuration process on subsequent visits.
+
 **Performance Optimization**: The system implements intelligent caching strategies to minimize database queries and improve response times. The workspace key service maintains a TTL-based cache to reduce latency for repeated requests.
 
-**User Experience**: The component provides clear feedback at every step, with loading indicators, error handling, and intuitive navigation between different configuration stages.
+**User Experience**: The component provides clear feedback at every step, with loading indicators, error handling, and intuitive navigation between different configuration stages. The new remember provider feature enhances the user experience by reducing repetitive configuration steps.
 
 **Extensibility**: The architecture supports multiple AI providers with standardized interfaces, allowing for easy addition of new providers without significant architectural changes.
 
@@ -160,7 +178,7 @@ The ModelSelectionGate component serves as the primary interface for AI provider
 
 #### Component Structure and State Management
 
-The component manages several distinct states to handle the different phases of the configuration process:
+The component manages several distinct states to handle the different phases of the configuration process, including the new remember provider functionality:
 
 ```mermaid
 stateDiagram-v2
@@ -180,10 +198,10 @@ The component implements a comprehensive state management system with the follow
 
 - **Loading State**: Initial state while fetching provider information from the server
 - **Provider Selection State**: Displays available providers with their branding and features
-- **Confirmation State**: Allows users to review and finalize their selection
+- **Confirmation State**: Allows users to review and finalize their selection with remember provider toggle
 - **Error State**: Handles configuration failures and provides guidance
 
-#### Provider Integration and Branding
+#### Enhanced Provider Integration and Branding
 
 The component supports five major AI providers, each with customized branding and optimized settings:
 
@@ -201,19 +219,21 @@ Each provider integration includes:
 - Provider-specific model recommendations
 - Security indicators showing server-side key handling
 
-#### Security Implementation
+#### Enhanced Security Implementation
 
-The Model Selection Gate implements multiple layers of security to protect user credentials:
+The Model Selection Gate implements multiple layers of security to protect user credentials, including the new localStorage integration:
 
 **Client-Side Security**:
 - API keys are never displayed or stored in the browser
 - All sensitive data is handled through secure server-side APIs
 - Configuration is validated before transmission
+- **New**: Remember provider preference stored in localStorage with automatic persistence
 
 **Server-Side Security**:
 - API keys are encrypted using AES-256-GCM encryption
 - Keys are stored in the database with workspace isolation
 - Access control ensures only authorized users can modify settings
+- **Enhanced**: Improved provider detection and credential management
 
 **Section sources**
 - [ModelSelectionGate.tsx:55-61](file://components/ModelSelectionGate.tsx#L55-L61)
@@ -279,6 +299,55 @@ CacheUpdate --> Use
 - [encryption.ts:27-69](file://lib/security/encryption.ts#L27-L69)
 - [workspaceKeyService.ts:19-24](file://lib/security/workspaceKeyService.ts#L19-L24)
 
+## Enhanced Features
+
+### Remember Provider Toggle Feature
+
+**New Feature**: The Model Selection Gate now includes a 'remember provider' toggle that enhances user experience by allowing users to persist their provider preferences across sessions.
+
+#### Implementation Details
+
+The remember provider feature is implemented using localStorage for client-side persistence:
+
+- **State Management**: The component maintains a `rememberProvider` state that is initialized from localStorage
+- **Automatic Persistence**: When users confirm their selection, the preference is automatically saved to localStorage
+- **Cross-Session Persistence**: Preferences are maintained across browser sessions and page reloads
+- **Default Behavior**: Defaults to `false` for new users, allowing them to decide whether to remember their choice
+
+#### User Experience Benefits
+
+- **Reduced Configuration Steps**: Returning users can bypass the provider selection process
+- **Personalized Experience**: Users can set their preferred provider as default
+- **Intuitive Controls**: Simple checkbox toggle with clear visual feedback
+- **Privacy Control**: Users retain full control over whether to remember their preference
+
+**Section sources**
+- [ModelSelectionGate.tsx:76-81](file://components/ModelSelectionGate.tsx#L76-L81)
+- [ModelSelectionGate.tsx:130-131](file://components/ModelSelectionGate.tsx#L130-L131)
+- [ModelSelectionGate.tsx:388-400](file://components/ModelSelectionGate.tsx#L388-L400)
+
+### Streamlined Configuration Workflow
+
+**Enhanced Feature**: The component has been optimized to provide a more streamlined configuration experience with improved provider detection and credential management.
+
+#### Workflow Improvements
+
+- **Enhanced Provider Detection**: Improved logic for detecting configured providers from environment variables
+- **Better Error Handling**: More informative error messages and guidance for users
+- **Optimized Loading States**: Faster provider loading with better user feedback
+- **Improved Model Selection**: Enhanced model selection interface with better visual hierarchy
+
+#### User Interface Enhancements
+
+- **Visual Progress Indicators**: Clear indication of current configuration step
+- **Better Form Feedback**: Real-time validation and error messaging
+- **Enhanced Security Indicators**: Clear communication of server-side key handling
+- **Responsive Design**: Improved mobile and desktop user experience
+
+**Section sources**
+- [ModelSelectionGate.tsx:84-116](file://components/ModelSelectionGate.tsx#L84-L116)
+- [ModelSelectionGate.tsx:190-233](file://components/ModelSelectionGate.tsx#L190-L233)
+
 ## Dependency Analysis
 
 The Model Selection Gate system exhibits a well-structured dependency graph with clear separation of concerns and minimal coupling between components.
@@ -289,6 +358,7 @@ subgraph "External Dependencies"
 LUCIDE[Lucide React Icons]
 NEXTJS[Next.js Runtime]
 PRISMA[Prisma ORM]
+LOCALSTORAGE[localStorage API]
 end
 subgraph "Internal Components"
 MSG[ModelSelectionGate]
@@ -301,6 +371,7 @@ end
 MSG --> PSTATUS
 MSG --> ECONFIG
 MSG --> MAPI
+MSG --> LOCALSTORAGE
 ECONFIG --> WKS
 WKS --> ENC
 WKS --> PRISMA
@@ -328,6 +399,7 @@ The Model Selection Gate demonstrates excellent design principles with low inter
 - Strong integration with API layer for data operations
 - Deep integration with security services for credential management
 - Seamless integration with database layer for persistent storage
+- **New**: Integration with localStorage for preference persistence
 
 ### Data Flow Patterns
 
@@ -339,9 +411,11 @@ The system implements several sophisticated data flow patterns:
 
 **Asynchronous Data Loading**: All network operations use async/await patterns with proper error handling and loading states.
 
+**Enhanced Preference Management**: New data flow for localStorage integration with automatic persistence and retrieval.
+
 **Section sources**
 - [ModelSelectionGate.tsx:77-154](file://components/ModelSelectionGate.tsx#L77-L154)
-- [page.tsx:450-464](file://app/page.tsx#L450-L464)
+- [page.tsx:523-537](file://app/page.tsx#L523-L537)
 
 ## Performance Considerations
 
@@ -380,6 +454,8 @@ The component is designed with memory efficiency in mind:
 
 **Cleanup Strategies**: Proper cleanup of event listeners and timers to prevent memory leaks.
 
+**Enhanced Preference Management**: Efficient localStorage integration with minimal memory footprint.
+
 **Section sources**
 - [workspaceKeyService.ts:19-24](file://lib/security/workspaceKeyService.ts#L19-L24)
 - [workspaceKeyService.ts:47-90](file://lib/security/workspaceKeyService.ts#L47-L90)
@@ -405,6 +481,11 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - Solution: Verify database connectivity and Prisma configuration
 - Prevention: Implement connection pooling and health checks
 
+**LocalStorage Issues**:
+- **New**: Symptom: Remember provider preference not persisting
+- **New**: Solution: Check browser localStorage permissions and quota limits
+- **New**: Prevention: Implement graceful degradation when localStorage is unavailable
+
 ### Diagnostic Tools
 
 **Debug Information**: The system provides detailed debug information in development environments, including:
@@ -413,6 +494,7 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - Provider configuration status
 - Database query traces
 - Encryption key validation
+- **New**: localStorage preference management diagnostics
 
 **Error Logging**: Comprehensive error logging with structured data for troubleshooting:
 
@@ -420,6 +502,7 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - Authentication failures
 - Database operation errors
 - Network connectivity issues
+- **New**: Preference persistence errors
 
 ### Section sources**
 - [ModelSelectionGate.tsx:190-224](file://components/ModelSelectionGate.tsx#L190-L224)
@@ -430,14 +513,19 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 
 The Model Selection Gate represents a sophisticated implementation of AI provider configuration that successfully balances user experience, security, and performance. The component demonstrates excellent architectural principles with clear separation of concerns, robust error handling, and comprehensive security measures.
 
+**Recent Enhancements**:
+- **Remember Provider Feature**: Streamlined configuration workflow with localStorage integration
+- **Enhanced User Experience**: Improved provider detection, credential management, and visual feedback
+- **Optimized Performance**: Better loading states and reduced configuration steps for returning users
+
 Key achievements of the system include:
 
 **Security Excellence**: Implementation of multi-layered security with encrypted storage, workspace isolation, and secure key management practices.
 
-**User Experience**: Intuitive multi-step wizard with clear feedback, comprehensive error handling, and responsive design.
+**Enhanced User Experience**: Intuitive multi-step wizard with clear feedback, comprehensive error handling, responsive design, and personalized preference management through the remember provider feature.
 
-**Performance Optimization**: Intelligent caching, efficient data structures, and optimized network operations.
+**Performance Optimization**: Intelligent caching, efficient data structures, optimized network operations, and efficient localStorage integration.
 
 **Extensibility**: Modular architecture that supports easy addition of new AI providers and configuration options.
 
-The Model Selection Gate serves as a foundational component that enables the broader AI-powered accessibility-first UI engine to deliver a secure, reliable, and user-friendly experience for generating accessible user interfaces through AI assistance.
+The Model Selection Gate serves as a foundational component that enables the broader AI-powered accessibility-first UI engine to deliver a secure, reliable, and user-friendly experience for generating accessible user interfaces through AI assistance. The recent enhancements with the remember provider toggle and streamlined workflow make it an even more effective tool for onboarding new users while improving the experience for returning users.

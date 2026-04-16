@@ -35,6 +35,12 @@ export interface FinalRoundPanelProps {
   onDismiss?: () => void;
   /** Error message (only on status='error' or 'skipped') */
   errorMessage?: string;
+  /** Called when user manually applies the suggested fix */
+  onApplyFix?: () => void;
+  /** Called when user dismisses the suggested fix */
+  onDismissFix?: () => void;
+  /** Whether to show manual controls (apply/dismiss buttons) */
+  showControls?: boolean;
 }
 
 // ─── Score ring component ──────────────────────────────────────────────────────
@@ -206,6 +212,9 @@ export default function FinalRoundPanel({
   codeWasReplaced,
   onDismiss,
   errorMessage,
+  onApplyFix,
+  onDismissFix,
+  showControls = true,
 }: FinalRoundPanelProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -390,6 +399,30 @@ export default function FinalRoundPanel({
               <p className="text-xs text-violet-300 leading-tight">
                 Design has been automatically elevated with the AI designer&apos;s improvements.
               </p>
+            </div>
+          )}
+
+          {/* Manual apply/dismiss controls */}
+          {status === 'fixed' && showControls && !codeWasReplaced && result?.suggestedCode && (
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); onApplyFix?.(); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                  bg-violet-500/20 text-violet-300 text-xs font-semibold
+                  hover:bg-violet-500/30 border border-violet-500/30 transition-colors"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Apply Fix
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onDismissFix?.(); }}
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg
+                  bg-gray-700/50 text-gray-400 text-xs font-semibold
+                  hover:bg-gray-700 border border-gray-600/30 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+                Dismiss
+              </button>
             </div>
           )}
 

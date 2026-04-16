@@ -640,8 +640,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'openai',
     tier: 'cloud',
     contextWindow: 128000,
-    maxOutputTokens: 8000,
-    idealTemperature: 0.5,
+    maxOutputTokens: 4096,  // Optimized: 4k sufficient for most components, very fast
+    idealTemperature: 0.8,  // High creativity for colorful UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -649,12 +649,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['fast', 'cheap', 'strong React knowledge', 'excellent for repair tasks'],
     weaknesses: ['less creative than gpt-4o for visual design tasks'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,
+    maxBlueprintTokens: 4000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 60000,
+    timeoutMs: 45000,  // Fast timeout for quick responses
   },
 
   'gpt-4o': {
@@ -663,8 +663,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'openai',
     tier: 'cloud',
     contextWindow: 128000,
-    maxOutputTokens: 16000,
-    idealTemperature: 0.6,
+    maxOutputTokens: 8192,  // Optimized: 8k is sufficient for full apps, reduces cost/latency
+    idealTemperature: 0.85,  // High creativity for colorful, aesthetic UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -677,12 +677,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     ],
     weaknesses: ['higher cost per token'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 8000,
+    maxBlueprintTokens: 6000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 90000,
+    timeoutMs: 60000,  // Reduced from 90s for faster response
   },
 
   // ── OpenAI Reasoning Models (o1 / o3 series) ─────────────────────────────
@@ -818,8 +818,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'anthropic',
     tier: 'cloud',
     contextWindow: 200000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.6,
+    maxOutputTokens: 8192,  // 8k optimal for complex full apps
+    idealTemperature: 0.8,  // High creativity for aesthetic UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
     supportsJsonMode: false,
@@ -832,12 +832,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     ],
     weaknesses: ['no JSON mode', 'slightly slower than GPT-4o-mini'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 10000,
+    maxBlueprintTokens: 6000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 90000,
+    timeoutMs: 75000,  // Optimized timeout
   },
 
   'claude-3-haiku-20240307': {
@@ -846,8 +846,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'anthropic',
     tier: 'cloud',
     contextWindow: 200000,
-    maxOutputTokens: 4096,
-    idealTemperature: 0.5,
+    maxOutputTokens: 4096,  // 4k optimal for quick components
+    idealTemperature: 0.75,  // Good creativity for UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
     supportsJsonMode: false,
@@ -855,12 +855,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['fastest Anthropic model', 'very cheap', 'great for repair and review tasks'],
     weaknesses: ['less design creativity than Sonnet'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,
+    maxBlueprintTokens: 4000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 30000,
+    timeoutMs: 30000,  // Fast timeout
   },
 
   // claude-3-5-haiku and claude-3-opus aliases
@@ -870,8 +870,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'anthropic',
     tier: 'cloud',
     contextWindow: 200000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.5,
+    maxOutputTokens: 4096,  // 4k optimal for quick components
+    idealTemperature: 0.75,  // Good creativity for UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: false,
     supportsJsonMode: false,
@@ -879,12 +879,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['fast', 'cheap', 'great code quality for cost'],
     weaknesses: ['less creative than Sonnet'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 8000,
+    maxBlueprintTokens: 4000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 45000,
+    timeoutMs: 35000,  // Fast timeout
   },
 
   'claude-3-opus-20240229': {
@@ -916,8 +916,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'google',
     tier: 'cloud',
     contextWindow: 1000000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.6,
+    maxOutputTokens: 8192,  // 8k for complex full apps
+    idealTemperature: 0.85,  // High creativity for colorful UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -925,12 +925,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['enormous context window (1M tokens)', 'vision/multimodal', 'strong code'],
     weaknesses: ['slower than GPT-4o on straight code generation tasks'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 12000,
+    maxBlueprintTokens: 6000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 90000,
+    timeoutMs: 75000,  // Optimized timeout
   },
 
   'gemini-2.0-flash': {
@@ -939,8 +939,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'google',
     tier: 'cloud',
     contextWindow: 128000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.5,
+    maxOutputTokens: 4096,  // 4k for fast component generation
+    idealTemperature: 0.85,  // High creativity for colorful UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -948,12 +948,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['fastest cloud model in the stack', 'cheap', 'ideal for thinking/intent phases'],
     weaknesses: ['less design nuance than GPT-4o or Claude Sonnet'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 8000,
+    maxBlueprintTokens: 4000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 30000,
+    timeoutMs: 25000,  // Fast timeout for quick responses
   },
 
   'deepseek-chat': {
@@ -985,8 +985,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'groq',
     tier: 'cloud',
     contextWindow: 32768,
-    maxOutputTokens: 4000,
-    idealTemperature: 0.5,
+    maxOutputTokens: 4096,  // 4k optimal for fast inference
+    idealTemperature: 0.75,  // Good creativity for UI designs
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: false,
@@ -998,12 +998,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     ],
     weaknesses: ['smaller context than paid cloud providers', 'design instincts weaker than GPT-4o'],
     promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 4000,
+    maxBlueprintTokens: 3000,  // Reduced for faster processing
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 30000,
+    timeoutMs: 25000,  // Fast timeout for Groq speed
   },
 
   'mistral-large-latest': {

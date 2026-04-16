@@ -199,7 +199,7 @@ function buildGuidedFreeformPrompt(
     config.blueprintTokenBudget,
   );
 
-  const system = `You are an expert React/TypeScript developer specialising in accessible, modern UI components.
+  const system = `You are an expert React/TypeScript developer specialising in accessible, modern, visually stunning UI components.
 
 DESIGN GUIDELINES:
 - Visual style: ${blueprint.visualStyle}
@@ -207,6 +207,9 @@ DESIGN GUIDELINES:
 - Responsive: mobile-first with Tailwind sm: md: lg: xl: prefixes
 - Accessibility: WCAG 2.1 AA — all interactive elements need aria-labels, semantic HTML
 - Tailwind spacing scale: use only standard values (p-4, m-2, gap-6 — NOT p-[13px])
+- COLORS: Use vibrant, modern color palettes with gradients, accent colors, and thoughtful contrast
+- CREATIVITY: Be bold and creative with visual design — use shadows, rounded corners, gradients, and modern aesthetics
+- NEVER use plain gray/white designs unless explicitly requested — always add visual interest
 
 AVAILABLE IMPORTS (sandbox only — no other packages exist):
 - \`import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';\`

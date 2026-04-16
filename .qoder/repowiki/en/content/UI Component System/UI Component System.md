@@ -6,7 +6,10 @@
 - [package.json](file://package.json)
 - [components/A11yReport.tsx](file://components/A11yReport.tsx)
 - [components/GeneratedCode.tsx](file://components/GeneratedCode.tsx)
-- [components/PromptInput.tsx](file://components/PromptInput.tsx)
+- [components/prompt-input/ModeToggle.tsx](file://components/prompt-input/ModeToggle.tsx)
+- [components/prompt-input/PromptHistory.tsx](file://components/prompt-input/PromptHistory.tsx)
+- [components/prompt-input/PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
+- [components/prompt-input/types.ts](file://components/prompt-input/types.ts)
 - [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
@@ -28,23 +31,25 @@
 
 ## Update Summary
 **Changes Made**
-- Updated VersionTimeline component documentation to reflect responsive dimension improvements
-- Enhanced CenterWorkspace component documentation with intelligent scroll management details
-- Added new section on scroll management and user experience enhancements
-- Updated component usage patterns to reflect improved accessibility and responsiveness
+- Updated PromptInput component documentation to reflect modular architecture with ModeToggle and PromptHistory components
+- Added new sections documenting the modular prompt input system design
+- Enhanced CenterWorkspace component documentation with improved scroll management details
+- Added new section on component composition patterns and prop interfaces
+- Updated component usage patterns to reflect improved accessibility and maintainability
 
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
-5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Enhanced User Experience Features](#enhanced-user-experience-features)
-7. [Dependency Analysis](#dependency-analysis)
-8. [Performance Considerations](#performance-considerations)
-9. [Troubleshooting Guide](#troubleshooting-guide)
-10. [Conclusion](#conclusion)
-11. [Appendices](#appendices)
+5. [Modular Prompt Input System](#modular-prompt-input-system)
+6. [Detailed Component Analysis](#detailed-component-analysis)
+7. [Enhanced User Experience Features](#enhanced-user-experience-features)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
+12. [Appendices](#appendices)
 
 ## Introduction
 This document describes the internal UI component system and design framework of an AI-powered, accessibility-first React application. It focuses on:
@@ -61,6 +66,7 @@ The system emphasizes accessibility, a cohesive visual language, responsive desi
 ## Project Structure
 The repository is a Next.js application with a monorepo-style packages directory for reusable UI libraries and a components directory for application-specific UI building blocks. The UI ecosystem integrates:
 - Built-in components under components/
+- Modular prompt input system under components/prompt-input/
 - UI packages under packages/@ui/*
 - Application pages under app/
 - Supporting providers and IDE panels under components/
@@ -75,7 +81,9 @@ APP_FORGOT["app/forgot-password/page.tsx"]
 APP_RESET["app/reset-password/page.tsx"]
 end
 subgraph "Components"
-PROMPT["components/PromptInput.tsx"]
+PROMPT["components/prompt-input/PromptInput.tsx"]
+MODE_TOGGLE["components/prompt-input/ModeToggle.tsx"]
+PROMPT_HISTORY["components/prompt-input/PromptHistory.tsx"]
 GENCODE["components/GeneratedCode.tsx"]
 A11Y["components/A11yReport.tsx"]
 TIMELINE["components/VersionTimeline.tsx"]
@@ -112,6 +120,8 @@ IDE_CW --> GENCODE
 IDE_CW --> A11Y
 IDE_CW --> TIMELINE
 IDE_CW --> SANDBOX
+PROMPT --> MODE_TOGGLE
+PROMPT --> PROMPT_HISTORY
 PROMPT --> INTENT
 IDE_RP --> TIMELINE
 IDE_SB --> IDE_CW
@@ -132,7 +142,9 @@ AUTH_* --> PK_CORE
 **Diagram sources**
 - [app/layout.tsx](file://app/layout.tsx)
 - [app/page.tsx](file://app/page.tsx)
-- [components/PromptInput.tsx](file://components/PromptInput.tsx)
+- [components/prompt-input/PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
+- [components/prompt-input/ModeToggle.tsx](file://components/prompt-input/ModeToggle.tsx)
+- [components/prompt-input/PromptHistory.tsx](file://components/prompt-input/PromptHistory.tsx)
 - [components/GeneratedCode.tsx](file://components/GeneratedCode.tsx)
 - [components/A11yReport.tsx](file://components/A11yReport.tsx)
 - [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
@@ -153,26 +165,30 @@ AUTH_* --> PK_CORE
 ## Core Components
 This section documents the primary UI components that form the backbone of the design system and authoring workflow.
 
-- PromptInput: Natural language input with intent classification, voice input, image-to-text attachment, and generation modes (component, app, depth UI).
-- GeneratedCode: Read-only code viewer with copy/download actions and syntax highlighting.
-- A11yReport: Accessibility scoring and violation listing with severity-based styling and suggested fixes.
-- VersionTimeline: Responsive timeline navigation and rollback across project versions with intelligent scroll management.
-- SandpackPreview: Dynamic live preview of generated React components.
-- IntentBadge: Visual indicator of detected intent classification.
-- IDE Panels: CenterWorkspace, RightPanel, and Sidebar for integrated authoring.
-- WorkspaceProvider and WorkspaceSwitcher: Context and UI for workspace management.
-- SessionProvider and UserNav: Authentication scaffolding.
+- **PromptInput**: Modular natural language input system with intent classification, voice input, image-to-text attachment, and generation modes (component, app, depth UI). Now composed of ModeToggle and PromptHistory sub-components.
+- **ModeToggle**: Dedicated component for generation mode selection with scope switching and depth UI toggle.
+- **PromptHistory**: History management component for reusing previous prompts with generation metadata.
+- **GeneratedCode**: Read-only code viewer with copy/download actions and syntax highlighting.
+- **A11yReport**: Accessibility scoring and violation listing with severity-based styling and suggested fixes.
+- **VersionTimeline**: Responsive timeline navigation and rollback across project versions with intelligent scroll management.
+- **SandpackPreview**: Dynamic live preview of generated React components.
+- **IntentBadge**: Visual indicator of detected intent classification.
+- **IDE Panels**: CenterWorkspace, RightPanel, and Sidebar for integrated authoring.
+- **WorkspaceProvider and WorkspaceSwitcher**: Context and UI for workspace management.
+- **SessionProvider and UserNav**: Authentication scaffolding.
 
 These components share a consistent design language, accessibility attributes, responsive behavior, and intelligent user experience features that enforce style DNA and design system rules.
 
 **Section sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/IntentBadge.tsx:1-103](file://components/IntentBadge.tsx#L1-L103)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
@@ -192,11 +208,17 @@ The UI architecture centers around a blueprint engine that enforces design syste
 sequenceDiagram
 participant User as "User"
 participant Prompt as "PromptInput"
+participant ModeToggle as "ModeToggle"
+participant History as "PromptHistory"
 participant Engine as "Blueprint Engine"
 participant Gen as "GeneratedCode"
 participant Preview as "SandpackPreview"
 participant Workspace as "CenterWorkspace"
 User->>Prompt : "Describe UI (natural language)"
+Prompt->>ModeToggle : "Handle mode selection"
+Prompt->>History : "Load and manage history"
+ModeToggle-->>Prompt : "Scope mode + depth UI"
+History-->>Prompt : "Selected prompt"
 Prompt->>Engine : "Intent classification + payload"
 Engine-->>Prompt : "Validation + mode selection"
 Prompt->>Engine : "Generate component/app"
@@ -208,35 +230,134 @@ Workspace-->>User : "Intelligent auto-scroll + iterative refinement"
 ```
 
 **Diagram sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
+
+## Modular Prompt Input System
+
+The prompt input system has been refactored into a modular architecture that improves maintainability, testability, and component composition patterns.
+
+### Component Composition Pattern
+The new architecture follows a composition pattern where PromptInput acts as a coordinator that orchestrates smaller, focused components:
+
+```mermaid
+graph TB
+subgraph "PromptInput System"
+PROMPT_INPUT["PromptInput.tsx<br/>Main Coordinator"]
+MODE_TOGGLE["ModeToggle.tsx<br/>Mode Selection"]
+PROMPT_HISTORY["PromptHistory.tsx<br/>History Management"]
+INTENT_BADGE["IntentBadge.tsx<br/>Live Intent Display"]
+end
+PROMPT_INPUT --> MODE_TOGGLE
+PROMPT_INPUT --> PROMPT_HISTORY
+PROMPT_INPUT --> INTENT_BADGE
+MODE_TOGGLE --> |"scopeMode"| PROMPT_INPUT
+MODE_TOGGLE --> |"depthUi"| PROMPT_INPUT
+PROMPT_HISTORY --> |"onSelect"| PROMPT_INPUT
+INTENT_BADGE --> |"liveIntent"| PROMPT_INPUT
+```
+
+**Diagram sources**
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
+- [components/IntentBadge.tsx:1-103](file://components/IntentBadge.tsx#L1-L103)
+
+### Key Benefits of Modular Architecture
+- **Single Responsibility**: Each component has a focused purpose
+- **Testability**: Components can be tested independently
+- **Reusability**: Components can be used in different contexts
+- **Maintainability**: Changes to one component don't affect others
+- **Accessibility**: Each component maintains its own accessibility features
+
+**Section sources**
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
+- [components/prompt-input/types.ts:1-49](file://components/prompt-input/types.ts#L1-L49)
 
 ## Detailed Component Analysis
 
-### PromptInput
-Purpose: Accepts natural language prompts, validates input, detects intent, and triggers generation in component/app/depth UI modes. Integrates voice input and image-to-text attachment.
+### PromptInput (Refactored)
+Purpose: Main orchestration component for the prompt input system, now composed of specialized sub-components.
 
 Key behaviors:
-- Input validation and error messaging
-- Debounced intent classification with confidence metrics
-- Voice recording via Web Speech API
-- Image upload pipeline for OCR/context
-- Mode toggles and submission routing
+- **State Management**: Coordinates state between ModeToggle, PromptHistory, and IntentBadge
+- **Form Handling**: Manages form submission, validation, and error states
+- **Speech Recognition**: Integrates Web Speech API for voice input
+- **Image Processing**: Handles image-to-text conversion for visual context
+- **Intent Classification**: Debounced live intent detection with confidence tracking
+- **History Integration**: Loads and manages generation history
 
 Prop interfaces and customization:
-- onSubmit(prompt, mode, options)
-- isLoading, onIntentDetected, hasActiveProject, aiPayload
-- Options include depthUi flag
+- `onSubmit(prompt, mode, options)`: Main submission handler
+- `isLoading`: Loading state for the entire system
+- `onIntentDetected`: Callback for live intent classification
+- `hasActiveProject`: Project context for intent classification
+- `aiPayload`: Additional context for AI processing
 
 Accessibility and design system alignment:
 - Uses severity-based styling and WCAG-compliant contrast
 - Clear affordances for keyboard and screen reader users
 - Consistent spacing and typography tokens
+- Proper ARIA labels and roles throughout
 
 **Section sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+
+### ModeToggle
+Purpose: Dedicated component for generation mode selection with scope switching and depth UI toggle.
+
+Key behaviors:
+- **Mode Selection**: Switches between component and app generation modes
+- **Depth UI Toggle**: Enables premium visual generation features
+- **Visual Feedback**: Provides immediate visual feedback for selected modes
+- **Hint System**: Shows contextual hints for each generation mode
+- **Disabled States**: Properly handles loading states and disabled conditions
+
+Prop interfaces and customization:
+- `scopeMode`: Current scope ('component' | 'app')
+- `depthUi`: Whether depth UI mode is enabled
+- `isLoading`: Loading state for disabling interactions
+- `onScopeChange(mode)`: Handler for scope mode changes
+- `onDepthUiToggle()`: Handler for depth UI toggle
+
+Accessibility and design system alignment:
+- Uses gradient backgrounds with proper contrast ratios
+- Clear visual hierarchy with iconography
+- Disabled state handling with appropriate styling
+- Focus management and keyboard navigation support
+
+**Section sources**
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+
+### PromptHistory
+Purpose: Manages and displays generation history with quick re-use capabilities.
+
+Key behaviors:
+- **History Loading**: Fetches and displays previous generation prompts
+- **Quick Re-use**: Allows clicking history items to quickly reuse prompts
+- **Visual Indicators**: Shows component names and prompt snippets
+- **Empty State**: Provides guidance when no history exists
+- **Responsive Design**: Handles overflow with horizontal scrolling
+
+Prop interfaces and customization:
+- `history`: Array of HistoryItem objects
+- `isLoading`: Loading state for disabling interactions
+- `onSelect(prompt)`: Handler for selecting a history item
+
+Accessibility and design system alignment:
+- Uses consistent badge styling with proper contrast
+- Scrollbar hiding for clean appearance
+- Disabled state handling for loading conditions
+- Focus management for interactive elements
+
+**Section sources**
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 
 ### GeneratedCode
 Purpose: Displays generated TypeScript/JSX code with syntax highlighting, copy-to-clipboard, and download capabilities.
@@ -248,8 +369,8 @@ Key behaviors:
 - CodeMirror integration with dark theme and JS/TS support
 
 Prop interfaces and customization:
-- code: string
-- componentName: string
+- `code`: string - The generated code to display
+- `componentName`: string - Used for filename derivation
 
 Accessibility and design system alignment:
 - Backdrop blur and glassmorphism with consistent borders
@@ -267,7 +388,7 @@ Key behaviors:
 - Applied auto-fixes summary
 
 Prop interfaces and customization:
-- report: A11yReport with optional appliedFixes
+- `report`: A11yReport with optional appliedFixes
 
 Accessibility and design system alignment:
 - Semantic roles and ARIA attributes
@@ -319,12 +440,14 @@ Purpose: Visual indicator of detected intent classification with confidence.
 
 Integration:
 - Used within PromptInput to surface live intent hints
+- Supports multiple sizes and confidence display
 
 Accessibility and design system alignment:
 - Compact, accessible badges with appropriate contrast
+- Configurable sizing and label visibility
 
 **Section sources**
-- [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
+- [components/IntentBadge.tsx:1-103](file://components/IntentBadge.tsx#L1-L103)
 
 ### IDE Panels and Workspace Providers
 Purpose: Integrated authoring environment and workspace management with enhanced user experience features.
@@ -347,7 +470,7 @@ Accessibility and design system alignment:
 - Responsive design patterns across all panel components
 
 **Section sources**
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
@@ -406,9 +529,15 @@ Several components now feature enhanced responsive behavior:
 - Responsive padding and spacing adjustments
 - Optimized for both desktop and mobile viewing
 
+**PromptInput Responsiveness:**
+- **Enhanced**: Adaptive textarea sizing based on content length
+- **Improved**: Dynamic placeholder text based on generation mode
+- **Updated**: Responsive action bar with conditional elements
+
 **Section sources**
 - [components/VersionTimeline.tsx:25-28](file://components/VersionTimeline.tsx#L25-L28)
 - [components/ide/RightPanel.tsx:608](file://components/ide/RightPanel.tsx#L608)
+- [components/prompt-input/PromptInput.tsx:225-227](file://components/prompt-input/PromptInput.tsx#L225-L227)
 
 ## Dependency Analysis
 The UI components depend on shared tokens, theming, and utility packages. The application also relies on external libraries for icons, syntax highlighting, and runtime preview.
@@ -470,6 +599,7 @@ APP_DEPS --> PK_A11Y
 - Optimize image uploads and OCR processing with progress states and cancellation where applicable.
 - **Enhanced**: Intelligent scroll management uses efficient threshold calculations to minimize reflow.
 - **Improved**: Responsive components leverage CSS Flexbox for optimal layout performance.
+- **Updated**: Modular architecture reduces unnecessary re-renders by isolating component concerns.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -479,21 +609,22 @@ Common issues and resolutions:
 - Accessibility warnings: Review A11yReport for severity levels and apply suggested fixes; confirm WCAG criteria coverage.
 - **Updated**: VersionTimeline responsive issues: Ensure parent containers have defined dimensions; the component now uses `w-full h-full`.
 - **Enhanced**: CenterWorkspace scroll conflicts: The 50-pixel threshold prevents conflicts with manual scrolling; adjust threshold if needed.
+- **Improved**: PromptInput modular architecture: Check individual component imports and ensure proper TypeScript definitions.
 - Workspace rollback errors: Confirm projectId presence and network connectivity; handle server-side rollback responses.
 
 **Section sources**
 - [components/GeneratedCode.tsx:30-63](file://components/GeneratedCode.tsx#L30-L63)
-- [components/PromptInput.tsx:86-128](file://components/PromptInput.tsx#L86-L128)
+- [components/prompt-input/PromptInput.tsx:86-128](file://components/prompt-input/PromptInput.tsx#L86-L128)
 - [components/VersionTimeline.tsx:25-28](file://components/VersionTimeline.tsx#L25-L28)
 - [components/ide/CenterWorkspace.tsx:56-68](file://components/ide/CenterWorkspace.tsx#L56-L68)
 
 ## Conclusion
-The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, and enhanced user experience features that adapt to user behavior patterns. By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
+The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, and enhanced user experience features that adapt to user behavior patterns. The new modular prompt input system demonstrates improved maintainability and component composition patterns. By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
 ## Appendices
 
 ### Component Registry and Metadata
-- Built-in components are located under components/ and include PromptInput, GeneratedCode, A11yReport, VersionTimeline, SandpackPreview, IntentBadge, and IDE/workspace/auth panels.
+- Built-in components are located under components/ and include the modular prompt input system with PromptInput, ModeToggle, and PromptHistory.
 - Each component exposes a clear prop interface and adheres to accessibility standards.
 - Compatibility requirements:
   - Use Tailwind classes aligned with @ui/tokens and @ui/theming
@@ -501,15 +632,18 @@ The UI component system blends accessibility-first design with an AI-driven blue
   - Provide keyboard navigation and focus management
   - Support SSR-safe dynamic imports for client-only features
   - Implement responsive design patterns for all components
+  - **Updated**: Follow modular architecture with clear component boundaries
 
 **Section sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/IntentBadge.tsx:1-103](file://components/IntentBadge.tsx#L1-L103)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
@@ -523,6 +657,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Apply motion and layout primitives from @ui/motion and @ui/layout to preserve rhythm and spacing.
 - Integrate accessibility checks and WCAG compliance in component rendering and props.
 - **Enhanced**: Incorporate responsive design patterns and user experience heuristics.
+- **Updated**: Support modular component composition with clear separation of concerns.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -555,9 +690,12 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Add tests and documentation for usage patterns
 - Keep component small, focused, and composable
 - **Enhanced**: Implement responsive design patterns and user experience considerations
+- **Updated**: Follow modular architecture principles with clear component boundaries
 
 **Section sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
+- [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
@@ -569,6 +707,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Document new components in @ui packages with usage examples
 - Maintain backward compatibility and deprecation policies
 - **Enhanced**: Incorporate user experience patterns and accessibility best practices
+- **Updated**: Support modular component composition with clear architectural guidelines
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -579,12 +718,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Workspace management leverages @ui/core and @ui/layout for consistent layouts
 - Intent detection and refinement leverage @ui/command-palette and @ui/forms
 - **Enhanced**: Intelligent scroll management improves user experience across all generated content
+- **Updated**: Modular prompt input system integrates seamlessly with the broader component ecosystem
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
 
 ### Usage Patterns and Best Practices
 - Prefer composition over inheritance; combine small, focused components
@@ -596,10 +736,11 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Enhanced**: Implement intelligent scroll management for better user experience
 - **Updated**: Utilize responsive design patterns for all components
 - **Improved**: Consider user behavior patterns when designing auto-scrolling features
+- **Updated**: Follow modular architecture principles for maintainable component design
 
 **Section sources**
-- [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
+- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
-- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/CenterWorkspace.tsx:1-255](file://components/ide/CenterWorkspace.tsx#L1-L255)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)

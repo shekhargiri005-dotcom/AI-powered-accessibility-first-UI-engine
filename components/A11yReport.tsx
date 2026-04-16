@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
-import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench, Download, FileJson } from 'lucide-react';
+import React, { useState } from 'react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench, Download, FileJson, FileText, Check, X } from 'lucide-react';
 import type { A11yReport, A11yViolation } from '@/lib/validation/schemas';
 
 export interface A11yReportProps {
   report: A11yReport & { appliedFixes?: string[] };
+  onFixApplied?: (fixId: string) => void;
+  onFixDismissed?: (fixId: string) => void;
 }
 
 const SEVERITY_CONFIG = {
@@ -58,12 +60,31 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function ViolationCard({ violation }: { violation: A11yViolation }) {
+interface ViolationCardProps {
+  violation: A11yViolation;
+  onFixApplied?: (fixId: string) => void;
+  onFixDismissed?: (fixId: string) => void;
+}
+
+function ViolationCard({ violation, onFixApplied, onFixDismissed }: ViolationCardProps) {
   const config = SEVERITY_CONFIG[violation.severity];
+  const [fixState, setFixState] = useState<'idle' | 'applied' | 'dismissed'>('idle');
+
+  const handleApply = () => {
+    setFixState('applied');
+    onFixApplied?.(violation.ruleId);
+  };
+
+  const handleDismiss = () => {
+    setFixState('dismissed');
+    onFixDismissed?.(violation.ruleId);
+  };
+
+  if (fixState === 'dismissed') return null;
 
   return (
     <div
-      className={`rounded-lg border p-3 ${config.classes}`}
+      className={`rounded-lg border p-3 ${config.classes} ${fixState === 'applied' ? 'opacity-60' : ''}`}
       role="listitem"
     >
       <div className="flex items-start gap-2">
@@ -74,6 +95,11 @@ function ViolationCard({ violation }: { violation: A11yViolation }) {
               {violation.ruleId}
             </span>
             <span className="text-xs text-gray-500">{violation.wcagCriteria}</span>
+            {fixState === 'applied' && (
+              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 flex items-center gap-1">
+                <Check className="w-3 h-3" /> Fixed
+              </span>
+            )}
           </div>
           <p className="text-sm font-medium text-gray-200 mb-0.5">
             {violation.description}
@@ -83,18 +109,38 @@ function ViolationCard({ violation }: { violation: A11yViolation }) {
           </p>
           <div className="flex items-start gap-1.5">
             <Wrench className="w-3 h-3 text-gray-500 flex-shrink-0 mt-0.5" aria-hidden="true" />
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 flex-1">
               <span className="font-medium text-gray-300">Fix: </span>
               {violation.suggestion}
             </p>
           </div>
+          
+          {/* Fix action buttons */}
+          {fixState === 'idle' && (
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={handleApply}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-green-500/20 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors"
+              >
+                <Check className="w-3 h-3" />
+                Apply Fix
+              </button>
+              <button
+                onClick={handleDismiss}
+                className="flex items-center gap-1 px-2 py-1 rounded-md bg-gray-700/50 text-gray-400 text-xs font-medium hover:bg-gray-700 transition-colors"
+              >
+                <X className="w-3 h-3" />
+                Dismiss
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default function A11yReportComponent({ report }: A11yReportProps) {
+export default function A11yReportComponent({ report, onFixApplied, onFixDismissed }: A11yReportProps) {
   const errorCount = report.violations.filter(v => v.severity === 'error').length;
   const warningCount = report.violations.filter(v => v.severity === 'warning').length;
   const infoCount = report.violations.filter(v => v.severity === 'info').length;
@@ -116,6 +162,61 @@ export default function A11yReportComponent({ report }: A11yReportProps) {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportPDF = () => {
+    // Create a simple HTML representation for PDF
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Accessibility Report</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
+          h1 { color: #2563eb; }
+          .score { font-size: 48px; font-weight: bold; color: ${report.score >= 90 ? '#22c55e' : report.score >= 70 ? '#eab308' : '#ef4444'}; }
+          .violation { margin: 20px 0; padding: 15px; border-left: 4px solid #ccc; }
+          .error { border-left-color: #ef4444; background: #fef2f2; }
+          .warning { border-left-color: #eab308; background: #fefce8; }
+          .info { border-left-color: #3b82f6; background: #eff6ff; }
+          .meta { color: #666; font-size: 12px; margin-top: 30px; }
+        </style>
+      </head>
+      <body>
+        <h1>Accessibility Report</h1>
+        <p><strong>Score:</strong> <span class="score">${report.score}</span>/100</p>
+        <p><strong>Status:</strong> ${report.passed ? '✓ Passed' : '✗ Violations Found'}</p>
+        <p><strong>Standard:</strong> WCAG 2.1 AA</p>
+        <hr>
+        <h2>Violations (${report.violations.length})</h2>
+        ${report.violations.map(v => `
+          <div class="violation ${v.severity}">
+            <strong>${v.ruleId}</strong> (${v.severity.toUpperCase()})<br>
+            <em>${v.wcagCriteria}</em><br>
+            <p>${v.description}</p>
+            <p><strong>Element:</strong> ${v.element}</p>
+            <p><strong>Suggestion:</strong> ${v.suggestion}</p>
+          </div>
+        `).join('')}
+        ${report.appliedFixes?.length ? `
+          <h2>Applied Fixes</h2>
+          <ul>${report.appliedFixes.map(f => `<li>${f}</li>`).join('')}</ul>
+        ` : ''}
+        <div class="meta">
+          <p>Exported: ${new Date().toLocaleString()}</p>
+        </div>
+      </body>
+      </html>
+    `;
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `a11y-report-${Date.now()}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section
       aria-labelledby="a11y-report-heading"
@@ -129,12 +230,20 @@ export default function A11yReportComponent({ report }: A11yReportProps) {
         </h3>
         <div className="ml-auto flex items-center gap-2">
           <button
+            onClick={handleExportPDF}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Export report as PDF/HTML"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+          <button
             onClick={handleExportJSON}
             className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
             title="Export report as JSON"
           >
             <FileJson className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Export</span>
+            <span className="hidden sm:inline">JSON</span>
           </button>
           <span className="text-xs text-gray-500">WCAG 2.1 AA</span>
         </div>
@@ -208,7 +317,12 @@ export default function A11yReportComponent({ report }: A11yReportProps) {
             </h4>
             <ul className="space-y-2" role="list" aria-label="Accessibility violations">
               {report.violations.map((violation) => (
-                <ViolationCard key={violation.ruleId} violation={violation} />
+                <ViolationCard 
+                  key={violation.ruleId} 
+                  violation={violation} 
+                  onFixApplied={onFixApplied}
+                  onFixDismissed={onFixDismissed}
+                />
               ))}
             </ul>
           </div>

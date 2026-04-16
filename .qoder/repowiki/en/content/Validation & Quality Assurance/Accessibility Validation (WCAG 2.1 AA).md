@@ -11,6 +11,13 @@
 - [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Added documentation for the new JSON export functionality in A11yReport component
+- Updated the Report UI Rendering section to include export capabilities
+- Enhanced the A11yReport schema documentation to reflect new metadata fields
+- Added new section covering JSON export workflow and metadata
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -24,12 +31,12 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the WCAG 2.1 AA–compliant accessibility validation system implemented as a rule-based static analyzer for generated TSX code. It documents all 12 accessibility rules, the scoring mechanism, the A11yReport schema, and the auto-repair capabilities. Guidance is included for extending the rule set and customizing thresholds.
+This document describes the WCAG 2.1 AA–compliant accessibility validation system implemented as a rule-based static analyzer for generated TSX code. It documents all 12 accessibility rules, the scoring mechanism, the A11yReport schema, auto-repair capabilities, and the new JSON export functionality. Guidance is included for extending the rule set, customizing thresholds, and exporting accessibility reports with metadata.
 
 ## Project Structure
 The accessibility validation system spans three main areas:
 - Validation engine: rule definitions and scoring logic
-- Report renderer: UI component for displaying violations and suggestions
+- Report renderer: UI component for displaying violations and suggestions with JSON export capabilities
 - Tests and integration: unit tests and optional AI-based repair pipeline
 
 ```mermaid
@@ -39,7 +46,7 @@ V["a11yValidator.ts<br/>Rules + Scoring + Auto-Repair"]
 S["schemas.ts<br/>A11yReport + A11yViolation"]
 end
 subgraph "Presentation"
-R["A11yReport.tsx<br/>Report UI"]
+R["A11yReport.tsx<br/>Report UI + JSON Export"]
 end
 subgraph "Tests"
 T["a11yValidator.test.ts<br/>Unit tests"]
@@ -60,7 +67,7 @@ P --> R
 **Diagram sources**
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
-- [A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
+- [A11yReport.tsx:1-220](file://components/A11yReport.tsx#L1-L220)
 - [a11yValidator.test.ts:1-110](file://__tests__/a11yValidator.test.ts#L1-L110)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
@@ -69,7 +76,7 @@ P --> R
 **Section sources**
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
-- [A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
+- [A11yReport.tsx:1-220](file://components/A11yReport.tsx#L1-L220)
 - [a11yValidator.test.ts:1-110](file://__tests__/a11yValidator.test.ts#L1-L110)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
@@ -79,8 +86,8 @@ P --> R
 - Rule engine: Defines 12 WCAG 2.1 AA–aligned rules and executes them against TSX code.
 - Scoring: Computes a compliance score from severity counts with configurable penalties.
 - Auto-repair: Applies targeted, safe transformations to fix common issues.
-- Report schema: Structured data model for violations and suggestions.
-- Report UI: Renders the accessibility report with severity badges and fixes.
+- Report schema: Structured data model for violations and suggestions with export metadata.
+- Report UI: Renders the accessibility report with severity badges, suggestions, fixes, and JSON export functionality.
 
 **Section sources**
 - [a11yValidator.ts:10-260](file://lib/validation/a11yValidator.ts#L10-L260)
@@ -90,7 +97,7 @@ P --> R
 - [A11yReport.tsx:11-95](file://components/A11yReport.tsx#L11-L95)
 
 ## Architecture Overview
-The validator runs a static analysis pass over TSX code, collecting violations and computing a score. The report schema ensures consistent serialization, while the UI renders severity, suggestions, and applied fixes.
+The validator runs a static analysis pass over TSX code, collecting violations and computing a score. The report schema ensures consistent serialization, while the UI renders severity, suggestions, and applied fixes. The new JSON export functionality allows users to download comprehensive accessibility reports with metadata for audit trails and compliance documentation.
 
 ```mermaid
 sequenceDiagram
@@ -98,17 +105,23 @@ participant Caller as "Caller"
 participant Validator as "validateAccessibility()"
 participant Rules as "A11Y_RULES[]"
 participant Report as "A11yReport"
+participant Export as "JSON Export"
 Caller->>Validator : "validateAccessibility(code)"
 Validator->>Rules : "Iterate rules.check(code)"
 Rules-->>Validator : "per-rule {passed, element?, detail?}"
 Validator->>Report : "Build violations[]"
 Validator->>Report : "Compute score and passed"
 Validator-->>Caller : "A11yReport"
+Caller->>Export : "Click Export button"
+Export->>Export : "Add metadata (exportedAt, standard)"
+Export->>Export : "Create Blob with JSON.stringify"
+Export->>Export : "Download file with timestamp"
 ```
 
 **Diagram sources**
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 - [a11yValidator.ts:19-260](file://lib/validation/a11yValidator.ts#L19-L260)
+- [A11yReport.tsx:102-117](file://components/A11yReport.tsx#L102-L117)
 
 ## Detailed Component Analysis
 
@@ -296,6 +309,15 @@ A11yViolation fields:
 - suggestion: string
 - wcagCriteria: string
 
+**Updated** Enhanced with JSON export metadata fields
+
+The A11yReport schema now supports export functionality with additional metadata fields that are automatically added during JSON export:
+
+- exportedAt: ISO timestamp indicating when the report was exported
+- standard: WCAG compliance standard identifier ("WCAG 2.1 AA")
+
+These fields provide audit trail capabilities and compliance documentation support.
+
 ```mermaid
 erDiagram
 A11yReport {
@@ -321,36 +343,63 @@ A11yReport ||--o{ A11yViolation : "contains"
 **Section sources**
 - [schemas.ts:301-318](file://lib/validation/schemas.ts#L301-L318)
 
-### Report UI Rendering
+### Report UI Rendering and JSON Export
 The A11yReport component displays:
 - Compliance score with a circular progress indicator
 - Severity counts and pass/fail state
 - List of violations with ruleId, WCAG criteria, element, description, and suggestion
 - Applied auto-repairs when present
+- **New**: JSON export functionality with metadata
+
+**Updated** Added comprehensive JSON export capabilities
+
+The JSON export functionality provides users with downloadable accessibility reports containing:
+- Complete violation details
+- Auto-repair information (if applicable)
+- Timestamp metadata
+- WCAG compliance standard identification
 
 ```mermaid
 sequenceDiagram
 participant UI as "A11yReport.tsx"
-participant Report as "A11yReport"
-UI->>Report : "Read violations, score, passed"
-UI->>UI : "Render score ring"
-UI->>UI : "Render severity counts"
-UI->>UI : "Render violation cards"
-UI->>UI : "Render appliedFixes if present"
+participant Export as "handleExportJSON()"
+participant Browser as "Browser Download"
+UI->>UI : "User clicks Export button"
+UI->>Export : "handleExportJSON() called"
+Export->>Export : "Create data object with report + metadata"
+Export->>Export : "Add exportedAt timestamp"
+Export->>Export : "Add standard WCAG 2.1 AA"
+Export->>Export : "JSON.stringify with 2-space indentation"
+Export->>Export : "Create Blob with application/json type"
+Export->>Browser : "Create temporary anchor element"
+Export->>Browser : "Set href to object URL"
+Export->>Browser : "Set download filename with timestamp"
+Export->>Browser : "Trigger click event"
+Browser-->>Export : "File downloaded as a11y-report-{timestamp}.json"
+Export->>Export : "Clean up by revoking object URL"
 ```
 
 **Diagram sources**
-- [A11yReport.tsx:97-193](file://components/A11yReport.tsx#L97-L193)
+- [A11yReport.tsx:97-141](file://components/A11yReport.tsx#L97-L141)
+- [A11yReport.tsx:102-117](file://components/A11yReport.tsx#L102-L117)
+
+The export functionality includes:
+- Automatic timestamp generation (`exportedAt` field)
+- WCAG standard specification (`standard` field)
+- Proper MIME type handling (`application/json`)
+- User-friendly filename generation with timestamp
+- Safe cleanup of object URLs
 
 **Section sources**
 - [A11yReport.tsx:11-95](file://components/A11yReport.tsx#L11-L95)
 - [A11yReport.tsx:97-193](file://components/A11yReport.tsx#L97-L193)
+- [A11yReport.tsx:102-117](file://components/A11yReport.tsx#L102-L117)
 
 ### Integration with Repair Pipeline
 The system integrates with a broader repair pipeline:
 - Rule-based repairs run first to fix common issues
 - Optional AI-based repair fallback can address remaining problems
-- The validator’s auto-repair complements these steps
+- The validator's auto-repair complements these steps
 
 ```mermaid
 sequenceDiagram
@@ -381,7 +430,7 @@ AI-->>Gen : "AI-repaired code (optional)"
 
 ## Dependency Analysis
 - a11yValidator.ts depends on schemas.ts for A11yReport and A11yViolation types.
-- A11yReport.tsx consumes schemas.ts and renders the report UI.
+- A11yReport.tsx consumes schemas.ts and renders the report UI with JSON export functionality.
 - Tests validate both the validator and auto-repair behavior.
 - Public exports include accessibility-related packages.
 
@@ -417,6 +466,7 @@ IDX["packages/a11y/index.ts"] --> AR
 - Regex-based scanning scales linearly with code length; keep patterns efficient.
 - Early exits in rule checks reduce unnecessary work.
 - Consider caching or incremental analysis for repeated validations on large codebases.
+- **New**: JSON export operations are lightweight and triggered by user interaction only.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -425,10 +475,12 @@ Common issues and resolutions:
 - Unlabeled inputs: Add matching label or aria-label; autoRepair derives aria-label from placeholder/name/id.
 - Focus ring removal: Replace outline-none with a focus ring utility.
 - Error message announcements: Add role="alert" or aria-live="polite".
+- **New**: JSON export issues: Ensure browser allows downloads and check console for any security restrictions.
 
 Validation and repair verification:
 - Unit tests assert rule detection and auto-repair outcomes.
 - Repair pipeline applies rule-based repairs and optionally AI-based repairs.
+- **New**: Export functionality tested through user interaction scenarios.
 
 **Section sources**
 - [a11yValidator.test.ts:3-108](file://__tests__/a11yValidator.test.ts#L3-L108)
@@ -437,7 +489,7 @@ Validation and repair verification:
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
 
 ## Conclusion
-The system provides a robust, rule-based validator for WCAG 2.1 AA–compliant accessibility checks on generated TSX code. It offers actionable reporting, a scoring mechanism, and practical auto-repair capabilities to improve accessibility outcomes efficiently.
+The system provides a robust, rule-based validator for WCAG 2.1 AA–compliant accessibility checks on generated TSX code. It offers actionable reporting, a scoring mechanism, practical auto-repair capabilities, and comprehensive JSON export functionality for compliance documentation and audit trails.
 
 ## Appendices
 
@@ -458,3 +510,26 @@ To add a new rule:
 
 **Section sources**
 - [a11yValidator.ts:281-286](file://lib/validation/a11yValidator.ts#L281-L286)
+
+### JSON Export Metadata Specification
+**New Section**
+
+The JSON export functionality adds standardized metadata to accessibility reports:
+
+**Exported Fields:**
+- `exportedAt`: ISO 8601 timestamp indicating when the report was exported
+- `standard`: WCAG compliance standard identifier ("WCAG 2.1 AA")
+
+**File Naming Convention:**
+- `a11y-report-{timestamp}.json`
+- Timestamp uses milliseconds since epoch for uniqueness
+
+**Export Workflow Benefits:**
+- Audit trail creation for compliance documentation
+- Historical tracking of accessibility improvements
+- Integration with quality assurance processes
+- Automated compliance reporting capabilities
+
+**Section sources**
+- [A11yReport.tsx:102-117](file://components/A11yReport.tsx#L102-L117)
+- [schemas.ts:312-318](file://lib/validation/schemas.ts#L312-L318)

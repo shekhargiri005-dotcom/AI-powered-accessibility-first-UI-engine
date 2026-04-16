@@ -161,20 +161,20 @@ const TIER_DEFAULTS: Record<ModelTier, Partial<PipelineConfig>> = {
   cloud: {
     tier: 'cloud',
     promptStyle: 'freeform',
-    blueprintTokenBudget: 8000,
+    blueprintTokenBudget: 6000,  // Reduced from 8k for faster processing
     injectLockedImports: false,
     injectOutputWrapper: false,
     mergeSystemIntoUser: false,
-    temperature: 0.55,
-    maxOutputTokens: 8000,
+    temperature: 0.7,  // Base creativity (overridden by model profile)
+    maxOutputTokens: 8192,  // Standardized to 8k max
     maxToolRounds: 0,        // tools disabled globally — causes silent 400 on proxy/unknown endpoints
     useJsonMode: false,      // overridden per-model below
     useStreaming: true,
-    maxSystemPromptTokens: Infinity,
+    maxSystemPromptTokens: 8000,  // Cap system prompt to prevent bloat
     extractionStrategy: 'fence',
     repairStrategy: 'rules-only',
     repairModelId: null,     // rules-only for cloud — never call another LLM
-    timeoutMs: 90000,
+    timeoutMs: 60000,  // Reduced from 90s for faster UX
   },
 };
 
