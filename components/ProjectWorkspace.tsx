@@ -73,7 +73,9 @@ export default function ProjectWorkspace({
 
   // Sync new project changes from parent
   useEffect(() => {
-    if (initialProject.id !== (versions[0]?.intent?.componentName ?? '')) {
+    // Check if this is a different project by comparing component names
+    const currentProjectName = versions[0]?.intent?.componentName ?? '';
+    if (initialProject.intent.componentName !== currentProjectName) {
       setVersions([{
         version: 1,
         timestamp: initialProject.timestamp,
@@ -84,7 +86,7 @@ export default function ProjectWorkspace({
       }]);
       setCurrentVersion(1);
     }
-  }, [initialProject.id, initialProject.timestamp, initialProject.code, initialProject.intent, initialProject.a11yReport, versions]);
+  }, [initialProject.timestamp, initialProject.code, initialProject.intent, initialProject.a11yReport, versions]);
 
   // When parent generates a new output (refinement), append as new version
   useEffect(() => {

@@ -112,7 +112,10 @@ export async function createProject(
   metadata?: { thinkingPlan?: unknown; reviewData?: unknown; workspaceId?: string },
 ): Promise<Project> {
   const codeStr = typeof code === 'string' ? code : JSON.stringify(code);
-  const linesChanged = typeof code === 'string' ? code.split('\n').length : 0;
+  // Calculate lines for both single file and multi-file projects
+  const linesChanged = typeof code === 'string' 
+    ? code.split('\n').length 
+    : Object.values(code).reduce((total, fileContent) => total + fileContent.split('\n').length, 0);
   const now = new Date().toISOString();
 
   try {

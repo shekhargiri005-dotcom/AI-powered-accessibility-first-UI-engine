@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   FolderOpen, Plus, Search, Trash2, Clock, Layers, Code, Box, X,
-  RefreshCw, FolderKanban,
+  RefreshCw, FolderKanban, AlertCircle,
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';
+import { useWorkspace } from './workspace/WorkspaceProvider';
 
 export interface ProjectManagerProps {
   onOpenProject: (id: string) => void;
@@ -20,9 +21,11 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 export default function ProjectManager({ onOpenProject, onNewProject, onClose }: ProjectManagerProps) {
+  const { activeWorkspaceId } = useWorkspace();
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   /** ID awaiting inline confirm — replaces the blocking window.confirm() */
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -30,16 +33,23 @@ export default function ProjectManager({ onOpenProject, onNewProject, onClose }:
 
   const fetchProjects = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
-      const res = await fetch('/api/projects');
+      const url = activeWorkspaceId 
+        ? `/api/projects?workspaceId=${encodeURIComponent(activeWorkspaceId)}`
+        : '/api/projects';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
       const data = await res.json();
       setProjects(data.projects || []);
-    } catch { /* ignore */ } finally {
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'Failed to load projects');
+    } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchProjects(); }, []);
+  useEffect(() => { fetchProjects(); }, [activeWorkspaceId]);
 
   const filtered = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -133,11 +143,17 @@ export default function ProjectManager({ onOpenProject, onNewProject, onClose }:
         </div>
 
         {/* Project List */}
-        {deleteError && (
+        {(deleteError || fetchError) && (
           <div className="mx-4 mt-2 p-2.5 rounded-xl bg-red-900/20 border border-red-500/30 flex items-center gap-2 text-xs text-red-300">
-            <X className="w-3.5 h-3.5 flex-shrink-0" />
-            {deleteError}
-            <button onClick={() => setDeleteError(null)} className="ml-auto text-red-400 hover:text-red-200" aria-label="Dismiss error">✕</button>
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            {deleteError || fetchError}
+            <button 
+              onClick={() => { setDeleteError(null); setFetchError(null); }} 
+              className="ml-auto text-red-400 hover:text-red-200" 
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
           </div>
         )}
 

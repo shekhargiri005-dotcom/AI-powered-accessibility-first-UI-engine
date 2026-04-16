@@ -457,7 +457,7 @@ export default function HomePage() {
       temperature: 0.6,
       fullAppMode: false,
       multiSlideMode: false,
-      isLocal: config.provider === 'ollama',
+      isLocal: false,
     });
     setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
     setShowModelGate(false);
@@ -509,17 +509,6 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Desktop Secure Mode Banner */}
-      {aiConfig && (
-        <div className="hidden lg:flex fixed top-4 right-4 z-50 items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
-          <Shield className="w-3.5 h-3.5 text-emerald-400" />
-          <span className="text-xs font-medium text-emerald-400">Secure Mode Active</span>
-          <div className="w-px h-3 bg-emerald-500/30 mx-1" />
-          <Lock className="w-3 h-3 text-emerald-400/70" />
-          <span className="text-[10px] text-emerald-400/70">Server-side credentials</span>
-        </div>
-      )}
-
       {/* Left Sidebar Pane */}
       <Sidebar
         activeProjectId={activeProjectId}
@@ -543,7 +532,17 @@ export default function HomePage() {
         pt-14 lg:pt-0
       `}>
         <CenterWorkspace
-          headerControls={null}
+          headerControls={
+            aiConfig ? (
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs font-medium text-emerald-400">Secure Mode Active</span>
+                <div className="w-px h-3 bg-emerald-500/30 mx-1" />
+                <Lock className="w-3 h-3 text-emerald-400/70" />
+                <span className="text-[10px] text-emerald-400/70">Server-side credentials</span>
+              </div>
+            ) : null
+          }
           onPromptSubmit={handlePromptSubmit}
           isLoading={isRunning}
           hasActiveProject={!!activeProjectId}
