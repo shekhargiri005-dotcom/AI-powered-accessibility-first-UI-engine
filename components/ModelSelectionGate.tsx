@@ -172,12 +172,9 @@ export default function ModelSelectionGate({
   if (!isOpen) return null;
 
   return (
-    <div 
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#0B0F19] bg-contain bg-center bg-no-repeat"
-      style={{ backgroundImage: "url('/model-bg.jpg')" }}
-    >
-      {/* Background Pattern & Dark Overlay */}
-      <div className="absolute inset-0 overflow-hidden bg-black/60 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-[#0B0F19]">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 overflow-hidden">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>

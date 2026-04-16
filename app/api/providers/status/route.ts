@@ -10,6 +10,9 @@
 import { NextResponse } from 'next/server';
 import { unstable_noStore } from 'next/cache';
 
+// Force dynamic rendering - env vars checked at runtime
+export const dynamic = 'force-dynamic';
+
 // Optimized settings for each provider
 export interface ProviderSettings {
   temperature: number;
