@@ -27,7 +27,6 @@ export interface ProviderStatus {
   configured: boolean;
   models: string[];
   recommended?: boolean;
-  localOnly?: boolean;
 }
 
 export interface ModelSelectionGateProps {
@@ -258,6 +257,7 @@ export default function ModelSelectionGate({
                     <li>• ANTHROPIC_API_KEY - for Claude models</li>
                     <li>• GOOGLE_API_KEY - for Gemini models</li>
                     <li>• GROQ_API_KEY - for Groq fast inference</li>
+                    <li>• OLLAMA_API_KEY - for local Ollama models</li>
                   </ul>
                 </div>
               </div>

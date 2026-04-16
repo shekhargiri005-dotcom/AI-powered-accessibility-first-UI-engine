@@ -53,14 +53,13 @@ const PROVIDERS: ProviderConfig[] = [
   },
   {
     id: 'ollama',
-    name: 'Ollama (Local)',
-    color: 'from-orange-500 to-amber-500',
+    name: 'Ollama',
+    color: 'from-gray-500 to-gray-400',
     icon: '🦙',
-    envKey: 'OLLAMA_BASE_URL',
-    placeholder: 'http://localhost:11434/v1',
-    models: ['deepseek-coder:6.7b', 'llama3.1', 'mistral'],
+    envKey: 'OLLAMA_API_KEY',
+    placeholder: 'ollama-...',
+    models: ['llama3', 'mistral', 'codellama'],
     docsUrl: 'https://ollama.com',
-    isLocal: true,
   },
 ];
 

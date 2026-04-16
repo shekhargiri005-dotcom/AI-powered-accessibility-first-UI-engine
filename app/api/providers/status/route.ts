@@ -56,14 +56,13 @@ export const PROVIDER_CONFIG = [
   },
   {
     id: 'ollama',
-    name: 'Ollama (Local)',
+    name: 'Ollama',
     description: 'Run models locally on your machine',
     color: 'text-gray-300',
     gradient: 'from-gray-500/20 to-gray-400/20 border-gray-500/30',
     bgColor: 'bg-gray-500',
-    envVar: null, // No API key needed
+    envVar: 'OLLAMA_API_KEY', // Now requires API key like other adapters
     models: ['llama3', 'mistral', 'codellama', 'custom'],
-    localOnly: true,
   },
 ];
 
@@ -77,7 +76,6 @@ export interface ProviderStatus {
   configured: boolean;
   models: string[];
   recommended?: boolean;
-  localOnly?: boolean;
 }
 
 // ─── GET — return provider status (which ones have env vars configured) ───────
@@ -87,13 +85,12 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    const isVercel = process.env.VERCEL === '1' || process.env.VERCEL === 'true';
-    
     // Debug: Log all available env var keys (without values for security)
     const allEnvKeys = Object.keys(process.env).filter(key => 
       key.includes('API_KEY') && (
         key.includes('OPENAI') || key.includes('ANTHROPIC') || 
-        key.includes('GOOGLE') || key.includes('GEMINI') || key.includes('GROQ')
+        key.includes('GOOGLE') || key.includes('GEMINI') || 
+        key.includes('GROQ') || key.includes('OLLAMA')
       )
     );
     console.log('[providers/status] Available env vars:', allEnvKeys);
@@ -103,28 +100,23 @@ export async function GET() {
       let configured = false;
       let debugInfo: Record<string, boolean> = {};
       
-      if (provider.localOnly) {
-        // Ollama is only configured if NOT on Vercel (local only)
-        configured = !isVercel;
-      } else {
-        // Check primary env var
-        const primaryKey = provider.envVar ? process.env[provider.envVar] : undefined;
-        // Check alternate env var (for Google which has GEMINI_API_KEY as fallback)
-        const altKey = 'envVarAlt' in provider && provider.envVarAlt 
-          ? process.env[provider.envVarAlt] 
-          : undefined;
-        
-        configured = !!(primaryKey || altKey);
-        
-        // Debug logging
-        if (provider.envVar) {
-          debugInfo[provider.envVar] = !!primaryKey;
-        }
-        if ('envVarAlt' in provider && provider.envVarAlt) {
-          debugInfo[provider.envVarAlt] = !!altKey;
-        }
-        console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
+      // Check primary env var
+      const primaryKey = provider.envVar ? process.env[provider.envVar] : undefined;
+      // Check alternate env var (for Google which has GEMINI_API_KEY as fallback)
+      const altKey = 'envVarAlt' in provider && provider.envVarAlt 
+        ? process.env[provider.envVarAlt] 
+        : undefined;
+      
+      configured = !!(primaryKey || altKey);
+      
+      // Debug logging
+      if (provider.envVar) {
+        debugInfo[provider.envVar] = !!primaryKey;
       }
+      if ('envVarAlt' in provider && provider.envVarAlt) {
+        debugInfo[provider.envVarAlt] = !!altKey;
+      }
+      console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
 
       return {
         id: provider.id,
@@ -136,7 +128,6 @@ export async function GET() {
         configured,
         models: provider.models,
         recommended: provider.recommended,
-        localOnly: provider.localOnly,
       };
     });
 
@@ -150,7 +141,6 @@ export async function GET() {
       // Debug info (only in development)
       ...(process.env.NODE_ENV === 'development' && {
         debug: {
-          isVercel,
           availableEnvVars: allEnvKeys,
           nodeEnv: process.env.NODE_ENV,
         }
