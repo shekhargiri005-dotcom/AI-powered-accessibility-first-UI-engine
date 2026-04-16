@@ -84,12 +84,7 @@ export default function HomePage() {
     localStorage.removeItem('uiEngine_multiSlideMode');
     sessionStorage.removeItem('uiEngine_active');
     
-    // Call server to clear session config
-    try {
-      await fetch('/api/engine-config', { method: 'DELETE' });
-    } catch {
-      // Ignore errors - client-side cleanup is sufficient
-    }
+    // Server-side config cleared via localStorage only (no server session)
     
     // Redirect to login (user must re-authenticate)
     window.location.href = '/login';
@@ -103,14 +98,15 @@ export default function HomePage() {
 
   // Check for existing AI config on mount - show ModelSelectionGate if none exists
   useEffect(() => {
-    const checkExistingConfig = async () => {
+    const checkExistingConfig = () => {
       try {
-        const res = await fetch('/api/engine-config');
-        const data = await res.json();
+        // Check localStorage for saved config
+        const savedConfig = localStorage.getItem('aiEngineConfig');
+        const rememberProvider = localStorage.getItem('ai_remember_provider') === 'true';
         
-        if (data.success && data.config) {
-          // Config exists, load it
-          const config = data.config;
+        if (savedConfig && rememberProvider) {
+          // Config exists and user wants to remember it
+          const config = JSON.parse(savedConfig);
           setAiConfig({
             provider: config.provider,
             providerName: config.providerName || config.provider,

@@ -130,24 +130,15 @@ export default function ModelSelectionGate({
       // Save remember preference
       localStorage.setItem('ai_remember_provider', rememberProvider.toString());
       
-      // Save the selection to server
-      const res = await fetch('/api/engine-config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          provider: selectedProvider.id,
-          model: selectedModel,
-          apiKey: 'ENV_FALLBACK', // Server will use env var
-          temperature: 0.6,
-          fullAppMode: false,
-          multiSlideMode: false,
-        }),
-      });
-
-      const data = await res.json();
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to save configuration');
-      }
+      // Save config to localStorage (server uses env vars, no API call needed)
+      localStorage.setItem('aiEngineConfig', JSON.stringify({
+        provider: selectedProvider.id,
+        model: selectedModel,
+        providerName: selectedProvider.name,
+        temperature: selectedProvider.settings?.temperature || 0.7,
+        fullAppMode: false,
+        multiSlideMode: false,
+      }));
 
       onComplete({
         provider: selectedProvider.id,
