@@ -19,31 +19,44 @@ export interface ProviderSettings {
   presencePenalty?: number;
 }
 
+// Optimized settings for UI/code generation based on provider characteristics
+// Temperature: Lower (0.1-0.3) for deterministic code, higher (0.7-0.8) for creative tasks
+// Max tokens: Based on model context window and typical UI component size
 export const PROVIDER_SETTINGS: Record<string, ProviderSettings> = {
   openai: {
-    temperature: 0.6,
-    maxTokens: 4096,
-    topP: 1,
-    frequencyPenalty: 0,
-    presencePenalty: 0,
+    // GPT-4o: Excellent for code, lower temp for consistency
+    // Max 16k output, but 8k is plenty for most UI components
+    temperature: 0.2,
+    maxTokens: 8192,
+    topP: 0.95,
+    frequencyPenalty: 0.1,
+    presencePenalty: 0.1,
   },
   anthropic: {
-    temperature: 0.7,
+    // Claude 3.5 Sonnet: Best for code, Amazon recommends 4k limit for optimal performance
+    // Slightly higher temp for natural language explanations
+    temperature: 0.3,
     maxTokens: 4096,
     topP: 0.9,
   },
   google: {
-    temperature: 0.7,
+    // Gemini 2.0 Flash: 8k default output, fast and cost-effective
+    // Official recommended temp is 0.7, but lower for code generation
+    temperature: 0.3,
     maxTokens: 8192,
-    topP: 1,
+    topP: 0.95,
   },
   groq: {
-    temperature: 0.5,
-    maxTokens: 4096,
-    topP: 1,
+    // Groq: Ultra-fast inference (300-1600 tokens/sec)
+    // Lower temp for speed + consistency, 8k for larger components
+    temperature: 0.1,
+    maxTokens: 8192,
+    topP: 0.9,
   },
   ollama: {
-    temperature: 0.8,
+    // Local models: Higher temp compensates for smaller model size
+    // 4k context is typical for local setups, 2048 tokens sufficient
+    temperature: 0.7,
     maxTokens: 2048,
     topP: 0.9,
   },
