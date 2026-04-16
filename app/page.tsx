@@ -66,8 +66,8 @@ export default function HomePage() {
   const [isDirectRefining, setIsDirectRefining] = useState(false);
 
   // ─── Auto-Reset on Inactivity ─────────────────────────────────────────────
-  // Reset LLM config after 30 minutes of inactivity (user must re-auth and re-select model)
-  const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  // Reset LLM config after 15 minutes of inactivity (user must re-auth and re-select model)
+  const INACTIVITY_TIMEOUT = 15 * 60 * 1000; // 15 minutes
   const lastActivityRef = useRef<number>(0);
   const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
 

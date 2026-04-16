@@ -24,7 +24,7 @@ export default function VersionTimeline({
   return (
     <aside
       aria-label="Version history timeline"
-      className="w-64 border-r border-gray-700/30 bg-gray-900/20 flex-col hidden md:flex"
+      className="w-full h-full flex flex-col bg-gray-900/20"
     >
       {/* Header */}
       <div className="p-4 border-b border-gray-700/20 flex-shrink-0">

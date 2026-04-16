@@ -18,6 +18,8 @@
 - [codeExtractor.ts](file://lib/ai/codeExtractor.ts)
 - [memory.ts](file://lib/ai/memory.ts)
 - [schemas.ts](file://lib/validation/schemas.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 </cite>
 
 ## Table of Contents
@@ -130,7 +132,7 @@ G --> MM
 
 ## Core Components
 - Intent Classification: Determines intent type, confidence, and suggested mode; informs whether to proceed to generation.
-- Thinking Plan: Builds an execution plan aligned with the user’s intent to guide generation.
+- Thinking Plan: Builds an execution plan aligned with the user's intent to guide generation.
 - Intent Parsing: Converts natural language into a validated UI intent with fields, layout, interactions, and accessibility requirements.
 - Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair.
 - Expert Review and AI Repair: Optional second-pass review and targeted repair using a reviewer agent.
@@ -256,7 +258,7 @@ API-->>API : Log and return result
 - Purpose: Convert a prompt into a validated UI intent for generation.
 - Inputs: Prompt, mode, optional contextId for refinement, provider/model hints.
 - Processing: Retrieves knowledge, builds model-aware prompt, enforces JSON mode when safe, strips thinking blocks, and validates schema.
-- Outputs: Validated UI intent or minimal fallback for “not a UI description”.
+- Outputs: Validated UI intent or minimal fallback for "not a UI description".
 
 ```mermaid
 flowchart TD
@@ -326,7 +328,7 @@ Final --> Return(["Return result"])
 - Purpose: Optional second-pass review and targeted repair to improve quality.
 - Review: JSON-based expert review with pass/fail, score, critiques, and repair instructions.
 - Repair: Dedicated repair agent that fixes issues and returns fixed code.
-- Skip Logic: Disabled for local/Ollama models and fast-compatible providers to avoid expensive inference.
+- Skip Logic: **Updated** Now uses a direct approach targeting only the Groq provider for skipping expensive vision review processes. The pipeline no longer uses complex provider categorization logic that differentiated between local and cloud providers.
 
 ```mermaid
 sequenceDiagram
@@ -444,8 +446,18 @@ API->>MM : Upsert component embedding (repair patterns)
 - [route.ts:358-383](file://app/api/generate/route.ts#L358-L383)
 - [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
 
+### Provider Detection and Skip Logic
+- Purpose: Determine when to skip expensive vision review processes to optimize costs.
+- Implementation: **Updated** Now uses a direct approach targeting only the Groq provider for skipping expensive vision review processes. The pipeline no longer uses complex provider categorization logic that differentiated between local and cloud providers.
+- Logic: `const skipVisionReview = provider === 'groq';` - When the user explicitly selects the Groq provider, the pipeline skips the vision review to avoid cost-prohibitive second API calls.
+
+**Section sources**
+- [route.ts:134-135](file://app/api/generate/route.ts#L134-L135)
+- [index.ts:45-47](file://lib/ai/adapters/index.ts#L45-L47)
+- [resolveDefaultAdapter.ts:49](file://lib/ai/resolveDefaultAdapter.ts#L49)
+
 ## Dependency Analysis
-The pipeline’s design centers around capability-driven orchestration:
+The pipeline's design centers around capability-driven orchestration:
 - Model Registry defines capabilities and tiers.
 - Tiered Pipeline maps profiles to concrete configurations.
 - Prompt Builder composes model-aware prompts.
@@ -501,16 +513,16 @@ API --> CG
 - Parallelization: Run accessibility and tests in parallel to minimize end-to-end latency.
 - Budgeting: Enforce token budgets for system prompts and knowledge injection to avoid truncation and retries.
 - Timeouts: Apply per-stage timeouts and aggregate limits to prevent long-running requests.
-
-[No sources needed since this section provides general guidance]
+- **Skip Logic Optimization**: **Updated** The pipeline now uses a direct approach to skip vision review for Groq provider, reducing unnecessary API calls and costs.
 
 ## Troubleshooting Guide
 - Classification failures: Retry on rate limits; coerce schema for local models.
-- Parsing failures: Minimal fallback intent for “not a UI description”; inspect raw AI response for debugging.
+- Parsing failures: Minimal fallback intent for "not a UI description"; inspect raw AI response for debugging.
 - Generation failures: Inspect model tier, extraction confidence, and validation warnings; leverage repair pipeline.
 - Review/Repair failures: Pipeline continues with original code; check quotas and provider availability.
 - Vision review failures: Missing Playwright binaries or Browserless credentials; fallback gracefully.
 - Accessibility issues: Apply auto-repair; review suggestions and fix remaining violations.
+- **Skip Logic Issues**: **Updated** If vision review is unexpectedly skipped for non-Groq providers, verify the provider parameter is correctly set to 'groq' to trigger the skip logic.
 
 **Section sources**
 - [intentClassifier.ts:104-133](file://lib/ai/intentClassifier.ts#L104-L133)
@@ -521,4 +533,6 @@ API --> CG
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 
 ## Conclusion
-The AI generation pipeline is designed for reliability and quality across diverse environments. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. Parallel quality gates and persistence further strengthen the system’s robustness and usability.
+The AI generation pipeline is designed for reliability and quality across diverse environments. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. Parallel quality gates and persistence further strengthen the system's robustness and usability.
+
+**Updated** The pipeline now uses a simplified, direct approach for skip logic optimization, focusing specifically on the Groq provider to avoid unnecessary vision review costs. This change removes the complexity of provider categorization while maintaining the essential performance benefits of selective review skipping.

@@ -17,16 +17,17 @@
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [app/api/generate/route.ts](file://app/api/generate/route.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Restored OllamaAdapter as a fully supported AI provider, bringing total adapters to 5
-- Added OllamaAdapter to provider detection logic and named providers list
-- Updated URL handling for local Ollama endpoint with configurable base URL
-- Updated factory pattern to include Ollama among named providers alongside OpenAI, Anthropic, Google, and Groq
-- Revised troubleshooting guide to include Ollama as a supported local provider option
-- Updated project structure diagram to reflect Ollama integration
+- Removed OllamaAdapter from the factory pattern and provider detection logic
+- Eliminated Ollama-specific local model execution and runtime detection
+- Removed isLocal property and related logic from the adapter system
+- Updated skipVisionReview approach to use a simplified provider-based check instead of complex isLocalModel detection
+- Revised troubleshooting guide to remove Ollama as a supported local provider option
+- Updated project structure diagram to reflect Ollama removal
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -41,12 +42,14 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the universal AI adapter system that powers the AI engine. The system now supports five distinct AI providers: OpenAI, Anthropic, Google, Groq (OpenAI-compatible), and Ollama (local models). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. The factory resolves credentials securely through workspaceKeyService or environment variables, with Ollama supporting local model execution without requiring API keys.
+This document describes the universal AI adapter system that powers the AI engine. The system now supports four distinct AI providers: OpenAI, Anthropic, Google, and Groq (OpenAI-compatible). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. The factory resolves credentials securely through workspaceKeyService or environment variables, with the system optimized for cloud-based AI services.
+
+**Updated** Removed OllamaAdapter support and simplified the adapter system to focus on cloud-based providers only.
 
 ## Project Structure
 The AI adapter system lives under lib/ai and is composed of:
 - A base adapter interface and shared types
-- Provider-specific adapters (OpenAI, Anthropic, Google, Groq, Ollama)
+- Provider-specific adapters (OpenAI, Anthropic, Google, Groq)
 - A factory and registry that selects and instantiates adapters
 - A pluggable cache layer for generation results and streams
 - Tool definitions and conversion helpers for function calling
@@ -64,7 +67,6 @@ IDX["adapters/index.ts"]
 OA["adapters/openai.ts"]
 AA["adapters/anthropic.ts"]
 GA["adapters/google.ts"]
-OLA["adapters/ollama.ts"]
 UCA["adapters/unconfigured.ts"]
 CFG["config.ts"]
 RDA["resolveDefaultAdapter.ts"]
@@ -74,22 +76,22 @@ WK["security/workspaceKeyService.ts"]
 end
 subgraph "API Routes"
 PS["api/providers/status/route.ts"]
+GR["api/generate/route.ts"]
 end
 BASE --> IDX
 TYPES --> IDX
 TOOLS --> OA
 TOOLS --> GA
-TOOLS --> OLA
 CACHE --> IDX
 IDX --> OA
 IDX --> AA
 IDX --> GA
-IDX --> OLA
 IDX --> UCA
 CFG --> IDX
 RDA --> IDX
 WK --> IDX
 PS --> IDX
+GR --> IDX
 ```
 
 **Diagram sources**
@@ -101,12 +103,12 @@ PS --> IDX
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [app/api/generate/route.ts](file://app/api/generate/route.ts)
 
 **Section sources**
 - [README.md](file://README.md)
@@ -115,12 +117,12 @@ PS --> IDX
 ## Core Components
 - Base adapter interface: Defines the provider-agnostic contract for generating and streaming completions.
 - Shared types: Provide client-safe message, generation, streaming, and pricing types.
-- Provider adapters: Implementations for OpenAI, Anthropic, Google, Groq (cloud providers), and Ollama (local provider); plus a fallback adapter for unconfigured environments.
+- Provider adapters: Implementations for OpenAI, Anthropic, Google, and Groq (cloud providers); plus a fallback adapter for unconfigured environments.
 - Factory and registry: Securely resolves credentials, detects provider, and instantiates adapters with universal LLM_KEY support.
 - Caching: Adds a pluggable cache around generation and streaming calls.
 - Tools: Canonical tool schema and conversion helpers for cross-provider function calling.
 - Configuration shims: Backward-compatible exports and environment-based adapter resolver.
-- Enhanced credential resolution: Five-tier fallback system including universal LLM_KEY support.
+- Enhanced credential resolution: Four-tier fallback system including universal LLM_KEY support.
 
 **Section sources**
 - [lib/ai/adapters/base.ts](file://lib/ai/adapters/base.ts)
@@ -132,13 +134,13 @@ PS --> IDX
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ## Architecture Overview
-The system separates concerns with enhanced credential resolution supporting both cloud and local providers:
+The system separates concerns with enhanced credential resolution supporting cloud providers only:
 - Application code interacts with the AIAdapter interface.
 - The factory selects a concrete adapter based on configuration and environment.
 - Adapters normalize provider differences and expose a unified request/response model.
 - A caching layer improves performance and reduces costs.
 - Tools enable function calling across providers with a single canonical schema.
-- Ollama provides local model execution without requiring API keys.
+- **Updated**: No local model execution support - all providers are cloud-based.
 
 ```mermaid
 sequenceDiagram
@@ -161,10 +163,6 @@ Factory->>Factory : "check universal LLM_KEY"
 alt "Universal key exists"
 Factory-->>Registry : "cfg {provider, model, LLM_KEY}"
 else "No universal key"
-Factory->>Factory : "check Ollama local endpoint"
-alt "Local Ollama available"
-Factory-->>Registry : "cfg {provider='ollama', baseUrl}"
-else "No local endpoint"
 Factory-->>Registry : "cfg {provider='unconfigured'}"
 end
 end
@@ -183,7 +181,7 @@ Provider-->>Caller : "GenerateResult/StreamChunk"
 - AIAdapter defines provider, generate(), and stream().
 - GenerateOptions and GenerateResult define the standardized request/response contract.
 - StreamChunk captures incremental deltas and optional usage on the final chunk.
-- ProviderName enumerates supported providers (OpenAI, Anthropic, Google, Groq, Ollama, unconfigured).
+- ProviderName enumerates supported providers (OpenAI, Anthropic, Google, Groq, unconfigured).
 - Pricing utilities estimate USD cost based on provider/model.
 
 ```mermaid
@@ -229,7 +227,7 @@ AIAdapter --> StreamChunk : "produces"
 ### Factory Pattern and Dynamic Adapter Instantiation
 - getWorkspaceAdapter resolves credentials from workspace storage or environment variables, then delegates to createAdapter.
 - createAdapter detects provider from config or model name, validates API keys, and returns a CachedAdapter-wrapped provider adapter.
-- **Updated**: Now includes Ollama as a named provider with local endpoint support.
+- **Updated**: Removed OllamaAdapter from provider detection and factory logic.
 - For unknown providers, it falls back to UnconfiguredAdapter to avoid hard failures.
 - Legacy getAdapter remains for backward compatibility but should be migrated to getWorkspaceAdapter.
 
@@ -244,10 +242,7 @@ HasKey -- Yes --> Create
 HasKey -- No --> Universal["Check for universal LLM_KEY"]
 Universal --> UniFound{"Universal key found?"}
 UniFound -- Yes --> CreateUni["createAdapter(cfg with LLM_KEY)"]
-UniFound -- No --> OllamaCheck["Check for local Ollama endpoint"]
-OllamaCheck --> OllamaFound{"Ollama available?"}
-OllamaFound -- Yes --> CreateOllama["createAdapter({provider:'ollama', baseUrl:'http://localhost:11434/v1'})"]
-OllamaFound -- No --> Fallback["Return UnconfiguredAdapter"]
+UniFound -- No --> Fallback["Return UnconfiguredAdapter"]
 Create --> Detect["detectProvider(model)"]
 Detect --> Compat{"OpenAI-compatible?"}
 Compat -- Yes --> OpenAI["CachedAdapter(new OpenAIAdapter(key, compatUrl))"]
@@ -256,7 +251,6 @@ Named -- Yes --> NewAdapter["new ProviderAdapter(keyOrUrl)"]
 Named -- No --> Unconfigured["new UnconfiguredAdapter()"]
 OpenAI --> CacheWrap["wrap with CachedAdapter"]
 NewAdapter --> CacheWrap
-Ollama --> CacheWrap
 CacheWrap --> End(["AIAdapter"])
 ```
 
@@ -276,8 +270,7 @@ The system now supports a universal LLM_KEY environment variable that works acro
 2. **Environment Variable Check**: Provider-specific keys (e.g., OPENAI_API_KEY)
 3. **Provider-Specific Fallback**: Alternative environment variables (Google/Gemini)
 4. **Universal LLM_KEY Fallback**: Single universal key for all cloud providers
-5. **Local Provider Check**: Ollama local endpoint availability
-6. **Failure**: UnconfiguredAdapter for graceful degradation
+5. **Failure**: UnconfiguredAdapter for graceful degradation
 
 **Universal Key Implementation:**
 - The universal LLM_KEY is checked after provider-specific environment variables
@@ -299,10 +292,7 @@ H -- Yes --> D
 H -- No --> I["Check universal LLM_KEY"]
 I --> J{"LLM_KEY found?"}
 J -- Yes --> K["createAdapter({provider, model, apiKey: LLM_KEY})"]
-J -- No --> L["Check Ollama local endpoint"]
-L --> M{"Ollama available?"}
-M -- Yes --> N["createAdapter({provider:'ollama', baseUrl: OLLAMA_BASE_URL || 'http://localhost:11434/v1'})"]
-M -- No --> O["Return UnconfiguredAdapter"]
+J -- No --> O["Return UnconfiguredAdapter"]
 ```
 
 **Diagram sources**
@@ -367,30 +357,6 @@ AA-->>App : "StreamChunk (delta/done)"
 **Section sources**
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
 
-#### OllamaAdapter
-- **Updated**: Now fully supported as a named provider for local model execution.
-- Uses OpenAI-compatible API at http://localhost:11434/v1 by default.
-- Supports any model pulled via `ollama pull` command.
-- Handles tool calling for models that support function calling (e.g., llama3.1, mistral-nemo).
-- **Local Execution**: No API key required - connects directly to local Ollama endpoint.
-
-```mermaid
-sequenceDiagram
-participant App as "Application"
-participant OA as "OllamaAdapter"
-participant Local as "Ollama Endpoint"
-App->>OA : "generate(options)"
-OA->>Local : "chat.completions.create (local)"
-Local-->>OA : "response from local model"
-OA-->>App : "GenerateResult"
-```
-
-**Diagram sources**
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
-
-**Section sources**
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
-
 #### UnconfiguredAdapter
 - Graceful fallback when no credentials are available.
 - Returns either structured JSON for JSON mode or a React alert component for UI.
@@ -399,9 +365,9 @@ OA-->>App : "GenerateResult"
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ### Configuration Management and Authentication Handling
-- getWorkspaceAdapter prioritizes workspace-scoped keys, then environment variables, universal LLM_KEY, local Ollama endpoint, and finally returns UnconfiguredAdapter.
-- Environment variables are checked per provider, including Groq, Google/Gemini, and Ollama.
-- **Enhanced**: Ollama local endpoint detection as the fifth fallback mechanism.
+- getWorkspaceAdapter prioritizes workspace-scoped keys, then environment variables, universal LLM_KEY, and finally returns UnconfiguredAdapter.
+- Environment variables are checked per provider, including Groq, Google/Gemini.
+- **Enhanced**: Simplified provider detection without Ollama support.
 - ConfigurationError is thrown when a provider requires a key but none is found.
 
 ```mermaid
@@ -418,10 +384,7 @@ H -- Yes --> D
 H -- No --> I["Check universal LLM_KEY"]
 I --> J{"LLM_KEY found?"}
 J -- Yes --> K["createAdapter({provider, model, apiKey: LLM_KEY})"]
-J -- No --> L["Check Ollama local endpoint"]
-L --> M{"Ollama available?"}
-M -- Yes --> N["createAdapter({provider:'ollama', baseUrl: OLLAMA_BASE_URL || 'http://localhost:11434/v1'})"]
-M -- No --> O["Return UnconfiguredAdapter"]
+J -- No --> O["Return UnconfiguredAdapter"]
 ```
 
 **Diagram sources**
@@ -444,7 +407,6 @@ M -- No --> O["Return UnconfiguredAdapter"]
 - UnconfiguredAdapter prevents server crashes and guides users to configure credentials.
 - Upstash Redis initialization failure is handled gracefully; cache writes are best-effort.
 - Provider adapters handle HTTP errors and malformed responses.
-- **Enhanced**: Ollama local endpoint detection provides transparent fallback without ConfigurationError.
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -487,7 +449,7 @@ Metrics --> End(["return"])
 ### Environment-Based Defaults and Backward Compatibility
 - config.ts re-exports factory and resolver for backward compatibility.
 - resolveDefaultAdapter chooses the first available provider key based on priority tiers.
-- **Enhanced**: Ollama included in provider detection for local model execution.
+- **Updated**: Removed Ollama from provider detection for local model execution.
 
 **Section sources**
 - [lib/ai/config.ts](file://lib/ai/config.ts)
@@ -496,8 +458,8 @@ Metrics --> End(["return"])
 ## Dependency Analysis
 The adapter system exhibits low coupling and high cohesion with enhanced credential resolution:
 - Adapters depend on shared types and tools.
-- The factory depends on workspace key service, environment variables, adapters, and local endpoint detection.
-- **Enhanced**: Ollama integration provides local model execution without external dependencies.
+- The factory depends on workspace key service, environment variables, adapters.
+- **Updated**: Removed Ollama integration, providing cloud-only model execution.
 - Caching is orthogonal and composable via decorator pattern.
 - Tools are isolated and converted at adapter boundaries.
 
@@ -506,21 +468,19 @@ graph LR
 TYPES["types.ts"] --> BASE["adapters/base.ts"]
 TYPES --> OA["adapters/openai.ts"]
 TYPES --> GA["adapters/google.ts"]
-TYPES --> OLA["adapters/ollama.ts"]
 TOOLS["tools.ts"] --> OA
 TOOLS --> GA
-TOOLS --> OLA
 BASE --> IDX["adapters/index.ts"]
 CACHE["cache.ts"] --> IDX
 IDX --> OA
 IDX --> AA["adapters/anthropic.ts"]
 IDX --> GA
-IDX --> OLA
 IDX --> UCA["adapters/unconfigured.ts"]
 CFG["config.ts"] --> IDX
 RDA["resolveDefaultAdapter.ts"] --> IDX
 WK["security/workspaceKeyService.ts"] --> IDX
 PS["api/providers/status/route.ts"] --> IDX
+GR["api/generate/route.ts"] --> IDX
 ```
 
 **Diagram sources**
@@ -532,12 +492,12 @@ PS["api/providers/status/route.ts"] --> IDX
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/config.ts](file://lib/ai/config.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [app/api/generate/route.ts](file://app/api/generate/route.ts)
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -548,13 +508,13 @@ PS["api/providers/status/route.ts"] --> IDX
 - Use streaming for long-form generation to improve perceived latency.
 - Monitor token usage via pricing utilities and metrics.
 - For cloud providers, ensure network connectivity to provider endpoints; otherwise use UnconfiguredAdapter for graceful UX.
-- **Enhanced**: Ollama provides zero-latency local model execution for development and testing scenarios.
+- **Updated**: Removed Ollama benefits - all providers are cloud-based with consistent performance characteristics.
 
 ## Troubleshooting Guide
 - Missing API key: Expect ConfigurationError or UnconfiguredAdapter behavior. Configure provider key in workspace settings or environment variables.
-- **Enhanced**: Ollama local endpoint: Ensure Ollama is running locally on http://localhost:11434/v1 or set OLLAMA_BASE_URL environment variable.
+- **Updated**: Removed Ollama local endpoint considerations - all providers are cloud-based.
 - Provider-specific constraints: Some providers reject certain parameters (e.g., response_format, tools, temperature). The adapters normalize these differences.
-- Network connectivity: Cloud providers require internet access; Ollama provides local execution without network dependencies.
+- Network connectivity: All providers require internet access for cloud-based execution.
 - Tool execution: Ensure tool names match and parameters conform to the declared schema; mismatches are handled gracefully.
 - **Enhanced**: Universal key debugging: Check console logs for "[getWorkspaceAdapter] Using universal LLM_KEY for [provider]" messages.
 
@@ -565,7 +525,7 @@ PS["api/providers/status/route.ts"] --> IDX
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ## Conclusion
-The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. **Enhanced** with Ollama support, the system now provides six distinct provider options: OpenAI, Anthropic, Google, Groq (cloud providers), and Ollama (local provider). The addition of Ollama enables local model execution without API keys, expanding deployment flexibility. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, and add provider-specific environment handling.
+The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. **Updated** with Ollama removal, the system now provides four distinct provider options: OpenAI, Anthropic, Google, and Groq (all cloud providers). The removal of Ollama simplifies the system architecture and focuses on cloud-based AI services. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, and add provider-specific environment handling.
 
 ## Appendices
 
@@ -587,34 +547,7 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Wrap adapters with CachedAdapter to reduce latency and cost.
 - Validate tool schemas and handle tool execution errors.
 - Instrument metrics and logging for observability.
-- **Enhanced**: Consider Ollama for local development and testing scenarios.
-
-### Ollama Integration Guide
-**Setting Up Local Ollama:**
-1. Install Ollama from https://ollama.com/download
-2. Pull desired models using `ollama pull <model-name>`
-3. Start Ollama service (runs locally on port 11434)
-4. No API key required for local execution
-
-**Environment Configuration:**
-- Default base URL: http://localhost:11434/v1
-- Override with OLLAMA_BASE_URL environment variable
-- Ollama automatically handles tool calling for compatible models
-
-**Supported Models:**
-- llama3, mistral, codellama, gemma2, mixtral
-- Any model pulled via `ollama pull`
-- Tool calling supported for models like llama3.1, mistral-nemo
-
-**Benefits:**
-- Zero-latency local execution during development
-- No external API dependencies or costs
-- Ideal for testing and prototyping
-- Seamless integration with existing adapter system
-
-**Section sources**
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
-- [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
+- **Updated**: Focus on cloud-based providers for consistent performance and reliability.
 
 ### Universal LLM_KEY Configuration Guide
 **Setting Up Universal Key:**
@@ -632,3 +565,13 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [app/api/providers/status/route.ts](file://app/api/providers/status/route.ts)
+
+### Vision Review Optimization
+**Updated** The system now uses a simplified skipVisionReview approach:
+- Vision review is skipped for Groq provider to avoid cost-prohibitive second API call
+- This replaces the previous complex isLocalModel detection across multiple providers
+- Reduces latency and cost for local model execution scenarios
+- Maintains quality assurance through cloud-based review when available
+
+**Section sources**
+- [app/api/generate/route.ts](file://app/api/generate/route.ts)
