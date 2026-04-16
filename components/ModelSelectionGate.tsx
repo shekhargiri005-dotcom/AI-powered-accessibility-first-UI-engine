@@ -9,9 +9,7 @@ import {
   Check,
   AlertCircle,
   Loader2,
-  Settings,
   Zap,
-  ArrowRight,
   Cpu,
   Globe,
   Server
@@ -295,36 +293,42 @@ export default function ModelSelectionGate({
                     onClick={() => handleProviderSelect(provider)}
                     className={`
                       relative group p-5 rounded-2xl border-2 transition-all duration-200 text-left
-                      bg-gray-900/50 border-gray-700/50 hover:border-gray-600 hover:bg-gray-800/50
+                      bg-gray-900/50 border-gray-700/50 
+                      hover:border-violet-500/50 hover:bg-violet-500/5
                       hover:scale-[1.02] active:scale-[0.98]
                     `}
                   >
+                    {/* Provider Brand Color Top Border */}
+                    <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-lg ${provider.bgColor} opacity-60`} />
+
                     {/* Recommended Badge */}
                     {provider.recommended && (
-                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full">
+                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-violet-500/30">
                         RECOMMENDED
                       </div>
                     )}
 
-                    {/* Icon with provider color */}
-                    <div className={`mb-3 ${provider.color}`}>
-                      {PROVIDER_ICONS[provider.id] || <Sparkles className="w-8 h-8" />}
+                    {/* Icon with provider brand color background */}
+                    <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${provider.gradient} mb-3`}>
+                      <div className={provider.color}>
+                        {PROVIDER_ICONS[provider.id] || <Sparkles className="w-7 h-7" />}
+                      </div>
                     </div>
 
                     {/* Content */}
-                    <h3 className="font-semibold text-white mb-1">{provider.name}</h3>
+                    <h3 className="font-semibold text-white mb-1 group-hover:text-violet-200 transition-colors">{provider.name}</h3>
                     <p className="text-xs text-gray-400 mb-3">{provider.description}</p>
 
-                    {/* Features - show first model as default */}
+                    {/* Features - show first model as default with provider color */}
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${provider.bgColor}`} />
-                      <span className="text-[10px] text-gray-500">
+                      <span className="text-[10px] text-gray-500 group-hover:text-violet-300/70 transition-colors">
                         Default: {provider.models[0]}
                       </span>
                     </div>
 
-                    {/* Hover Effect */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                    {/* Violet Hover Glow Effect */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
                   </button>
                 ))}
               </div>
@@ -345,8 +349,13 @@ export default function ModelSelectionGate({
           {/* Step 2: Confirm */}
           {step === 'confirm' && selectedProvider && (
             <div className="max-w-md mx-auto text-center space-y-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 mb-4">
-                <Check className="w-10 h-10 text-emerald-400" />
+              {/* Provider Brand Icon */}
+              <div className="inline-flex items-center justify-center">
+                <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${selectedProvider.gradient} flex items-center justify-center shadow-2xl`}>
+                  <div className={selectedProvider.color}>
+                    {PROVIDER_ICONS[selectedProvider.id] || <Sparkles className="w-12 h-12" />}
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -354,20 +363,25 @@ export default function ModelSelectionGate({
                   Ready to Generate!
                 </h2>
                 <p className="text-gray-400">
-                  Your AI engine is configured and ready to create beautiful UI components.
+                  Your <span className={selectedProvider.color}>{selectedProvider.name}</span> engine is ready
                 </p>
               </div>
 
-              <div className="bg-gray-950 rounded-2xl p-6 text-left space-y-4">
+              <div className="bg-gray-950 rounded-2xl p-6 text-left space-y-4 border border-violet-500/20">
+                {/* Provider with brand color */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Provider</span>
                   <div className="flex items-center gap-2">
-                    <div className={selectedProvider.color}>
-                      {PROVIDER_ICONS[selectedProvider.id] || <Sparkles className="w-5 h-5" />}
+                    <div className={`p-1.5 rounded-lg bg-gradient-to-br ${selectedProvider.gradient}`}>
+                      <div className={selectedProvider.color}>
+                        {PROVIDER_ICONS[selectedProvider.id] || <Sparkles className="w-4 h-4" />}
+                      </div>
                     </div>
                     <span className="text-white font-medium">{selectedProvider.name}</span>
                   </div>
                 </div>
+
+                {/* Model Selection with violet theme */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Model</span>
                   <div className="flex flex-wrap gap-2 justify-end">
@@ -375,10 +389,10 @@ export default function ModelSelectionGate({
                       <button
                         key={model}
                         onClick={() => setSelectedModel(model)}
-                        className={`px-2 py-1 rounded-lg text-xs font-medium transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           selectedModel === model
-                            ? 'bg-violet-500 text-white'
-                            : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                            ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30'
+                            : 'bg-gray-800 text-gray-400 hover:bg-violet-500/20 hover:text-violet-300'
                         }`}
                       >
                         {model}
@@ -386,10 +400,12 @@ export default function ModelSelectionGate({
                     ))}
                   </div>
                 </div>
+
+                {/* Security */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Security</span>
-                  <span className="flex items-center gap-1 text-emerald-400 text-sm">
-                    <Shield className="w-3 h-3" />
+                  <span className="flex items-center gap-1.5 text-violet-400 text-sm">
+                    <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
                     Server-side
                   </span>
                 </div>
@@ -398,14 +414,14 @@ export default function ModelSelectionGate({
               <div className="flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-gray-800 transition-colors"
+                  className="flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-300 transition-colors"
                 >
                   Back
                 </button>
                 <button
                   onClick={handleComplete}
                   disabled={isSaving}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-violet-500/25"
                 >
                   {isSaving ? (
                     <>
@@ -425,11 +441,10 @@ export default function ModelSelectionGate({
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-xs text-gray-600">
-          <p>
-            You can change your AI provider anytime in{' '}
-            <Settings className="w-3 h-3 inline" />
-            {' '}Settings → AI Engine Config
+        <div className="text-center mt-8 text-xs text-violet-400/50">
+          <p className="flex items-center justify-center gap-2">
+            <Sparkles className="w-3 h-3" />
+            Secure server-side AI generation
           </p>
         </div>
       </div>
