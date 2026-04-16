@@ -1,4 +1,7 @@
-import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk, ProviderName } from './base';
+import 'server-only';
+
+import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
+import type { ProviderName } from '../types';
 
 /**
  * A fallback socket adapter used when no API keys are present on the server

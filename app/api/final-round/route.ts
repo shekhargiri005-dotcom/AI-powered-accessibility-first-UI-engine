@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { runFinalRoundCritic } from '@/lib/ai/finalRoundCritic';
 import type { FinalRoundCriticOptions } from '@/lib/ai/finalRoundCritic';
+import { auth } from '@/lib/auth';
 
 export const maxDuration = 120;
 
@@ -13,13 +14,18 @@ interface FinalRoundRequestBody {
   /** Model identifier chosen by the user — same model that generated the UI */
   model: string;
   provider?: string;
-  apiKey?: string;
-  baseUrl?: string;
+  // SECURITY: apiKey and baseUrl are NEVER accepted from client
+  // Credentials are resolved server-side via workspaceKeyService
 }
 
 export async function POST(req: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/final-round');
   reqLogger.info('Final Round critique request received');
+
+  // Get workspace and user context for credential resolution
+  const session = await auth();
+  const userId = session?.user?.id;
+  const workspaceId = req.headers.get('x-workspace-id') || 'default';
 
   let body: unknown;
   try {
@@ -32,7 +38,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Request body must be a JSON object' }, { status: 400 });
   }
 
-  const { imageDataUrl, code, model, provider, apiKey, baseUrl } = body as FinalRoundRequestBody;
+  // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+  const { imageDataUrl, code, model, provider } = body as FinalRoundRequestBody;
 
   if (!imageDataUrl || !code || !model) {
     return NextResponse.json(
@@ -41,9 +48,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Sanitise masked keys (page.tsx stores '••••' for loaded keys)
-  const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
-
   reqLogger.info('Running Final Round critic', { model, provider });
 
   const opts: FinalRoundCriticOptions = {
@@ -51,8 +55,8 @@ export async function POST(req: NextRequest) {
     code,
     model,
     provider,
-    apiKey: effectiveApiKey,
-    baseUrl,
+    workspaceId,
+    userId,
   };
 
   const response = await runFinalRoundCritic(opts);

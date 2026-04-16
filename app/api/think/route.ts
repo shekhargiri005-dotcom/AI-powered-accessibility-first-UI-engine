@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateThinkingPlan, buildFallbackPlan } from '@/lib/ai/thinkingEngine';
 import type { IntentType, ThinkingPlan } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger';
+import { auth } from '@/lib/auth';
+import type { ProviderName } from '@/lib/ai/types';
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/think');
@@ -18,26 +20,44 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing fields: prompt, intentType' }, { status: 400 });
     }
 
-    const { prompt, intentType, projectContext, model, provider, apiKey, baseUrl } = body as {
+    // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+    const { prompt, intentType, projectContext, model, provider } = body as {
       prompt: string;
       intentType: IntentType;
       projectContext?: { componentName?: string; files?: string[] };
       model?: string;
       provider?: string;
-      apiKey?: string;
-      baseUrl?: string;
     };
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
-    const modelConfig = model
-      ? { model, provider, apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined, baseUrl }
-      : undefined;
+    // Get workspace context from session and headers
+    const session = await auth();
+    const userId = session?.user?.id;
+    const workspaceId = request.headers.get('x-workspace-id') || 'default';
 
-    reqLogger.debug('Generating thinking plan', { intentType, model, provider });
-    const result = await generateThinkingPlan(prompt, intentType, projectContext, modelConfig);
+    // Build caller model config only if the user actually supplied a model
+    const providerId = provider ? (provider as ProviderName) : undefined;
+    const modelId = model || undefined;
+
+    reqLogger.debug('Generating thinking plan', { 
+      intentType, 
+      model: modelId ?? 'env-resolved', 
+      provider: providerId ?? 'env-resolved',
+      workspaceId 
+    });
+    
+    const result = await generateThinkingPlan(
+      prompt, 
+      intentType, 
+      projectContext, 
+      providerId,
+      modelId,
+      workspaceId,
+      userId,
+    );
 
     if (!result.success) {
       reqLogger.warn('Thinking plan generation failed — returning deterministic fallback plan', { error: result.error });

@@ -111,8 +111,8 @@ export interface AIEngineConfig {
   provider: string;       // provider id ('openai' | 'anthropic' | 'groq' | 'ollama' etc.)
   providerName: string;   // Display name
   model: string;          // Exact model name
-  apiKey: string;         // Raw user key (client-side only; also sent per-request over HTTPS)
-  baseUrl?: string;       // For OpenAI-compat providers
+  apiKey: string;         // Masked key indicator ('••••' or 'local') - NEVER the real key
+  baseUrl?: string;       // For OpenAI-compat providers (display only)
   temperature: number;
   fullAppMode: boolean;
   multiSlideMode: boolean;

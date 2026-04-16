@@ -14,4 +14,4 @@ export { parseIntent } from './intentParser';
 export type { ParseResult } from './intentParser';
 
 export { classifyIntent } from './intentClassifier';
-export type { ClassificationResult, AICallConfig } from './intentClassifier';
+export type { ClassificationResult } from './intentClassifier';

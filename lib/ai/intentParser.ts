@@ -1,5 +1,5 @@
 import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig } from './adapters/index';
+import type { ProviderName } from './types';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { getModelProfile } from './modelRegistry';
 import {
@@ -39,11 +39,14 @@ export async function parseIntent(
   /** Link to persistent project if provided — enables refinement detection */
   contextId?: string,
   /**
-   * Caller-supplied adapter config.
-   * When provided, skips resolveDefaultAdapter entirely — the caller's model/provider/key are used.
-   * When omitted, falls through to INTENT_MODEL env var → any provider env key → local Ollama.
+   * Caller-supplied provider and model.
+   * When provided, credentials are resolved server-side via workspaceKeyService.
+   * When omitted, falls through to resolveDefaultAdapter.
    */
-  modelConfig?: { model: string; provider?: string; apiKey?: string; baseUrl?: string },
+  provider?: ProviderName,
+  model?: string,
+  workspaceId?: string,
+  userId?: string,
 ): Promise<ParseResult> {
   if (!userInput || userInput.trim().length === 0) {
     return { success: false, error: 'Input cannot be empty' };
@@ -73,13 +76,22 @@ export async function parseIntent(
       systemPrompt = INTENT_PARSER_SYSTEM_PROMPT;
     }
 
-    // Determine what to budget against (we do this early so we can truncate knowledge).
-    // Since intentParser allows override via modelConfig, we look at the provided model or the fallback.
-    let cfg: AdapterConfig;
-    if (modelConfig) {
-      cfg = modelConfig;
+    // Resolve model and provider
+    let modelId: string;
+    let providerId: ProviderName;
+    let wsId: string;
+    let uid: string | undefined;
+
+    if (provider && model) {
+      modelId = model;
+      providerId = provider;
+      wsId = workspaceId || 'default';
+      uid = userId;
     } else {
-      cfg = resolveDefaultAdapter('INTENT');
+      const defaultConfig = resolveDefaultAdapter('INTENT');
+      modelId = defaultConfig.model;
+      providerId = (defaultConfig.provider || 'openai') as ProviderName;
+      wsId = 'default';
     }
 
     // Ensure the knowledge string doesn't overflow the context limits of small/local models
@@ -89,7 +101,7 @@ export async function parseIntent(
     const baseSystemTokens = 500 + estimateTokens(userInput);
     // Rough mapping of model limits. Default to 'large' (3500 system tokens) for cloud models,
     // and 'medium' (1800) for local/hf models without explicit token capacities.
-    const tier = /hf-|local|llama|mistral|gemma/i.test(cfg.model) ? 'medium' : 'large';
+    const tier = /hf-|local|llama|mistral|gemma/i.test(modelId) ? 'medium' : 'large';
     
     const knowledge = fitContextToTierBudget(rawKnowledge, baseSystemTokens, tier);
 
@@ -105,13 +117,13 @@ export async function parseIntent(
       userPrompt += `\n\n=== ITERATIVE CONTEXT ===\nThis request is a follow-up to project ID: ${contextId}. Determine if this is a refinement/modification and set "isRefinement" accordingly in your JSON response.`;
     }
 
-    // adapter logic (cfg is already resolved)
-    const adapter = await getWorkspaceAdapter(cfg);
+    // adapter logic (credentials resolved server-side)
+    const adapter = await getWorkspaceAdapter(providerId, modelId, wsId, uid);
 
     // Look up model capacity — governs whether JSON mode is safe to enable.
     // Models like deepseek-coder report supportsJsonMode: false; we skip it for them.
     // Additionally, Ollama requires the word "json" in the system prompt when JSON mode is enabled.
-    const modelProfile = getModelProfile(cfg.model);
+    const modelProfile = getModelProfile(modelId);
     const useJsonMode = modelProfile?.supportsJsonMode !== false;
 
     // Ensure the system prompt contains the word "json" — required by Ollama when using JSON mode.
@@ -121,7 +133,7 @@ export async function parseIntent(
       : systemPrompt;
 
     const adapterResult = await adapter.generate({
-      model: cfg.model,
+      model: modelId,
       messages: [
         { role: 'system', content: effectiveSystemPrompt },
         { role: 'user', content: userPrompt },

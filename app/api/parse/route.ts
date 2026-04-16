@@ -3,6 +3,8 @@ import { parseIntent } from '@/lib/ai/intentParser';
 import type { GenerationMode } from '@/lib/ai/componentGenerator';
 import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 import { logger } from '@/lib/logger';
+import { auth } from '@/lib/auth';
+import type { ProviderName } from '@/lib/ai/types';
 
 export const maxDuration = 60;
 
@@ -29,19 +31,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { prompt, mode, depthUi, contextId, model, provider, apiKey, baseUrl } = body as {
+    // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+    const { prompt, mode, depthUi, contextId, model, provider } = body as {
       prompt: string;
       mode: GenerationMode;
       depthUi?: boolean;
       contextId?: string;
-      // User-configured model — forwarded so we honour their Ollama/cloud selection
-      // rather than allowing the env-resolved adapter to silently pick up a
-      // quota-exhausted OPENAI_API_KEY (or any other unintended key).
       model?: string;
       provider?: string;
-      apiKey?: string;
-      baseUrl?: string;
     };
+
+    // Get workspace context from session and headers
+    const session = await auth();
+    const userId = session?.user?.id;
+    const workspaceId = request.headers.get('x-workspace-id') || 'default';
 
     // ─── Input Validation ──────────────────────────────────────────────────────
     // When contextId is set this is a refinement — e.g. "make it blue", "add a shadow".
@@ -76,21 +79,24 @@ export async function POST(request: NextRequest) {
 
     // Build caller model config only if the user actually supplied a model.
     // Passing undefined lets parseIntent fall through to resolveDefaultAdapter.
-    const modelConfig = model
-      ? {
-          model,
-          provider,
-          apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined,
-          baseUrl,
-        }
-      : undefined;
+    const providerId = provider ? (provider as ProviderName) : undefined;
+    const modelId = model || undefined;
 
-    reqLogger.debug('Parsing intent', { mode: generationMode, model: model ?? 'env-resolved' });
+    reqLogger.debug('Parsing intent', { 
+      mode: generationMode, 
+      model: modelId ?? 'env-resolved',
+      provider: providerId ?? 'env-resolved',
+      workspaceId 
+    });
+    
     const result = await parseIntent(
       sanitizedPrompt,
       generationMode,
       typeof contextId === 'string' ? contextId : undefined,
-      modelConfig,
+      providerId,
+      modelId,
+      workspaceId,
+      userId,
     );
 
     if (!result.success) {

@@ -1,5 +1,5 @@
 import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig } from './adapters/index';
+import type { ProviderName } from './types';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { IntentClassificationSchema, type IntentClassification } from '../validation/schemas';
 
@@ -60,17 +60,13 @@ export interface ClassificationResult {
   error?: string;
 }
 
-export interface AICallConfig {
-  model: string;
-  provider?: string;
-  apiKey?: string;
-  baseUrl?: string;
-}
-
 export async function classifyIntent(
   userInput: string,
   hasActiveProject: boolean = false,
-  modelConfig?: string | AICallConfig,
+  provider?: ProviderName,
+  model?: string,
+  workspaceId?: string,
+  userId?: string,
 ): Promise<ClassificationResult> {
   if (!userInput || userInput.trim().length < 2) {
     return { success: false, error: 'Input too short to classify' };
@@ -83,24 +79,27 @@ export async function classifyIntent(
     : '';
 
   try {
-    // Build adapter config from whatever the caller provides
-    let adapterConfig: AdapterConfig;
-    if (!modelConfig) {
-      // No model configured by user.
-      // delegate to resolveDefaultAdapter which checks generic DEFAULT_MODEL and fallback env keys
-      adapterConfig = resolveDefaultAdapter('CLASSIFIER');
-    } else if (typeof modelConfig === 'string') {
-      adapterConfig = { model: modelConfig };
+    // Resolve model and provider
+    let modelId: string;
+    let providerId: ProviderName;
+    let wsId: string;
+    let uid: string | undefined;
+
+    if (provider && model) {
+      // Use provided values
+      modelId = model;
+      providerId = provider;
+      wsId = workspaceId || 'default';
+      uid = userId;
     } else {
-      adapterConfig = {
-        model: modelConfig.model,
-        provider: modelConfig.provider,
-        apiKey: modelConfig.apiKey,
-        baseUrl: modelConfig.baseUrl,
-      };
+      // Fall back to default adapter resolution
+      const defaultConfig = resolveDefaultAdapter('CLASSIFIER');
+      modelId = defaultConfig.model;
+      providerId = (defaultConfig.provider || 'openai') as ProviderName;
+      wsId = 'default';
     }
 
-    const adapter = await getWorkspaceAdapter(adapterConfig);
+    const adapter = await getWorkspaceAdapter(providerId, modelId, wsId, uid);
     
     // Retry loop for 429 Rate Limit errors
     let adapterResult;
@@ -111,7 +110,7 @@ export async function classifyIntent(
     while (true) {
       try {
         adapterResult = await adapter.generate({
-          model: adapterConfig.model,
+          model: modelId,
           messages: [
             { role: 'system', content: CLASSIFIER_SYSTEM_PROMPT },
             { role: 'user', content: `Classify this input:\n\n"${sanitized}"${contextHint}` },

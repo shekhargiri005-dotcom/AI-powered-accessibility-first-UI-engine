@@ -11,6 +11,8 @@
  *   gemini-1.5-pro, gemini-1.5-flash, gemini-1.5-flash-8b
  */
 
+import 'server-only';
+
 import OpenAI from 'openai';
 import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
 import {

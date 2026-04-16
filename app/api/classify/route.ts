@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { classifyIntent } from '@/lib/ai/intentClassifier';
 import { getFastModelForProvider } from '@/lib/ai/modelRegistry';
 import { logger } from '@/lib/logger';
+import { auth } from '@/lib/auth';
+import type { ProviderName } from '@/lib/ai/types';
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/classify');
@@ -18,33 +20,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing field: prompt' }, { status: 400 });
     }
 
-    const { prompt, hasActiveProject, model, provider, apiKey, baseUrl } = body as {
+    // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+    const { prompt, hasActiveProject, model, provider } = body as {
       prompt: string;
       hasActiveProject?: boolean;
       model?: string;
       provider?: string;
-      apiKey?: string;
-      baseUrl?: string;
     };
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return NextResponse.json({ success: false, error: 'prompt must be a non-empty string' }, { status: 400 });
     }
 
+    // Get workspace context from session and headers
+    const session = await auth();
+    const userId = session?.user?.id;
+    const workspaceId = request.headers.get('x-workspace-id') || 'default';
+
     // Dynamically fetch the lightest model available for the selected provider to save CPU/tokens
-    const fastModel = getFastModelForProvider(provider) || model || 'gpt-4o-mini';
+    const providerId = (provider || 'openai') as ProviderName;
+    const fastModel = getFastModelForProvider(providerId) || model || 'gpt-4o-mini';
 
-    const modelConfig = (provider || apiKey || baseUrl || model)
-      ? { 
-          model: fastModel, 
-          provider: provider || (model?.includes('gemini') ? 'google' : undefined), 
-          apiKey: apiKey && apiKey !== '••••' && apiKey !== 'ENV_FALLBACK' ? apiKey : undefined, 
-          baseUrl 
-        }
-      : undefined;
-
-    reqLogger.debug('Classifying prompt intent', { hasActiveProject, forcedModel: fastModel, provider });
-    const result = await classifyIntent(prompt, hasActiveProject ?? false, modelConfig);
+    reqLogger.debug('Classifying prompt intent', { 
+      hasActiveProject, 
+      forcedModel: fastModel, 
+      provider: providerId,
+      workspaceId 
+    });
+    
+    const result = await classifyIntent(
+      prompt, 
+      hasActiveProject ?? false, 
+      providerId,
+      fastModel,
+      workspaceId,
+      userId
+    );
 
     if (!result.success) {
       reqLogger.warn('Classification failed', { error: result.error });

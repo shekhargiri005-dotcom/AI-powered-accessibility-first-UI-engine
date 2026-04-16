@@ -14,7 +14,6 @@
  */
 
 import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig } from './adapters/index';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { executeToolCalls } from './tools';
 import { DEFAULT_AGENT_TOOLS } from './agentTools';
@@ -70,8 +69,6 @@ export async function generateComponent(
   workspaceId?: string,
   userId?: string,
   provider?: string,
-  apiKey?: string,
-  baseUrl?: string,
   thinkingPlan?: unknown,
 ): Promise<GenerationResult> {
   try {
@@ -86,20 +83,12 @@ export async function generateComponent(
     const intelligenceContext = `${blueprintContext}\n\n${designContext}`;
 
     // ─── Step 1: Resolve model + credentials ─────────────────────────────────
-    let cfg: AdapterConfig;
-    if (requestedModel) {
-      cfg = {
-        model:   requestedModel,
-        provider,
-        apiKey:  apiKey && apiKey !== '••••' ? apiKey : undefined,
-        baseUrl,
-      };
-    } else {
-      cfg = resolveDefaultAdapter('GENERATION');
-    }
+    // Credentials are now resolved server-side via workspaceKeyService
+    // Only provider and model are passed from client
+    const effectiveProvider = provider || resolveDefaultAdapter('GENERATION').provider;
 
     // ─── Step 2: Get model profile + pipeline config ──────────────────────────
-    const effectiveModel = cfg.model;
+    const effectiveModel = requestedModel || resolveDefaultAdapter('GENERATION').model;
     // Track whether the profile is EXPLICIT (registered) vs fallback.
     // Tools must never be passed to unregistered/unknown models — they may silently 400.
     const explicitProfile = getModelProfile(effectiveModel);
@@ -245,7 +234,12 @@ export async function generateComponent(
     }
 
     // ─── Step 5: Get adapter ─────────────────────────────────────────────────
-    const adapter = await getWorkspaceAdapter(cfg, workspaceId, userId);
+    const adapter = await getWorkspaceAdapter(
+      effectiveProvider as import('./types').ProviderName,
+      effectiveModel,
+      workspaceId ?? 'default',
+      userId,
+    );
 
     // ─── Step 6: Agentic Tool Loop ───────────────────────────────────────────
     // Respects maxToolRounds from pipeline config (0 for tiny/small, up to 3 for cloud).

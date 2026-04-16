@@ -150,15 +150,17 @@ describe('Adapter Index Factory', () => {
   });
 
   describe('getWorkspaceAdapter', () => {
-    it('uses explicit config directly', async () => {
-      const adapter = await getWorkspaceAdapter({ model: 'gpt-4', provider: 'openai', apiKey: 'explicit-key' });
+    it('resolves adapter with workspace credentials', async () => {
+      process.env.OPENAI_API_KEY = 'env-key';
+      const adapter = await getWorkspaceAdapter('openai', 'gpt-4', 'test-workspace', 'test-user');
       expect(adapter.provider).toBe('openai');
     });
 
-    it('handles masks as no key (falls back to env)', async () => {
-      process.env.OPENAI_API_KEY = 'env-override';
-      const adapter = await getWorkspaceAdapter({ model: 'gpt-4', provider: 'openai', apiKey: '••••' });
-      expect(adapter.provider).toBe('openai');
+    it('returns unconfigured adapter when no credentials available', async () => {
+      delete process.env.OPENAI_API_KEY;
+      const adapter = await getWorkspaceAdapter('openai', 'gpt-4', 'test-workspace', 'test-user');
+      // Returns unconfigured adapter that shows setup UI
+      expect(adapter.provider).toBe('unconfigured');
     });
   });
 });

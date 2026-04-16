@@ -11,7 +11,10 @@
  * Supported models: claude-3-5-sonnet-*, claude-3-opus-*, claude-3-haiku-*, etc.
  */
 
-import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk, Message } from './base';
+import 'server-only';
+
+import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
+import type { Message } from '../types';
 
 // ─── Anthropic API shape ─────────────────────────────────────────────────────
 

@@ -219,10 +219,10 @@ export interface FinalRoundCriticOptions {
   model: string;
   /** Provider identifier (openai, anthropic, google, ollama, etc.) */
   provider?: string;
-  /** API key for the selected model */
-  apiKey?: string;
-  /** Custom base URL for OpenAI-compat providers */
-  baseUrl?: string;
+  /** Workspace ID for credential resolution */
+  workspaceId?: string;
+  /** User ID for credential resolution */
+  userId?: string;
 }
 
 export interface FinalRoundCriticResponse {
@@ -238,7 +238,7 @@ export interface FinalRoundCriticResponse {
 export async function runFinalRoundCritic(
   opts: FinalRoundCriticOptions,
 ): Promise<FinalRoundCriticResponse> {
-  const { imageDataUrl, code, model, provider, apiKey, baseUrl } = opts;
+  const { imageDataUrl, code, model, provider, workspaceId, userId } = opts;
 
   const visionProvider = detectVisionProvider(model, provider);
 
@@ -252,13 +252,13 @@ export async function runFinalRoundCritic(
 
     switch (visionProvider) {
       case 'openai':
-        rawJson = await callOpenAIVision({ model, apiKey, baseUrl, provider, imageDataUrl, codeContext });
+        rawJson = await callOpenAIVision({ model, provider, imageDataUrl, codeContext, workspaceId, userId });
         break;
       case 'google':
-        rawJson = await callGoogleVision({ model, apiKey, imageDataUrl, codeContext });
+        rawJson = await callGoogleVision({ model, imageDataUrl, codeContext, workspaceId, userId });
         break;
       case 'anthropic':
-        rawJson = await callAnthropicVision({ model, apiKey, imageDataUrl, codeContext });
+        rawJson = await callAnthropicVision({ model, imageDataUrl, codeContext, workspaceId, userId });
         break;
       case 'text-only':
       default:
@@ -306,17 +306,20 @@ export async function runFinalRoundCritic(
 
 interface OpenAIVisionOpts {
   model: string;
-  apiKey?: string;
-  baseUrl?: string;
   provider?: string;
   imageDataUrl: string;
   codeContext: string;
+  workspaceId?: string;
+  userId?: string;
 }
 
 async function callOpenAIVision(opts: OpenAIVisionOpts): Promise<string> {
-  const { model, apiKey, baseUrl, provider, imageDataUrl, codeContext } = opts;
+  const { model, provider, imageDataUrl, codeContext, workspaceId, userId } = opts;
 
-  // Resolve base URL: explicit baseUrl > known provider URL > OpenAI default
+  // Import workspaceKeyService for credential resolution
+  const { getWorkspaceApiKey } = await import('@/lib/security/workspaceKeyService');
+
+  // Resolve base URL: known provider URL > OpenAI default
   const COMPAT_URLS: Record<string, string> = {
     groq:        'https://api.groq.com/openai/v1',
     openrouter:  'https://openrouter.ai/api/v1',
@@ -325,17 +328,22 @@ async function callOpenAIVision(opts: OpenAIVisionOpts): Promise<string> {
     huggingface: 'https://router.huggingface.co/hf-inference/v1',
   };
   const resolvedBase =
-    baseUrl ??
     (provider && COMPAT_URLS[provider]) ??
     'https://api.openai.com/v1';
 
-  // Key resolution: explicit > env fallback
-  const resolvedKey =
-    apiKey ??
-    (provider === 'groq'       ? process.env.GROQ_API_KEY          : undefined) ??
-    (provider === 'openrouter' ? process.env.OPENROUTER_API_KEY     : undefined) ??
-    (provider === 'together'   ? process.env.TOGETHER_API_KEY       : undefined) ??
-    process.env.OPENAI_API_KEY;
+  // Key resolution: workspace DB first, env fallback
+  let resolvedKey: string | null = null;
+  if (workspaceId) {
+    resolvedKey = await getWorkspaceApiKey(provider || 'openai', workspaceId, userId);
+  }
+  if (!resolvedKey) {
+    resolvedKey =
+      (provider === 'groq'       ? process.env.GROQ_API_KEY          : undefined) ??
+      (provider === 'openrouter' ? process.env.OPENROUTER_API_KEY     : undefined) ??
+      (provider === 'together'   ? process.env.TOGETHER_API_KEY       : undefined) ??
+      process.env.OPENAI_API_KEY ??
+      null;
+  }
 
   if (!resolvedKey) {
     throw new Error(`API key required for ${provider ?? 'openai'} Final Round vision call.`);
@@ -374,14 +382,26 @@ async function callOpenAIVision(opts: OpenAIVisionOpts): Promise<string> {
 
 interface GoogleVisionOpts {
   model: string;
-  apiKey?: string;
   imageDataUrl: string;
   codeContext: string;
+  workspaceId?: string;
+  userId?: string;
 }
 
 async function callGoogleVision(opts: GoogleVisionOpts): Promise<string> {
-  const { model, apiKey, imageDataUrl, codeContext } = opts;
-  const resolvedKey = apiKey ?? process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY;
+  const { model, imageDataUrl, codeContext, workspaceId, userId } = opts;
+
+  // Import workspaceKeyService for credential resolution
+  const { getWorkspaceApiKey } = await import('@/lib/security/workspaceKeyService');
+
+  // Key resolution: workspace DB first, env fallback
+  let resolvedKey: string | null = null;
+  if (workspaceId) {
+    resolvedKey = await getWorkspaceApiKey('google', workspaceId, userId);
+  }
+  if (!resolvedKey) {
+    resolvedKey = process.env.GOOGLE_API_KEY ?? process.env.GEMINI_API_KEY ?? null;
+  }
   if (!resolvedKey) throw new Error('Google API key required for Final Round vision call.');
 
   const userPart = buildGoogleUserMessage(imageDataUrl, codeContext);
@@ -416,14 +436,26 @@ async function callGoogleVision(opts: GoogleVisionOpts): Promise<string> {
 
 interface AnthropicVisionOpts {
   model: string;
-  apiKey?: string;
   imageDataUrl: string;
   codeContext: string;
+  workspaceId?: string;
+  userId?: string;
 }
 
 async function callAnthropicVision(opts: AnthropicVisionOpts): Promise<string> {
-  const { model, apiKey, imageDataUrl, codeContext } = opts;
-  const resolvedKey = apiKey ?? process.env.ANTHROPIC_API_KEY;
+  const { model, imageDataUrl, codeContext, workspaceId, userId } = opts;
+
+  // Import workspaceKeyService for credential resolution
+  const { getWorkspaceApiKey } = await import('@/lib/security/workspaceKeyService');
+
+  // Key resolution: workspace DB first, env fallback
+  let resolvedKey: string | null = null;
+  if (workspaceId) {
+    resolvedKey = await getWorkspaceApiKey('anthropic', workspaceId, userId);
+  }
+  if (!resolvedKey) {
+    resolvedKey = process.env.ANTHROPIC_API_KEY ?? null;
+  }
   if (!resolvedKey) throw new Error('Anthropic API key required for Final Round vision call.');
 
   const userMessage = buildAnthropicUserMessage(imageDataUrl, codeContext);

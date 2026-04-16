@@ -18,6 +18,7 @@ import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
 import { runVisionRuntimeReview } from '@/lib/ai/visionReviewer';
 import { upsertComponentEmbedding } from '@/lib/ai/vectorStore';
+import type { ProviderName } from '@/lib/ai/types';
 
 export const maxDuration = 300;
 
@@ -44,14 +45,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag, provider, apiKey, baseUrl, thinkingPlan } = body as {
+    // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+    const { mode, model, maxTokens, isMultiSlide, prompt, stream: streamFlag, provider, thinkingPlan } = body as {
       mode?: string; model?: string; maxTokens?: number; provider?: string;
-      isMultiSlide?: boolean; prompt?: string; stream?: boolean; apiKey?: string; baseUrl?: string;
+      isMultiSlide?: boolean; prompt?: string; stream?: boolean;
       thinkingPlan?: unknown;
     };
-
-    // Sanitise masked key — page.tsx stores '••••' when loaded from localStorage
-    const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
 
     // ── SSE streaming path ───────────────────────────────────────────────────
     if (streamFlag) {
@@ -63,10 +62,8 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'model is required for streaming' }, { status: 400 });
       }
 
-      const adapter = await getWorkspaceAdapter(
-        { model, provider, apiKey: effectiveApiKey, baseUrl },
-        workspaceId, userId,
-      );
+      const providerId = (provider || 'openai') as ProviderName;
+      const adapter = await getWorkspaceAdapter(providerId, model, workspaceId, userId);
 
       const systemPrompt = 'You are an expert React/Tailwind UI engineer. Generate a single, complete, accessible React component. Return only raw TSX code, no markdown fences.';
       const userPrompt   = prompt ?? 'Generate a simple hello world UI component.';
@@ -137,17 +134,11 @@ export async function POST(request: NextRequest) {
     // Detect local/Ollama models — skip expensive review/repair LLM calls for them.
     // Also skip for fast-compat providers (Groq/Together) which route lightweight models
     // through the OpenAI-compat adapter but cannot run a second vision-review call cost-effectively.
-    const isGroqOrCompat = (
-      baseUrl?.includes('groq.com') ||
-      baseUrl?.includes('together.xyz') ||
-      provider === 'groq'
-    );
+    const isGroqOrCompat = provider === 'groq';
     const isLocalModel = (
       provider === 'ollama' ||
       provider === 'lmstudio' ||
       isGroqOrCompat ||
-      baseUrl?.includes('localhost') ||
-      baseUrl?.includes('127.0.0.1') ||
       // Final fallback: no cloud keys configured anywhere — assume local environment
       (
         !provider &&
@@ -200,8 +191,6 @@ export async function POST(request: NextRequest) {
       workspaceId,
       userId,
       provider,
-      effectiveApiKey,
-      baseUrl,
       thinkingPlan,
     );
     if (!generationResult.success || !generationResult.code) {
@@ -230,7 +219,7 @@ export async function POST(request: NextRequest) {
       const repaired = await repairGeneratedCode(
         finalSourceCode,
         `Fix deterministic validation errors: ${reason}`,
-        provider ? { provider, apiKey: effectiveApiKey, baseUrl } : undefined,
+        provider ? { provider, model, workspaceId, userId } : undefined,
       );
       if (repaired && repaired.length > 100) {
         finalSourceCode = repaired;
@@ -245,7 +234,7 @@ export async function POST(request: NextRequest) {
     // adapterOverride ensures the engine uses the SAME provider the user selected in the UI
     // instead of re-resolving independently from env vars (which may point to an over-quota key).
     const adapterOverride: ReviewerAdapterOverride | undefined = provider
-      ? { provider, apiKey: effectiveApiKey, baseUrl, model }
+      ? { provider, model, workspaceId, userId }
       : undefined;
 
     let critiqueData: unknown;

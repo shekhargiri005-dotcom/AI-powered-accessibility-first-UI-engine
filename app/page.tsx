@@ -60,6 +60,7 @@ export default function HomePage() {
   const [isDirectRefining, setIsDirectRefining] = useState(false);
 
   // Called when the user saves AI Engine Config
+  // SECURITY: The config passed here has apiKey='••••' (masked) - real key is stored server-side
   const handleEngineConfigSaved = useCallback((config: AIEngineConfig) => {
     setAiConfig(config);
     setIsFullAppMode(config.fullAppMode);
@@ -75,14 +76,12 @@ export default function HomePage() {
   }, []);
 
   // Helper: build the AI payload fields from the active config
+  // SECURITY: Only provider and model are sent to server - credentials are resolved server-side
   const aiPayload = useCallback(() => {
     if (!aiConfig) return {};
     return {
       model:    aiConfig.model,
       provider: aiConfig.provider,
-      // Only send the real key (not the masked "••••" stored version)
-      apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
-      baseUrl:  aiConfig.baseUrl,
     };
   }, [aiConfig]);
 
@@ -513,8 +512,6 @@ export default function HomePage() {
             aiConfig={aiConfig ? {
               model:    aiConfig.model,
               provider: aiConfig.provider,
-              apiKey:   aiConfig.apiKey !== '••••' && aiConfig.apiKey !== 'local' ? aiConfig.apiKey : undefined,
-              baseUrl:  aiConfig.baseUrl,
             } : null}
           />
         </div>

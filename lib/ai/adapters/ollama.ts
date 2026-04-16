@@ -8,6 +8,8 @@
  * Models that don't support tools will ignore the definitions gracefully.
  */
 
+import 'server-only';
+
 import OpenAI from 'openai';
 import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
 import {

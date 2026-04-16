@@ -10,6 +10,8 @@
  * Sending unsupported params causes 400 (no body) — the fix is below.
  */
 
+import 'server-only';
+
 import OpenAI from 'openai';
 import type { AIAdapter, GenerateOptions, GenerateResult, StreamChunk } from './base';
 import {

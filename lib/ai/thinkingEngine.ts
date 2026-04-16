@@ -1,6 +1,5 @@
 import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig } from './adapters/index';
-import type { AICallConfig } from './intentClassifier';
+import type { ProviderName } from './types';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { getModelProfile } from './modelRegistry';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
@@ -169,7 +168,10 @@ export async function generateThinkingPlan(
   prompt: string,
   intentType: IntentType,
   projectContext?: { componentName?: string; files?: string[] },
-  modelConfig?: string | AICallConfig,
+  provider?: ProviderName,
+  model?: string,
+  workspaceId?: string,
+  userId?: string,
 ): Promise<ThinkingResult> {
   const sanitized = prompt.substring(0, 10000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
 
@@ -187,35 +189,38 @@ export async function generateThinkingPlan(
   const userMessage = `Intent Type: ${intentType}\n\nUser Input:\n"${sanitized}"${contextBlock}${blueprintHint}`;
 
   try {
-    // Build adapter config from caller-provided model config
-    let adapterConfig: AdapterConfig;
-    if (!modelConfig) {
+    // Resolve model and provider
+    let modelId: string;
+    let providerId: ProviderName;
+    let wsId: string;
+    let uid: string | undefined;
+
+    if (provider && model) {
+      modelId = model;
+      providerId = provider;
+      wsId = workspaceId || 'default';
+      uid = userId;
+    } else {
       const envModel = process.env.THINKING_MODEL;
       if (!envModel) {
         // No model configured — return a deterministic fallback immediately.
         // The thinking panel is non-blocking; the user can still proceed.
         return { success: true, plan: buildFallbackPlan(sanitized, intentType) };
       }
-      adapterConfig = resolveDefaultAdapter('THINKING');
-    } else if (typeof modelConfig === 'string') {
-      adapterConfig = { model: modelConfig };
-    } else {
-      adapterConfig = {
-        model: modelConfig.model,
-        provider: modelConfig.provider,
-        apiKey: modelConfig.apiKey,
-        baseUrl: modelConfig.baseUrl,
-      };
+      const defaultConfig = resolveDefaultAdapter('THINKING');
+      modelId = defaultConfig.model;
+      providerId = (defaultConfig.provider || 'openai') as ProviderName;
+      wsId = 'default';
     }
 
-    const adapter = await getWorkspaceAdapter(adapterConfig);
+    const adapter = await getWorkspaceAdapter(providerId, modelId, wsId, uid);
 
     // Gate JSON mode on model capability (same as intentParser)
-    const modelProfile = getModelProfile(adapterConfig.model);
+    const modelProfile = getModelProfile(modelId);
     const useJsonMode = modelProfile?.supportsJsonMode !== false;
 
     const result2 = await adapter.generate({
-      model: adapterConfig.model,
+      model: modelId,
       messages: [
         { role: 'system', content: THINKING_SYSTEM_PROMPT },
         { role: 'user', content: userMessage },
@@ -262,7 +267,7 @@ export async function generateThinkingPlan(
       if (parsed === undefined) {
         // All stages failed — log raw output for diagnosis
         console.warn(
-          `[ThinkingEngine] All JSON extraction stages failed for ${adapterConfig.model}. ` +
+          `[ThinkingEngine] All JSON extraction stages failed for ${modelId}. ` +
           `Raw output (first 500 chars): ${raw.substring(0, 500)}`
         );
         return { success: false, error: 'Thinking engine returned malformed JSON' };

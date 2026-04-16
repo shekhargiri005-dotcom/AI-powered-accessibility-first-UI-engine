@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
+import { getWorkspaceAdapter, ConfigurationError } from '@/lib/ai/adapters/index';
 import { resolveDefaultAdapter } from '@/lib/ai/resolveDefaultAdapter';
 import { logger } from '@/lib/logger';
+import { auth } from '@/lib/auth';
+import type { ProviderName } from '@/lib/ai/types';
 
 export const maxDuration = 30;
 
@@ -30,27 +32,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Request body required' }, { status: 400 });
     }
 
-    const { componentName, codeSnippet, intentDescription, model, provider, apiKey, baseUrl } = body as {
+    // SECURITY: Only accept provider and model from client - NEVER apiKey or baseUrl
+    const { componentName, codeSnippet, intentDescription, model, provider } = body as {
       componentName?: string;
       codeSnippet?: string;
       intentDescription?: string;
       model?: string;
       provider?: string;
-      apiKey?: string;
-      baseUrl?: string;
     };
 
     if (!codeSnippet || typeof codeSnippet !== 'string' || codeSnippet.trim().length < 50) {
       return NextResponse.json({ success: false, error: 'codeSnippet required (min 50 chars)' }, { status: 400 });
     }
 
-    // Resolve adapter — honour user's UI selection, fall back to env-resolved provider
-    const effectiveApiKey = apiKey && apiKey !== '••••' ? apiKey : undefined;
-    const cfg = model
-      ? { model, provider, apiKey: effectiveApiKey, baseUrl }
-      : resolveDefaultAdapter('THINKING'); // lightweight model is sufficient
+    // Get workspace context from session and headers
+    const session = await auth();
+    const userId = session?.user?.id;
+    const workspaceId = request.headers.get('x-workspace-id') || 'default';
 
-    const adapter = await getWorkspaceAdapter(cfg);
+    // Resolve adapter using server-side credential resolution
+    const providerId = (provider || 'openai') as ProviderName;
+    const modelId = model || resolveDefaultAdapter('THINKING').model;
+
+    const adapter = await getWorkspaceAdapter(providerId, modelId, workspaceId, userId);
 
     const userPrompt = `Component: "${componentName ?? 'Unknown'}"
 ${intentDescription ? `Original Goal: "${intentDescription}"\n` : ''}
@@ -59,10 +63,10 @@ ${codeSnippet.slice(0, 2000)}
 
 Suggest exactly 3 specific, targeted UI improvements. Return ONLY a JSON array of 3 strings.`;
 
-    reqLogger.info('Generating suggestions', { componentName, model: cfg.model });
+    reqLogger.info('Generating suggestions', { componentName, model: modelId, provider: providerId });
 
     const result = await adapter.generate({
-      model: cfg.model,
+      model: modelId,
       messages: [
         { role: 'system', content: SUGGESTIONS_SYSTEM_PROMPT },
         { role: 'user', content: userPrompt },
@@ -94,6 +98,16 @@ Suggest exactly 3 specific, targeted UI improvements. Return ONLY a JSON array o
     return NextResponse.json({ success: true, suggestions });
   } catch (error) {
     reqLogger.error('Suggestions generation failed', error);
+    
+    // Handle configuration errors gracefully
+    if (error instanceof ConfigurationError) {
+      return NextResponse.json({ 
+        success: true, 
+        suggestions: [],
+        warning: 'AI provider not configured'
+      });
+    }
+    
     // Always return 200 — suggestions are non-blocking
     return NextResponse.json({ success: true, suggestions: [] });
   }

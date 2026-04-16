@@ -5,11 +5,14 @@
  * Now uses the unified adapter layer — works with any provider the user
  * has configured (OpenAI, Anthropic, Groq, Ollama, etc.).
  * No hardcoded model names. No silent fallbacks.
+ * 
+ * SECURITY: Credentials are resolved server-side via workspaceKeyService.
+ * Never accepts apiKey or baseUrl from client requests.
  */
 
-import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig }  from './adapters/index';
-import { type UIIntent }       from '../validation/schemas';
+import { getWorkspaceAdapter, type ConfigurationError } from './adapters/index';
+import type { ProviderName } from './types';
+import { type UIIntent } from '../validation/schemas';
 import { buildSemanticContext } from './semanticKnowledgeBase';
 import { getPipelineConfigForModel } from './tieredPipeline';
 import { fitContextToTierBudget, estimateTokens } from './promptBudget';
@@ -19,34 +22,17 @@ export interface FileManifestItem {
   description: string;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function buildAdapterConfig(
-  model: string,
-  provider?: string,
-  apiKey?: string,
-  baseUrl?: string,
-): AdapterConfig {
-  return {
-    model,
-    provider,
-    apiKey: apiKey && apiKey !== '••••' ? apiKey : undefined,
-    baseUrl,
-  };
-}
-
 // ─── Manifest Generator ───────────────────────────────────────────────────────
 
 export async function generateAppManifest(
   intent: UIIntent,
   model: string,
   isMultiSlide: boolean = false,
-  provider?: string,
-  apiKey?: string,
-  baseUrl?: string,
+  provider: ProviderName = 'openai',
+  workspaceId: string = 'default',
+  userId?: string,
 ): Promise<FileManifestItem[]> {
-  const cfg = buildAdapterConfig(model, provider, apiKey, baseUrl);
-  const adapter = await getWorkspaceAdapter(cfg);
+  const adapter = await getWorkspaceAdapter(provider, model, workspaceId, userId);
 
   let prompt =
     'You are an elite React UI Architect. The user wants to build a massive application.\n' +
@@ -61,7 +47,7 @@ export async function generateAppManifest(
   if ((intent as UIIntent & { depthUi?: boolean }).depthUi) {
     prompt +=
       '\n\nDEPTH UI STYLE MODE:\n' +
-      '- The user wants a premium “Depth UI” aesthetic (parallax layers, floating cards, subtle glow, glassmorphism).\n' +
+      '- The user wants a premium "Depth UI" aesthetic (parallax layers, floating cards, subtle glow, glassmorphism).\n' +
       '- Plan file responsibilities to support layered visuals and motion (hero layers, background ornaments, reusable motion utilities inside components).\n' +
       '- Ensure accessibility: respect prefers-reduced-motion; animations must degrade gracefully.\n';
   }
@@ -121,14 +107,13 @@ export async function generateFileChunk(
   model: string,
   maxTokens: number,
   isMultiSlide: boolean = false,
-  provider?: string,
-  apiKey?: string,
-  baseUrl?: string,
+  provider: ProviderName = 'openai',
+  workspaceId: string = 'default',
+  userId?: string,
   /** Pre-computed RAG context (computed ONCE at manifest level — avoids N embedding queries) */
   sharedSemanticContext?: string,
 ): Promise<string> {
-  const cfg     = buildAdapterConfig(model, provider, apiKey, baseUrl);
-  const adapter = await getWorkspaceAdapter(cfg);
+  const adapter = await getWorkspaceAdapter(provider, model, workspaceId, userId);
   const fileDef = manifest.find((f) => f.filename === targetFile);
 
   let prompt =

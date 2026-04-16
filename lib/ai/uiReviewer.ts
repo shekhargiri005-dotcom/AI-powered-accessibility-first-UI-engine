@@ -1,5 +1,5 @@
 import { getWorkspaceAdapter } from './adapters/index';
-import type { AdapterConfig } from './adapters/index';
+import type { ProviderName } from './types';
 import { resolveDefaultAdapter } from './resolveDefaultAdapter';
 import { z } from 'zod';
 
@@ -7,16 +7,19 @@ import { z } from 'zod';
  * Optional override that allows callers to pass the user's UI-selected provider
  * instead of relying on env-var auto-detection (resolveDefaultAdapter).
  * This ensures the review/repair engines honour the active Generation Engine Setup.
+ * 
+ * SECURITY: Credentials are resolved server-side via workspaceKeyService.
+ * This interface only accepts provider and model identifiers.
  */
 export interface ReviewerAdapterOverride {
   /** Provider id (e.g. 'groq', 'anthropic', 'google') */
   provider?: string;
-  /** Raw API key for the provider */
-  apiKey?: string;
-  /** Custom base URL (OpenAI-compat providers) */
-  baseUrl?: string;
   /** The explicit model ID supplied by the user */
   model?: string;
+  /** Workspace ID for credential lookup */
+  workspaceId?: string;
+  /** User ID for authorization */
+  userId?: string;
 }
 
 const ReviewSchema = z.object({
@@ -59,29 +62,35 @@ export async function reviewGeneratedCode(
 ): Promise<UIReviewResult> {
   try {
     const purposeModel = process.env.REVIEW_MODEL ?? '';
-    let cfg: AdapterConfig;
+    let modelId: string;
+    let providerId: ProviderName;
+    let workspaceId: string;
+    let userId: string | undefined;
 
     if (purposeModel) {
       // Explicit purpose-specific env override always wins
-      cfg = { model: purposeModel };
+      modelId = purposeModel;
+      providerId = 'openai';
+      workspaceId = 'default';
     } else if (adapterOverride?.provider) {
       // Use the provider and model the user selected in the Generation Engine Setup UI
-      cfg = {
-        model:    adapterOverride.model || 'gpt-4o', // fallback if perfectly unconfigured
-        provider: adapterOverride.provider,
-        apiKey:   adapterOverride.apiKey,
-        baseUrl:  adapterOverride.baseUrl,
-      };
+      modelId = adapterOverride.model || 'gpt-4o';
+      providerId = adapterOverride.provider as ProviderName;
+      workspaceId = adapterOverride.workspaceId || 'default';
+      userId = adapterOverride.userId;
     } else {
-      cfg = resolveDefaultAdapter('REVIEW');
+      const defaultConfig = resolveDefaultAdapter('REVIEW');
+      modelId = defaultConfig.model;
+      providerId = (defaultConfig.provider || 'openai') as ProviderName;
+      workspaceId = 'default';
     }
 
-    const adapter = await getWorkspaceAdapter(cfg);
+    const adapter = await getWorkspaceAdapter(providerId, modelId, workspaceId, userId);
 
     const unindentedCode = code.replace(/^[ \t]+/gm, '');
 
     const adapterResult = await adapter.generate({
-      model: cfg.model,
+      model: modelId,
       messages: [
         { role: 'system', content: REVIEWER_SYSTEM_PROMPT },
         { role: 'user', content: `Original Intent Context:\n${intentContext}\n\nGenerated Code to Review:\n\`\`\`tsx\n${unindentedCode}\n\`\`\`` },
@@ -132,25 +141,31 @@ export async function repairGeneratedCode(
 ): Promise<string> {
   try {
     const purposeModel = process.env.REPAIR_MODEL ?? '';
-    let cfg: AdapterConfig;
+    let modelId: string;
+    let providerId: ProviderName;
+    let workspaceId: string;
+    let userId: string | undefined;
 
     if (purposeModel) {
-      cfg = { model: purposeModel };
+      modelId = purposeModel;
+      providerId = 'openai';
+      workspaceId = 'default';
     } else if (adapterOverride?.provider) {
-      cfg = {
-        model:    adapterOverride.model || 'gpt-4o',
-        provider: adapterOverride.provider,
-        apiKey:   adapterOverride.apiKey,
-        baseUrl:  adapterOverride.baseUrl,
-      };
+      modelId = adapterOverride.model || 'gpt-4o';
+      providerId = adapterOverride.provider as ProviderName;
+      workspaceId = adapterOverride.workspaceId || 'default';
+      userId = adapterOverride.userId;
     } else {
-      cfg = resolveDefaultAdapter('REPAIR');
+      const defaultConfig = resolveDefaultAdapter('REPAIR');
+      modelId = defaultConfig.model;
+      providerId = (defaultConfig.provider || 'openai') as ProviderName;
+      workspaceId = 'default';
     }
 
-    const adapter = await getWorkspaceAdapter(cfg);
+    const adapter = await getWorkspaceAdapter(providerId, modelId, workspaceId, userId);
 
     const adapterResult = await adapter.generate({
-      model: cfg.model,
+      model: modelId,
       messages: [
         { role: 'system', content: REPAIR_SYSTEM_PROMPT },
         { role: 'user', content: `REPAIR INSTRUCTIONS:\n${repairInstructions}\n\nBROKEN / SUBPAR CODE:\n\`\`\`tsx\n${brokenCode}\n\`\`\`` },
