@@ -150,7 +150,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
   const apiKey = cfg.apiKey;
 
   // 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
-  const namedProviders = ['openai', 'anthropic', 'google'];
+  const namedProviders = ['openai', 'anthropic', 'google', 'ollama'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
   const isCompat  = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
@@ -183,6 +183,12 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
       const key = apiKey || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
       if (!key) throw new ConfigurationError('google', 'Google API key required. Add it in the AI Engine Config panel.');
       adapter = new GoogleAdapter(key);
+      break;
+    }
+    case 'ollama': {
+      // Ollama uses a local OpenAI-compatible endpoint
+      const ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+      adapter = new OllamaAdapter(ollamaUrl);
       break;
     }
     case 'unconfigured':
@@ -245,6 +251,7 @@ export async function getWorkspaceAdapter(
     anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
+    ollama: process.env.OLLAMA_API_KEY,
   };
   
   const fallbackKey = providerEnvMap[providerId];
@@ -286,6 +293,7 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
 export { OpenAIAdapter }    from './openai';
 export { AnthropicAdapter } from './anthropic';
 export { GoogleAdapter }    from './google';
+export { OllamaAdapter }    from './ollama';
 export { UnconfiguredAdapter } from './unconfigured';
 
 export type { AIAdapter } from './base';
