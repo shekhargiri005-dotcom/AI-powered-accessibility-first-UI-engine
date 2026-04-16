@@ -73,6 +73,12 @@ export default function ModelSelectionGate({
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
+  const [rememberProvider, setRememberProvider] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ai_remember_provider') === 'true';
+    }
+    return false;
+  });
 
   // Fetch configured providers on mount
   useEffect(() => {
@@ -121,6 +127,9 @@ export default function ModelSelectionGate({
     setIsSaving(true);
     
     try {
+      // Save remember preference
+      localStorage.setItem('ai_remember_provider', rememberProvider.toString());
+      
       // Save the selection to server
       const res = await fetch('/api/engine-config', {
         method: 'POST',
@@ -374,6 +383,20 @@ export default function ModelSelectionGate({
                     <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
                     Server-side
                   </span>
+                </div>
+
+                {/* Remember Provider Toggle */}
+                <div className="flex items-center justify-between pt-3 border-t border-gray-800">
+                  <span className="text-gray-500 text-sm">Remember my choice</span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={rememberProvider}
+                      onChange={(e) => setRememberProvider(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-violet-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-violet-500"></div>
+                  </label>
                 </div>
               </div>
 

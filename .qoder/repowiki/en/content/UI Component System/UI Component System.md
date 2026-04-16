@@ -7,13 +7,12 @@
 - [components/A11yReport.tsx](file://components/A11yReport.tsx)
 - [components/GeneratedCode.tsx](file://components/GeneratedCode.tsx)
 - [components/PromptInput.tsx](file://components/PromptInput.tsx)
-- [components/ProjectWorkspace.tsx](file://components/ProjectWorkspace.tsx)
-- [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
+- [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/IDE/CentreWorkspace.tsx](file://components/IDE/CentreWorkspace.tsx)
-- [components/IDE/RightPanel.tsx](file://components/IDE/RightPanel.tsx)
-- [components/IDE/Sidebar.tsx](file://components/IDE/Sidebar.tsx)
+- [components/ide/CenterWorkspace.tsx](file://components/ide/CenterWorkspace.tsx)
+- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
+- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
@@ -27,17 +26,25 @@
 - [docs/ENV_SETUP.md](file://docs/ENV_SETUP.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated VersionTimeline component documentation to reflect responsive dimension improvements
+- Enhanced CenterWorkspace component documentation with intelligent scroll management details
+- Added new section on scroll management and user experience enhancements
+- Updated component usage patterns to reflect improved accessibility and responsiveness
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Enhanced User Experience Features](#enhanced-user-experience-features)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document describes the internal UI component system and design framework of an AI-powered, accessibility-first React application. It focuses on:
@@ -49,7 +56,7 @@ This document describes the internal UI component system and design framework of
 - The relationship between generated components and the internal ecosystem
 - Usage patterns and best practices for maintaining design consistency
 
-The system emphasizes accessibility, a cohesive visual language, and an integrated authoring experience that supports natural language-driven UI generation.
+The system emphasizes accessibility, a cohesive visual language, responsive design, and intelligent user experience features that adapt to user behavior patterns.
 
 ## Project Structure
 The repository is a Next.js application with a monorepo-style packages directory for reusable UI libraries and a components directory for application-specific UI building blocks. The UI ecosystem integrates:
@@ -71,13 +78,12 @@ subgraph "Components"
 PROMPT["components/PromptInput.tsx"]
 GENCODE["components/GeneratedCode.tsx"]
 A11Y["components/A11yReport.tsx"]
-WORKSPACE["components/ProjectWorkspace.tsx"]
 TIMELINE["components/VersionTimeline.tsx"]
 SANDBOX["components/SandpackPreview.tsx"]
 INTENT["components/IntentBadge.tsx"]
-IDE_CW["components/IDE/CentreWorkspace.tsx"]
-IDE_RP["components/IDE/RightPanel.tsx"]
-IDE_SB["components/IDE/Sidebar.tsx"]
+IDE_CW["components/ide/CenterWorkspace.tsx"]
+IDE_RP["components/ide/RightPanel.tsx"]
+IDE_SB["components/ide/Sidebar.tsx"]
 WS_PROV["components/workspace/WorkspaceProvider.tsx"]
 WS_SWITCH["components/workspace/WorkspaceSwitcher.tsx"]
 AUTH_SP["components/auth/SessionProvider.tsx"]
@@ -101,24 +107,21 @@ PK_UTILS["@ui/utils"]
 PK_A11Y["@ui/a11y"]
 end
 APP_LAYOUT --> PROMPT
-APP_PAGE --> WORKSPACE
-WORKSPACE --> GENCODE
-WORKSPACE --> A11Y
-WORKSPACE --> TIMELINE
-WORKSPACE --> SANDBOX
+APP_PAGE --> IDE_CW
+IDE_CW --> GENCODE
+IDE_CW --> A11Y
+IDE_CW --> TIMELINE
+IDE_CW --> SANDBOX
 PROMPT --> INTENT
-IDE_CW --> PROMPT
-IDE_RP --> GENCODE
-IDE_SB --> WORKSPACE
-WS_PROV --> WORKSPACE
-WS_SWITCH --> WORKSPACE
+IDE_RP --> TIMELINE
+IDE_SB --> IDE_CW
+WS_PROV --> IDE_CW
+WS_SWITCH --> IDE_CW
 AUTH_SP --> APP_LAYOUT
 AUTH_NAV --> APP_LAYOUT
 PROMPT --> PK_CORE
 GENCODE --> PK_CORE
 A11Y --> PK_CORE
-WORKSPACE --> PK_LAYOUT
-SANDBOX --> PK_EDITOR
 TIMELINE --> PK_CORE
 INTENT --> PK_CORE
 IDE_* --> PK_LAYOUT
@@ -132,13 +135,12 @@ AUTH_* --> PK_CORE
 - [components/PromptInput.tsx](file://components/PromptInput.tsx)
 - [components/GeneratedCode.tsx](file://components/GeneratedCode.tsx)
 - [components/A11yReport.tsx](file://components/A11yReport.tsx)
-- [components/ProjectWorkspace.tsx](file://components/ProjectWorkspace.tsx)
 - [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/IDE/CentreWorkspace.tsx](file://components/IDE/CentreWorkspace.tsx)
-- [components/IDE/RightPanel.tsx](file://components/IDE/RightPanel.tsx)
-- [components/IDE/Sidebar.tsx](file://components/IDE/Sidebar.tsx)
+- [components/ide/CenterWorkspace.tsx](file://components/ide/CenterWorkspace.tsx)
+- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
+- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
@@ -154,27 +156,25 @@ This section documents the primary UI components that form the backbone of the d
 - PromptInput: Natural language input with intent classification, voice input, image-to-text attachment, and generation modes (component, app, depth UI).
 - GeneratedCode: Read-only code viewer with copy/download actions and syntax highlighting.
 - A11yReport: Accessibility scoring and violation listing with severity-based styling and suggested fixes.
-- ProjectWorkspace: Iterative design workspace with preview/code modes, version timeline, and refinement controls.
+- VersionTimeline: Responsive timeline navigation and rollback across project versions with intelligent scroll management.
 - SandpackPreview: Dynamic live preview of generated React components.
-- VersionTimeline: Navigation and rollback across project versions.
 - IntentBadge: Visual indicator of detected intent classification.
-- IDE Panels: CentreWorkspace, RightPanel, and Sidebar for integrated authoring.
+- IDE Panels: CenterWorkspace, RightPanel, and Sidebar for integrated authoring.
 - WorkspaceProvider and WorkspaceSwitcher: Context and UI for workspace management.
 - SessionProvider and UserNav: Authentication scaffolding.
 
-These components share a consistent design language, accessibility attributes, and integration points that enforce style DNA and design system rules.
+These components share a consistent design language, accessibility attributes, responsive behavior, and intelligent user experience features that enforce style DNA and design system rules.
 
 **Section sources**
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/IDE/CentreWorkspace.tsx](file://components/IDE/CentreWorkspace.tsx)
-- [components/IDE/RightPanel.tsx](file://components/IDE/RightPanel.tsx)
-- [components/IDE/Sidebar.tsx](file://components/IDE/Sidebar.tsx)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
+- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
@@ -186,6 +186,7 @@ The UI architecture centers around a blueprint engine that enforces design syste
 - Accessibility is baked into component props and rendering
 - Composition patterns promote reuse and maintainability
 - Providers and contexts coordinate state across the workspace
+- Intelligent user experience features adapt to user behavior patterns
 
 ```mermaid
 sequenceDiagram
@@ -194,7 +195,7 @@ participant Prompt as "PromptInput"
 participant Engine as "Blueprint Engine"
 participant Gen as "GeneratedCode"
 participant Preview as "SandpackPreview"
-participant Workspace as "ProjectWorkspace"
+participant Workspace as "CenterWorkspace"
 User->>Prompt : "Describe UI (natural language)"
 Prompt->>Engine : "Intent classification + payload"
 Engine-->>Prompt : "Validation + mode selection"
@@ -203,14 +204,14 @@ Engine-->>Gen : "Return generated code"
 Engine-->>Preview : "Return runtime-ready component"
 Gen-->>Workspace : "Display code"
 Preview-->>Workspace : "Render live preview"
-Workspace-->>User : "Iterative refinement"
+Workspace-->>User : "Intelligent auto-scroll + iterative refinement"
 ```
 
 **Diagram sources**
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
 
 ## Detailed Component Analysis
 
@@ -276,27 +277,28 @@ Accessibility and design system alignment:
 **Section sources**
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 
-### ProjectWorkspace
-Purpose: Manages iterative design iterations with preview/code modes, version timeline, and refinement controls.
+### VersionTimeline
+Purpose: Provides a responsive timeline of versions with selection and rollback actions, now featuring improved dimensions and accessibility.
 
 Key behaviors:
-- Tracks versions and current selection
-- Supports local and server-side rollback
-- Switchable view modes (preview/code)
-- Quick refinement chips and custom prompts
+- Responsive `w-full h-full` dimensions that adapt to container size
+- Timeline navigation with version selection and rollback capabilities
+- Visual indicators for active, latest, and selected versions
+- Hover-based reveal of rollback actions
+- Accessible keyboard navigation and ARIA labeling
 
-Prop interfaces and customization:
-- initialProject: ProjectIteration
-- onRefine(prompt): Promise<void>
-- isRefining: boolean
-- projectId?: string | null
+Responsive design improvements:
+- **Updated**: Now uses `w-full h-full` instead of fixed `w-64` dimensions
+- Adapts seamlessly to different screen sizes and container constraints
+- Maintains aspect ratio while filling available space
 
 Accessibility and design system alignment:
-- Consistent header, borders, and backdrop blur
-- Keyboard-navigable refinement bar and buttons
+- Clear selection states and disabled states for actions
+- Proper ARIA labels and keyboard navigation support
+- Consistent spacing and typography scaling
 
 **Section sources**
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 
 ### SandpackPreview
 Purpose: Renders the live preview of generated components using a sandbox runtime.
@@ -312,18 +314,6 @@ Accessibility and design system alignment:
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 
-### VersionTimeline
-Purpose: Provides a compact timeline of versions with selection and rollback actions.
-
-Integration:
-- Consumed by ProjectWorkspace for navigation and rollback
-
-Accessibility and design system alignment:
-- Clear selection states and disabled states for actions
-
-**Section sources**
-- [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
-
 ### IntentBadge
 Purpose: Visual indicator of detected intent classification with confidence.
 
@@ -337,22 +327,29 @@ Accessibility and design system alignment:
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
 
 ### IDE Panels and Workspace Providers
-Purpose: Integrated authoring environment and workspace management.
+Purpose: Integrated authoring environment and workspace management with enhanced user experience features.
 
-- CentreWorkspace: Central authoring area
-- RightPanel: Code and inspection panel
+- CenterWorkspace: Central authoring area with intelligent scroll management
+- RightPanel: Code and inspection panel with VersionTimeline integration
 - Sidebar: Navigation and project list
 - WorkspaceProvider: Global workspace context
 - WorkspaceSwitcher: Workspace selection UI
 
+Intelligent scroll management features:
+- **Enhanced**: CenterWorkspace now prevents automatic scrolling when users are actively reviewing previous content
+- Uses 50-pixel threshold to detect when users are "looking back" at content
+- Smooth auto-scrolling only when user is at the bottom of the feed
+- Preserves user reading flow and reduces unwanted page jumps
+
 Accessibility and design system alignment:
 - Unified theming and spacing
 - Consistent focus management and keyboard shortcuts
+- Responsive design patterns across all panel components
 
 **Section sources**
-- [components/IDE/CentreWorkspace.tsx](file://components/IDE/CentreWorkspace.tsx)
-- [components/IDE/RightPanel.tsx](file://components/IDE/RightPanel.tsx)
-- [components/IDE/Sidebar.tsx](file://components/IDE/Sidebar.tsx)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
+- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 
@@ -369,6 +366,49 @@ Accessibility and design system alignment:
 **Section sources**
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
 - [components/auth/UserNav.tsx](file://components/auth/UserNav.tsx)
+
+## Enhanced User Experience Features
+
+### Intelligent Scroll Management
+The CenterWorkspace component now features sophisticated scroll management that enhances the user experience during AI-driven interactions:
+
+**Key Features:**
+- **50-pixel threshold detection**: Automatically determines when users are actively reviewing content
+- **Context-aware scrolling**: Prevents unwanted auto-scrolling when users are reading previous messages
+- **Smooth transitions**: Uses CSS smooth scrolling for natural user experience
+- **State preservation**: Maintains user position when content changes unexpectedly
+
+**Implementation Details:**
+- Scroll position monitoring with `scrollTop + clientHeight < scrollHeight - 50` calculation
+- Reactive effect that triggers only when content requires attention
+- Non-intrusive behavior that respects user control
+
+**Benefits:**
+- Reduces cognitive load during content review
+- Prevents disorientation during long conversations
+- Maintains focus on current interaction while preserving context
+- Enhances accessibility for users with motor control considerations
+
+**Section sources**
+- [components/ide/CenterWorkspace.tsx:56-68](file://components/ide/CenterWorkspace.tsx#L56-L68)
+
+### Responsive Design Improvements
+Several components now feature enhanced responsive behavior:
+
+**VersionTimeline Responsiveness:**
+- **Updated**: `w-full h-full` dimensions replace fixed `w-64`
+- Adapts to sidebar width constraints
+- Maintains optimal viewing experience across devices
+- Integrates seamlessly with RightPanel layout
+
+**CenterWorkspace Adaptability:**
+- Flexible height management for varying content loads
+- Responsive padding and spacing adjustments
+- Optimized for both desktop and mobile viewing
+
+**Section sources**
+- [components/VersionTimeline.tsx:25-28](file://components/VersionTimeline.tsx#L25-L28)
+- [components/ide/RightPanel.tsx:608](file://components/ide/RightPanel.tsx#L608)
 
 ## Dependency Analysis
 The UI components depend on shared tokens, theming, and utility packages. The application also relies on external libraries for icons, syntax highlighting, and runtime preview.
@@ -428,6 +468,8 @@ APP_DEPS --> PK_A11Y
 - Prefer CSS transitions and hardware-accelerated animations for motion components.
 - Lazy-load syntax highlighting and editor features to minimize runtime overhead.
 - Optimize image uploads and OCR processing with progress states and cancellation where applicable.
+- **Enhanced**: Intelligent scroll management uses efficient threshold calculations to minimize reflow.
+- **Improved**: Responsive components leverage CSS Flexbox for optimal layout performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -435,39 +477,41 @@ Common issues and resolutions:
 - Speech recognition unsupported: PromptInput gracefully handles missing SpeechRecognition APIs and informs users.
 - Live preview not rendering: Verify dynamic import configuration and ensure client-side rendering for preview components.
 - Accessibility warnings: Review A11yReport for severity levels and apply suggested fixes; confirm WCAG criteria coverage.
+- **Updated**: VersionTimeline responsive issues: Ensure parent containers have defined dimensions; the component now uses `w-full h-full`.
+- **Enhanced**: CenterWorkspace scroll conflicts: The 50-pixel threshold prevents conflicts with manual scrolling; adjust threshold if needed.
 - Workspace rollback errors: Confirm projectId presence and network connectivity; handle server-side rollback responses.
 
 **Section sources**
 - [components/GeneratedCode.tsx:30-63](file://components/GeneratedCode.tsx#L30-L63)
 - [components/PromptInput.tsx:86-128](file://components/PromptInput.tsx#L86-L128)
-- [components/ProjectWorkspace.tsx:111-133](file://components/ProjectWorkspace.tsx#L111-L133)
-- [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
+- [components/VersionTimeline.tsx:25-28](file://components/VersionTimeline.tsx#L25-L28)
+- [components/ide/CenterWorkspace.tsx:56-68](file://components/ide/CenterWorkspace.tsx#L56-L68)
 
 ## Conclusion
-The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality and inclusivity. The component registry and composition patterns outlined here provide a foundation for extending the system with new components and capabilities.
+The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, and enhanced user experience features that adapt to user behavior patterns. By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
 ## Appendices
 
 ### Component Registry and Metadata
-- Built-in components are located under components/ and include PromptInput, GeneratedCode, A11yReport, ProjectWorkspace, SandpackPreview, VersionTimeline, IntentBadge, and IDE/workspace/auth panels.
+- Built-in components are located under components/ and include PromptInput, GeneratedCode, A11yReport, VersionTimeline, SandpackPreview, IntentBadge, and IDE/workspace/auth panels.
 - Each component exposes a clear prop interface and adheres to accessibility standards.
 - Compatibility requirements:
   - Use Tailwind classes aligned with @ui/tokens and @ui/theming
   - Ensure ARIA attributes and semantic roles
   - Provide keyboard navigation and focus management
   - Support SSR-safe dynamic imports for client-only features
+  - Implement responsive design patterns for all components
 
 **Section sources**
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
 - [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/IDE/CentreWorkspace.tsx](file://components/IDE/CentreWorkspace.tsx)
-- [components/IDE/RightPanel.tsx](file://components/IDE/RightPanel.tsx)
-- [components/IDE/Sidebar.tsx](file://components/IDE/Sidebar.tsx)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
+- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
+- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
 - [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
@@ -478,13 +522,14 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Maintain style DNA consistency by centralizing variants and class compositions in @ui/core and @ui/theming.
 - Apply motion and layout primitives from @ui/motion and @ui/layout to preserve rhythm and spacing.
 - Integrate accessibility checks and WCAG compliance in component rendering and props.
+- **Enhanced**: Incorporate responsive design patterns and user experience heuristics.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
 
 ### Component Library Organization
 - @ui/core: Base components, tokens, and foundational utilities
-- @ui/layout: Layout primitives and grid systems
+- @ui/layout: Layout primitives and grid systems with responsive design
 - @ui/forms: Form controls and validation helpers
 - @ui/motion: Motion primitives and animation utilities
 - @ui/three: 3D and advanced rendering helpers
@@ -509,12 +554,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Export variants and composition helpers from @ui/core
 - Add tests and documentation for usage patterns
 - Keep component small, focused, and composable
+- **Enhanced**: Implement responsive design patterns and user experience considerations
 
 **Section sources**
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 
 ### Extending the Design System
 - Introduce new tokens in @ui/tokens and update @ui/theming accordingly
@@ -522,6 +568,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Extend form controls in @ui/forms with consistent styling and validation
 - Document new components in @ui packages with usage examples
 - Maintain backward compatibility and deprecation policies
+- **Enhanced**: Incorporate user experience patterns and accessibility best practices
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -531,11 +578,12 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Accessibility reports are produced by @ui/a11y and surfaced in A11yReport
 - Workspace management leverages @ui/core and @ui/layout for consistent layouts
 - Intent detection and refinement leverage @ui/command-palette and @ui/forms
+- **Enhanced**: Intelligent scroll management improves user experience across all generated content
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 
 ### Usage Patterns and Best Practices
@@ -545,9 +593,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Ensure all interactive elements are keyboard accessible and screen-reader friendly
 - Provide clear feedback for loading, error, and success states
 - Keep generated code readable and editable; avoid obfuscation
+- **Enhanced**: Implement intelligent scroll management for better user experience
+- **Updated**: Utilize responsive design patterns for all components
+- **Improved**: Consider user behavior patterns when designing auto-scrolling features
 
 **Section sources**
 - [components/PromptInput.tsx:1-563](file://components/PromptInput.tsx#L1-L563)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
-- [components/ProjectWorkspace.tsx:1-313](file://components/ProjectWorkspace.tsx#L1-L313)
+- [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
+- [components/ide/CenterWorkspace.tsx:1-254](file://components/ide/CenterWorkspace.tsx#L1-L254)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)

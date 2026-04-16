@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench, Download, FileJson } from 'lucide-react';
 import type { A11yReport, A11yViolation } from '@/lib/validation/schemas';
 
 export interface A11yReportProps {
@@ -99,6 +99,23 @@ export default function A11yReportComponent({ report }: A11yReportProps) {
   const warningCount = report.violations.filter(v => v.severity === 'warning').length;
   const infoCount = report.violations.filter(v => v.severity === 'info').length;
 
+  const handleExportJSON = () => {
+    const data = {
+      ...report,
+      exportedAt: new Date().toISOString(),
+      standard: 'WCAG 2.1 AA',
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `a11y-report-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <section
       aria-labelledby="a11y-report-heading"
@@ -110,7 +127,17 @@ export default function A11yReportComponent({ report }: A11yReportProps) {
         <h3 id="a11y-report-heading" className="text-sm font-semibold text-white">
           Accessibility Report
         </h3>
-        <span className="ml-auto text-xs text-gray-500">WCAG 2.1 AA</span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleExportJSON}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            title="Export report as JSON"
+          >
+            <FileJson className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Export</span>
+          </button>
+          <span className="text-xs text-gray-500">WCAG 2.1 AA</span>
+        </div>
       </div>
 
       <div className="p-4">

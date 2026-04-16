@@ -1,9 +1,9 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import type { GenerationMode, SubmitOptions } from '@/components/PromptInput';
+import type { GenerationMode, SubmitOptions } from '@/components/prompt-input';
 import type { PipelineStep } from '@/components/PipelineStatus';
-import type { AIEngineConfig } from '@/components/AIEngineConfigPanel';
+import type { AIEngineConfig } from '@/lib/ai/types';
 import type { UIIntent, A11yReport, ThinkingPlan, IntentClassification } from '@/lib/validation/schemas';
 import type { FeedbackMeta } from '@/components/FeedbackBar';
 import { Menu, Shield, Lock } from 'lucide-react';

@@ -2,7 +2,8 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw } from 'lucide-react';
-import PromptInput, { type GenerationMode, type SubmitOptions } from '@/components/PromptInput';
+import { PromptInput } from '@/components/prompt-input';
+import type { GenerationMode, SubmitOptions } from '@/components/prompt-input';
 import ThinkingPanel from '@/components/ThinkingPanel';
 import PipelineStatus from '@/components/PipelineStatus';
 import type {
