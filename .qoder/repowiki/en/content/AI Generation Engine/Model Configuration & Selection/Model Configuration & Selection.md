@@ -8,6 +8,7 @@
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
+- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [cache.ts](file://lib/ai/cache.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
@@ -25,6 +26,8 @@
 ## Update Summary
 **Changes Made**
 - Enhanced ModelSelectionGate component with major visual redesign featuring violet-themed color scheme
+- Updated Ollama configuration to require OLLAMA_API_KEY instead of local-only setup
+- Removed references to DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers from environment variable configuration examples
 - Implemented gradient backgrounds and brand color integration throughout the component
 - Added improved hover effects with violet glow transitions and enhanced typography
 - Updated to reflect new streamlined configuration approach where AI engine configuration is now handled during startup via ModelSelectionGate
@@ -85,6 +88,7 @@ subgraph "Adapters"
 IDX["adapters/index.ts"]
 OA["adapters/openai.ts"]
 AA["adapters/anthropic.ts"]
+OL["adapters/ollama.ts"]
 UA["adapters/unconfigured.ts"]
 end
 subgraph "Core"
@@ -108,6 +112,7 @@ EC --> IDX
 AM --> IDX
 IDX --> OA
 IDX --> AA
+IDX --> OL
 IDX --> CA
 MR --> IDX
 TY --> IDX
@@ -119,16 +124,17 @@ GRADIENTS --> GLOW
 **Diagram sources**
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
 - [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [adapters/ollama.ts:1-87](file://lib/ai/adapters/ollama.ts#L1-L87)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
@@ -137,16 +143,17 @@ GRADIENTS --> GLOW
 **Section sources**
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
 - [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [adapters/ollama.ts:1-87](file://lib/ai/adapters/ollama.ts#L1-L87)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
@@ -163,11 +170,11 @@ GRADIENTS --> GLOW
 - Caching: Deterministic caching of generation results for performance and cost savings.
 
 **Section sources**
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
@@ -214,7 +221,7 @@ MSG-->>APP : Complete configuration
 - [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
 - [engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:110-129](file://lib/ai/types.ts#L110-L129)
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
 - [globals.css:1-156](file://app/globals.css#L1-L156)
@@ -230,7 +237,7 @@ The ModelSelectionGate provides a streamlined three-step wizard for initial mode
 The new provider status API dynamically discovers configured providers based on environment variables:
 - Checks for provider-specific environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
 - Filters providers to only show those with valid credentials configured
-- Handles special cases like Ollama (local-only, no API key required)
+- Handles special cases like Ollama (requires OLLAMA_API_KEY, no longer local-only)
 - Supports alternative environment variables (e.g., GOOGLE_API_KEY and GEMINI_API_KEY)
 
 ```mermaid
@@ -254,23 +261,23 @@ Step4 --> ErrorDisplay["Show credential setup instructions<br/>with violet error
 
 **Section sources**
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 
 ### Enhanced Provider Status Discovery
 The new `/api/providers/status` endpoint provides dynamic provider discovery with comprehensive configuration:
 - Defines provider configurations with colors, gradients, and model lists
 - Checks environment variables for provider configuration
-- Handles special cases (local-only providers, alternative environment variables)
+- Handles special cases (Ollama now requires OLLAMA_API_KEY)
 - Returns configured provider count for UI display
-- Supports Vercel environment detection for local-only providers
 
 ```mermaid
 flowchart TD
 ProviderConfig["PROVIDER_CONFIG array"] --> CheckEnv["Check environment variables"]
 CheckEnv --> LocalOnly{"Local-only provider?"}
-LocalOnly --> |Yes| VercelCheck{"On Vercel platform?"}
-VercelCheck --> |Yes| NotConfigured["Not configured"]
-VercelCheck --> |No| Configured["Configured"]
+LocalOnly --> |Yes| OllamaCheck{"Is Ollama provider?"}
+OllamaCheck --> |Yes| OllamaKeyCheck{"OLLAMA_API_KEY present?"}
+OllamaKeyCheck --> |Yes| Configured["Configured"]
+OllamaKeyCheck --> |No| NotConfigured["Not configured"]
 LocalOnly --> |No| PrimaryCheck{"Primary env var present?"}
 PrimaryCheck --> |Yes| Configured
 PrimaryCheck --> |No| AltCheck{"Alternative env var present?"}
@@ -285,7 +292,7 @@ NotConfigured --> ReturnStatus
 - [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
 
 **Section sources**
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 
 ### Model Registry and Tiered Pipeline
 The registry defines five tiers and associated pipeline behaviors:
@@ -351,6 +358,7 @@ participant IDX as "adapters/index.ts"
 participant WS as "workspaceKeyService.ts"
 participant OA as "OpenAIAdapter"
 participant AA as "AnthropicAdapter"
+participant OL as "OllamaAdapter"
 participant UA as "UnconfiguredAdapter"
 UI->>API : POST {provider, model, apiKey}
 API->>WS : getWorkspaceApiKey(provider, workspaceId)
@@ -373,6 +381,7 @@ IDX-->>UI : AIAdapter
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
 - [adapters/openai.ts:36-62](file://lib/ai/adapters/openai.ts#L36-L62)
 - [adapters/anthropic.ts:71-87](file://lib/ai/adapters/anthropic.ts#L71-L87)
+- [adapters/ollama.ts:25-30](file://lib/ai/adapters/ollama.ts#L25-L30)
 - [adapters/unconfigured.ts:13-14](file://lib/ai/adapters/unconfigured.ts#L13-L14)
 
 **Section sources**
@@ -396,31 +405,25 @@ SwitchProvider --> |openai| FetchOpenAI["Fetch /v1/models"]
 SwitchProvider --> |anthropic| FetchAnthropic["Fetch /v1/models"]
 SwitchProvider --> |google| FetchGoogle["Fetch /v1beta/models"]
 SwitchProvider --> |groq| FetchGroq["Fetch /v1/models"]
-SwitchProvider --> |openrouter| FetchOpenRouter["Fetch /api/v1/models"]
-SwitchProvider --> |together| FetchTogether["Fetch /v1/models"]
-SwitchProvider --> |deepseek| FetchDeepSeek["Fetch /v1/models"]
-SwitchProvider --> |mistral| FetchMistral["Fetch /v1/models"]
-SwitchProvider --> |ollama/lmstudio| FetchOllama["Fetch /api/tags or fallback"]
+SwitchProvider --> |ollama| FetchOllama["Fetch /api/tags or fallback"]
+SwitchProvider --> |lmstudio| FetchLMStudio["Fetch /v1/models"]
 SwitchProvider --> |custom| FetchCustom["Fetch /v1/models with baseUrl"]
 FetchOpenAI --> |error| FallbackOpenAI["Static fallback"]
 FetchAnthropic --> |error| FallbackAnthropic["Static fallback"]
 FetchGoogle --> |error| FallbackGoogle["Static fallback"]
 FetchGroq --> |error| FallbackGroq["Static fallback"]
-FetchOpenRouter --> |error| FallbackOpenRouter["Minimal fallback"]
-FetchTogether --> |error| FallbackTogether["Minimal fallback"]
-FetchDeepSeek --> |error| FallbackDeepSeek["Static fallback"]
-FetchMistral --> |error| FallbackMistral["Static fallback"]
 FetchOllama --> |offline| FallbackOllama["Static fallback"]
+FetchLMStudio --> |offline| FallbackLMStudio["Static fallback"]
 FetchCustom --> |error| FallbackCustom["Minimal fallback"]
 Fallback* --> Sort["Sort featured first, then alphabetically"]
 Sort --> Return["Return {success, models, count}"]
 ```
 
 **Diagram sources**
-- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
+- [models/route.ts:18-271](file://app/api/models/route.ts#L18-L271)
 
 **Section sources**
-- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
+- [models/route.ts:18-271](file://app/api/models/route.ts#L18-L271)
 
 ### Prompt Styles, Token Budgets, and Extraction Strategies
 Prompt styles and pipeline controls are defined per model tier:
@@ -606,6 +609,7 @@ EC --> IDX["adapters/index.ts"]
 AM --> IDX
 IDX --> OA["adapters/openai.ts"]
 IDX --> AA["adapters/anthropic.ts"]
+IDX --> OL["adapters/ollama.ts"]
 IDX --> UA["adapters/unconfigured.ts"]
 IDX --> CA["cache.ts"]
 MR["modelRegistry.ts"] --> IDX
@@ -619,27 +623,28 @@ CSS --> GLOW["Violet Glow Transitions"]
 **Diagram sources**
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [adapters/ollama.ts:1-87](file://lib/ai/adapters/ollama.ts#L1-L87)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [globals.css:1-156](file://app/globals.css#L1-L156)
 
 **Section sources**
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+- [providers/status/route.ts:1-157](file://app/api/providers/status/route.ts#L1-L157)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [models/route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
-- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
 - [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
@@ -661,7 +666,7 @@ Common issues and resolutions:
 - Missing API keys: The provider status API filters out providers without configured credentials; check environment variables
 - Provider connectivity: Model listing API surfaces authentication errors distinctly; use the connection test in the settings panel
 - Silent failures: The registry returns null for unknown models; callers should fall back to a sensible default tier (cloud)
-- Local provider unavailability: Ollama fallbacks provide a static list; ensure the daemon is reachable or configure environment variables
+- Local provider unavailability: Ollama fallbacks provide a static list; ensure the daemon is reachable or configure OLLAMA_API_KEY
 - **Enhanced**: Model gate showing error state: Check that environment variables are properly configured for desired providers with violet-themed error display
 - **Enhanced**: Provider not appearing: Verify environment variable naming conventions (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) with proper configuration detection
 - **Enhanced**: Automatic credential resolution failing: Ensure environment variables are set in the deployment platform (Vercel) with proper environment variable support
@@ -670,7 +675,7 @@ Common issues and resolutions:
 **Section sources**
 - [adapters/index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
 - [adapters/unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
-- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
+- [models/route.ts:18-271](file://app/api/models/route.ts#L18-L271)
 - [modelRegistry.ts:18-23](file://lib/ai/modelRegistry.ts#L18-L23)
 - [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
 - [ModelSelectionGate.tsx:244-275](file://components/ModelSelectionGate.tsx#L244-L275)
@@ -709,7 +714,7 @@ The model configuration and selection system provides a robust, provider-agnosti
 - Use the settings panel to validate connections and manage keys
 
 **Section sources**
-- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
+- [models/route.ts:18-271](file://app/api/models/route.ts#L18-L271)
 - [adapters/unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
 - [AIEngineConfigPanel.tsx:340-356](file://components/AIEngineConfigPanel.tsx#L340-L356)
 
@@ -740,7 +745,9 @@ The model configuration and selection system provides a robust, provider-agnosti
 - Set ANTHROPIC_API_KEY for Claude models
 - Set GOOGLE_API_KEY or GEMINI_API_KEY for Gemini models
 - Set GROQ_API_KEY for Groq inference
-- Ollama does not require API keys (local-only)
+- Set OLLAMA_API_KEY for local Ollama models (now requires API key)
+
+**Updated** Removed references to DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers from environment variable configuration examples
 
 **Section sources**
 - [providers/status/route.ts:13-67](file://app/api/providers/status/route.ts#L13-L67)

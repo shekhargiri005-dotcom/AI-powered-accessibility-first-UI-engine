@@ -264,6 +264,7 @@ export async function getWorkspaceAdapter(
     anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
+    ollama: process.env.OLLAMA_API_KEY,
   };
   
   const fallbackKey = providerEnvMap[providerId];
@@ -271,7 +272,14 @@ export async function getWorkspaceAdapter(
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
-  // 3. Failure: No credentials found
+  // 3. Universal LLM_KEY fallback - works for all providers
+  const universalKey = process.env.LLM_KEY;
+  if (universalKey) {
+    console.log(`[getWorkspaceAdapter] Using universal LLM_KEY for ${providerId}`);
+    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
+  }
+
+  // 4. Failure: No credentials found
   // Return UnconfiguredAdapter for graceful degradation
   // (it returns a helpful UI component instead of crashing)
   return new UnconfiguredAdapter();

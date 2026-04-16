@@ -17,6 +17,14 @@ import {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export interface ProviderSettings {
+  temperature: number;
+  maxTokens: number;
+  topP?: number;
+  frequencyPenalty?: number;
+  presencePenalty?: number;
+}
+
 export interface ProviderStatus {
   id: string;
   name: string;
@@ -27,6 +35,7 @@ export interface ProviderStatus {
   configured: boolean;
   models: string[];
   recommended?: boolean;
+  settings?: ProviderSettings;
 }
 
 export interface ModelSelectionGateProps {
@@ -251,13 +260,14 @@ export default function ModelSelectionGate({
                   {error || 'Please add API keys to your environment variables to use the AI UI Engine.'}
                 </p>
                 <div className="bg-gray-950 rounded-xl p-4 text-left text-sm text-gray-400 space-y-2">
-                  <p className="font-medium text-gray-300">Required environment variables:</p>
+                  <p className="font-medium text-gray-300">Required environment variable:</p>
                   <ul className="space-y-1 font-mono text-xs">
-                    <li>• OPENAI_API_KEY - for OpenAI GPT models</li>
-                    <li>• ANTHROPIC_API_KEY - for Claude models</li>
-                    <li>• GOOGLE_API_KEY - for Gemini models</li>
-                    <li>• GROQ_API_KEY - for Groq fast inference</li>
-                    <li>• OLLAMA_API_KEY - for local Ollama models</li>
+                    <li>• LLM_KEY - Universal key for all adapters</li>
+                  </ul>
+                  <p className="text-xs text-gray-500 mt-2">Or use specific keys:</p>
+                  <ul className="space-y-1 font-mono text-xs text-gray-500">
+                    <li>• OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY</li>
+                    <li>• GROQ_API_KEY, OLLAMA_API_KEY</li>
                   </ul>
                 </div>
               </div>
@@ -400,6 +410,21 @@ export default function ModelSelectionGate({
                     ))}
                   </div>
                 </div>
+
+                {/* Optimized Settings */}
+                {selectedProvider.settings && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-500">Optimized</span>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="px-2 py-1 rounded bg-violet-500/20 text-violet-300">
+                        Temp: {selectedProvider.settings.temperature}
+                      </span>
+                      <span className="px-2 py-1 rounded bg-violet-500/20 text-violet-300">
+                        Max: {selectedProvider.settings.maxTokens.toLocaleString()} tokens
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* Security */}
                 <div className="flex items-center justify-between">

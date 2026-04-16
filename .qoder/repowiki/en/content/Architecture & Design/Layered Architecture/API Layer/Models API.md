@@ -5,12 +5,16 @@
 - [route.ts](file://app/api/models/route.ts)
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
-- [adapters/index.ts](file://lib/ai/adapters/index.ts)
-- [types.ts](file://lib/ai/types.ts)
-- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
-- [AIEngineConfigPanel.tsx](file://components/AIEngineConfigPanel.tsx)
 - [ENV_SETUP.md](file://docs/ENV_SETUP.md)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated provider list to reflect simplified implementation focusing on core providers
+- Removed DeepSeek, Mistral, OpenRouter, Together AI, Meta, Qwen, and Gemma providers
+- Simplified model fetching logic to focus on remaining providers (OpenAI, Anthropic, Google, Ollama)
+- Updated supported providers list to reflect current implementation
+- Enhanced static fallback configurations for remaining providers
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -26,9 +30,11 @@
 ## Introduction
 This document describes the Models API endpoint that lists available AI models across multiple providers and local engines. It covers the HTTP GET method, query parameters, response format, provider-specific behaviors, model capability metadata, and integration with the model registry and credential resolution system.
 
+**Updated** The Models API now focuses on a simplified set of core providers: OpenAI, Anthropic, Google, and Ollama, with enhanced static fallback configurations for improved reliability.
+
 ## Project Structure
 The Models API is implemented as a Next.js route handler under the app router. It integrates with:
-- Provider-specific model fetchers
+- Provider-specific model fetchers for core providers
 - Credential resolution (client-provided, stored in DB, or environment variables)
 - Static fallbacks for providers without live listings
 - Sorting and feature-flagging logic
@@ -45,26 +51,22 @@ Provider --> OpenAI["fetchOpenAIModels()"]
 Provider --> Anthropic["fetchAnthropicModels()"]
 Provider --> Google["fetchGoogleModels()"]
 Provider --> Groq["fetchGroqModels()"]
-Provider --> OpenRouter["fetchOpenRouterModels()"]
-Provider --> Together["fetchTogetherModels()"]
-Provider --> DeepSeek["fetchDeepSeekModels()"]
-Provider --> Mistral["fetchMistralModels()"]
 Provider --> Ollama["fetchOllamaModels()"]
 Route --> Sort["Sort & Feature Flag"]
 Sort --> Response["JSON Response"]
 ```
 
 **Diagram sources**
-- [route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [route.ts:181-249](file://app/api/models/route.ts#L181-L249)
 - [workspaceKeyService.ts:32-67](file://lib/security/workspaceKeyService.ts#L32-L67)
 
 **Section sources**
-- [route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [route.ts:1-271](file://app/api/models/route.ts#L1-L271)
 
 ## Core Components
 - Endpoint: GET /api/models
 - Query parameters:
-  - provider (required): One of the supported provider IDs
+  - provider (required): One of the supported provider IDs (openai, anthropic, google, groq, ollama, lmstudio)
   - apiKey (optional): Client-supplied API key (masked in storage)
   - baseUrl (optional): Base URL for custom/OpenAI-compatible providers
 - Response shape:
@@ -86,7 +88,7 @@ Behavior highlights:
 
 **Section sources**
 - [route.ts:8-14](file://app/api/models/route.ts#L8-L14)
-- [route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [route.ts:128-271](file://app/api/models/route.ts#L128-L271)
 
 ## Architecture Overview
 The route handler orchestrates provider-specific fetchers and applies a unified response format. It resolves credentials through a prioritized strategy and falls back to static lists when providers are unavailable.
@@ -112,7 +114,7 @@ R-->>C : "{success, models, count}"
 ```
 
 **Diagram sources**
-- [route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [route.ts:128-271](file://app/api/models/route.ts#L128-L271)
 - [workspaceKeyService.ts:32-67](file://lib/security/workspaceKeyService.ts#L32-L67)
 
 ## Detailed Component Analysis
@@ -120,7 +122,7 @@ R-->>C : "{success, models, count}"
 ### HTTP GET /api/models
 - Purpose: Return a list of available models for a given provider, with capability hints and feature flags.
 - Required query parameter:
-  - provider: lowercase provider identifier (e.g., openai, anthropic, google, groq, openrouter, together, deepseek, mistral, meta, qwen, gemma, ollama, lmstudio)
+  - provider: lowercase provider identifier (e.g., openai, anthropic, google, groq, ollama, lmstudio)
 - Optional query parameters:
   - apiKey: client-supplied key (masked in storage)
   - baseUrl: base URL for custom/OpenAI-compatible providers
@@ -144,24 +146,20 @@ Sorting:
 - Then sorted by id alphabetically
 
 **Section sources**
-- [route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [route.ts:128-271](file://app/api/models/route.ts#L128-L271)
 
 ### Provider-Specific Fetchers
 - OpenAI: Filters chat models, sorts by creation date, marks featured models
 - Anthropic: Uses x-api-key header and anthropic-version
 - Google: Uses API key query param; includes inputTokenLimit as contextWindow
 - Groq: Returns 401 with a specific message for invalid/expired keys
-- OpenRouter: Returns combined multi-provider catalog
-- Together: Filters by type='chat' and supports both array and data-wrapped responses
-- DeepSeek: Minimal profile with isFeatured
-- Mistral: Basic profile with isFeatured
 - Ollama: Attempts /api/tags; falls back to curated local models if offline
 
 Timeouts:
 - All remote fetchers use AbortSignal.timeout to prevent slow responses
 
 **Section sources**
-- [route.ts:18-202](file://app/api/models/route.ts#L18-L202)
+- [route.ts:18-124](file://app/api/models/route.ts#L18-L124)
 
 ### Model Capability Metadata Integration
 While the models endpoint returns a minimal ModelInfo shape, the broader system maintains a comprehensive model capability registry. This registry defines:
@@ -214,7 +212,7 @@ MODEL_REGISTRY --> ModelCapabilityProfile : "contains"
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 
 ### Credential Resolution and Storage
-The route’s resolveKey function implements a strict hierarchy:
+The route's resolveKey function implements a strict hierarchy:
 1. Client-provided apiKey (masked indicators ignored)
 2. Workspace-stored encrypted key via DB lookup
 3. Environment variable fallbacks
@@ -236,42 +234,20 @@ HasEnv --> |No| ReturnNull["Return null"]
 ```
 
 **Diagram sources**
-- [route.ts:220-229](file://app/api/models/route.ts#L220-L229)
+- [route.ts:142-151](file://app/api/models/route.ts#L142-L151)
 - [workspaceKeyService.ts:32-67](file://lib/security/workspaceKeyService.ts#L32-L67)
 
 **Section sources**
-- [route.ts:220-229](file://app/api/models/route.ts#L220-L229)
-- [workspaceKeyService.ts:1-67](file://lib/security/workspaceKeyService.ts#L1-L67)
+- [route.ts:142-151](file://app/api/models/route.ts#L142-L151)
+- [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 
-### Adapter Integration and Provider Detection
-The adapter system determines provider from either explicit configuration or model name heuristics. It also manages OpenAI-compatible base URLs and local adapters.
+### Static Fallback Configuration
+The route includes comprehensive static fallback lists for providers that support live model listings. These fallbacks ensure the API remains functional even when external providers are unavailable.
 
-```mermaid
-graph LR
-Detect["detectProvider(model)"] --> OpenAI["openai"]
-Detect --> Anthropic["anthropic"]
-Detect --> Google["google"]
-Detect --> Groq["groq"]
-Detect --> Ollama["ollama"]
-Compat["OPENAI_COMPAT_BASE_URLS"] --> Groq
-Compat --> LMStudio["lmstudio"]
-```
-
-**Diagram sources**
-- [adapters/index.ts:56-64](file://lib/ai/adapters/index.ts#L56-L64)
-- [adapters/index.ts:45-48](file://lib/ai/adapters/index.ts#L45-L48)
+**Updated** Enhanced static fallback configurations for remaining providers (OpenAI, Anthropic, Google, Groq) with curated model selections and feature flags.
 
 **Section sources**
-- [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-
-### UI Integration and Configuration Options
-- ProviderSelector and AIEngineConfigPanel define provider metadata, environment variable keys, and model suggestions used across the UI.
-- Environment variables required for production deployment are documented in ENV_SETUP.md.
-
-**Section sources**
-- [ProviderSelector.tsx:87-93](file://components/ProviderSelector.tsx#L87-L93)
-- [AIEngineConfigPanel.tsx:29-59](file://components/AIEngineConfigPanel.tsx#L29-L59)
-- [ENV_SETUP.md:44-89](file://docs/ENV_SETUP.md#L44-L89)
+- [route.ts:153-176](file://app/api/models/route.ts#L153-L176)
 
 ## Dependency Analysis
 - Route depends on:
@@ -289,24 +265,17 @@ Route --> FOAI["fetchOpenAIModels"]
 Route --> FANTH["fetchAnthropicModels"]
 Route --> FGOOG["fetchGoogleModels"]
 Route --> FGROQ["fetchGroqModels"]
-Route --> FOR["fetchOpenRouterModels"]
-Route --> FTog["fetchTogetherModels"]
-Route --> FDSeek["fetchDeepSeekModels"]
-Route --> FMist["fetchMistralModels"]
 Route --> FOlla["fetchOllamaModels"]
 Route --> Reg["modelRegistry"]
-Adapters["Adapters"] --> Reg
 ```
 
 **Diagram sources**
-- [route.ts:18-202](file://app/api/models/route.ts#L18-L202)
+- [route.ts:18-124](file://app/api/models/route.ts#L18-L124)
 - [modelRegistry.ts:1046-1137](file://lib/ai/modelRegistry.ts#L1046-L1137)
-- [adapters/index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
 
 **Section sources**
-- [route.ts:18-202](file://app/api/models/route.ts#L18-L202)
+- [route.ts:18-124](file://app/api/models/route.ts#L18-L124)
 - [modelRegistry.ts:1046-1137](file://lib/ai/modelRegistry.ts#L1046-L1137)
-- [adapters/index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
 
 ## Performance Considerations
 - Timeout strategy: Remote fetchers use AbortSignal.timeout to bound latency.
@@ -322,7 +291,7 @@ Recommendations:
 **Section sources**
 - [route.ts:4](file://app/api/models/route.ts#L4)
 - [route.ts:20-22](file://app/api/models/route.ts#L20-L22)
-- [route.ts:182-184](file://app/api/models/route.ts#L182-L184)
+- [route.ts:251-256](file://app/api/models/route.ts#L251-L256)
 - [workspaceKeyService.ts:12-24](file://lib/security/workspaceKeyService.ts#L12-L24)
 
 ## Troubleshooting Guide
@@ -338,9 +307,9 @@ Operational tips:
 - Validate provider-specific API keys in the AI Engine Config panel.
 
 **Section sources**
-- [route.ts:212-214](file://app/api/models/route.ts#L212-L214)
+- [route.ts:134-136](file://app/api/models/route.ts#L134-L136)
 - [route.ts:89](file://app/api/models/route.ts#L89)
-- [route.ts:192-202](file://app/api/models/route.ts#L192-L202)
+- [route.ts:102-124](file://app/api/models/route.ts#L102-L124)
 - [ENV_SETUP.md:44-89](file://docs/ENV_SETUP.md#L44-L89)
 - [workspaceKeyService.ts:37-46](file://lib/security/workspaceKeyService.ts#L37-L46)
 

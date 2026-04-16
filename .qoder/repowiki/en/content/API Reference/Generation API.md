@@ -13,7 +13,19 @@
 - [memory.ts](file://lib/ai/memory.ts)
 - [types.ts](file://lib/ai/types.ts)
 - [auth.ts](file://lib/auth.ts)
+- [openai.ts](file://lib/ai/adapters/openai.ts)
+- [anthropic.ts](file://lib/ai/adapters/anthropic.ts)
+- [google.ts](file://lib/ai/adapters/google.ts)
+- [ollama.ts](file://lib/ai/adapters/ollama.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated model selection logic to reflect the simplified provider set (removed DeepSeek, Groq, and Together references)
+- Revised API key requirement checking to align with current supported providers
+- Updated provider detection logic to reflect the current supported adapters
+- Removed references to now-deprecated provider configurations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -48,12 +60,12 @@ Route --> Response["JSON Response"]
 ```
 
 **Diagram sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-438](file://app/api/generate/route.ts#L25-L438)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-438](file://app/api/generate/route.ts#L25-L438)
 
 ## Core Components
 - Endpoint: POST /api/generate
@@ -63,7 +75,7 @@ Route --> Response["JSON Response"]
 - Multi-stage Pipeline: Validation → Generation → Expert Review → Accessibility Repair → Safety Validation → Persistence.
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-438](file://app/api/generate/route.ts#L25-L438)
 - [auth.ts:11-87](file://lib/auth.ts#L11-L87)
 
 ## Architecture Overview
@@ -99,7 +111,7 @@ R-->>C : {success, code, a11yReport, tests, ...}
 ```
 
 **Diagram sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-438](file://app/api/generate/route.ts#L25-L438)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 - [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
@@ -114,7 +126,7 @@ R-->>C : {success, code, a11yReport, tests, ...}
 - Purpose: Generate React components or apps with optional streaming.
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-438](file://app/api/generate/route.ts#L25-L438)
 
 ### Authentication and Authorization
 - Non-streaming requests require authentication via NextAuth.
@@ -197,6 +209,8 @@ Mode selection influences blueprint, design rules, and downstream processing (e.
 - Supports named providers (openai, anthropic, google, ollama) and OpenAI-compatible providers (groq, lmstudio).
 - Credentials are resolved from workspace settings or environment variables.
 - For local models (ollama, lmstudio) or fast-compatible providers (groq), expert review is skipped to reduce cost and latency.
+
+**Updated** Simplified provider set to remove DeepSeek, Groq, and Together references. The current supported providers are openai, anthropic, google, ollama, and lmstudio.
 
 **Section sources**
 - [route.ts:137-152](file://app/api/generate/route.ts#L137-L152)
@@ -383,3 +397,5 @@ Common issues and resolutions:
 
 ## Conclusion
 The /api/generate endpoint provides a robust, secure, and extensible pipeline for generating high-quality, accessible React components and applications. It integrates workspace-specific AI adapters, performs multi-layer validation and repair, and offers both synchronous and streaming generation modes. The documented schemas and flows enable reliable client integration and predictable behavior across environments.
+
+**Updated** The provider ecosystem has been simplified to focus on core AI providers (openai, anthropic, google, ollama) and local/LM Studio compatibility, removing references to previously supported but now deprecated providers (DeepSeek, Groq, Together). This simplification reduces complexity while maintaining essential functionality for workspace-specific AI adapter integration.

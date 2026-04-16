@@ -52,6 +52,16 @@ const PROVIDERS: ProviderConfig[] = [
     docsUrl: 'https://aistudio.google.com/apikey',
   },
   {
+    id: 'groq',
+    name: 'Groq',
+    color: 'from-orange-500 to-red-500',
+    icon: '⚡',
+    envKey: 'GROQ_API_KEY',
+    placeholder: 'gsk_...',
+    models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'],
+    docsUrl: 'https://console.groq.com/keys',
+  },
+  {
     id: 'ollama',
     name: 'Ollama',
     color: 'from-gray-500 to-gray-400',
