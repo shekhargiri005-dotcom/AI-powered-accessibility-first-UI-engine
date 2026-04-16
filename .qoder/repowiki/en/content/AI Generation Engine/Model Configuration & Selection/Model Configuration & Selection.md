@@ -13,9 +13,23 @@
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [engine-config/route.ts](file://app/api/engine-config/route.ts)
 - [models/route.ts](file://app/api/models/route.ts)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
 - [AIEngineConfigPanel.tsx](file://components/AIEngineConfigPanel.tsx)
 - [WorkspaceSettingsPanel.tsx](file://components/WorkspaceSettingsPanel.tsx)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
+- [page.tsx](file://app/page.tsx)
+- [globals.css](file://app/globals.css)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced ModelSelectionGate component with major visual redesign featuring violet-themed color scheme
+- Implemented gradient backgrounds and brand color integration throughout the component
+- Added improved hover effects with violet glow transitions and enhanced typography
+- Updated to reflect new streamlined configuration approach where AI engine configuration is now handled during startup via ModelSelectionGate
+- Integrated comprehensive styling system with violet orb glows and frosted glass effects
+- Enhanced provider selection interface with sophisticated visual feedback and animations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -23,37 +37,49 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Visual Design System](#visual-design-system)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document describes the model configuration and selection system that powers AI-driven UI generation. It covers:
 - Model registry architecture with capability profiles, tier classifications, and capability flags
 - Tiered pipeline configuration that selects generation parameters based on model capabilities
 - Model resolution algorithm that chooses appropriate models based on intent complexity, workspace settings, and available resources
+- Streamlined three-step model selection flow with automatic provider discovery and credential resolution
+- **Enhanced**: Major visual redesign with violet-themed color scheme, gradient backgrounds, and brand color integration
+- **Enhanced**: Improved hover effects with violet glow transitions and enhanced typography with hover state animations
 - Prompt style selection (structured, guided-freeform, freeform), token budget calculations, and fallback mechanisms
 - Examples for configuring custom models, optimizing for cost/performance, and handling model availability issues
 
 ## Project Structure
-The model configuration system spans several layers:
+The model configuration system spans several layers with enhanced streamlined selection flow and comprehensive visual design:
+- ModelSelectionGate for initial setup with automatic provider discovery, credential resolution, and major visual redesign
+- ProviderSelector for intuitive provider and model selection with enhanced visual feedback
 - UI panels for configuration and model discovery
-- Backend APIs for engine configuration and model listing
+- Backend APIs for engine configuration, provider status, and model listing
 - Adapter layer for provider-neutral model invocation
 - Registry and pricing for capability metadata and cost estimation
 - Caching and credential management for reliability and performance
+- Comprehensive styling system with violet theme, gradient backgrounds, and frosted glass effects
 
 ```mermaid
 graph TB
+subgraph "Streamlined Selection Flow"
+MSG["ModelSelectionGate.tsx"]
+PS["ProviderSelector.tsx"]
+end
+subgraph "Backend APIs"
+PSAPI["/api/providers/status (route.ts)"]
+EC["/api/engine-config (route.ts)"]
+AM["/api/models (route.ts)"]
+end
 subgraph "UI Panels"
 AEC["AIEngineConfigPanel.tsx"]
 WSP["WorkspaceSettingsPanel.tsx"]
-end
-subgraph "Backend APIs"
-EC["/api/engine-config (route.ts)"]
-AM["/api/models (route.ts)"]
 end
 subgraph "Adapters"
 IDX["adapters/index.ts"]
@@ -67,6 +93,14 @@ TY["types.ts"]
 WS["workspaceKeyService.ts"]
 CA["cache.ts"]
 end
+subgraph "Visual Design System"
+CSS["globals.css"]
+VIOLET["Violet Theme System"]
+GRADIENTS["Gradient Effects"]
+GLOW["Violet Glow Transitions"]
+end
+MSG --> PSAPI
+PS --> EC
 AEC --> EC
 WSP --> EC
 EC --> WS
@@ -77,35 +111,46 @@ IDX --> AA
 IDX --> CA
 MR --> IDX
 TY --> IDX
+CSS --> VIOLET
+VIOLET --> GRADIENTS
+GRADIENTS --> GLOW
 ```
 
 **Diagram sources**
-- [AIEngineConfigPanel.tsx:1-899](file://components/AIEngineConfigPanel.tsx#L1-L899)
-- [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
+- [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
+- [globals.css:1-156](file://app/globals.css#L1-L156)
 
 **Section sources**
-- [AIEngineConfigPanel.tsx:1-899](file://components/AIEngineConfigPanel.tsx#L1-L899)
-- [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
+- [AIEngineConfigPanel.tsx:1-928](file://components/AIEngineConfigPanel.tsx#L1-L928)
+- [WorkspaceSettingsPanel.tsx:1-437](file://components/WorkspaceSettingsPanel.tsx#L1-L437)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
+- [globals.css:1-156](file://app/globals.css#L1-L156)
 
 ## Core Components
 - Model registry: Central capability metadata for all supported models, including tier classification, token budgets, prompt strategies, and repair priorities.
@@ -113,57 +158,134 @@ TY --> IDX
 - Adapter factory: Provider-neutral creation of adapters with secure credential resolution and fallbacks.
 - Workspace configuration: Persistent storage of provider, model, and encrypted API keys per workspace.
 - Model discovery: Dynamic listing of available models per provider with robust fallbacks.
+- **Enhanced**: ModelSelectionGate: Streamlined three-step wizard for initial model configuration with automatic provider discovery, credential resolution, and comprehensive visual redesign featuring violet theme, gradients, and brand color integration.
+- **Enhanced**: ProviderSelector: Intuitive provider selection component with model suggestions, secure credential management, and enhanced visual feedback.
 - Caching: Deterministic caching of generation results for performance and cost savings.
 
 **Section sources**
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 
 ## Architecture Overview
-The system separates concerns across UI, persistence, adapters, and registry:
+The system separates concerns across UI, persistence, adapters, and registry with enhanced streamlined selection flow and comprehensive visual design:
+- ModelSelectionGate provides initial setup with automatic provider discovery, credential resolution, and major visual redesign.
+- ProviderSelector offers intuitive provider and model selection with model suggestions and enhanced visual feedback.
 - UI panels collect provider, model, and optional credentials.
+- Provider status API dynamically discovers configured providers based on environment variables.
 - Engine configuration API persists encrypted keys and returns current configuration.
 - Model listing API queries providers and falls back to static lists when unavailable.
 - Adapters encapsulate provider-specific logic and expose a uniform interface.
 - Registry defines pipeline behavior per model tier and capability flags.
 - Pricing enables cost-aware decisions.
+- Comprehensive styling system provides violet theme, gradient backgrounds, and frosted glass effects.
 
 ```mermaid
 sequenceDiagram
-participant UI as "AIEngineConfigPanel.tsx"
+participant APP as "app/page.tsx"
+participant MSG as "ModelSelectionGate.tsx"
+participant PSAPI as "/api/providers/status"
 participant API_EC as "/api/engine-config"
-participant API_AM as "/api/models"
 participant AD as "adapters/index.ts"
 participant REG as "modelRegistry.ts"
 participant PR as "types.ts (pricing)"
 participant WS as "workspaceKeyService.ts"
-UI->>API_EC : GET current config
-API_EC-->>UI : {provider, model, hasKey}
-UI->>API_AM : GET /api/models?provider=...
-API_AM-->>UI : {success, models}
-UI->>AD : getWorkspaceAdapter(provider, model, workspaceId)
-AD->>WS : getWorkspaceApiKey(provider, workspaceId)
-WS-->>AD : encrypted key or null
-AD-->>UI : AIAdapter (with cache wrapper)
-UI->>REG : resolve model profile (tier, strategy)
-UI->>PR : costEstimateUsd(prompt, completion)
-UI-->>UI : render model picker and pricing hints
+participant CSS as "globals.css"
+APP->>MSG : Check existing config
+MSG->>PSAPI : Fetch configured providers
+PSAPI-->>MSG : Provider status (configured only)
+MSG->>MSG : Auto-select first configured provider
+MSG->>API_EC : Save selection (server uses env vars)
+API_EC-->>MSG : Success
+MSG->>REG : resolve model profile (tier, strategy)
+MSG->>PR : costEstimateUsd(prompt, completion)
+MSG->>CSS : Apply violet theme styling
+MSG-->>APP : Complete configuration
 ```
 
 **Diagram sources**
-- [AIEngineConfigPanel.tsx:1-899](file://components/AIEngineConfigPanel.tsx#L1-L899)
-- [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
-- [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
-- [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
-- [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
+- [page.tsx:68-107](file://app/page.tsx#L68-L107)
+- [ModelSelectionGate.tsx:71-104](file://components/ModelSelectionGate.tsx#L71-L104)
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
+- [engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
+- [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
+- [types.ts:110-129](file://lib/ai/types.ts#L110-L129)
+- [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
+- [globals.css:1-156](file://app/globals.css#L1-L156)
 
 ## Detailed Component Analysis
+
+### Enhanced Model Selection Gate and Streamlined Wizard
+The ModelSelectionGate provides a streamlined three-step wizard for initial model configuration with comprehensive visual redesign:
+- **Step 1: Loading** - Automatically fetches configured providers from the new `/api/providers/status` endpoint with animated loading states
+- **Step 2: Provider Selection** - Displays only providers with configured API keys (filtered from environment variables) in an enhanced grid layout with gradient backgrounds and brand color integration
+- **Step 3: Confirmation** - Reviews and confirms the selected configuration with automatic credential resolution and enhanced security indicators
+
+The new provider status API dynamically discovers configured providers based on environment variables:
+- Checks for provider-specific environment variables (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+- Filters providers to only show those with valid credentials configured
+- Handles special cases like Ollama (local-only, no API key required)
+- Supports alternative environment variables (e.g., GOOGLE_API_KEY and GEMINI_API_KEY)
+
+```mermaid
+flowchart TD
+Start(["ModelSelectionGate"]) --> Step1["Loading Providers"]
+Step1 --> FetchStatus["GET /api/providers/status"]
+FetchStatus --> FilterConfigured{"Filter configured providers"}
+FilterConfigured --> |Found providers| Step2["Enhanced Provider Selection Grid"]
+FilterConfigured --> |No providers| Step4["Error State with Violet Theme"]
+Step2 --> SelectProvider["Auto-select first configured provider<br/>with gradient backgrounds<br/>and brand color integration"]
+SelectProvider --> Step3["Enhanced Confirmation Screen<br/>with security indicators"]
+Step3 --> SaveSelection["POST /api/engine-config (server uses env vars)"]
+SaveSelection --> Complete["Configuration Complete<br/>with violet glow effects"]
+Step4 --> ErrorDisplay["Show credential setup instructions<br/>with violet error styling"]
+```
+
+**Diagram sources**
+- [ModelSelectionGate.tsx:71-104](file://components/ModelSelectionGate.tsx#L71-L104)
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
+- [ModelSelectionGate.tsx:112-148](file://components/ModelSelectionGate.tsx#L112-L148)
+
+**Section sources**
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+
+### Enhanced Provider Status Discovery
+The new `/api/providers/status` endpoint provides dynamic provider discovery with comprehensive configuration:
+- Defines provider configurations with colors, gradients, and model lists
+- Checks environment variables for provider configuration
+- Handles special cases (local-only providers, alternative environment variables)
+- Returns configured provider count for UI display
+- Supports Vercel environment detection for local-only providers
+
+```mermaid
+flowchart TD
+ProviderConfig["PROVIDER_CONFIG array"] --> CheckEnv["Check environment variables"]
+CheckEnv --> LocalOnly{"Local-only provider?"}
+LocalOnly --> |Yes| VercelCheck{"On Vercel platform?"}
+VercelCheck --> |Yes| NotConfigured["Not configured"]
+VercelCheck --> |No| Configured["Configured"]
+LocalOnly --> |No| PrimaryCheck{"Primary env var present?"}
+PrimaryCheck --> |Yes| Configured
+PrimaryCheck --> |No| AltCheck{"Alternative env var present?"}
+AltCheck --> |Yes| Configured
+AltCheck --> |No| NotConfigured
+Configured --> ReturnStatus["Return configured status<br/>with violet theme styling"]
+NotConfigured --> ReturnStatus
+```
+
+**Diagram sources**
+- [providers/status/route.ts:13-67](file://app/api/providers/status/route.ts#L13-L67)
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
+
+**Section sources**
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 
 ### Model Registry and Tiered Pipeline
 The registry defines five tiers and associated pipeline behaviors:
@@ -295,10 +417,10 @@ Sort --> Return["Return {success, models, count}"]
 ```
 
 **Diagram sources**
-- [models/route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
 
 **Section sources**
-- [models/route.ts:206-456](file://app/api/models/route.ts#L206-L456)
+- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
 
 ### Prompt Styles, Token Budgets, and Extraction Strategies
 Prompt styles and pipeline controls are defined per model tier:
@@ -406,17 +528,78 @@ end
 - [adapters/index.ts:82-138](file://lib/ai/adapters/index.ts#L82-L138)
 - [cache.ts:108-140](file://lib/ai/cache.ts#L108-L140)
 
+## Visual Design System
+
+### Enhanced Styling Architecture
+The ModelSelectionGate features a comprehensive visual redesign with a cohesive violet-themed design system:
+- **Violet Orb Background**: Radial gradient orbs positioned strategically behind the main content
+- **Gradient Provider Cards**: Each provider displays with unique gradient backgrounds and brand color integration
+- **Violet Glow Transitions**: Smooth hover effects with purple/violet glow transitions on interactive elements
+- **Frosted Glass Effects**: Backdrop blur and translucent surfaces for modern UI feel
+- **Typography Enhancements**: Improved hover state animations and text styling with violet accents
+
+### Color Scheme and Theming
+The system implements a sophisticated color palette centered around violet and purple tones:
+- Primary violet: `#8b5cf6` (139, 92, 246) - used for highlights, gradients, and interactive elements
+- Secondary gradients: From-violet-to-purple combinations for provider cards and buttons
+- Background: Dark slate blue `#0B0F19` with subtle violet undertones
+- Text: High contrast white and gray tones with violet accents for emphasis
+- Glows: Subtle violet shadows and text glows for depth and visual interest
+
+### Interactive Elements and Animations
+- **Hover Effects**: Smooth scaling transitions (1.02x) with violet glow overlays on provider cards
+- **Button States**: Gradient backgrounds with hover effects, active press-down animations
+- **Loading States**: Animated spinner with violet color scheme
+- **Success States**: Emerald green accents for positive feedback
+- **Error States**: Red/orange tones with violet borders for warnings
+
+```mermaid
+flowchart TD
+VIOLET_THEME["Violet Theme System"] --> ORBS["Violet Orb Backgrounds<br/>Radial gradients with blur effects"]
+VIOLET_THEME --> GRADIENTS["Gradient Provider Cards<br/>Brand color integration"]
+VIOLET_THEME --> GLOW["Violet Glow Transitions<br/>Hover effects and animations"]
+VIOLET_THEME --> GLASS["Frosted Glass Effects<br/>Backdrop blur and translucency"]
+VIOLET_THEME --> TYPO["Typography Enhancements<br/>Hover state animations"]
+ORBS --> BACKGROUND["Background Pattern<br/>Positioned strategically"]
+GRADIENTS --> CARDS["Provider Cards<br/>Unique gradients per provider"]
+GLOW --> HOVER["Hover Effects<br/>Scale and opacity transitions"]
+GLASS --> SURFACES["Interactive Surfaces<br/>Card and button styling"]
+TYPO --> TEXT["Text Styling<br/>Violet accents and animations"]
+```
+
+**Diagram sources**
+- [ModelSelectionGate.tsx:158-163](file://components/ModelSelectionGate.tsx#L158-L163)
+- [ModelSelectionGate.tsx:294-332](file://components/ModelSelectionGate.tsx#L294-L332)
+- [ModelSelectionGate.tsx:424-437](file://components/ModelSelectionGate.tsx#L424-L437)
+- [globals.css:9-21](file://app/globals.css#L9-L21)
+- [globals.css:54-68](file://app/globals.css#L54-L68)
+
+**Section sources**
+- [ModelSelectionGate.tsx:158-163](file://components/ModelSelectionGate.tsx#L158-L163)
+- [ModelSelectionGate.tsx:294-332](file://components/ModelSelectionGate.tsx#L294-L332)
+- [ModelSelectionGate.tsx:424-437](file://components/ModelSelectionGate.tsx#L424-L437)
+- [globals.css:9-21](file://app/globals.css#L9-L21)
+- [globals.css:54-68](file://app/globals.css#L54-L68)
+
 ## Dependency Analysis
-The system exhibits clear separation of concerns:
+The system exhibits clear separation of concerns with enhanced streamlined selection flow and comprehensive visual design:
+- ModelSelectionGate depends on provider status API for automatic provider discovery and styling system for visual effects
+- ProviderSelector depends on engine-config API for credential status checks and configuration
 - UI panels depend on backend APIs for configuration and model discovery
+- Provider status API depends on environment variables and provider configurations
 - Engine configuration API depends on workspace key service and encryption
 - Adapter factory depends on provider-specific adapters and caching
 - Registry and pricing are independent data sources consumed by UI and adapters
 - Model listing API depends on provider endpoints and static fallbacks
+- Visual design system provides consistent theming across all components
 
 ```mermaid
 graph LR
-UI["AIEngineConfigPanel.tsx"] --> EC["/api/engine-config"]
+MSG["ModelSelectionGate.tsx"] --> PSAPI["/api/providers/status"]
+MSG --> EC["/api/engine-config"]
+MSG --> CSS["globals.css"]
+PS["ProviderSelector.tsx"] --> EC
+UI["AIEngineConfigPanel.tsx"] --> EC
 UI --> AM["/api/models"]
 EC --> WS["workspaceKeyService.ts"]
 EC --> IDX["adapters/index.ts"]
@@ -427,29 +610,40 @@ IDX --> UA["adapters/unconfigured.ts"]
 IDX --> CA["cache.ts"]
 MR["modelRegistry.ts"] --> IDX
 TY["types.ts"] --> IDX
+PSAPI --> ENV["Environment Variables"]
+CSS --> THEME["Violet Theme System"]
+CSS --> GRADIENTS["Gradient Effects"]
+CSS --> GLOW["Violet Glow Transitions"]
 ```
 
 **Diagram sources**
-- [AIEngineConfigPanel.tsx:1-899](file://components/AIEngineConfigPanel.tsx#L1-L899)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [adapters/unconfigured.ts:1-99](file://lib/ai/adapters/unconfigured.ts#L1-L99)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
+- [globals.css:1-156](file://app/globals.css#L1-L156)
 
 **Section sources**
 - [adapters/index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
-- [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
+- [models/route.ts:1-200](file://app/api/models/route.ts#L1-L200)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
+- [modelRegistry.ts:1-200](file://lib/ai/modelRegistry.ts#L1-L200)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
+- [globals.css:1-156](file://app/globals.css#L1-L156)
 
 ## Performance Considerations
 - Use caching to reduce redundant generations and lower latency and cost
@@ -457,26 +651,33 @@ TY["types.ts"] --> IDX
 - Tune temperature and max tokens according to model profiles to balance quality and speed
 - Leverage static fallbacks for model discovery to avoid network timeouts
 - Monitor token usage and cost estimates to guide model selection
-
-[No sources needed since this section provides general guidance]
+- **Enhanced**: ModelSelectionGate reduces initial setup friction with streamlined three-step flow and optimized visual effects
+- **Enhanced**: Automatic provider discovery eliminates manual credential entry overhead with efficient API calls
+- **Enhanced**: Environment variable-based credential resolution improves security and reduces configuration complexity
+- **Enhanced**: Visual redesign maintains performance through optimized gradient rendering and minimal DOM manipulation
 
 ## Troubleshooting Guide
 Common issues and resolutions:
-- Missing API keys: The adapter factory throws a configuration error or returns an unconfigured adapter; use the settings panel to save keys
+- Missing API keys: The provider status API filters out providers without configured credentials; check environment variables
 - Provider connectivity: Model listing API surfaces authentication errors distinctly; use the connection test in the settings panel
 - Silent failures: The registry returns null for unknown models; callers should fall back to a sensible default tier (cloud)
 - Local provider unavailability: Ollama fallbacks provide a static list; ensure the daemon is reachable or configure environment variables
+- **Enhanced**: Model gate showing error state: Check that environment variables are properly configured for desired providers with violet-themed error display
+- **Enhanced**: Provider not appearing: Verify environment variable naming conventions (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.) with proper configuration detection
+- **Enhanced**: Automatic credential resolution failing: Ensure environment variables are set in the deployment platform (Vercel) with proper environment variable support
+- **Enhanced**: Visual effects not displaying: Verify globals.css is properly loaded and violet theme variables are accessible
 
 **Section sources**
 - [adapters/index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
 - [adapters/unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
-- [models/route.ts:445-455](file://app/api/models/route.ts#L445-L455)
+- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
 - [modelRegistry.ts:18-23](file://lib/ai/modelRegistry.ts#L18-L23)
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
+- [ModelSelectionGate.tsx:244-275](file://components/ModelSelectionGate.tsx#L244-L275)
+- [globals.css:9-21](file://app/globals.css#L9-L21)
 
 ## Conclusion
-The model configuration and selection system provides a robust, provider-agnostic framework for choosing and managing AI models. By combining a centralized registry, secure credential resolution, dynamic model discovery, and cost-aware pricing, it enables teams to optimize for performance, cost, and reliability while maintaining a consistent developer experience.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The model configuration and selection system provides a robust, provider-agnostic framework for choosing and managing AI models. The enhanced streamlined ModelSelectionGate flow with automatic provider discovery, credential resolution, and comprehensive visual redesign significantly improves the initial setup experience while maintaining security and flexibility. The major visual redesign featuring violet-themed color schemes, gradient backgrounds, and brand color integration creates a cohesive and visually appealing user experience. By combining a centralized registry, secure credential resolution, dynamic provider discovery, cost-aware pricing, and comprehensive visual design system, it enables teams to optimize for performance, cost, and reliability while maintaining a consistent developer experience with enhanced aesthetics.
 
 ## Appendices
 
@@ -508,6 +709,52 @@ The model configuration and selection system provides a robust, provider-agnosti
 - Use the settings panel to validate connections and manage keys
 
 **Section sources**
-- [models/route.ts:231-263](file://app/api/models/route.ts#L231-L263)
+- [models/route.ts:18-200](file://app/api/models/route.ts#L18-L200)
 - [adapters/unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
 - [AIEngineConfigPanel.tsx:340-356](file://components/AIEngineConfigPanel.tsx#L340-L356)
+
+### Example: Implement Streamlined Model Selection Gate
+- Integrate ModelSelectionGate into your main application as the initial setup flow
+- The component automatically handles provider discovery and credential resolution with visual feedback
+- Handle onComplete callback to receive selected provider, model, and providerName
+- Use onSkip callback for users who want to configure later
+- Leverage the enhanced visual design system for consistent theming
+
+**Section sources**
+- [ModelSelectionGate.tsx:59-157](file://components/ModelSelectionGate.tsx#L59-L157)
+- [page.tsx:468-474](file://app/page.tsx#L468-L474)
+
+### Example: Customize Provider Selector
+- Use ProviderSelector component for standalone provider selection
+- Configure PROVIDER_OPTIONS and PROVIDER_MODELS for your specific needs
+- Handle onProviderSelect callback to receive provider and model selections
+- Use onConfigureCredentials callback for credential management flows
+
+**Section sources**
+- [ProviderSelector.tsx:126-148](file://components/ProviderSelector.tsx#L126-L148)
+- [ProviderSelector.tsx:34-101](file://components/ProviderSelector.tsx#L34-L101)
+- [ProviderSelector.tsx:105-111](file://components/ProviderSelector.tsx#L105-L111)
+
+### Example: Configure Environment Variables for Providers
+- Set OPENAI_API_KEY for OpenAI models
+- Set ANTHROPIC_API_KEY for Claude models
+- Set GOOGLE_API_KEY or GEMINI_API_KEY for Gemini models
+- Set GROQ_API_KEY for Groq inference
+- Ollama does not require API keys (local-only)
+
+**Section sources**
+- [providers/status/route.ts:13-67](file://app/api/providers/status/route.ts#L13-L67)
+- [providers/status/route.ts:88-104](file://app/api/providers/status/route.ts#L88-L104)
+
+### Example: Implement Enhanced Visual Design System
+- Utilize the violet theme system with `--stitch-violet` variables
+- Apply gradient backgrounds using `from-violet-500/20 to-purple-500/20` classes
+- Implement violet glow effects with `shadow-violet-500/25` classes
+- Use frosted glass effects with `backdrop-blur-xl` and translucent surfaces
+- Leverage hover effects with smooth transitions and opacity changes
+
+**Section sources**
+- [globals.css:9-21](file://app/globals.css#L9-L21)
+- [globals.css:54-68](file://app/globals.css#L54-L68)
+- [ModelSelectionGate.tsx:158-163](file://components/ModelSelectionGate.tsx#L158-L163)
+- [ModelSelectionGate.tsx:294-332](file://components/ModelSelectionGate.tsx#L294-L332)

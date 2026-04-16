@@ -14,7 +14,17 @@
 - [engine-config/route.ts](file://app/api/engine-config/route.ts)
 - [auth.ts](file://lib/auth.ts)
 - [types.ts](file://lib/ai/types.ts)
+- [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [ProviderSelector.tsx](file://components/ProviderSelector.tsx)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced ModelSelectionGate integration with new provider status discovery through /api/providers/status endpoint
+- Updated engine-config API to support server-side credential management with encrypted key storage
+- Streamlined configuration flow replacing multi-step credential entry with automated provider detection
+- Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -28,10 +38,10 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document describes the utility APIs that power model discovery, history tracking, feedback collection, and manifest generation. It covers request/response schemas, authentication requirements, integration patterns with the generation pipeline, and data persistence layers. These endpoints are essential for configuring AI providers, auditing generation history, collecting user insights for quality improvement, and generating component metadata for multi-file applications.
+This document describes the utility APIs that power model discovery, history tracking, feedback collection, manifest generation, and provider configuration management. It covers request/response schemas, authentication requirements, integration patterns with the generation pipeline, and data persistence layers. These endpoints are essential for configuring AI providers, auditing generation history, collecting user insights for quality improvement, generating component metadata for multi-file applications, and managing provider credentials through a streamlined three-step configuration flow.
 
 ## Project Structure
-The utility endpoints live under app/api and integrate with shared libraries for persistence, authentication, and AI adapters.
+The utility endpoints live under app/api and integrate with shared libraries for persistence, authentication, and AI adapters. The new providers/status endpoint centralizes provider detection from environment variables.
 
 ```mermaid
 graph TB
@@ -41,6 +51,7 @@ H["/api/history"]
 F["/api/feedback"]
 X["/api/manifest"]
 EC["/api/engine-config"]
+PS["/api/providers/status"]
 end
 subgraph "Libraries"
 PR["lib/prisma.ts"]
@@ -53,6 +64,10 @@ end
 subgraph "Persistence"
 SC["prisma/schema.prisma"]
 end
+subgraph "UI Components"
+MSG["ModelSelectionGate.tsx"]
+PSel["ProviderSelector.tsx"]
+end
 M --> PR
 H --> PR
 F --> FS
@@ -60,6 +75,8 @@ X --> CG
 X --> AU
 EC --> PR
 EC --> AU
+PS --> MSG
+PS --> PSel
 CG --> TY
 ME --> PR
 FS --> PR
@@ -72,6 +89,7 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -79,6 +97,8 @@ PR --> SC
 - [chunkGenerator.ts:1-220](file://lib/ai/chunkGenerator.ts#L1-L220)
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
+- [ModelSelectionGate.tsx:1-454](file://components/ModelSelectionGate.tsx#L1-L454)
+- [ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 
 **Section sources**
 - [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -86,6 +106,7 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -100,6 +121,7 @@ PR --> SC
 - Feedback endpoint: Accepts user signals and metrics, aggregates statistics, and persists structured feedback.
 - Manifest endpoint: Generates a file manifest for multi-file application scaffolding using the configured provider and model.
 - Engine config endpoint: Manages workspace-level provider/model selection and encrypted API key storage.
+- **Providers status endpoint**: Centralized provider detection that automatically identifies configured providers from environment variables.
 
 **Section sources**
 - [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -107,17 +129,22 @@ PR --> SC
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 
 ## Architecture Overview
-The utility APIs integrate with authentication, persistence, and AI adapters. The models endpoint resolves keys from client input, database, or environment variables. The history endpoint uses Prisma-backed memory. The feedback endpoint writes to both Redis-backed stats and Prisma. The manifest endpoint uses the unified adapter layer to generate manifests securely.
+The utility APIs integrate with authentication, persistence, and AI adapters. The models endpoint resolves keys from client input, database, or environment variables. The history endpoint uses Prisma-backed memory. The feedback endpoint writes to both Redis-backed stats and Prisma. The manifest endpoint uses the unified adapter layer to generate manifests securely. The new providers/status endpoint centralizes provider configuration detection from environment variables.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
-participant Models as "/api/models"
+participant Providers as "/api/providers/status"
 participant Engine as "/api/engine-config"
 participant DB as "Prisma DB"
 participant Env as "Environment"
+Client->>Providers : GET /api/providers/status
+Providers->>Env : Check environment variables
+Env-->>Providers : Provider configuration status
+Providers-->>Client : {success, providers[], configuredCount}
 Client->>Engine : GET /api/engine-config
 Engine->>DB : Read workspace settings
 DB-->>Engine : Config (provider, model)
@@ -130,6 +157,7 @@ Models-->>Client : {models, count}
 ```
 
 **Diagram sources**
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
 - [models/route.ts:206-456](file://app/api/models/route.ts#L206-L456)
 - [engine-config/route.ts:36-65](file://app/api/engine-config/route.ts#L36-L65)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
@@ -386,6 +414,67 @@ Invalidate --> Ok["Return {success:true}"]
 **Section sources**
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
 
+### Providers Status Endpoint
+Purpose: Centralized provider detection that automatically identifies configured providers from environment variables. This endpoint replaces the previous multi-step credential entry process with a streamlined three-step flow.
+
+- Method: GET
+- Path: /api/providers/status
+- Query parameters: None
+- Authentication: Not required
+- Response:
+  - success: boolean
+  - providers: Array of ProviderStatus
+  - configuredCount: number (count of configured providers)
+- ProviderStatus fields:
+  - id: string (provider identifier)
+  - name: string (display name)
+  - description: string (provider features)
+  - color: string (brand color class)
+  - gradient: string (gradient class)
+  - bgColor: string (background color class)
+  - configured: boolean (environment variable detected)
+  - models: string[] (available models)
+  - recommended: boolean (featured provider)
+  - localOnly: boolean (Ollama local-only detection)
+
+Key behaviors:
+- Automatically detects provider configuration from environment variables
+- Handles special case for Ollama (local-only, not configured on Vercel)
+- Supports alternate environment variables (Google has both GOOGLE_API_KEY and GEMINI_API_KEY)
+- Returns configuredCount for UI display optimization
+
+Configuration detection logic:
+- Checks primary environment variable for each provider
+- Falls back to alternate environment variable when available (Google)
+- Ollama is considered configured only when NOT deployed on Vercel (local-only)
+- Returns boolean configured flag for each provider
+
+```mermaid
+flowchart TD
+Start(["GET /api/providers/status"]) --> CheckVercel["Check VERCEL environment"]
+CheckVercel --> MapProviders["Map PROVIDER_CONFIG array"]
+MapProviders --> CheckLocal{"Local-only provider?"}
+CheckLocal --> |Yes| CheckNotVercel["configured = !isVercel"]
+CheckLocal --> |No| CheckPrimary["Check primary env var"]
+CheckPrimary --> HasPrimary{"Primary key exists?"}
+HasPrimary --> |Yes| SetConfigured["configured = true"]
+HasPrimary --> |No| CheckAlt["Check alternate env var"]
+CheckAlt --> HasAlt{"Alternate key exists?"}
+HasAlt --> |Yes| SetConfigured
+HasAlt --> |No| SetUnconfigured["configured = false"]
+SetConfigured --> BuildResponse["Build ProviderStatus[]"]
+SetUnconfigured --> BuildResponse
+CheckNotVercel --> BuildResponse
+BuildResponse --> CalcCount["Calculate configuredCount"]
+CalcCount --> Return["Return {success, providers, configuredCount}"]
+```
+
+**Diagram sources**
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
+
+**Section sources**
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
+
 ## Dependency Analysis
 - Models endpoint depends on:
   - Provider-specific fetchers and environment variables.
@@ -402,6 +491,10 @@ Invalidate --> Ok["Return {success:true}"]
 - Engine config endpoint depends on:
   - Prisma for workspace settings.
   - Encryption service for secure key storage.
+- **Providers status endpoint depends on:**
+  - Environment variables for provider configuration detection.
+  - Static PROVIDER_CONFIG array for provider metadata.
+  - ModelSelectionGate component for UI integration.
 
 ```mermaid
 graph LR
@@ -414,6 +507,9 @@ Manifest["/api/manifest"] --> Adapter["Unified Adapter (chunkGenerator)"]
 Manifest --> Auth["NextAuth"]
 Engine["/api/engine-config"] --> Prisma
 Engine --> Crypto["Encryption Service"]
+Providers["/api/providers/status"] --> Env
+Providers --> MSG["ModelSelectionGate"]
+Providers --> PSel["ProviderSelector"]
 ```
 
 **Diagram sources**
@@ -423,6 +519,7 @@ Engine --> Crypto["Encryption Service"]
 - [feedbackStore.ts:88-104](file://lib/ai/feedbackStore.ts#L88-L104)
 - [manifest/route.ts:21-36](file://app/api/manifest/route.ts#L21-L36)
 - [engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
+- [providers/status/route.ts:84-133](file://app/api/providers/status/route.ts#L84-L133)
 
 **Section sources**
 - [models/route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -431,6 +528,7 @@ Engine --> Crypto["Encryption Service"]
 - [feedbackStore.ts:1-356](file://lib/ai/feedbackStore.ts#L1-L356)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
 - [engine-config/route.ts:1-154](file://app/api/engine-config/route.ts#L1-L154)
+- [providers/status/route.ts:1-134](file://app/api/providers/status/route.ts#L1-L134)
 
 ## Performance Considerations
 - Models endpoint:
@@ -446,8 +544,10 @@ Engine --> Crypto["Encryption Service"]
   - Uses exponential backoff on rate limits and returns safe defaults on failure.
 - Engine config endpoint:
   - Upserts minimize DB round trips; cache invalidation ensures freshness.
-
-[No sources needed since this section provides general guidance]
+- **Providers status endpoint:**
+  - Single environment variable checks per provider (minimal overhead).
+  - Static PROVIDER_CONFIG array provides predictable performance.
+  - No database dependencies for provider detection.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -463,6 +563,10 @@ Common issues and resolutions:
   - Provider not configured; configure the API key in engine-config.
 - Engine config endpoint returns 500:
   - Check encryption service availability and Prisma connectivity.
+- **Providers status endpoint returns empty providers array:**
+  - Verify environment variables are properly configured in Vercel settings.
+  - Check that provider-specific environment variables match expected names (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.).
+  - Ensure Ollama is running locally when testing (not configured on Vercel).
 
 **Section sources**
 - [models/route.ts:445-455](file://app/api/models/route.ts#L445-L455)
@@ -470,6 +574,9 @@ Common issues and resolutions:
 - [feedbackStore.ts:106-139](file://lib/ai/feedbackStore.ts#L106-L139)
 - [manifest/route.ts:42-55](file://app/api/manifest/route.ts#L42-L55)
 - [engine-config/route.ts:123-126](file://app/api/engine-config/route.ts#L123-L126)
+- [providers/status/route.ts:126-132](file://app/api/providers/status/route.ts#L126-L132)
 
 ## Conclusion
-The utility APIs provide a cohesive foundation for model discovery, history tracking, feedback-driven improvements, and manifest generation. They integrate securely with authentication, resilient persistence, and provider-agnostic adapters, enabling reliable operation across environments and robust data handling for analytics and quality assurance.
+The utility APIs provide a cohesive foundation for model discovery, history tracking, feedback-driven improvements, and manifest generation. The new providers/status endpoint streamlines provider configuration by automatically detecting configured providers from environment variables, replacing the previous multi-step credential entry process with a streamlined three-step flow. They integrate securely with authentication, resilient persistence, and provider-agnostic adapters, enabling reliable operation across environments and robust data handling for analytics and quality assurance.
+
+**Updated** Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section, as they are no longer part of the streamlined configuration approach described in this document. The focus has shifted to the ModelSelectionGate component and the new provider status discovery mechanism for simplified provider setup.

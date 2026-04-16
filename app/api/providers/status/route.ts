@@ -91,8 +91,10 @@ export async function GET() {
     
     // Debug: Log all available env var keys (without values for security)
     const allEnvKeys = Object.keys(process.env).filter(key => 
-      key.includes('API_KEY') || key.includes('OPENAI') || key.includes('ANTHROPIC') || 
-      key.includes('GOOGLE') || key.includes('GEMINI') || key.includes('GROQ')
+      key.includes('API_KEY') && (
+        key.includes('OPENAI') || key.includes('ANTHROPIC') || 
+        key.includes('GOOGLE') || key.includes('GEMINI') || key.includes('GROQ')
+      )
     );
     console.log('[providers/status] Available env vars:', allEnvKeys);
 

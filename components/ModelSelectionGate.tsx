@@ -254,10 +254,10 @@ export default function ModelSelectionGate({
                 <div className="bg-gray-950 rounded-xl p-4 text-left text-sm text-gray-400 space-y-2">
                   <p className="font-medium text-gray-300">Required environment variables:</p>
                   <ul className="space-y-1 font-mono text-xs">
-                    <li>• OPENAI_API_KEY - for OpenAI models</li>
+                    <li>• OPENAI_API_KEY - for OpenAI GPT models</li>
                     <li>• ANTHROPIC_API_KEY - for Claude models</li>
                     <li>• GOOGLE_API_KEY - for Gemini models</li>
-                    <li>• GROQ_API_KEY - for Groq inference</li>
+                    <li>• GROQ_API_KEY - for Groq fast inference</li>
                   </ul>
                 </div>
               </div>

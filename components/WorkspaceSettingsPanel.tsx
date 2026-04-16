@@ -42,16 +42,6 @@ const PROVIDERS: ProviderConfig[] = [
     docsUrl: 'https://console.anthropic.com/keys',
   },
   {
-    id: 'deepseek',
-    name: 'DeepSeek',
-    color: 'from-blue-500 to-indigo-600',
-    icon: '🔮',
-    envKey: 'DEEPSEEK_API_KEY',
-    placeholder: 'sk-...',
-    models: ['deepseek-chat', 'deepseek-coder'],
-    docsUrl: 'https://platform.deepseek.com',
-  },
-  {
     id: 'google',
     name: 'Google Gemini',
     color: 'from-blue-400 to-red-400',

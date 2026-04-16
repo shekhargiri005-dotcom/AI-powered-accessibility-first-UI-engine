@@ -99,84 +99,6 @@ async function fetchGroqModels(apiKey: string): Promise<ModelInfo[]> {
   }));
 }
 
-async function fetchOpenRouterModels(apiKey: string): Promise<ModelInfo[]> {
-  const res = await fetch('https://openrouter.ai/api/v1/models', {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`OpenRouter /api/v1/models → HTTP ${res.status}`);
-  const data = await res.json();
-  const models: { id: string; name?: string; context_length?: number }[] = data.data ?? [];
-  const FEATURED = [
-    'openai/gpt-4o', 'openai/gpt-4o-mini',
-    'anthropic/claude-3.5-sonnet', 'google/gemini-2.0-flash-001',
-    'meta-llama/llama-3.3-70b-instruct',
-  ];
-  return models.map((m) => ({
-    id: m.id,
-    name: m.name ?? m.id,
-    contextWindow: m.context_length,
-    isFeatured: FEATURED.includes(m.id),
-  }));
-}
-
-async function fetchTogetherModels(apiKey: string): Promise<ModelInfo[]> {
-  const res = await fetch('https://api.together.xyz/v1/models', {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`Together /v1/models → HTTP ${res.status}`);
-  const data = await res.json();
-  // Together returns an array directly (no .data wrapper)
-  const models: { id: string; display_name?: string; context_length?: number; type?: string }[] =
-    Array.isArray(data) ? data : (data.data ?? []);
-  const FEATURED = [
-    'meta-llama/Llama-3-70b-chat-hf',
-    'meta-llama/Llama-3-8b-chat-hf',
-    'mistralai/Mixtral-8x22B-Instruct-v0.1',
-  ];
-  return models
-    .filter((m) => !m.type || m.type === 'chat')
-    .map((m) => ({
-      id: m.id,
-      name: m.display_name ?? m.id,
-      contextWindow: m.context_length,
-      isFeatured: FEATURED.includes(m.id),
-    }));
-}
-
-async function fetchDeepSeekModels(apiKey: string): Promise<ModelInfo[]> {
-  const res = await fetch('https://api.deepseek.com/v1/models', {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`DeepSeek /v1/models → HTTP ${res.status}`);
-  const data = await res.json();
-  const models: { id: string }[] = data.data ?? [];
-  const FEATURED = ['deepseek-chat', 'deepseek-coder', 'deepseek-reasoner'];
-  return models.map((m) => ({
-    id: m.id,
-    name: m.id,
-    isFeatured: FEATURED.includes(m.id),
-  }));
-}
-
-async function fetchMistralModels(apiKey: string): Promise<ModelInfo[]> {
-  const res = await fetch('https://api.mistral.ai/v1/models', {
-    headers: { Authorization: `Bearer ${apiKey}` },
-    signal: AbortSignal.timeout(8000),
-  });
-  if (!res.ok) throw new Error(`Mistral /v1/models → HTTP ${res.status}`);
-  const data = await res.json();
-  const models: { id: string; name?: string }[] = data.data ?? [];
-  const FEATURED = ['mistral-large-latest', 'mistral-medium-latest', 'codestral-latest'];
-  return models.map((m) => ({
-    id: m.id,
-    name: m.name ?? m.id,
-    isFeatured: FEATURED.includes(m.id),
-  }));
-}
-
 async function fetchOllamaModels(baseUrl = 'http://localhost:11434'): Promise<ModelInfo[]> {
   try {
     const res = await fetch(`${baseUrl}/api/tags`, {
@@ -251,15 +173,6 @@ export async function GET(request: NextRequest) {
       { id: 'llama-3.1-70b-versatile', name: 'Llama 3.1 70B' },
       { id: 'mixtral-8x7b-32768', name: 'Mixtral 8x7B' },
     ],
-    deepseek: [
-      { id: 'deepseek-chat', name: 'DeepSeek V3 (Chat)', isFeatured: true },
-      { id: 'deepseek-reasoner', name: 'DeepSeek R1 (Reasoner)', isFeatured: true },
-      { id: 'deepseek-coder', name: 'DeepSeek Coder' },
-    ],
-    mistral: [
-      { id: 'mistral-large-latest', name: 'Mistral Large', isFeatured: true },
-      { id: 'codestral-latest', name: 'Codestral' },
-    ],
   };
 
   try {
@@ -314,105 +227,6 @@ export async function GET(request: NextRequest) {
           models = await fetchGroqModels(finalKey);
         } catch {
           models = STATIC_FALLBACKS.groq;
-        }
-        break;
-      }
-
-      case 'openrouter': {
-        const finalKey = await resolveKey(apiKey, [process.env.OPENROUTER_API_KEY]);
-        if (!finalKey) {
-          // OpenRouter is too diverse for a small static list, but we give common ones
-          return NextResponse.json({ success: true, models: [
-            { id: 'openai/gpt-4o', name: 'GPT-4o (via OpenRouter)', isFeatured: true },
-            { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', isFeatured: true },
-            { id: 'google/gemini-2.0-flash-001', name: 'Gemini 2.0 Flash' },
-          ]});
-        }
-        try {
-          models = await fetchOpenRouterModels(finalKey);
-        } catch {
-          models = [ { id: 'openai/gpt-4o', name: 'GPT-4o (Fallback)', isFeatured: true } ];
-        }
-        break;
-      }
-
-      case 'together': {
-        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY]);
-        if (!finalKey) {
-           return NextResponse.json({ success: true, models: [
-             { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B', isFeatured: true },
-             { id: 'mistralai/Mixtral-8x22B-Instruct-v0.1', name: 'Mixtral 8x22B' },
-           ]});
-        }
-        try {
-          models = await fetchTogetherModels(finalKey);
-        } catch {
-          models = [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B (Fallback)', isFeatured: true } ];
-        }
-        break;
-      }
-
-      case 'deepseek': {
-        const finalKey = await resolveKey(apiKey, [process.env.DEEPSEEK_API_KEY]);
-        if (!finalKey) {
-          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.deepseek });
-        }
-        try {
-          models = await fetchDeepSeekModels(finalKey);
-        } catch {
-          models = STATIC_FALLBACKS.deepseek;
-        }
-        break;
-      }
-
-      case 'mistral': {
-        const finalKey = await resolveKey(apiKey, [process.env.MISTRAL_API_KEY, process.env.TOGETHER_API_KEY]);
-        if (!finalKey) {
-          return NextResponse.json({ success: true, models: STATIC_FALLBACKS.mistral });
-        }
-        try {
-          models = await fetchMistralModels(finalKey);
-        } catch {
-          models = STATIC_FALLBACKS.mistral;
-        }
-        break;
-      }
-
-      case 'meta': {
-        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
-        if (!finalKey) {
-          return NextResponse.json({ success: true, models: [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B', isFeatured: true } ] });
-        }
-        try {
-          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
-        } catch {
-          models = [ { id: 'meta-llama/Llama-3-70b-chat-hf', name: 'Llama 3 70B (Fallback)', isFeatured: true } ];
-        }
-        break;
-      }
-
-      case 'qwen': {
-        const finalKey = await resolveKey(apiKey, [process.env.DASHSCOPE_API_KEY, process.env.TOGETHER_API_KEY]);
-        if (!finalKey) {
-           return NextResponse.json({ success: true, models: [ { id: 'qwen-max', name: 'Qwen Max', isFeatured: true } ] });
-        }
-        try {
-          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://dashscope.aliyuncs.com/compatible-mode/v1');
-        } catch {
-          models = [ { id: 'qwen-max', name: 'Qwen Max (Fallback)', isFeatured: true } ];
-        }
-        break;
-      }
-
-      case 'gemma': {
-        const finalKey = await resolveKey(apiKey, [process.env.TOGETHER_API_KEY, process.env.GROQ_API_KEY]);
-        if (!finalKey) {
-          return NextResponse.json({ success: true, models: [ { id: 'gemma-2-27b-it', name: 'Gemma 2 27B', isFeatured: true } ] });
-        }
-        try {
-          models = await fetchOpenAIModels(finalKey, baseUrl || 'https://api.together.xyz/v1');
-        } catch {
-          models = [ { id: 'gemma-2-27b-it', name: 'Gemma 2 27B (Fallback)', isFeatured: true } ];
         }
         break;
       }
