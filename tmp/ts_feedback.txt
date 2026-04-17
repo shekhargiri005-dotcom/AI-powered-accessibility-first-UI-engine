@@ -1,4 +1,0 @@
-﻿components/FeedbackBar.tsx(130,23): error TS2367: This comparison appears to be unintentional because the types '"correcting"' and '"submitting"' have no overlap.
-components/FeedbackBar.tsx(134,14): error TS2367: This comparison appears to be unintentional because the types '"correcting"' and '"submitting"' have no overlap.
-components/SandpackPreview.tsx(101,43): error TS2339: Property 'code' does not exist on type 'string | SandpackFile'.
-  Property 'code' does not exist on type 'string'.
