@@ -41,6 +41,7 @@ const NEON_TRANSIENT = [
   'terminating connection',
   'Connection pool timeout',
   'Can\'t reach database server',
+  'fetch failed',
 ];
 
 function isNeonTransient(err: unknown): boolean {
@@ -52,18 +53,23 @@ function isNeonTransient(err: unknown): boolean {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * Wraps a Prisma operation with automatic reconnection on Neon "kind: Closed" errors.
- * Retries once after a 250ms pause to give Neon time to wake from idle.
+ * Wraps a Prisma operation with automatic reconnection on Neon transient errors.
+ * Uses exponential backoff (e.g. 500ms, 1000ms, 2000ms) to give database pools
+ * time to wake from idle.
  */
-export async function withReconnect<T>(fn: () => Promise<T>): Promise<T> {
-  try {
-    return await fn();
-  } catch (err) {
-    if (!isNeonTransient(err)) throw err;
+export async function withReconnect<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (!isNeonTransient(err) || attempt >= maxRetries) throw err;
 
-    // Give Neon 250ms to wake, then reconnect and retry
-    await sleep(250);
-    try { await prisma.$connect(); } catch { /* ignore — next call will surface real error */ }
-    return await fn();
+      attempt++;
+      const backoffMs = 500 * Math.pow(2, attempt - 1);
+      console.warn(`[Prisma] Connection error detected, retrying (${attempt}/${maxRetries}) in ${backoffMs}ms...`);
+      await sleep(backoffMs);
+      try { await prisma.$connect(); } catch { /* ignore — next call will surface real error */ }
+    }
   }
 }

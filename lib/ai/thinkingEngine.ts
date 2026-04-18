@@ -219,16 +219,38 @@ export async function generateThinkingPlan(
     const modelProfile = getModelProfile(modelId);
     const useJsonMode = modelProfile?.supportsJsonMode !== false;
 
-    const result2 = await adapter.generate({
-      model: modelId,
-      messages: [
-        { role: 'system', content: THINKING_SYSTEM_PROMPT },
-        { role: 'user', content: userMessage },
-      ],
-      ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
-      temperature: 0.3,
-      maxTokens: 800,
-    });
+    // Retry loop for 429 and network errors
+    let result2;
+    let retries = 0;
+    const maxRetries = 3;
+    const baseDelayMs = 1000;
+
+    while (true) {
+      try {
+        result2 = await adapter.generate({
+          model: modelId,
+          messages: [
+            { role: 'system', content: THINKING_SYSTEM_PROMPT },
+            { role: 'user', content: userMessage },
+          ],
+          ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
+          temperature: 0.3,
+          maxTokens: 800,
+        });
+        break; // Success
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        const isNetworkError = msg.includes('429') || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504');
+        
+        if (isNetworkError && retries < maxRetries) {
+          retries++;
+          console.warn(`[thinkingEngine] Network/Rate limit error. Retrying (${retries}/${maxRetries}) in ${baseDelayMs * Math.pow(2, retries - 1)}ms: ${msg}`);
+          await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
+          continue;
+        }
+        throw error;
+      }
+    }
 
     const raw = result2.content;
     if (!raw) return { success: false, error: 'Empty response from thinking engine' };

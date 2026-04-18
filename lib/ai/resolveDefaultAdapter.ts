@@ -55,6 +55,9 @@ const PROVIDER_CHECKS: Array<{
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
 ];
 
+/** Universal LLM_KEY for all providers */
+const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
+
 /**
  * Resolves an AdapterConfig from environment variables.
  *
@@ -67,12 +70,15 @@ const PROVIDER_CHECKS: Array<{
  * @returns        A ready-to-use AdapterConfig to pass to getWorkspaceAdapter()
  */
 export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
+  console.log(`[resolveDefaultAdapter] Resolving adapter for purpose: ${purpose}`);
+  
   // ── 1. Purpose-specific explicit override ─────────────────────────────────
   const purposeModel    = process.env[`${purpose}_MODEL`];
   const purposeProvider = process.env[`${purpose}_PROVIDER`];
   const purposeApiKey   = process.env[`${purpose}_API_KEY`];
 
   if (purposeModel) {
+    console.log(`[resolveDefaultAdapter] Using purpose-specific override for ${purpose}`);
     return {
       model:    purposeModel,
       provider: purposeProvider || undefined,
@@ -84,6 +90,7 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
   const genericModel    = process.env.DEFAULT_MODEL;
   const genericProvider = process.env.DEFAULT_PROVIDER;
   if (genericModel) {
+    console.log(`[resolveDefaultAdapter] Using generic model override: ${genericModel}`);
     return {
       model:    genericModel,
       provider: genericProvider || undefined,
@@ -96,6 +103,7 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
   for (const check of PROVIDER_CHECKS) {
     const key = process.env[check.envKey];
     if (key) {
+      console.log(`[resolveDefaultAdapter] ✓ Found ${check.envKey}, using provider: ${check.id}`);
       return {
         model:    defaults[check.id] ?? 'gpt-4o-mini',
         provider: check.id,
@@ -105,16 +113,41 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. Fallback (Waiting Socket) ─────────────────────────
+  // ── 4. Universal LLM_KEY fallback ─────────────────────────────────────────
+  // If no specific provider key is found, use LLM_KEY with the first provider
+  if (UNIVERSAL_LLM_KEY) {
+    const defaultProvider = PROVIDER_CHECKS[0]; // groq as default
+    console.log(`[resolveDefaultAdapter] ✓ Using universal LLM_KEY with provider: ${defaultProvider.id}`);
+    console.log(`[resolveDefaultAdapter] LLM_KEY length: ${UNIVERSAL_LLM_KEY.length}, prefix: ${UNIVERSAL_LLM_KEY.substring(0, 10)}...`);
+    return {
+      model:    defaults[defaultProvider.id] ?? 'gpt-4o-mini',
+      provider: defaultProvider.id,
+      apiKey:   UNIVERSAL_LLM_KEY,
+      baseUrl:  defaultProvider.baseUrl,
+    };
+  }
+
+  // ── 5. Fallback (Waiting Socket) ─────────────────────────
   // A generic socket that safely informs the client to inject a configuration.
+  console.error(`[resolveDefaultAdapter] ✗ No API keys found for purpose: ${purpose}`);
+  console.error(`[resolveDefaultAdapter] Available keys:`, 
+    Object.keys(process.env).filter(k => k.includes('API_KEY') || k === 'LLM_KEY')
+  );
+  
   return { model: 'unconfigured', provider: 'unconfigured' };
 }
 
 /**
  * Looks up the canonical API key env var for a named provider.
+ * Falls back to universal LLM_KEY if no specific key is found.
  * Returns undefined if no key is found.
  */
 export function resolveApiKeyForProvider(provider: string): string | undefined {
+  // First check for universal LLM_KEY
+  if (UNIVERSAL_LLM_KEY) {
+    return UNIVERSAL_LLM_KEY;
+  }
+  
   const map: Record<string, string[]> = {
     openai:     ['OPENAI_API_KEY'],
     anthropic:  ['ANTHROPIC_API_KEY'],

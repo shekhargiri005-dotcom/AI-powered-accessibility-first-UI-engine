@@ -122,13 +122,15 @@ export async function classifyIntent(
         break; // Success
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        if (msg.includes('429') && retries < maxRetries) {
+        const isNetworkError = msg.includes('429') || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504');
+        
+        if (isNetworkError && retries < maxRetries) {
           retries++;
-          console.warn(`[intentClassifier] 429 Rate Limit hit. Retrying (${retries}/${maxRetries}) in ${baseDelayMs * Math.pow(2, retries - 1)}ms...`);
+          console.warn(`[intentClassifier] Network/Rate limit error. Retrying (${retries}/${maxRetries}) in ${baseDelayMs * Math.pow(2, retries - 1)}ms: ${msg}`);
           await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
           continue;
         }
-        throw error; // Rethrow if not a 429 or out of retries
+        throw error; // Rethrow if not a transient network error or out of retries
       }
     }
 

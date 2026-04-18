@@ -261,12 +261,24 @@ export async function getWorkspaceAdapter(
 
   // 3. Universal LLM_KEY fallback - works for all providers
   const universalKey = process.env.LLM_KEY;
+  console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
+    hasLLMKey: !!universalKey,
+    keyLength: universalKey?.length || 0,
+    keyPrefix: universalKey ? universalKey.substring(0, 10) + '...' : 'none',
+    providerId,
+    modelId
+  });
+  
   if (universalKey) {
-    console.log(`[getWorkspaceAdapter] Using universal LLM_KEY for ${providerId}`);
+    console.log(`[getWorkspaceAdapter] ✓ Using universal LLM_KEY for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
   }
 
   // 4. Failure: No credentials found
+  console.error(`[getWorkspaceAdapter] ✗ No API key found for ${providerId}. Available env vars:`, 
+    Object.keys(process.env).filter(k => k.includes('API_KEY') || k === 'LLM_KEY')
+  );
+  
   // Return UnconfiguredAdapter for graceful degradation
   // (it returns a helpful UI component instead of crashing)
   return new UnconfiguredAdapter();
