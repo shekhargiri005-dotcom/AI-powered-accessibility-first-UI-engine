@@ -122,6 +122,13 @@ export default function HomePage() {
             setPreselectedProvider(provider);
             setProviderCredentials(prev => ({ ...prev, [provider]: true }));
           }
+          // Also set credentials for ALL providers that have keys
+          for (const [prov, cfg] of sorted) {
+            const c = cfg as { model: string | null; hasApiKey: boolean; updatedAt: Date };
+            if (c.hasApiKey) {
+              setProviderCredentials(prev => ({ ...prev, [prov]: true }));
+            }
+          }
         }
         // Gate is always shown — user must explicitly select and confirm a provider
       } catch (error) {
@@ -571,7 +578,9 @@ export default function HomePage() {
         {aiConfig && (
           <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
             <Shield className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-medium text-emerald-400">Secure</span>
+            <span className="text-[10px] font-medium text-emerald-400">{aiConfig.providerName}</span>
+            <div className="w-px h-3 bg-emerald-500/30" />
+            <span className="text-[10px] text-emerald-400/70">{aiConfig.model}</span>
           </div>
         )}
       </div>
@@ -603,10 +612,12 @@ export default function HomePage() {
             aiConfig ? (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
                 <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">Secure Mode Active</span>
+                <span className="text-xs font-medium text-emerald-400">{aiConfig.providerName}</span>
+                <div className="w-px h-3 bg-emerald-500/30 mx-1" />
+                <span className="text-xs text-emerald-400/70">{aiConfig.model}</span>
                 <div className="w-px h-3 bg-emerald-500/30 mx-1" />
                 <Lock className="w-3 h-3 text-emerald-400/70" />
-                <span className="text-[10px] text-emerald-400/70">Server-side credentials</span>
+                <span className="text-[10px] text-emerald-400/70">Server-side</span>
               </div>
             ) : null
           }
