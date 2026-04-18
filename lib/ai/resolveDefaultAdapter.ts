@@ -64,15 +64,18 @@ const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
  * figures out which provider the key is for without needing LLM_PROVIDER.
  *
  * Key format patterns:
- *   OpenAI:    sk-proj-... | sk-...
- *   Anthropic: sk-ant-...
+ *   OpenAI:    sk-proj-... | sk-... | sk_live_...
+ *   Anthropic: sk-ant-... | sk-ant-api...
  *   Google:    AIzaSy...
- *   Groq:      gsk_...
+ *   Groq:      gsk_... | gsk_live_...
  *   Ollama:    (no key — uses OLLAMA_BASE_URL)
  */
 export function detectProviderFromKey(apiKey: string): string | null {
   if (!apiKey || typeof apiKey !== 'string') return null;
   const key = apiKey.trim();
+  
+  // Debug: log first 10 chars to help diagnose detection issues
+  console.log(`[detectProviderFromKey] Checking key prefix: "${key.slice(0, 10)}..." (length: ${key.length})`);
 
   if (key.startsWith('gsk_'))          return 'groq';
   if (key.startsWith('sk-ant-'))       return 'anthropic';
@@ -80,6 +83,7 @@ export function detectProviderFromKey(apiKey: string): string | null {
   if (key.startsWith('sk-proj-'))      return 'openai';
   if (key.startsWith('sk-'))           return 'openai';  // generic OpenAI key format
 
+  console.log(`[detectProviderFromKey] ⚠ Unknown key format, no provider matched`);
   return null; // Unknown format — user must set LLM_PROVIDER explicitly
 }
 
@@ -93,8 +97,8 @@ function resolveLlmProvider(): string {
       console.log(`[resolveLlmProvider] ✓ Auto-detected LLM_KEY as ${detected} provider`);
       return detected;
     }
-    // Key format not recognized — default to openai so LLM_KEY still works
-    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER env var to override.`);
+    // Key format not recognized — default to openai
+    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect provider from LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER explicitly to override.`);
     return 'openai';
   }
   return '';
