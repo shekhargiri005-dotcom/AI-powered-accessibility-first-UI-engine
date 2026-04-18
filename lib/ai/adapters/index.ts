@@ -259,24 +259,30 @@ export async function getWorkspaceAdapter(
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
-  // 3. LLM_KEY — only valid for the provider it belongs to (via LLM_PROVIDER env var)
-  // The UI shows all providers when LLM_KEY exists, but the backend only uses it
-  // for the matching provider. This prevents 401 errors from sending an OpenAI key to Groq, etc.
+  // 3. LLM_KEY — auto-detect which provider the key belongs to, or use LLM_PROVIDER
+  // The engine detects the provider from the key format (sk-ant- → anthropic, gsk_ → groq, etc.)
+  // This prevents 401 errors from sending an OpenAI key to Groq, etc.
   const universalKey = process.env.LLM_KEY;
-  const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || (universalKey ? 'openai' : '');
-  const matchesLlmProvider = !!universalKey && providerId === llmProvider;
+  if (universalKey) {
+    // Import detectProviderFromKey for auto-detection
+    const { detectProviderFromKey } = await import('../resolveDefaultAdapter');
+    const explicitProvider = process.env.LLM_PROVIDER?.toLowerCase();
+    const detectedProvider = explicitProvider || detectProviderFromKey(universalKey) || 'openai';
+    const matchesProvider = providerId === detectedProvider;
 
-  console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
-    hasLLMKey: !!universalKey,
-    llmProvider: llmProvider || '(not set)',
-    matchesLlmProvider,
-    providerId,
-    modelId
-  });
-  
-  if (matchesLlmProvider) {
-    console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (matches LLM_PROVIDER)`);
-    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey! });
+    console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
+      hasLLMKey: true,
+      explicitProvider: explicitProvider || '(not set)',
+      detectedProvider,
+      matchesProvider,
+      providerId,
+      modelId
+    });
+
+    if (matchesProvider) {
+      console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (${explicitProvider ? 'explicit LLM_PROVIDER' : 'auto-detected'})`);
+      return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
+    }
   }
 
   // 4. Failure: No valid credentials for this provider

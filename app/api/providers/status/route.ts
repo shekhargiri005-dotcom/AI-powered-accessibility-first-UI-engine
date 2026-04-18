@@ -109,7 +109,7 @@ export const PROVIDER_CONFIG = [
   {
     id: 'ollama',
     name: 'Ollama',
-    description: 'Run models locally on your machine',
+    description: 'Cloud-hosted or local Ollama instances',
     color: 'text-gray-300',
     gradient: 'from-gray-500/20 to-gray-400/20 border-gray-500/30',
     bgColor: 'bg-gray-500',
@@ -139,12 +139,21 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check for LLM_KEY — in the UI, it makes all providers visible as available.
-    // On the backend, LLM_KEY only works for the provider set in LLM_PROVIDER.
-    // This ensures users see all options but get a clear error if they pick one without a real key.
+    // Check for LLM_KEY — auto-detect which provider it belongs to from key format.
+    // If LLM_PROVIDER is explicitly set, that takes priority over auto-detection.
+    // In the UI, LLM_KEY makes all providers visible; backend validates per-provider.
     const universalKey = process.env.LLM_KEY;
     const hasUniversalKey = !!universalKey;
-    const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || '';
+    // Auto-detect provider from key format, or use explicit LLM_PROVIDER
+    let llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || '';
+    if (!llmProvider && universalKey) {
+      // Import detectProviderFromKey for auto-detection
+      const { detectProviderFromKey } = await import('@/lib/ai/resolveDefaultAdapter');
+      llmProvider = detectProviderFromKey(universalKey) || '';
+      if (llmProvider) {
+        console.log(`[providers/status] ✓ Auto-detected LLM_KEY as ${llmProvider} provider`);
+      }
+    }
     
     // Debug: Log all available env var keys (without values for security)
     const allEnvKeys = Object.keys(process.env).filter(key => 
@@ -166,12 +175,11 @@ export async function GET() {
         : undefined;
       
       // Provider is configured if:
-      // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-      // 2. OLLAMA_BASE_URL is set (Ollama doesn't need an API key)
-      // 3. LLM_KEY exists — marks ALL providers as available in the UI
+      // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, OLLAMA_API_KEY, etc.)
+      // 2. LLM_KEY exists — marks ALL providers as available in the UI
       //    (backend will validate key compatibility per provider)
-      const ollamaBaseUrl = provider.id === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined;
-      configured = !!(primaryKey || altKey || ollamaBaseUrl || hasUniversalKey);
+      // All providers are equal — every one requires an API key, no exceptions.
+      configured = !!(primaryKey || altKey || hasUniversalKey);
       
       // Debug logging
       if (provider.envVar) {

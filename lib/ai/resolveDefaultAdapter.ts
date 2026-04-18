@@ -55,9 +55,52 @@ const PROVIDER_CHECKS: Array<{
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
 ];
 
-/** Universal LLM_KEY — bound to a specific provider via LLM_PROVIDER */
+/** Universal LLM_KEY — auto-detected or bound via LLM_PROVIDER */
 const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
-const LLM_PROVIDER = process.env.LLM_PROVIDER?.toLowerCase() || (UNIVERSAL_LLM_KEY ? 'openai' : '');
+
+/**
+ * Auto-detect which provider an API key belongs to based on its format.
+ * This allows LLM_KEY to work as a truly universal key — the engine
+ * figures out which provider the key is for without needing LLM_PROVIDER.
+ *
+ * Key format patterns:
+ *   OpenAI:    sk-proj-... | sk-...
+ *   Anthropic: sk-ant-...
+ *   Google:    AIzaSy...
+ *   Groq:      gsk_...
+ *   Ollama:    (no key — uses OLLAMA_BASE_URL)
+ */
+export function detectProviderFromKey(apiKey: string): string | null {
+  if (!apiKey || typeof apiKey !== 'string') return null;
+  const key = apiKey.trim();
+
+  if (key.startsWith('gsk_'))          return 'groq';
+  if (key.startsWith('sk-ant-'))       return 'anthropic';
+  if (key.startsWith('AIzaSy'))        return 'google';
+  if (key.startsWith('sk-proj-'))      return 'openai';
+  if (key.startsWith('sk-'))           return 'openai';  // generic OpenAI key format
+
+  return null; // Unknown format — user must set LLM_PROVIDER explicitly
+}
+
+/** Resolve LLM_PROVIDER: explicit env var > auto-detect from LLM_KEY > fallback */
+function resolveLlmProvider(): string {
+  const explicit = process.env.LLM_PROVIDER?.toLowerCase();
+  if (explicit) return explicit;
+  if (UNIVERSAL_LLM_KEY) {
+    const detected = detectProviderFromKey(UNIVERSAL_LLM_KEY);
+    if (detected) {
+      console.log(`[resolveLlmProvider] ✓ Auto-detected LLM_KEY as ${detected} provider`);
+      return detected;
+    }
+    // Key format not recognized — default to openai
+    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect provider from LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER explicitly to override.`);
+    return 'openai';
+  }
+  return '';
+}
+
+const LLM_PROVIDER = resolveLlmProvider();
 
 /**
  * Resolves an AdapterConfig from environment variables.
