@@ -68,7 +68,7 @@ const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
  *   Anthropic: sk-ant-... | sk-ant-api...
  *   Google:    AIzaSy...
  *   Groq:      gsk_... | gsk_live_...
- *   Ollama:    (no key — uses OLLAMA_BASE_URL)
+ *   Ollama:    numeric prefixes (e.g., 2794...) for cloud-hosted instances
  */
 export function detectProviderFromKey(apiKey: string): string | null {
   if (!apiKey || typeof apiKey !== 'string') return null;
@@ -77,11 +77,15 @@ export function detectProviderFromKey(apiKey: string): string | null {
   // Debug: log first 10 chars to help diagnose detection issues
   console.log(`[detectProviderFromKey] Checking key prefix: "${key.slice(0, 10)}..." (length: ${key.length})`);
 
+  // Standard provider prefixes
   if (key.startsWith('gsk_'))          return 'groq';
   if (key.startsWith('sk-ant-'))       return 'anthropic';
   if (key.startsWith('AIzaSy'))        return 'google';
   if (key.startsWith('sk-proj-'))      return 'openai';
   if (key.startsWith('sk-'))           return 'openai';  // generic OpenAI key format
+  
+  // Ollama cloud-hosted: numeric prefixes (e.g., 2794...)
+  if (/^\d/.test(key))                 return 'ollama';
 
   console.log(`[detectProviderFromKey] ⚠ Unknown key format, no provider matched`);
   return null; // Unknown format — user must set LLM_PROVIDER explicitly
