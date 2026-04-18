@@ -130,6 +130,7 @@ export interface ProviderStatus {
   models: string[];
   recommended?: boolean;
   settings?: ProviderSettings;
+  envVar?: string;
 }
 
 // ─── GET — return provider status (which ones have env vars configured) ───────
@@ -176,10 +177,10 @@ export async function GET() {
       
       // Provider is configured if:
       // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, OLLAMA_API_KEY, etc.)
-      // 2. LLM_KEY exists — marks ALL providers as available in the UI
-      //    (backend will validate key compatibility per provider)
+      // 2. LLM_KEY exists AND auto-detects/explicitly matches this provider
       // All providers are equal — every one requires an API key, no exceptions.
-      configured = !!(primaryKey || altKey || hasUniversalKey);
+      const matchesLlmKey = hasUniversalKey && provider.id === llmProvider;
+      configured = !!(primaryKey || altKey || matchesLlmKey);
       
       // Debug logging
       if (provider.envVar) {
@@ -203,6 +204,7 @@ export async function GET() {
         models: provider.models,
         recommended: provider.recommended,
         settings: provider.settings,
+        envVar: provider.envVar,
       };
     });
 
