@@ -138,15 +138,21 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. LLM_KEY (universal key) — use with first available provider ────────
-  // When user has set LLM_KEY, use it with the first provider that has a default model
+  // ── 4. LLM_KEY (universal key) — use with DEFAULT_PROVIDER or auto-detect ─
+  // When user has set LLM_KEY, use it with DEFAULT_PROVIDER (or auto-detect from key format)
   const universalKey = process.env.LLM_KEY;
   if (universalKey) {
-    // Default to openai if LLM_KEY is set but no specific provider key found
-    console.log(`[resolveDefaultAdapter] ✓ Using LLM_KEY with default provider: openai`);
+    // Check for explicit DEFAULT_PROVIDER env var
+    const defaultProvider = process.env.DEFAULT_PROVIDER?.toLowerCase();
+    // Auto-detect from key format as fallback
+    const detectedProvider = detectProviderFromKey(universalKey);
+    // Use explicit DEFAULT_PROVIDER, or auto-detected, or fallback to 'openai'
+    const provider = defaultProvider || detectedProvider || 'openai';
+    
+    console.log(`[resolveDefaultAdapter] ✓ Using LLM_KEY with provider: ${provider}${defaultProvider ? ' (from DEFAULT_PROVIDER)' : detectedProvider ? ' (auto-detected)' : ' (fallback)'}`);
     return {
-      model:    defaults['openai'] ?? 'gpt-4o-mini',
-      provider: 'openai',
+      model:    defaults[provider] ?? 'gpt-4o-mini',
+      provider: provider,
       apiKey:   universalKey,
     };
   }
