@@ -37,14 +37,13 @@ export async function POST(request: NextRequest) {
     const userId = session?.user?.id;
     const workspaceId = request.headers.get('x-workspace-id') || 'default';
 
-    // Dynamically fetch the lightest model available for the selected provider to save CPU/tokens
-    const providerId = (provider || 'openai') as ProviderName;
-    const fastModel = getFastModelForProvider(providerId) || model || 'gpt-4o-mini';
+    const providerId = provider ? (provider as ProviderName) : undefined;
+    const modelId = model || undefined;
 
     reqLogger.debug('Classifying prompt intent', { 
       hasActiveProject, 
-      forcedModel: fastModel, 
-      provider: providerId,
+      model: modelId ?? 'env-resolved', 
+      provider: providerId ?? 'env-resolved',
       workspaceId 
     });
     
@@ -52,7 +51,7 @@ export async function POST(request: NextRequest) {
       prompt, 
       hasActiveProject ?? false, 
       providerId,
-      fastModel,
+      modelId,
       workspaceId,
       userId
     );

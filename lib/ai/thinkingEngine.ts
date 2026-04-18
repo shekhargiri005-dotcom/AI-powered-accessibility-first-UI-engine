@@ -224,6 +224,7 @@ export async function generateThinkingPlan(
     let retries = 0;
     const maxRetries = 3;
     const baseDelayMs = 1000;
+    const requestTimeout = 30000; // 30 second timeout for thinking requests
 
     while (true) {
       try {
@@ -240,7 +241,7 @@ export async function generateThinkingPlan(
         break; // Success
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        const isNetworkError = msg.includes('429') || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504');
+        const isNetworkError = msg.includes('429') || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('timeout');
         
         if (isNetworkError && retries < maxRetries) {
           retries++;
@@ -248,6 +249,22 @@ export async function generateThinkingPlan(
           await new Promise(res => setTimeout(res, baseDelayMs * Math.pow(2, retries - 1)));
           continue;
         }
+
+        if (isNetworkError && provider) {
+          console.warn(`[thinkingEngine] User's adapter ${provider} failed with connection/rate limit error. Gracefully falling back to server default adapter.`);
+          // Recursive call without provider/model to force resolveDefaultAdapter
+          return generateThinkingPlan(prompt, intentType, projectContext, undefined, undefined, workspaceId, userId);
+        }
+
+        // Log detailed error information for debugging
+        console.error(`[thinkingEngine] Thinking plan generation failed for provider=${providerId}, model=${modelId}:`, {
+          error: msg,
+          provider: providerId,
+          model: modelId,
+          workspaceId: wsId,
+          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`] || !!process.env.LLM_KEY
+        });
+
         throw error;
       }
     }
