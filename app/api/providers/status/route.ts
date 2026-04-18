@@ -139,12 +139,12 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check for universal LLM_KEY — it is bound to a specific provider via LLM_PROVIDER.
-    // If LLM_PROVIDER is not set but LLM_KEY exists, it defaults to 'openai'.
-    // LLM_KEY should NOT mark all 5 providers as configured — only the one it belongs to.
+    // Check for LLM_KEY — in the UI, it makes all providers visible as available.
+    // On the backend, LLM_KEY only works for the provider set in LLM_PROVIDER.
+    // This ensures users see all options but get a clear error if they pick one without a real key.
     const universalKey = process.env.LLM_KEY;
     const hasUniversalKey = !!universalKey;
-    const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || (hasUniversalKey ? 'openai' : '');
+    const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || '';
     
     // Debug: Log all available env var keys (without values for security)
     const allEnvKeys = Object.keys(process.env).filter(key => 
@@ -167,12 +167,11 @@ export async function GET() {
       
       // Provider is configured if:
       // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-      // 2. LLM_KEY exists AND this provider matches LLM_PROVIDER
-      // LLM_KEY no longer marks ALL providers as configured — only its bound provider
-      // Ollama can also be configured via OLLAMA_BASE_URL (no API key needed)
+      // 2. OLLAMA_BASE_URL is set (Ollama doesn't need an API key)
+      // 3. LLM_KEY exists — marks ALL providers as available in the UI
+      //    (backend will validate key compatibility per provider)
       const ollamaBaseUrl = provider.id === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined;
-      const matchesLlmProvider = hasUniversalKey && provider.id === llmProvider;
-      configured = !!(primaryKey || altKey || ollamaBaseUrl || matchesLlmProvider);
+      configured = !!(primaryKey || altKey || ollamaBaseUrl || hasUniversalKey);
       
       // Debug logging
       if (provider.envVar) {
@@ -182,7 +181,7 @@ export async function GET() {
         debugInfo[provider.envVarAlt] = !!altKey;
       }
       debugInfo['LLM_KEY'] = hasUniversalKey;
-      debugInfo['matchesLlmProvider'] = matchesLlmProvider;
+      debugInfo['hasSpecificKey'] = !!(primaryKey || altKey);
       console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
 
       return {

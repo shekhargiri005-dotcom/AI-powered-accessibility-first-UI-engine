@@ -260,8 +260,8 @@ export async function getWorkspaceAdapter(
   }
 
   // 3. LLM_KEY — only valid for the provider it belongs to (via LLM_PROVIDER env var)
-  // If LLM_PROVIDER is not set but LLM_KEY exists, it defaults to 'openai'.
-  // LLM_KEY must NOT be used as a credential for unrelated providers.
+  // The UI shows all providers when LLM_KEY exists, but the backend only uses it
+  // for the matching provider. This prevents 401 errors from sending an OpenAI key to Groq, etc.
   const universalKey = process.env.LLM_KEY;
   const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || (universalKey ? 'openai' : '');
   const matchesLlmProvider = !!universalKey && providerId === llmProvider;
@@ -279,13 +279,14 @@ export async function getWorkspaceAdapter(
     return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey! });
   }
 
-  // 4. Failure: No credentials found
-  console.error(`[getWorkspaceAdapter] ✗ No API key found for ${providerId}. Available env vars:`, 
-    Object.keys(process.env).filter(k => k.includes('API_KEY') || k === 'LLM_KEY')
-  );
+  // 4. Failure: No valid credentials for this provider
+  const envVarName = `${providerId.toUpperCase()}_API_KEY`;
+  console.error(`[getWorkspaceAdapter] ✗ No valid API key for ${providerId}.`);
+  console.error(`[getWorkspaceAdapter] To fix: Set ${envVarName} in Vercel environment variables.`);
+  console.error(`[getWorkspaceAdapter] Or set LLM_PROVIDER=${providerId} to use LLM_KEY for this provider.`);
   
   // Return UnconfiguredAdapter for graceful degradation
-  // (it returns a helpful UI component instead of crashing)
+  // (it returns a helpful error message instead of crashing)
   return new UnconfiguredAdapter();
 }
 
