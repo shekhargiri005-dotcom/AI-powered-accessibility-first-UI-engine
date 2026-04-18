@@ -140,13 +140,18 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check which providers have API keys configured
-    // Each provider requires its own specific key in Vercel env vars:
-    //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
-    // No universal LLM_KEY — explicit per-provider configuration only.
+    // Check which providers are available:
+    // 1. Individual provider keys (OPENAI_API_KEY, etc.) mark that provider as configured
+    // 2. LLM_KEY (universal key) marks ALL providers as available — user selects which one to use
+    const universalKey = process.env.LLM_KEY;
+    const hasUniversalKey = !!universalKey;
     
+    if (hasUniversalKey) {
+      console.log('[providers/status] ✓ LLM_KEY found — all providers available for user selection');
+    }
+
     const providers: ProviderStatus[] = PROVIDER_CONFIG.map((provider) => {
-      // Check if provider is configured via env var
+      // Check if provider is configured via specific env var
       let configured = false;
       let debugInfo: Record<string, boolean> = {};
       
@@ -157,8 +162,10 @@ export async function GET() {
         ? process.env[provider.envVarAlt] 
         : undefined;
       
-      // Provider is configured if specific key exists
-      configured = !!(primaryKey || altKey);
+      // Provider is configured if:
+      // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+      // 2. OR LLM_KEY exists (universal key works with any provider)
+      configured = !!(primaryKey || altKey || hasUniversalKey);
       
       // Debug logging
       if (provider.envVar) {
@@ -167,8 +174,9 @@ export async function GET() {
       if ('envVarAlt' in provider && provider.envVarAlt) {
         debugInfo[provider.envVarAlt] = !!altKey;
       }
-      debugInfo['hasSpecificKey'] = !!(primaryKey || altKey);
-      console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
+      debugInfo['LLM_KEY'] = hasUniversalKey;
+      debugInfo['configured'] = configured;
+      console.log(`[providers/status] ${provider.id}:`, debugInfo);
 
       return {
         id: provider.id,

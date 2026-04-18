@@ -242,10 +242,20 @@ export async function getWorkspaceAdapter(
   // 2. Env Check: Fall back to environment variables
   // Each provider has its own API key env var:
   //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
+  // OR use LLM_KEY (universal key) for any provider the user selects.
+  
+  // First check provider-specific key
   const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`];
   if (envKey) {
     console.log(`[getWorkspaceAdapter] ✓ Using ${providerId.toUpperCase()}_API_KEY for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: envKey });
+  }
+
+  // Check for universal LLM_KEY — works with any provider the user selects
+  const universalKey = process.env.LLM_KEY;
+  if (universalKey) {
+    console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (user-selected)`);
+    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
   }
 
   // Provider-specific env var fallbacks (with GEMINI_API_KEY for Google)
