@@ -294,7 +294,7 @@ export default function RightPanel({
         ...(aiConfig?.model ? {
           model: aiConfig.model,
           provider: aiConfig.provider,
-          apiKey: aiConfig.apiKey && aiConfig.apiKey !== '••••' ? aiConfig.apiKey : undefined,
+          // SECURITY: Never send apiKey from client - server resolves it
           baseUrl: aiConfig.baseUrl,
         } : {}),
       }),
