@@ -55,8 +55,9 @@ const PROVIDER_CHECKS: Array<{
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
 ];
 
-/** Universal LLM_KEY for all providers */
+/** Universal LLM_KEY — bound to a specific provider via LLM_PROVIDER */
 const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
+const LLM_PROVIDER = process.env.LLM_PROVIDER?.toLowerCase() || (UNIVERSAL_LLM_KEY ? 'openai' : '');
 
 /**
  * Resolves an AdapterConfig from environment variables.
@@ -113,17 +114,16 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. Universal LLM_KEY fallback ─────────────────────────────────────────
-  // If no specific provider key is found, use LLM_KEY with the first provider
-  if (UNIVERSAL_LLM_KEY) {
-    const defaultProvider = PROVIDER_CHECKS[0]; // groq as default
-    console.log(`[resolveDefaultAdapter] ✓ Using universal LLM_KEY with provider: ${defaultProvider.id}`);
-    console.log(`[resolveDefaultAdapter] LLM_KEY length: ${UNIVERSAL_LLM_KEY.length}, prefix: ${UNIVERSAL_LLM_KEY.substring(0, 10)}...`);
+  // ── 4. LLM_KEY — only for the provider it belongs to ──────────────────────
+  // LLM_KEY is a single key that works for ONE specific provider (set via LLM_PROVIDER).
+  // It must NOT be used as a credential for unrelated providers (causes 401 errors).
+  if (UNIVERSAL_LLM_KEY && LLM_PROVIDER) {
+    console.log(`[resolveDefaultAdapter] ✓ Using LLM_KEY with provider: ${LLM_PROVIDER} (from LLM_PROVIDER)`);
     return {
-      model:    defaults[defaultProvider.id] ?? 'gpt-4o-mini',
-      provider: defaultProvider.id,
+      model:    defaults[LLM_PROVIDER] ?? 'gpt-4o-mini',
+      provider: LLM_PROVIDER,
       apiKey:   UNIVERSAL_LLM_KEY,
-      baseUrl:  defaultProvider.baseUrl,
+      baseUrl:  PROVIDER_CHECKS.find(c => c.id === LLM_PROVIDER)?.baseUrl,
     };
   }
 
@@ -139,12 +139,12 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
 
 /**
  * Looks up the canonical API key env var for a named provider.
- * Falls back to universal LLM_KEY if no specific key is found.
+ * LLM_KEY is only returned if the provider matches LLM_PROVIDER.
  * Returns undefined if no key is found.
  */
 export function resolveApiKeyForProvider(provider: string): string | undefined {
-  // First check for universal LLM_KEY
-  if (UNIVERSAL_LLM_KEY) {
+  // Check universal LLM_KEY only if provider matches LLM_PROVIDER
+  if (UNIVERSAL_LLM_KEY && provider.toLowerCase() === LLM_PROVIDER) {
     return UNIVERSAL_LLM_KEY;
   }
   

@@ -259,19 +259,24 @@ export async function getWorkspaceAdapter(
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
-  // 3. Universal LLM_KEY fallback - works for all providers
+  // 3. LLM_KEY — only valid for the provider it belongs to (via LLM_PROVIDER env var)
+  // If LLM_PROVIDER is not set but LLM_KEY exists, it defaults to 'openai'.
+  // LLM_KEY must NOT be used as a credential for unrelated providers.
   const universalKey = process.env.LLM_KEY;
+  const llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || (universalKey ? 'openai' : '');
+  const matchesLlmProvider = !!universalKey && providerId === llmProvider;
+
   console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
     hasLLMKey: !!universalKey,
-    keyLength: universalKey?.length || 0,
-    keyPrefix: universalKey ? universalKey.substring(0, 10) + '...' : 'none',
+    llmProvider: llmProvider || '(not set)',
+    matchesLlmProvider,
     providerId,
     modelId
   });
   
-  if (universalKey) {
-    console.log(`[getWorkspaceAdapter] ✓ Using universal LLM_KEY for ${providerId}`);
-    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
+  if (matchesLlmProvider) {
+    console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (matches LLM_PROVIDER)`);
+    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey! });
   }
 
   // 4. Failure: No credentials found
