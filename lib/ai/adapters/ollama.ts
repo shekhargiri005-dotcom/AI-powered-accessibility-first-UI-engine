@@ -23,9 +23,12 @@ export class OllamaAdapter implements AIAdapter {
   private client: OpenAI;
 
   constructor(baseURL?: string, apiKey?: string) {
+    const resolvedUrl = baseURL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+    const resolvedKey = apiKey || process.env.OLLAMA_API_KEY || 'ollama';
+    console.log(`[OllamaAdapter] Initializing with baseURL: ${resolvedUrl}, apiKey: ${resolvedKey.slice(0, 4)}...`);
     this.client = new OpenAI({
-      apiKey: apiKey || process.env.OLLAMA_API_KEY || 'ollama',
-      baseURL: baseURL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
+      apiKey: resolvedKey,
+      baseURL: resolvedUrl,
     });
   }
 
