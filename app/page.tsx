@@ -96,48 +96,55 @@ export default function HomePage() {
     }
   }, []);
 
-  // Check for existing AI config on mount - show ModelSelectionGate if none exists
+  // Check for existing AI config on mount - load from workspace settings API (database)
   useEffect(() => {
-    const checkExistingConfig = () => {
+    const loadWorkspaceConfig = async () => {
       try {
-        // Check localStorage for saved config
-        const savedConfig = localStorage.getItem('aiEngineConfig');
-        const rememberProvider = localStorage.getItem('ai_remember_provider') === 'true';
+        // Load from workspace settings API (database) - NOT localStorage
+        const res = await fetch('/api/workspace/settings');
+        const data = await res.json();
         
-        if (savedConfig && rememberProvider) {
-          // Config exists and user wants to remember it
-          const config = JSON.parse(savedConfig);
-          setAiConfig({
-            provider: config.provider,
-            providerName: config.providerName || config.provider,
-            model: config.model,
-            apiKey: '••••',
-            baseUrl: config.baseUrl,
-            temperature: config.temperature || 0.6,
-            fullAppMode: config.fullAppMode || false,
-            multiSlideMode: config.multiSlideMode || false,
-          });
-          setIsFullAppMode(config.fullAppMode || false);
-          setIsMultiSlideMode(config.multiSlideMode || false);
+        if (data.settings && Object.keys(data.settings).length > 0) {
+          // Get the most recently updated provider
+          const providers = Object.entries(data.settings);
+          const [provider, config] = providers[0] as [string, { model: string | null; hasApiKey: boolean; updatedAt: Date }];
           
-          // Mark this provider as having credentials
-          setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
-          
-          // Start inactivity monitoring
-          updateActivity();
+          if (config.hasApiKey) {
+            setAiConfig({
+              provider: provider,
+              providerName: provider,
+              model: config.model || 'default',
+              apiKey: '••••',
+              temperature: 0.6,
+              fullAppMode: false,
+              multiSlideMode: false,
+            });
+            setIsFullAppMode(false);
+            setIsMultiSlideMode(false);
+            
+            // Mark this provider as having credentials
+            setProviderCredentials(prev => ({ ...prev, [provider]: true }));
+            
+            // Start inactivity monitoring
+            updateActivity();
+          } else {
+            // No API key configured - show model gate
+            setShowModelGate(true);
+          }
         } else {
           // No config - show the model selection gate
           setShowModelGate(true);
         }
-      } catch {
-        // Error checking config - show the gate to be safe
+      } catch (error) {
+        console.error('Failed to load workspace config:', error);
+        // Error loading config - show the gate to be safe
         setShowModelGate(true);
       } finally {
         setHasCheckedConfig(true);
       }
     };
 
-    checkExistingConfig();
+    loadWorkspaceConfig();
   }, [updateActivity]);
 
   // Inactivity monitoring effect
