@@ -252,8 +252,15 @@ export async function generateThinkingPlan(
         }
 
         if (isNetworkError && provider) {
-          console.warn(`[thinkingEngine] User's adapter ${provider} failed with connection/rate limit error. Gracefully falling back to server default adapter.`);
-          // Recursive call without provider/model to force resolveDefaultAdapter
+          console.warn(`[thinkingEngine] User's adapter ${provider} failed with connection/rate limit error.`);
+          // Don't fallback to a different provider if using LLM_KEY — 
+          // the key is tied to the user's selected provider
+          if (process.env.LLM_KEY && !process.env[`${provider?.toUpperCase()}_API_KEY`]) {
+            console.error(`[thinkingEngine] Cannot fallback — LLM_KEY is configured for ${provider}, no other provider keys available.`);
+            throw error;
+          }
+          // Only fallback if we have provider-specific keys for other providers
+          console.log(`[thinkingEngine] Attempting fallback to default adapter...`);
           return generateThinkingPlan(prompt, intentType, projectContext, undefined, undefined, workspaceId, userId);
         }
 
