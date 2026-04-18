@@ -59,7 +59,14 @@ export async function getWorkspaceApiKey(
     });
 
     let decrypted = settings?.encryptedApiKey
-      ? encryptionService.decrypt(settings.encryptedApiKey)
+      ? (() => {
+          try {
+            return encryptionService.decrypt(settings.encryptedApiKey);
+          } catch (e) {
+            console.warn(`[workspaceKeyService] Failed to decrypt key for ${provider}:`, e);
+            return null;
+          }
+        })()
       : null;
 
     if (decrypted === 'ENV_FALLBACK') {
@@ -78,10 +85,12 @@ export async function getWorkspaceApiKey(
           orderBy: { updatedAt: 'desc' },
         });
         if (anySettings?.encryptedApiKey) {
-          const anyDecrypted = encryptionService.decrypt(anySettings.encryptedApiKey);
-          if (anyDecrypted && anyDecrypted !== 'ENV_FALLBACK') {
-            decrypted = anyDecrypted;
-          }
+          try {
+            const anyDecrypted = encryptionService.decrypt(anySettings.encryptedApiKey);
+            if (anyDecrypted && anyDecrypted !== 'ENV_FALLBACK') {
+              decrypted = anyDecrypted;
+            }
+          } catch { /* ignore — env var fallback will handle it */ }
         }
       } catch { /* ignore — env var fallback will handle it */ }
     }
