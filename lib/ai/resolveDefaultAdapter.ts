@@ -4,16 +4,14 @@
  *
  * Checks supported provider API keys in priority order and returns
  * the first available AdapterConfig. Works with OpenAI, Anthropic,
- * Google, Groq, HuggingFace, or local Ollama.
+ * Google, or Groq.
  *
  * Priority order (by capability tier and cost efficiency):
  *  1. Purpose-specific env override (e.g. INTENT_MODEL / INTENT_PROVIDER / INTENT_API_KEY)
  *  2. Groq        (fast, generous free-tier — ideal for CLASSIFIER/REVIEW/REPAIR)
  *  3. Google Gemini
  *  4. Anthropic
- *  5. HuggingFace (open-source models)
- *  6. OpenAI      (deprioritized — quota exhausts easily on free/trial keys)
- *  7. Ollama / LM Studio (local — no key needed, always available as last resort)
+ *  5. OpenAI      (deprioritized — quota exhausts easily on free/trial keys)
  */
 
 import type { AdapterConfig } from './adapters/index';
@@ -32,12 +30,12 @@ export type AdapterPurpose =
 
 /** Default model names per provider for each purpose tier */
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
-  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
-  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
-  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
-  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3' },
+  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile' },
+  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
 };
 
 /** Ordered provider detection list — first one with an env key wins. */
@@ -76,9 +74,6 @@ export function detectProviderFromKey(apiKey: string): string | null {
   if (key.startsWith('AIzaSy'))        return 'google';
   if (key.startsWith('sk-proj-'))      return 'openai';
   if (key.startsWith('sk-'))           return 'openai';
-  
-  // Ollama cloud-hosted: numeric prefixes
-  if (/^\d/.test(key))                 return 'ollama';
 
   return null;
 }
@@ -178,7 +173,6 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     anthropic:  ['ANTHROPIC_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
-    ollama:     ['OLLAMA_API_KEY'],
   };
   const vars = map[provider.toLowerCase()] ?? [];
   for (const v of vars) {

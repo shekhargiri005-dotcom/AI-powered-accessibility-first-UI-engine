@@ -7,9 +7,8 @@
  * The engine uses EXACTLY what the user configured. On error → surface it clearly.
  * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * Supported adapters (5 providers):
+ * Supported adapters (4 providers):
  *   Cloud: OpenAIAdapter, AnthropicAdapter, GoogleAdapter, Groq (OpenAI-compatible)
- *   Local: OllamaAdapter
  */
 
 import 'server-only';
@@ -19,7 +18,6 @@ import type { ProviderName } from '../types';
 import { OpenAIAdapter }    from './openai';
 import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
-import { OllamaAdapter }    from './ollama';
 import { UnconfiguredAdapter } from './unconfigured';
 import { getCache, generateCacheKey } from '../cache';
 
@@ -183,14 +181,6 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
       const key = apiKey || process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
       if (!key) throw new ConfigurationError('google', 'Google API key required. Add it in the AI Engine Config panel.');
       adapter = new GoogleAdapter(key);
-      break;
-    }
-    case 'ollama': {
-      // Ollama uses a local/cloud OpenAI-compatible endpoint
-      // For cloud-hosted Ollama with auth, pass the API key
-      const ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
-      const ollamaKey = apiKey || process.env.OLLAMA_API_KEY || process.env.LLM_KEY;
-      adapter = new OllamaAdapter(ollamaUrl, ollamaKey);
       break;
     }
     case 'unconfigured':

@@ -106,17 +106,6 @@ export const PROVIDER_CONFIG = [
     models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
     settings: PROVIDER_SETTINGS.groq,
   },
-  {
-    id: 'ollama',
-    name: 'Ollama',
-    description: 'Cloud-hosted or local Ollama instances',
-    color: 'text-gray-300',
-    gradient: 'from-gray-500/20 to-gray-400/20 border-gray-500/30',
-    bgColor: 'bg-gray-500',
-    envVar: 'OLLAMA_API_KEY',
-    models: ['llama3', 'mistral', 'codellama', 'custom'],
-    settings: PROVIDER_SETTINGS.ollama,
-  },
 ];
 
 export interface ProviderStatus {
