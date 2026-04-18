@@ -60,9 +60,10 @@ const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
 
 /**
  * Auto-detect which provider an API key belongs to based on its format.
- * This allows LLM_KEY to work as a truly universal key — the engine
- * figures out which provider the key is for without needing LLM_PROVIDER.
- *
+ * 
+ * DEPRECATED: This function is kept for backwards compatibility but auto-detection
+ * is no longer recommended. Use LLM_PROVIDER env var to explicitly specify the provider.
+ * 
  * Key format patterns:
  *   OpenAI:    sk-proj-... | sk-... | sk_live_...
  *   Anthropic: sk-ant-... | sk-ant-api...
@@ -73,42 +74,44 @@ const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
 export function detectProviderFromKey(apiKey: string): string | null {
   if (!apiKey || typeof apiKey !== 'string') return null;
   const key = apiKey.trim();
-  
-  // Debug: log first 10 chars to help diagnose detection issues
-  console.log(`[detectProviderFromKey] Checking key prefix: "${key.slice(0, 10)}..." (length: ${key.length})`);
 
   // Standard provider prefixes
   if (key.startsWith('gsk_'))          return 'groq';
   if (key.startsWith('sk-ant-'))       return 'anthropic';
   if (key.startsWith('AIzaSy'))        return 'google';
   if (key.startsWith('sk-proj-'))      return 'openai';
-  if (key.startsWith('sk-'))           return 'openai';  // generic OpenAI key format
+  if (key.startsWith('sk-'))           return 'openai';
   
-  // Ollama cloud-hosted: numeric prefixes (e.g., 2794...)
+  // Ollama cloud-hosted: numeric prefixes
   if (/^\d/.test(key))                 return 'ollama';
 
-  console.log(`[detectProviderFromKey] ⚠ Unknown key format, no provider matched`);
-  return null; // Unknown format — user must set LLM_PROVIDER explicitly
+  return null;
 }
 
-/** Resolve LLM_PROVIDER: explicit env var > auto-detect from LLM_KEY > fallback */
-function resolveLlmProvider(): string {
+/** 
+ * Resolve LLM_PROVIDER: explicit env var ONLY. 
+ * Auto-detection is deprecated — users must set LLM_PROVIDER when using LLM_KEY.
+ */
+function resolveLlmProvider(): { provider: string; source: 'explicit' | 'auto' | 'none' } {
   const explicit = process.env.LLM_PROVIDER?.toLowerCase();
-  if (explicit) return explicit;
+  if (explicit) {
+    return { provider: explicit, source: 'explicit' };
+  }
   if (UNIVERSAL_LLM_KEY) {
+    // Auto-detect for backwards compatibility, but warn
     const detected = detectProviderFromKey(UNIVERSAL_LLM_KEY);
     if (detected) {
-      console.log(`[resolveLlmProvider] ✓ Auto-detected LLM_KEY as ${detected} provider`);
-      return detected;
+      console.warn(`[resolveLlmProvider] ⚠ Auto-detected LLM_KEY as ${detected}. This is deprecated. Set LLM_PROVIDER=${detected} explicitly.`);
+      return { provider: detected, source: 'auto' };
     }
-    // Key format not recognized — default to openai
-    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect provider from LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER explicitly to override.`);
-    return 'openai';
+    console.error(`[resolveLlmProvider] ✗ LLM_KEY is set but format not recognized. Set LLM_PROVIDER explicitly (openai, anthropic, google, groq, ollama).`);
+    return { provider: '', source: 'none' };
   }
-  return '';
+  return { provider: '', source: 'none' };
 }
 
-const LLM_PROVIDER = resolveLlmProvider();
+const LLM_PROVIDER_RESULT = resolveLlmProvider();
+const LLM_PROVIDER = LLM_PROVIDER_RESULT.provider;
 
 /**
  * Resolves an AdapterConfig from environment variables.

@@ -140,25 +140,17 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check for LLM_KEY — auto-detect which provider it belongs to from key format.
-    // If LLM_PROVIDER is explicitly set, that takes priority over auto-detection.
-    // If auto-detection fails but LLM_KEY exists, default to 'openai' as fallback.
+    // Check for LLM_KEY — requires explicit LLM_PROVIDER to specify which provider it belongs to.
+    // Auto-detection is deprecated. Users must set LLM_PROVIDER (openai, anthropic, google, groq, ollama).
     const universalKey = process.env.LLM_KEY;
     const hasUniversalKey = !!universalKey;
-    // Auto-detect provider from key format, or use explicit LLM_PROVIDER
+    // Only use LLM_KEY if LLM_PROVIDER is explicitly set
     let llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || '';
-    if (!llmProvider && universalKey) {
-      // Import detectProviderFromKey for auto-detection
-      const { detectProviderFromKey } = await import('@/lib/ai/resolveDefaultAdapter');
-      const detected = detectProviderFromKey(universalKey);
-      if (detected) {
-        llmProvider = detected;
-        console.log(`[providers/status] ✓ Auto-detected LLM_KEY as ${llmProvider} provider`);
-      } else {
-        // Key format not recognized — default to openai so LLM_KEY still works
-        llmProvider = 'openai';
-        console.warn(`[providers/status] ⚠ Could not auto-detect LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER env var to override.`);
-      }
+    if (hasUniversalKey && !llmProvider) {
+      console.error(`[providers/status] ✗ LLM_KEY is set but LLM_PROVIDER is missing. Set LLM_PROVIDER to one of: openai, anthropic, google, groq, ollama`);
+    }
+    if (hasUniversalKey && llmProvider) {
+      console.log(`[providers/status] ✓ LLM_KEY configured for provider: ${llmProvider}`);
     }
     
     // Debug: Log all available env var keys (without values for security)

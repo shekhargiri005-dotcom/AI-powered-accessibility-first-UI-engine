@@ -259,31 +259,28 @@ export async function getWorkspaceAdapter(
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
-  // 3. LLM_KEY — auto-detect which provider the key belongs to, or use LLM_PROVIDER
-  // The engine detects the provider from the key format (sk-ant- → anthropic, gsk_ → groq, etc.)
-  // This prevents 401 errors from sending an OpenAI key to Groq, etc.
+  // 3. LLM_KEY — requires explicit LLM_PROVIDER to specify which provider it belongs to.
+  // Auto-detection is deprecated. Users must set LLM_PROVIDER (openai, anthropic, google, groq, ollama).
   const universalKey = process.env.LLM_KEY;
   if (universalKey) {
-    // Import detectProviderFromKey for auto-detection
-    const { detectProviderFromKey } = await import('../resolveDefaultAdapter');
     const explicitProvider = process.env.LLM_PROVIDER?.toLowerCase();
-    const detectedProvider = detectProviderFromKey(universalKey);
-    const resolvedProvider = explicitProvider || detectedProvider || 'openai';
-    const matchesProvider = providerId === resolvedProvider;
+    
+    if (!explicitProvider) {
+      console.error(`[getWorkspaceAdapter] ✗ LLM_KEY is set but LLM_PROVIDER is missing. Set LLM_PROVIDER to one of: openai, anthropic, google, groq, ollama`);
+    } else {
+      const matchesProvider = providerId === explicitProvider;
+      console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
+        hasLLMKey: true,
+        explicitProvider,
+        matchesProvider,
+        providerId,
+        modelId
+      });
 
-    console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
-      hasLLMKey: true,
-      explicitProvider: explicitProvider || '(not set)',
-      detectedProvider: detectedProvider || '(unknown format)',
-      resolvedProvider,
-      matchesProvider,
-      providerId,
-      modelId
-    });
-
-    if (matchesProvider) {
-      console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (${explicitProvider ? 'explicit LLM_PROVIDER' : detectedProvider ? 'auto-detected' : 'defaulted to openai'})`);
-      return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
+      if (matchesProvider) {
+        console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId}`);
+        return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
+      }
     }
   }
 
