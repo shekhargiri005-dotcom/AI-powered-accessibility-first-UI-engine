@@ -85,10 +85,10 @@ export async function classifyIntent(
     let wsId: string;
     let uid: string | undefined;
 
-    if (provider && model) {
-      // Use provided values
-      modelId = model;
+    if (provider) {
+      // Use provided provider (user's selection from UI)
       providerId = provider;
+      modelId = model || 'default'; // Use provided model or let adapter resolve
       wsId = workspaceId || 'default';
       uid = userId;
     } else {
