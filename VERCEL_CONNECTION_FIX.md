@@ -41,9 +41,9 @@ ANTHROPIC_API_KEY=sk-ant_your_key_here
 # Option 4: OpenAI
 OPENAI_API_KEY=sk-proj_your_key_here
 
-# Option 5: Ollama Cloud (self-hosted or cloud instances)
-OLLAMA_BASE_URL=https://your-ollama-instance.com/v1
-# Note: Ollama doesn't require an API key, just the base URL
+# Option 5: Ollama Cloud (cloud-hosted instances)
+OLLAMA_API_KEY=your_ollama_key_here
+OLLAMA_BASE_URL=https://your-ollama-cloud-instance.com/v1
 
 # 🌟 UNIVERSAL KEY - Works with ALL providers above
 # Fill this ONE key and your UI Engine will work immediately
@@ -60,7 +60,7 @@ LLM_KEY=your_api_key_here
 2. Google Gemini
 3. Anthropic
 4. OpenAI (last - quota exhausts quickly)
-5. Ollama (cloud or local - no API key needed, just URL)
+5. Ollama Cloud (cloud-hosted instances)
 
 ### 2. Verify Environment Variables Are Set
 
@@ -183,7 +183,7 @@ Note: Edge Functions have different limitations (no Node.js APIs, smaller bundle
 ## Quick Fix Checklist
 
 - [ ] Add at least one API key to Vercel environment variables (or just set `LLM_KEY`)
-- [ ] For Ollama cloud: Set `OLLAMA_BASE_URL` to your cloud instance URL
+- [ ] For Ollama Cloud: Set both `OLLAMA_API_KEY` and `OLLAMA_BASE_URL`
 - [ ] Redeploy the application (required for env var changes to take effect)
 - [ ] Check Vercel function logs for `[resolveDefaultAdapter]` messages
 - [ ] Test the `/api/classify` and `/api/think` endpoints
@@ -200,7 +200,7 @@ Your UI Engine supports **5 AI providers** out of the box:
 | **Google** | `GOOGLE_API_KEY` or `GEMINI_API_KEY` | Auto-configured | 🚀 Gemini models |
 | **Anthropic** | `ANTHROPIC_API_KEY` | Auto-configured | 🎯 Claude models |
 | **OpenAI** | `OPENAI_API_KEY` | Auto-configured | 🌟 GPT models |
-| **Ollama** | `OLLAMA_BASE_URL` | Your URL | 💻 Cloud or local, no API key needed |
+| **Ollama** | `OLLAMA_API_KEY` + `OLLAMA_BASE_URL` | Your cloud URL | ☁️ Cloud-hosted instances only |
 
 ## Need More Help?
 
@@ -209,4 +209,4 @@ If the issue persists after adding API keys:
 2. Check if your API key has the correct permissions/quotas
 3. Verify the API key works locally first (`npm run dev`)
 4. Consider trying a different provider (e.g., switch from OpenAI to Groq)
-5. For Ollama: Ensure your cloud instance is accessible from Vercel's servers
+5. For Ollama Cloud: Ensure both `OLLAMA_API_KEY` and `OLLAMA_BASE_URL` are configured
