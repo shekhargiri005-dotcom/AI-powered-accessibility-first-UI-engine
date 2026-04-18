@@ -22,10 +22,10 @@ export class OllamaAdapter implements AIAdapter {
   readonly provider = 'ollama';
   private client: OpenAI;
 
-  constructor(baseURL?: string) {
+  constructor(baseURL?: string, apiKey?: string) {
     this.client = new OpenAI({
-      apiKey: 'ollama',
-      baseURL: baseURL ?? process.env.OLLAMA_BASE_URL ?? 'http://localhost:11434/v1',
+      apiKey: apiKey || process.env.OLLAMA_API_KEY || 'ollama',
+      baseURL: baseURL || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1',
     });
   }
 

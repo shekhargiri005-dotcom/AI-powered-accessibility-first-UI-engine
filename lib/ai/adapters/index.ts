@@ -186,9 +186,11 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
       break;
     }
     case 'ollama': {
-      // Ollama uses a local OpenAI-compatible endpoint
+      // Ollama uses a local/cloud OpenAI-compatible endpoint
+      // For cloud-hosted Ollama with auth, pass the API key
       const ollamaUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
-      adapter = new OllamaAdapter(ollamaUrl);
+      const ollamaKey = apiKey || process.env.OLLAMA_API_KEY || process.env.LLM_KEY;
+      adapter = new OllamaAdapter(ollamaUrl, ollamaKey);
       break;
     }
     case 'unconfigured':
