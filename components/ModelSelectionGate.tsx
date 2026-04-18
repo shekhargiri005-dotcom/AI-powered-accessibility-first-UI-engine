@@ -47,6 +47,7 @@ export interface ModelSelectionGateProps {
   }) => void;
   onSkip?: () => void;
   hasCredentials?: Record<string, boolean>;
+  preselectedProvider?: string | null;
 }
 
 type GateStep = 'loading' | 'provider' | 'confirm' | 'error';
@@ -66,6 +67,7 @@ export default function ModelSelectionGate({
   isOpen,
   onComplete,
   onSkip,
+  preselectedProvider,
 }: ModelSelectionGateProps) {
   const [step, setStep] = useState<GateStep>('loading');
   const [configuredProviders, setConfiguredProviders] = useState<ProviderStatus[]>([]);
@@ -103,6 +105,16 @@ export default function ModelSelectionGate({
         if (configured.length === 0) {
           setStep('error');
           setError('No AI providers are configured. Please add API keys to your environment variables (Vercel).');
+        } else if (preselectedProvider) {
+          // Pre-select the previously used provider and go to confirmation step
+          const match = configured.find((p: ProviderStatus) => p.id === preselectedProvider);
+          if (match) {
+            setSelectedProvider(match);
+            setSelectedModel(match.models[0] || 'default');
+            setStep('confirm');
+          } else {
+            setStep('provider');
+          }
         } else {
           setStep('provider');
         }
@@ -113,7 +125,7 @@ export default function ModelSelectionGate({
     };
 
     fetchProviders();
-  }, [isOpen]);
+  }, [isOpen, preselectedProvider]);
 
   const handleProviderSelect = (provider: ProviderStatus) => {
     setSelectedProvider(provider);

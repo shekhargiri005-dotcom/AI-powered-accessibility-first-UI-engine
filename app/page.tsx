@@ -54,9 +54,10 @@ export default function HomePage() {
   const [output, setOutput] = useState<GenerationOutput | null>(null);
 
   // ─── Model Selection Gate ─────────────────────────────────────────────────
-  const [showModelGate, setShowModelGate] = useState(false);
+  const [showModelGate, setShowModelGate] = useState(true); // Always show gate after login (mandatory flow)
   const [hasCheckedConfig, setHasCheckedConfig] = useState(false);
   const [providerCredentials, setProviderCredentials] = useState<Record<string, boolean>>({});
+  const [preselectedProvider, setPreselectedProvider] = useState<string | null>(null);
 
   // ─── AI Engine Config ─────────────────────────────────────────────────────
   const [aiConfig, setAiConfig] = useState<AIEngineConfig | null>(null);
@@ -97,55 +98,42 @@ export default function HomePage() {
   }, []);
 
   // Check for existing AI config on mount - load from workspace settings API (database)
+  // ALWAYS show ModelSelectionGate per mandatory flow: Login → Gate → UI Engine
+  // If a provider was previously configured, pre-select it in the gate for convenience.
   useEffect(() => {
     const loadWorkspaceConfig = async () => {
       try {
         // Load from workspace settings API (database) - NOT localStorage
         const res = await fetch('/api/workspace/settings');
         const data = await res.json();
-        
+
         if (data.settings && Object.keys(data.settings).length > 0) {
           // Get the most recently updated provider
           const providers = Object.entries(data.settings);
-          const [provider, config] = providers[0] as [string, { model: string | null; hasApiKey: boolean; updatedAt: Date }];
-          
+          // Sort by updatedAt descending to get the most recent provider
+          const sorted = providers.sort((a, b) =>
+            new Date((b[1] as { updatedAt: Date }).updatedAt).getTime() -
+            new Date((a[1] as { updatedAt: Date }).updatedAt).getTime()
+          );
+          const [provider, config] = sorted[0] as [string, { model: string | null; hasApiKey: boolean; updatedAt: Date }];
+
           if (config.hasApiKey) {
-            setAiConfig({
-              provider: provider,
-              providerName: provider,
-              model: config.model || 'default',
-              apiKey: '••••',
-              temperature: 0.6,
-              fullAppMode: false,
-              multiSlideMode: false,
-            });
-            setIsFullAppMode(false);
-            setIsMultiSlideMode(false);
-            
-            // Mark this provider as having credentials
+            // Pre-select this provider in the gate (user still must confirm)
+            setPreselectedProvider(provider);
             setProviderCredentials(prev => ({ ...prev, [provider]: true }));
-            
-            // Start inactivity monitoring
-            updateActivity();
-          } else {
-            // No API key configured - show model gate
-            setShowModelGate(true);
           }
-        } else {
-          // No config - show the model selection gate
-          setShowModelGate(true);
         }
+        // Gate is always shown — user must explicitly select and confirm a provider
       } catch (error) {
         console.error('Failed to load workspace config:', error);
-        // Error loading config - show the gate to be safe
-        setShowModelGate(true);
+        // Error loading config — still show the gate
       } finally {
         setHasCheckedConfig(true);
       }
     };
 
     loadWorkspaceConfig();
-  }, [updateActivity]);
+  }, []);
 
   // Inactivity monitoring effect
   useEffect(() => {
@@ -537,7 +525,9 @@ export default function HomePage() {
     });
     setProviderCredentials(prev => ({ ...prev, [config.provider]: true }));
     setShowModelGate(false);
-  }, []);
+    // Start inactivity monitoring
+    updateActivity();
+  }, [updateActivity]);
 
   // Don't render the main UI until we've checked for existing config
   // This ensures ModelSelectionGate is shown first for new users
@@ -557,6 +547,7 @@ export default function HomePage() {
         isOpen={showModelGate}
         onComplete={handleModelGateComplete}
         hasCredentials={providerCredentials}
+        preselectedProvider={preselectedProvider}
       />
 
       {/* Parallax visual background — purely decorative */}
