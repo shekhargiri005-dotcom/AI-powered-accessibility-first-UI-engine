@@ -105,17 +105,9 @@ export default function ModelSelectionGate({
         if (configured.length === 0) {
           setStep('error');
           setError('No AI providers are configured. Please add API keys to your environment variables (Vercel).');
-        } else if (preselectedProvider) {
-          // Pre-select the previously used provider and go to confirmation step
-          const match = configured.find((p: ProviderStatus) => p.id === preselectedProvider);
-          if (match) {
-            setSelectedProvider(match);
-            setSelectedModel(match.models[0] || 'default');
-            setStep('confirm');
-          } else {
-            setStep('provider');
-          }
         } else {
+          // Always show the provider selection page — user must explicitly choose
+          // The previously used provider will be visually highlighted on the grid
           setStep('provider');
         }
       } catch (err) {
@@ -247,26 +239,31 @@ export default function ModelSelectionGate({
 
               {/* Provider Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {configuredProviders.map((provider) => (
-                  <button
-                    key={provider.id}
-                    onClick={() => handleProviderSelect(provider)}
-                    className={`
-                      relative group p-5 rounded-2xl border-2 transition-all duration-200 text-left
-                      bg-gray-900/50 border-gray-700/50 
-                      hover:border-violet-500/50 hover:bg-violet-500/5
-                      hover:scale-[1.02] active:scale-[0.98]
-                    `}
-                  >
-                    {/* Provider Brand Color Top Border */}
-                    <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-lg ${provider.bgColor} opacity-60`} />
+                {configuredProviders.map((provider) => {
+                  const isLastUsed = preselectedProvider === provider.id;
+                  return (
+                    <button
+                      key={provider.id}
+                      onClick={() => handleProviderSelect(provider)}
+                      className={`
+                        relative group p-5 rounded-2xl border-2 transition-all duration-200 text-left
+                        ${isLastUsed
+                          ? 'bg-violet-500/10 border-violet-500/40'
+                          : 'bg-gray-900/50 border-gray-700/50'
+                        }
+                        hover:border-violet-500/50 hover:bg-violet-500/5
+                        hover:scale-[1.02] active:scale-[0.98]
+                      `}
+                    >
+                      {/* Provider Brand Color Top Border */}
+                      <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-lg ${provider.bgColor} ${isLastUsed ? 'opacity-100' : 'opacity-60'}`} />
 
-                    {/* Recommended Badge */}
-                    {provider.recommended && (
-                      <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-violet-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-violet-500/30">
-                        RECOMMENDED
-                      </div>
-                    )}
+                      {/* Last Used Badge */}
+                      {isLastUsed && (
+                        <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-emerald-500/30">
+                          LAST USED
+                        </div>
+                      )}
 
                     {/* Icon with provider brand color background */}
                     <div className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${provider.gradient} mb-3`}>
@@ -290,7 +287,8 @@ export default function ModelSelectionGate({
                     {/* Violet Hover Glow Effect */}
                     <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
                   </button>
-                ))}
+                );
+                })}
               </div>
 
               {onSkip && (
