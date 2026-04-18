@@ -98,16 +98,14 @@ export default function ModelSelectionGate({
           throw new Error(data.error || 'Failed to load providers');
         }
 
-        // Filter to only configured providers
-        const configured = data.providers.filter((p: ProviderStatus) => p.configured);
-        setConfiguredProviders(configured);
+        // Show ALL providers — configured ones are clickable, unconfigured are disabled
+        setConfiguredProviders(data.providers);
 
-        if (configured.length === 0) {
+        const hasAnyConfigured = data.providers.some((p: ProviderStatus) => p.configured);
+        if (!hasAnyConfigured) {
           setStep('error');
           setError('No AI providers are configured. Please add API keys to your environment variables (Vercel).');
         } else {
-          // Always show the provider selection page — user must explicitly choose
-          // The previously used provider will be visually highlighted on the grid
           setStep('provider');
         }
       } catch (err) {
@@ -233,7 +231,7 @@ export default function ModelSelectionGate({
                   <span className="text-xs font-medium text-violet-300">Available Providers</span>
                 </div>
                 <p className="text-sm text-gray-400">
-                  These providers have API keys configured in your environment
+                  Select an AI provider to power your generation engine
                 </p>
               </div>
 
@@ -241,27 +239,36 @@ export default function ModelSelectionGate({
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {configuredProviders.map((provider) => {
                   const isLastUsed = preselectedProvider === provider.id;
+                  const isDisabled = !provider.configured;
                   return (
                     <button
                       key={provider.id}
-                      onClick={() => handleProviderSelect(provider)}
+                      onClick={() => !isDisabled && handleProviderSelect(provider)}
+                      disabled={isDisabled}
                       className={`
                         relative group p-5 rounded-2xl border-2 transition-all duration-200 text-left
-                        ${isLastUsed
-                          ? 'bg-violet-500/10 border-violet-500/40'
-                          : 'bg-gray-900/50 border-gray-700/50'
+                        ${isDisabled
+                          ? 'bg-gray-900/20 border-gray-800/30 opacity-50 cursor-not-allowed'
+                          : isLastUsed
+                            ? 'bg-violet-500/10 border-violet-500/40 hover:border-violet-500/50 hover:bg-violet-500/5 hover:scale-[1.02] active:scale-[0.98]'
+                            : 'bg-gray-900/50 border-gray-700/50 hover:border-violet-500/50 hover:bg-violet-500/5 hover:scale-[1.02] active:scale-[0.98]'
                         }
-                        hover:border-violet-500/50 hover:bg-violet-500/5
-                        hover:scale-[1.02] active:scale-[0.98]
                       `}
                     >
                       {/* Provider Brand Color Top Border */}
-                      <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-lg ${provider.bgColor} ${isLastUsed ? 'opacity-100' : 'opacity-60'}`} />
+                      <div className={`absolute top-0 left-4 right-4 h-1 rounded-b-lg ${provider.bgColor} ${isDisabled ? 'opacity-20' : isLastUsed ? 'opacity-100' : 'opacity-60'}`} />
 
                       {/* Last Used Badge */}
-                      {isLastUsed && (
+                      {isLastUsed && !isDisabled && (
                         <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-emerald-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-emerald-500/30">
                           LAST USED
+                        </div>
+                      )}
+
+                      {/* Not Configured Badge */}
+                      {isDisabled && (
+                        <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-gray-700 text-gray-400 text-[10px] font-bold rounded-full">
+                          NO KEY
                         </div>
                       )}
 
@@ -285,7 +292,9 @@ export default function ModelSelectionGate({
                     </div>
 
                     {/* Violet Hover Glow Effect */}
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                    {!isDisabled && (
+                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                    )}
                   </button>
                 );
                 })}

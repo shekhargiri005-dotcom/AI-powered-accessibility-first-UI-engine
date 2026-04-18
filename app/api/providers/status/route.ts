@@ -169,8 +169,10 @@ export async function GET() {
       // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
       // 2. LLM_KEY exists AND this provider matches LLM_PROVIDER
       // LLM_KEY no longer marks ALL providers as configured — only its bound provider
+      // Ollama can also be configured via OLLAMA_BASE_URL (no API key needed)
+      const ollamaBaseUrl = provider.id === 'ollama' ? process.env.OLLAMA_BASE_URL : undefined;
       const matchesLlmProvider = hasUniversalKey && provider.id === llmProvider;
-      configured = !!(primaryKey || altKey || matchesLlmProvider);
+      configured = !!(primaryKey || altKey || ollamaBaseUrl || matchesLlmProvider);
       
       // Debug logging
       if (provider.envVar) {
