@@ -42,11 +42,13 @@ export async function POST(request: NextRequest) {
     const providerId = provider ? (provider as ProviderName) : undefined;
     const modelId = model || undefined;
 
-    reqLogger.debug('Generating thinking plan', { 
+    reqLogger.info('Generating thinking plan', { 
       intentType, 
-      model: modelId ?? 'env-resolved', 
-      provider: providerId ?? 'env-resolved',
-      workspaceId 
+      model: modelId ?? 'not-provided', 
+      provider: providerId ?? 'not-provided',
+      workspaceId,
+      rawProvider: provider,
+      rawModel: model
     });
     
     const result = await generateThinkingPlan(

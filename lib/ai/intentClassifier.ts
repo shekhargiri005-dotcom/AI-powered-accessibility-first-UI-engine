@@ -85,14 +85,18 @@ export async function classifyIntent(
     let wsId: string;
     let uid: string | undefined;
 
+    console.log('[intentClassifier] Input parameters:', { provider, model, workspaceId, userId });
+
     if (provider) {
       // Use provided provider (user's selection from UI)
+      console.log('[intentClassifier] ✓ Using user-selected provider:', provider);
       providerId = provider;
       modelId = model || 'default'; // Use provided model or let adapter resolve
       wsId = workspaceId || 'default';
       uid = userId;
     } else {
       // Fall back to default adapter resolution
+      console.log('[intentClassifier] ⚠ No provider specified, falling back to default');
       const defaultConfig = resolveDefaultAdapter('CLASSIFIER');
       modelId = defaultConfig.model;
       providerId = (defaultConfig.provider || 'openai') as ProviderName;
