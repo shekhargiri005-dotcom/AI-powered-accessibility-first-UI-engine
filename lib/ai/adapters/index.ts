@@ -267,20 +267,22 @@ export async function getWorkspaceAdapter(
     // Import detectProviderFromKey for auto-detection
     const { detectProviderFromKey } = await import('../resolveDefaultAdapter');
     const explicitProvider = process.env.LLM_PROVIDER?.toLowerCase();
-    const detectedProvider = explicitProvider || detectProviderFromKey(universalKey) || 'openai';
-    const matchesProvider = providerId === detectedProvider;
+    const detectedProvider = detectProviderFromKey(universalKey);
+    const resolvedProvider = explicitProvider || detectedProvider || 'openai';
+    const matchesProvider = providerId === resolvedProvider;
 
     console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
       hasLLMKey: true,
       explicitProvider: explicitProvider || '(not set)',
-      detectedProvider,
+      detectedProvider: detectedProvider || '(unknown format)',
+      resolvedProvider,
       matchesProvider,
       providerId,
       modelId
     });
 
     if (matchesProvider) {
-      console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (${explicitProvider ? 'explicit LLM_PROVIDER' : 'auto-detected'})`);
+      console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (${explicitProvider ? 'explicit LLM_PROVIDER' : detectedProvider ? 'auto-detected' : 'defaulted to openai'})`);
       return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
     }
   }

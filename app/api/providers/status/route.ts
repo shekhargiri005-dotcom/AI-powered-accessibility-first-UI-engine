@@ -142,7 +142,7 @@ export async function GET() {
   try {
     // Check for LLM_KEY — auto-detect which provider it belongs to from key format.
     // If LLM_PROVIDER is explicitly set, that takes priority over auto-detection.
-    // In the UI, LLM_KEY makes all providers visible; backend validates per-provider.
+    // If auto-detection fails but LLM_KEY exists, default to 'openai' as fallback.
     const universalKey = process.env.LLM_KEY;
     const hasUniversalKey = !!universalKey;
     // Auto-detect provider from key format, or use explicit LLM_PROVIDER
@@ -150,9 +150,14 @@ export async function GET() {
     if (!llmProvider && universalKey) {
       // Import detectProviderFromKey for auto-detection
       const { detectProviderFromKey } = await import('@/lib/ai/resolveDefaultAdapter');
-      llmProvider = detectProviderFromKey(universalKey) || '';
-      if (llmProvider) {
+      const detected = detectProviderFromKey(universalKey);
+      if (detected) {
+        llmProvider = detected;
         console.log(`[providers/status] ✓ Auto-detected LLM_KEY as ${llmProvider} provider`);
+      } else {
+        // Key format not recognized — default to openai so LLM_KEY still works
+        llmProvider = 'openai';
+        console.warn(`[providers/status] ⚠ Could not auto-detect LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER env var to override.`);
       }
     }
     

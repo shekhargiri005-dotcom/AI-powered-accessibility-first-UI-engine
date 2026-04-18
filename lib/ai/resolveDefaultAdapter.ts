@@ -93,8 +93,8 @@ function resolveLlmProvider(): string {
       console.log(`[resolveLlmProvider] ✓ Auto-detected LLM_KEY as ${detected} provider`);
       return detected;
     }
-    // Key format not recognized — default to openai
-    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect provider from LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER explicitly to override.`);
+    // Key format not recognized — default to openai so LLM_KEY still works
+    console.warn(`[resolveLlmProvider] ⚠ Could not auto-detect LLM_KEY format. Defaulting to 'openai'. Set LLM_PROVIDER env var to override.`);
     return 'openai';
   }
   return '';
