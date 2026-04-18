@@ -55,21 +55,16 @@ const PROVIDER_CHECKS: Array<{
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
 ];
 
-/** Universal LLM_KEY — auto-detected or bound via LLM_PROVIDER */
-const UNIVERSAL_LLM_KEY = process.env.LLM_KEY;
-
 /**
- * Auto-detect which provider an API key belongs to based on its format.
- * 
- * DEPRECATED: This function is kept for backwards compatibility but auto-detection
- * is no longer recommended. Use LLM_PROVIDER env var to explicitly specify the provider.
- * 
- * Key format patterns:
- *   OpenAI:    sk-proj-... | sk-... | sk_live_...
- *   Anthropic: sk-ant-... | sk-ant-api...
- *   Google:    AIzaSy...
- *   Groq:      gsk_... | gsk_live_...
- *   Ollama:    numeric prefixes (e.g., 2794...) for cloud-hosted instances
+ * Resolves an AdapterConfig from environment variables.
+ *
+ * Priority:
+ * 1. <PURPOSE>_MODEL env var  (explicit override — use any model/provider)
+ * 2. First provider env key found in PROVIDER_CHECKS order
+ * 3. Fallback to unconfigured
+ *
+ * @param purpose  Which pipeline step this is for (controls default model selection)
+ * @returns        A ready-to-use AdapterConfig to pass to getWorkspaceAdapter()
  */
 export function detectProviderFromKey(apiKey: string): string | null {
   if (!apiKey || typeof apiKey !== 'string') return null;
@@ -88,38 +83,13 @@ export function detectProviderFromKey(apiKey: string): string | null {
   return null;
 }
 
-/** 
- * Resolve LLM_PROVIDER: explicit env var ONLY. 
- * Auto-detection is deprecated — users must set LLM_PROVIDER when using LLM_KEY.
- */
-function resolveLlmProvider(): { provider: string; source: 'explicit' | 'auto' | 'none' } {
-  const explicit = process.env.LLM_PROVIDER?.toLowerCase();
-  if (explicit) {
-    return { provider: explicit, source: 'explicit' };
-  }
-  if (UNIVERSAL_LLM_KEY) {
-    // Auto-detect for backwards compatibility, but warn
-    const detected = detectProviderFromKey(UNIVERSAL_LLM_KEY);
-    if (detected) {
-      console.warn(`[resolveLlmProvider] ⚠ Auto-detected LLM_KEY as ${detected}. This is deprecated. Set LLM_PROVIDER=${detected} explicitly.`);
-      return { provider: detected, source: 'auto' };
-    }
-    console.error(`[resolveLlmProvider] ✗ LLM_KEY is set but format not recognized. Set LLM_PROVIDER explicitly (openai, anthropic, google, groq, ollama).`);
-    return { provider: '', source: 'none' };
-  }
-  return { provider: '', source: 'none' };
-}
-
-const LLM_PROVIDER_RESULT = resolveLlmProvider();
-const LLM_PROVIDER = LLM_PROVIDER_RESULT.provider;
-
 /**
  * Resolves an AdapterConfig from environment variables.
  *
  * Priority:
  * 1. <PURPOSE>_MODEL env var  (explicit override — use any model/provider)
  * 2. First provider env key found in PROVIDER_CHECKS order
- * 3. Ollama local (always available, no key needed)
+ * 3. Fallback to unconfigured
  *
  * @param purpose  Which pipeline step this is for (controls default model selection)
  * @returns        A ready-to-use AdapterConfig to pass to getWorkspaceAdapter()
@@ -168,24 +138,11 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. LLM_KEY — only for the provider it belongs to ──────────────────────
-  // LLM_KEY is a single key that works for ONE specific provider (set via LLM_PROVIDER).
-  // It must NOT be used as a credential for unrelated providers (causes 401 errors).
-  if (UNIVERSAL_LLM_KEY && LLM_PROVIDER) {
-    console.log(`[resolveDefaultAdapter] ✓ Using LLM_KEY with provider: ${LLM_PROVIDER} (from LLM_PROVIDER)`);
-    return {
-      model:    defaults[LLM_PROVIDER] ?? 'gpt-4o-mini',
-      provider: LLM_PROVIDER,
-      apiKey:   UNIVERSAL_LLM_KEY,
-      baseUrl:  PROVIDER_CHECKS.find(c => c.id === LLM_PROVIDER)?.baseUrl,
-    };
-  }
-
-  // ── 5. Fallback (Waiting Socket) ─────────────────────────
+  // ── 4. Fallback (Waiting Socket) ─────────────────────────
   // A generic socket that safely informs the client to inject a configuration.
   console.error(`[resolveDefaultAdapter] ✗ No API keys found for purpose: ${purpose}`);
   console.error(`[resolveDefaultAdapter] Available keys:`, 
-    Object.keys(process.env).filter(k => k.includes('API_KEY') || k === 'LLM_KEY')
+    Object.keys(process.env).filter(k => k.includes('API_KEY'))
   );
   
   return { model: 'unconfigured', provider: 'unconfigured' };
@@ -193,20 +150,16 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
 
 /**
  * Looks up the canonical API key env var for a named provider.
- * LLM_KEY is only returned if the provider matches LLM_PROVIDER.
+ * Each provider has its own specific env var.
  * Returns undefined if no key is found.
  */
 export function resolveApiKeyForProvider(provider: string): string | undefined {
-  // Check universal LLM_KEY only if provider matches LLM_PROVIDER
-  if (UNIVERSAL_LLM_KEY && provider.toLowerCase() === LLM_PROVIDER) {
-    return UNIVERSAL_LLM_KEY;
-  }
-  
   const map: Record<string, string[]> = {
     openai:     ['OPENAI_API_KEY'],
     anthropic:  ['ANTHROPIC_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
+    ollama:     ['OLLAMA_API_KEY'],
   };
   const vars = map[provider.toLowerCase()] ?? [];
   for (const v of vars) {

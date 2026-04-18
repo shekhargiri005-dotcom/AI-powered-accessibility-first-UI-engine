@@ -140,26 +140,11 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check for LLM_KEY — requires explicit LLM_PROVIDER to specify which provider it belongs to.
-    // Auto-detection is deprecated. Users must set LLM_PROVIDER (openai, anthropic, google, groq, ollama).
-    const universalKey = process.env.LLM_KEY;
-    const hasUniversalKey = !!universalKey;
-    // Only use LLM_KEY if LLM_PROVIDER is explicitly set
-    let llmProvider = process.env.LLM_PROVIDER?.toLowerCase() || '';
-    if (hasUniversalKey && !llmProvider) {
-      console.error(`[providers/status] ✗ LLM_KEY is set but LLM_PROVIDER is missing. Set LLM_PROVIDER to one of: openai, anthropic, google, groq, ollama`);
-    }
-    if (hasUniversalKey && llmProvider) {
-      console.log(`[providers/status] ✓ LLM_KEY configured for provider: ${llmProvider}`);
-    }
+    // Check which providers have API keys configured
+    // Each provider requires its own specific key in Vercel env vars:
+    //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
+    // No universal LLM_KEY — explicit per-provider configuration only.
     
-    // Debug: Log all available env var keys (without values for security)
-    const allEnvKeys = Object.keys(process.env).filter(key => 
-      key.includes('API_KEY') || key === 'LLM_KEY' || key === 'LLM_PROVIDER'
-    );
-    console.log('[providers/status] Available env vars:', allEnvKeys);
-    console.log('[providers/status] LLM_KEY present:', hasUniversalKey, 'LLM_PROVIDER:', llmProvider || '(not set)');
-
     const providers: ProviderStatus[] = PROVIDER_CONFIG.map((provider) => {
       // Check if provider is configured via env var
       let configured = false;
@@ -172,12 +157,8 @@ export async function GET() {
         ? process.env[provider.envVarAlt] 
         : undefined;
       
-      // Provider is configured if:
-      // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, OLLAMA_API_KEY, etc.)
-      // 2. LLM_KEY exists AND auto-detects/explicitly matches this provider
-      // All providers are equal — every one requires an API key, no exceptions.
-      const matchesLlmKey = hasUniversalKey && provider.id === llmProvider;
-      configured = !!(primaryKey || altKey || matchesLlmKey);
+      // Provider is configured if specific key exists
+      configured = !!(primaryKey || altKey);
       
       // Debug logging
       if (provider.envVar) {
@@ -186,7 +167,6 @@ export async function GET() {
       if ('envVarAlt' in provider && provider.envVarAlt) {
         debugInfo[provider.envVarAlt] = !!altKey;
       }
-      debugInfo['LLM_KEY'] = hasUniversalKey;
       debugInfo['hasSpecificKey'] = !!(primaryKey || altKey);
       console.log(`[providers/status] ${provider.id}:`, debugInfo, 'configured:', configured);
 
@@ -215,7 +195,7 @@ export async function GET() {
       // Debug info (only in development)
       ...(process.env.NODE_ENV === 'development' && {
         debug: {
-          availableEnvVars: allEnvKeys,
+          availableEnvVars: Object.keys(process.env).filter(k => k.includes('API_KEY')),
           nodeEnv: process.env.NODE_ENV,
         }
       }),

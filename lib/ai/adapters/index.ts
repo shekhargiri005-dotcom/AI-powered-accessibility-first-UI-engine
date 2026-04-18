@@ -240,12 +240,15 @@ export async function getWorkspaceAdapter(
   }
 
   // 2. Env Check: Fall back to environment variables
+  // Each provider has its own API key env var:
+  //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
   const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`];
   if (envKey) {
+    console.log(`[getWorkspaceAdapter] ✓ Using ${providerId.toUpperCase()}_API_KEY for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: envKey });
   }
 
-  // Provider-specific env var fallbacks
+  // Provider-specific env var fallbacks (with GEMINI_API_KEY for Google)
   const providerEnvMap: Record<string, string | undefined> = {
     openai: process.env.OPENAI_API_KEY,
     anthropic: process.env.ANTHROPIC_API_KEY,
@@ -256,35 +259,11 @@ export async function getWorkspaceAdapter(
   
   const fallbackKey = providerEnvMap[providerId];
   if (fallbackKey) {
+    console.log(`[getWorkspaceAdapter] ✓ Using ${providerId.toUpperCase()}_API_KEY for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
-  // 3. LLM_KEY — requires explicit LLM_PROVIDER to specify which provider it belongs to.
-  // Auto-detection is deprecated. Users must set LLM_PROVIDER (openai, anthropic, google, groq, ollama).
-  const universalKey = process.env.LLM_KEY;
-  if (universalKey) {
-    const explicitProvider = process.env.LLM_PROVIDER?.toLowerCase();
-    
-    if (!explicitProvider) {
-      console.error(`[getWorkspaceAdapter] ✗ LLM_KEY is set but LLM_PROVIDER is missing. Set LLM_PROVIDER to one of: openai, anthropic, google, groq, ollama`);
-    } else {
-      const matchesProvider = providerId === explicitProvider;
-      console.log(`[getWorkspaceAdapter] Checking LLM_KEY for ${providerId}:`, {
-        hasLLMKey: true,
-        explicitProvider,
-        matchesProvider,
-        providerId,
-        modelId
-      });
-
-      if (matchesProvider) {
-        console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId}`);
-        return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
-      }
-    }
-  }
-
-  // 4. Failure: No valid credentials for this provider
+  // 3. Failure: No valid credentials for this provider
   const envVarName = `${providerId.toUpperCase()}_API_KEY`;
   console.error(`[getWorkspaceAdapter] ✗ No valid API key for ${providerId}.`);
   console.error(`[getWorkspaceAdapter] To fix: Set ${envVarName} in Vercel environment variables.`);
