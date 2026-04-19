@@ -58,6 +58,51 @@ export interface ClassificationResult {
   success: boolean;
   classification?: IntentClassification;
   error?: string;
+  _fallback?: boolean;
+}
+
+/**
+ * Build a deterministic local classification when the LLM is rate-limited or unavailable.
+ * Uses simple heuristics to determine intent type from the prompt text.
+ */
+function buildLocalClassification(prompt: string, hasActiveProject: boolean): IntentClassification {
+  const lower = prompt.toLowerCase();
+  
+  // Detect refinement vs generation
+  const refinementKeywords = ['fix', 'change', 'update', 'improve', 'make the', 'adjust', 'modify', 'refine', 'edit', 'remove', 'add a', 'replace'];
+  const generationKeywords = ['build', 'create', 'generate', 'design', 'make a', 'develop', 'construct'];
+  const isRefinement = hasActiveProject && refinementKeywords.some(k => lower.includes(k));
+  const isGeneration = generationKeywords.some(k => lower.includes(k));
+
+  let intentType: string;
+  if (isRefinement) {
+    intentType = 'ui_refinement';
+  } else if (isGeneration || !hasActiveProject) {
+    intentType = 'ui_generation';
+  } else {
+    intentType = 'ui_generation'; // Default to generation
+  }
+
+  // Detect multi-component prompts → suggest app mode
+  const componentIndicators = (lower.match(/\b(build|create|design|make)\b/g) || []).length;
+  const suggestedMode = componentIndicators >= 2 ? 'app' : 'component';
+
+  return {
+    intentType: intentType as IntentClassification['intentType'],
+    confidence: 0.6, // Lower confidence for local fallback
+    summary: prompt.substring(0, 150),
+    shouldGenerateCode: ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType),
+    suggestedMode: suggestedMode as 'component' | 'app',
+    needsClarification: false,
+    clarificationQuestion: undefined,
+    purpose: 'unknown',
+    visualType: '2d-standard',
+    complexity: 'medium',
+    platform: 'responsive',
+    layout: 'single-page',
+    motionLevel: 'subtle',
+    preferredStack: ['react', 'tailwind'],
+  };
 }
 
 export async function classifyIntent(
@@ -108,9 +153,8 @@ export async function classifyIntent(
     // Retry loop for 429 Rate Limit errors
     let adapterResult;
     let retries = 0;
-    const maxRetries = 3;
-    const baseDelayMs = 1000;
-    const requestTimeout = 30000; // 30 second timeout for classification requests
+    const maxRetries = 2; // Reduced from 3 — classify is lightweight, fail fast
+    const baseDelayMs = 1500;
 
     while (true) {
       try {
@@ -127,7 +171,8 @@ export async function classifyIntent(
         break; // Success
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        const isNetworkError = msg.includes('429') || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('timeout');
+        const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('quota');
+        const isNetworkError = isRateLimit || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504') || msg.includes('timeout');
         
         if (isNetworkError && retries < maxRetries) {
           retries++;
@@ -136,17 +181,17 @@ export async function classifyIntent(
           continue;
         }
 
-        if (isNetworkError && provider) {
-          console.warn(`[intentClassifier] User's adapter ${provider} failed with connection/rate limit error.`);
-          // Don't fallback to a different provider if using LLM_KEY — 
-          // the key is tied to the user's selected provider
-          if (process.env.LLM_KEY && !process.env[`${provider?.toUpperCase()}_API_KEY`]) {
-            console.error(`[intentClassifier] Cannot fallback — LLM_KEY is configured for ${provider}, no other provider keys available.`);
-            throw error;
-          }
-          // Only fallback if we have provider-specific keys for other providers
-          console.log(`[intentClassifier] Attempting fallback to default adapter...`);
-          return classifyIntent(userInput, hasActiveProject, undefined, undefined, workspaceId, userId);
+        if (isRateLimit) {
+          // Rate limit exhausted — return a smart local fallback instead of failing the pipeline
+          console.warn(`[intentClassifier] Provider ${provider} rate limited. Returning local classification fallback.`);
+          const localResult = buildLocalClassification(sanitized, hasActiveProject);
+          return { success: true, classification: localResult, _fallback: true };
+        }
+
+        if (isNetworkError) {
+          console.warn(`[intentClassifier] User's adapter ${provider} failed with connection error after retries.`);
+          const localResult = buildLocalClassification(sanitized, hasActiveProject);
+          return { success: true, classification: localResult, _fallback: true };
         }
 
         // Log detailed error information for debugging
@@ -155,7 +200,7 @@ export async function classifyIntent(
           provider: providerId,
           model: modelId,
           workspaceId: wsId,
-          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`] || !!process.env.LLM_KEY
+          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`]
         });
 
         throw error; // Rethrow if not a transient network error or out of retries

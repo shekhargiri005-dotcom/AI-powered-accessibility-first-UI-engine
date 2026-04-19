@@ -252,16 +252,9 @@ export async function generateThinkingPlan(
         }
 
         if (isNetworkError && provider) {
-          console.warn(`[thinkingEngine] User's adapter ${provider} failed with connection/rate limit error.`);
-          // Don't fallback to a different provider if using LLM_KEY — 
-          // the key is tied to the user's selected provider
-          if (process.env.LLM_KEY && !process.env[`${provider?.toUpperCase()}_API_KEY`]) {
-            console.error(`[thinkingEngine] Cannot fallback — LLM_KEY is configured for ${provider}, no other provider keys available.`);
-            throw error;
-          }
-          // Only fallback if we have provider-specific keys for other providers
-          console.log(`[thinkingEngine] Attempting fallback to default adapter...`);
-          return generateThinkingPlan(prompt, intentType, projectContext, undefined, undefined, workspaceId, userId);
+          console.warn(`[thinkingEngine] User's adapter ${provider} failed with connection/rate limit error. Returning fallback plan.`);
+          const fallback = buildFallbackPlan(prompt, intentType);
+          return { success: true, plan: fallback };
         }
 
         // Log detailed error information for debugging
@@ -270,7 +263,7 @@ export async function generateThinkingPlan(
           provider: providerId,
           model: modelId,
           workspaceId: wsId,
-          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`] || !!process.env.LLM_KEY
+          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`]
         });
 
         throw error;
