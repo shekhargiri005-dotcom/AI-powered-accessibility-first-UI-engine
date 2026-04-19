@@ -382,7 +382,7 @@ export default function RightPanel({
 
   return (
     <div className={`
-      flex flex-col flex-1 min-h-0 bg-[#0B0F19] border-t lg:border-t-0 lg:border-l border-white/[0.08] z-20
+      flex flex-col flex-1 min-h-0 bg-[#0B0F19] border-t border-white/[0.08] z-20
       ${isPreviewFullscreen ? 'fixed inset-0 z-50' : 'relative w-full'}
     `}>
       {/* ── Top Header ───────────────────────────────────────────────────── */}

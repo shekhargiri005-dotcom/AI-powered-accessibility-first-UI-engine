@@ -683,104 +683,107 @@ export default function HomePage() {
       />
       )}
 
-      {/* Center AI Work Pane */}
-      {!isPreviewFullscreen && (
-      <div className={`
-        flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 relative z-20
-        ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.08]' : 'w-full'}
-        pt-14 lg:pt-0
-      `}>
-        <CenterWorkspace
-          headerControls={
-            aiConfig ? (
-              <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full ${pt.bgLight} border ${pt.border} backdrop-blur-sm`}>
-                <Shield className={`w-3.5 h-3.5 ${pt.textPrimary}`} />
-                <span className={`text-xs font-medium ${pt.textPrimary}`}>{aiConfig.providerName}</span>
-                <div className={`w-px h-3 ${pt.border} mx-1`} />
-                <span className={`text-xs ${pt.textMuted}`}>{aiConfig.model}</span>
-                <div className={`w-px h-3 ${pt.border} mx-1`} />
-                <Lock className={`w-3 h-3 ${pt.textMuted}`} />
-                <span className={`text-[10px] ${pt.textMuted}`}>Server-side</span>
-              </div>
-            ) : null
-          }
-          onPromptSubmit={handlePromptSubmit}
-          isLoading={isRunning}
-          hasActiveProject={!!activeProjectId}
-          aiPayload={aiPayload()}
-          onIntentDetected={setLiveClassification}
-          stage={isDirectRefining ? 'complete' : stage}
-          pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
-          pipelineError={pipelineError}
-          thinkingPlan={thinkingPlan}
-          isThinkingLoading={isThinkingLoading}
-          originalPrompt={pendingPrompt}
-          onProceed={async () => {
-            setThinkingPlan(null);
-            await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
-          }}
-          onRefineUnderstanding={() => {
-            setStage('idle');
-            setPipelineStep('idle');
-            setThinkingPlan(null);
-          }}
-          onChangeIntent={async (intentType) => {
-            setThinkingPlan(null);
-            setIsThinkingLoading(true);
-            try {
-              const res = await fetch('/api/think', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt: pendingPrompt, intentType, ...aiPayload() }),
-              });
-              const data = await res.json();
-              if (data.success) setThinkingPlan(data.plan);
-            } catch { /* fallback */ } finally {
-              setIsThinkingLoading(false);
+      {/* Main area: Chat on top + Preview below */}
+      <div className={`flex-1 flex flex-col min-h-0 min-w-0 relative z-20 ${isPreviewFullscreen ? 'w-full' : ''}`}>
+        {/* Chat pane */}
+        {!isPreviewFullscreen && (
+        <div className={`
+          flex flex-col min-w-0 relative z-20
+          ${output ? 'h-[45%] flex-shrink-0 border-b border-white/[0.08]' : 'flex-1'}
+          pt-14 lg:pt-0
+        `}>
+          <CenterWorkspace
+            headerControls={
+              aiConfig ? (
+                <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full ${pt.bgLight} border ${pt.border} backdrop-blur-sm`}>
+                  <Shield className={`w-3.5 h-3.5 ${pt.textPrimary}`} />
+                  <span className={`text-xs font-medium ${pt.textPrimary}`}>{aiConfig.providerName}</span>
+                  <div className={`w-px h-3 ${pt.border} mx-1`} />
+                  <span className={`text-xs ${pt.textMuted}`}>{aiConfig.model}</span>
+                  <div className={`w-px h-3 ${pt.border} mx-1`} />
+                  <Lock className={`w-3 h-3 ${pt.textMuted}`} />
+                  <span className={`text-[10px] ${pt.textMuted}`}>Server-side</span>
+                </div>
+              ) : null
             }
-          }}
-          onDismissThinking={() => {
-            setThinkingPlan(null);
-            setStage('idle');
-            setPipelineStep('idle');
-          }}
-          onAskClarification={(q) => {
-            setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
-          }}
-          chatMessages={chatMessages}
-          provider={aiConfig?.provider}
-        />
-      </div>
-      )}
-
-      {/* Right Dev Panel */}
-      {output && (
-        <div className={`flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 bg-[#0B0F19] relative z-10 ${isPreviewFullscreen ? 'w-full' : 'w-full lg:w-2/3 xl:w-[60%]'}`}>
-          <RightPanel
-            initialProject={{
-              id: activeProjectId || 'current',
-              timestamp: outputTimestampRef.current,
-              code: output.code,
-              intent: output.intent,
-              a11yReport: output.a11yReport,
-              componentName: output.componentName,
-              tests: output.tests
+            onPromptSubmit={handlePromptSubmit}
+            isLoading={isRunning}
+            hasActiveProject={!!activeProjectId}
+            aiPayload={aiPayload()}
+            onIntentDetected={setLiveClassification}
+            stage={isDirectRefining ? 'complete' : stage}
+            pipelineStep={isDirectRefining ? 'complete' : pipelineStep}
+            pipelineError={pipelineError}
+            thinkingPlan={thinkingPlan}
+            isThinkingLoading={isThinkingLoading}
+            originalPrompt={pendingPrompt}
+            onProceed={async () => {
+              setThinkingPlan(null);
+              await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
             }}
-            onRefine={handleDirectRefine}
-            isRefining={isRunning}
-            projectId={activeProjectId}
-            feedbackMeta={generationMeta}
-            intentConfidence={lastIntentConfidence}
-            aiConfig={aiConfig ? {
-              model:    aiConfig.model,
-              provider: aiConfig.provider,
-            } : null}
-            isPreviewFullscreen={isPreviewFullscreen}
-            onTogglePreviewFullscreen={() => setIsPreviewFullscreen(prev => !prev)}
+            onRefineUnderstanding={() => {
+              setStage('idle');
+              setPipelineStep('idle');
+              setThinkingPlan(null);
+            }}
+            onChangeIntent={async (intentType) => {
+              setThinkingPlan(null);
+              setIsThinkingLoading(true);
+              try {
+                const res = await fetch('/api/think', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ prompt: pendingPrompt, intentType, ...aiPayload() }),
+                });
+                const data = await res.json();
+                if (data.success) setThinkingPlan(data.plan);
+              } catch { /* fallback */ } finally {
+                setIsThinkingLoading(false);
+              }
+            }}
+            onDismissThinking={() => {
+              setThinkingPlan(null);
+              setStage('idle');
+              setPipelineStep('idle');
+            }}
+            onAskClarification={(q) => {
+              setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
+            }}
+            chatMessages={chatMessages}
             provider={aiConfig?.provider}
           />
         </div>
-      )}
+        )}
+
+        {/* Preview pane — below chat */}
+        {output && (
+          <div className={`${isPreviewFullscreen ? 'flex-1' : 'h-[55%]'} flex flex-col min-h-0 bg-[#0B0F19] relative z-10`}>
+            <RightPanel
+              initialProject={{
+                id: activeProjectId || 'current',
+                timestamp: outputTimestampRef.current,
+                code: output.code,
+                intent: output.intent,
+                a11yReport: output.a11yReport,
+                componentName: output.componentName,
+                tests: output.tests
+              }}
+              onRefine={handleDirectRefine}
+              isRefining={isRunning}
+              projectId={activeProjectId}
+              feedbackMeta={generationMeta}
+              intentConfidence={lastIntentConfidence}
+              aiConfig={aiConfig ? {
+                model:    aiConfig.model,
+                provider: aiConfig.provider,
+              } : null}
+              isPreviewFullscreen={isPreviewFullscreen}
+              onTogglePreviewFullscreen={() => setIsPreviewFullscreen(prev => !prev)}
+              provider={aiConfig?.provider}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
