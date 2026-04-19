@@ -13,7 +13,18 @@
 - [vectorStore.ts](file://lib/ai/vectorStore.ts)
 - [testGenerator.ts](file://lib/testGenerator.ts)
 - [auth.ts](file://lib/auth.ts)
+- [thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
+- [think/route.ts](file://app/api/think/route.ts)
+- [classify/route.ts](file://app/api/classify/route.ts)
+- [parse/route.ts](file://app/api/parse/route.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced free-tier provider detection logic with conditional execution of expensive operations
+- Added deterministic fallback functions for classify, think, and parse operations
+- Removed browserless rendering dependencies and simplified timeout mechanisms
+- Integrated comprehensive free-tier fast-path optimizations across the generation pipeline
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -27,14 +38,14 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document describes the Generation API endpoint responsible for transforming user intent into production-ready, accessible React components or applications. It covers HTTP semantics, request/response schemas, authentication, validation, streaming, and the integrated AI generation pipeline. It also explains how the system integrates with the AI generation engine, validation systems, and optional review/repair loops.
+This document describes the Generation API endpoint responsible for transforming user intent into production-ready, accessible React components or applications. It covers HTTP semantics, request/response schemas, authentication, validation, streaming, and the integrated AI generation pipeline. The system now includes enhanced free-tier provider detection logic and deterministic fallback functions to optimize performance and reduce API costs for users on constrained provider tiers.
 
 ## Project Structure
 The Generation API is implemented as a Next.js route handler that orchestrates:
 - Authentication and workspace context
 - Request validation and normalization
 - AI generation via a provider adapter
-- Optional review and repair loops
+- Optional review and repair loops with free-tier optimization
 - Accessibility validation and auto-repairs
 - Test generation
 - Persistence and embeddings
@@ -44,10 +55,11 @@ graph TB
 Client["Client"] --> Route["/api/generate (POST)"]
 Route --> Auth["auth()"]
 Route --> Validate["Input Validation<br/>Prompt + Mode + Intent"]
-Route --> Gen["generateComponent()"]
+Route --> FreeTier["Free-tier Provider Detection"]
+FreeTier --> Gen["generateComponent()"]
 Gen --> Adapter["getWorkspaceAdapter()"]
 Adapter --> Providers["OpenAI / Anthropic / Google / Ollama / Groq / LM Studio"]
-Gen --> Review["Optional Review + Repair"]
+Gen --> Review["Conditional Review + Repair<br/>(Free-tier Optimized)"]
 Review --> A11y["Accessibility Validation + Auto-Repair"]
 Review --> Tests["Test Generation"]
 Route --> Persist["Save Generation + Embeddings"]
@@ -67,11 +79,12 @@ Route --> Response["JSON Response"]
 - Authentication: JWT-based session via NextAuth
 - Streaming: Optional SSE stream for raw model tokens
 - Validation: Prompt, generation mode, intent schema, browser safety, deterministic code checks
-- Generation: Orchestrated by generateComponent(), using provider adapters
-- Review/Repair: Optional UI expert review and automated repair
+- Generation: Orchestrated by generateComponent(), using provider adapters with free-tier optimization
+- Review/Repair: Conditional UI expert review and automated repair with quota conservation
 - Accessibility: Static analysis and auto-repair
 - Tests: RTL and Playwright scaffolding
 - Persistence: Memory storage and vector embeddings
+- Free-tier Optimization: Deterministic fallback functions for expensive operations
 
 **Section sources**
 - [route.ts:25-439](file://app/api/generate/route.ts#L25-L439)
@@ -79,11 +92,11 @@ Route --> Response["JSON Response"]
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
 ## Architecture Overview
-The Generation API composes multiple subsystems:
+The Generation API composes multiple subsystems with enhanced free-tier provider detection:
 - Authentication and workspace context
 - Input sanitization and schema validation
 - Generation pipeline with model-aware prompting and tool loops
-- Optional review loop with vision/runtime checks
+- Conditional review loop with vision/runtime checks (optimized for free-tier)
 - Parallelized accessibility and test generation
 - Persistence and embeddings for feedback learning
 
@@ -93,23 +106,26 @@ participant C as "Client"
 participant R as "Route Handler"
 participant A as "auth()"
 participant V as "Validators"
+participant FT as "Free-tier Detection"
 participant G as "generateComponent()"
 participant AD as "getWorkspaceAdapter()"
 participant PR as "Provider Adapter"
-participant RV as "Review/Repair"
+participant RV as "Conditional Review/Repair"
 participant AX as "A11y Validator"
 participant TG as "Test Generator"
 participant P as "Persistence"
 C->>R : POST /api/generate {intent, mode, model?, provider?, ...}
 R->>A : auth()
 R->>V : validatePromptInput(), validateGenerationMode(), UIIntentSchema
+R->>FT : Detect free-tier provider (google/groq)
+FT-->>R : isFreeTierProvider flag
 R->>G : generateComponent(intent, mode, ...)
 G->>AD : getWorkspaceAdapter(provider, model, workspaceId, userId)
 AD-->>PR : Provider Adapter
 G->>PR : stream()/generate(messages, tools?)
 PR-->>G : Raw content
 G-->>R : {code, blueprint, warnings, repairs}
-R->>RV : Optional reviewGeneratedCode() + repairGeneratedCode()
+R->>RV : Conditional reviewGeneratedCode() (skipped for free-tier)
 R->>AX : validateAccessibility() + autoRepairA11y()
 R->>TG : generateTests(intent, code)
 R->>P : saveGeneration() + upsertComponentEmbedding()
@@ -180,6 +196,55 @@ Common Status Codes
 - [inputValidator.ts:53-117](file://lib/intelligence/inputValidator.ts#L53-L117)
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
+### Free-tier Provider Detection and Optimization
+The system now includes sophisticated free-tier provider detection logic to optimize resource usage and prevent quota exhaustion:
+
+**Free-tier Detection Logic**
+- Providers considered free-tier: `google` and `groq`
+- Detection occurs in three key operations:
+  1. Generation endpoint: Skips expensive review/repair operations
+  2. Think endpoint: Uses deterministic fallback plan builder
+  3. Classify endpoint: Uses local classification function
+  4. Parse endpoint: Builds local intent fallback
+
+**Conditional Execution Strategy**
+- Free-tier providers automatically skip:
+  - UI expert review and repair loops
+  - Browserless rendering dependencies
+  - Complex timeout mechanisms
+  - Additional API calls beyond generation
+- This optimization preserves API quotas while maintaining functionality
+
+**Section sources**
+- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
+- [think/route.ts:45-53](file://app/api/think/route.ts#L45-L53)
+- [classify/route.ts:42-50](file://app/api/classify/route.ts#L42-L50)
+- [parse/route.ts:85-119](file://app/api/parse/route.ts#L85-L119)
+
+### Deterministic Fallback Functions
+Enhanced with comprehensive fallback functions for expensive operations:
+
+**Think Endpoint Fallback**
+- `buildFallbackPlan()` creates deterministic thinking plans instantly
+- Uses blueprint selection and intent analysis without LLM calls
+- Ensures non-blocking operation even with provider limitations
+
+**Classify Endpoint Fallback**
+- `buildLocalClassification()` performs intent classification locally
+- Provides reasonable defaults for Google/Groq free-tier constraints
+- Maintains user experience continuity
+
+**Parse Endpoint Fallback**
+- Creates local intent objects with sensible defaults
+- Validates against appropriate schemas for different generation modes
+- Enables seamless generation flow without external dependencies
+
+**Section sources**
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
+- [think/route.ts:45-53](file://app/api/think/route.ts#L45-L53)
+- [classify/route.ts:42-50](file://app/api/classify/route.ts#L42-L50)
+- [parse/route.ts:85-119](file://app/api/parse/route.ts#L85-L119)
+
 ### Request Validation
 - Prompt validation: validatePromptInput()
   - Checks emptiness, length, low-signal patterns, and UI-related signal
@@ -225,22 +290,37 @@ Repair --> Return
 - [componentGenerator.ts:60-391](file://lib/ai/componentGenerator.ts#L60-L391)
 - [adapters/index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
-### Review and Repair Loop
-- Triggered only for non-local models (cloud reviewers available)
-- Two phases:
-  1) Vision/Runtime review: runVisionRuntimeReview() plus visual critique
-  2) Text-based review: reviewGeneratedCode() with JSON schema output
-- Repair: repairGeneratedCode() applies targeted fixes
-- Timeout protection: 60-second aggregate budget for review phase
-- Graceful fallback: failures do not block successful code delivery
+### Conditional Review and Repair Loop
+- **Enhanced**: Review loop now conditionally executes based on provider tier
+- **Free-tier optimization**: Automatically skipped for Google/Groq free-tier providers
+- **Quota conservation**: Prevents guaranteed 429 errors for constrained providers
+- **Graceful degradation**: Falls back to deterministic validation and repair
+
+**Free-tier Detection Logic**
+```typescript
+const isFreeTierProvider = !process.env.REVIEW_MODEL && (
+  provider === 'google' || provider === 'groq'
+);
+```
+
+**Conditional Execution**
+- Non-free-tier providers: Full review/repair pipeline with vision/runtime checks
+- Free-tier providers: Skip review/repair entirely, rely on deterministic validation
+- Timeout protection: 60-second aggregate budget for review phase (not applicable for free-tier)
 
 ```mermaid
 sequenceDiagram
 participant R as "Route"
-participant VR as "runVisionRuntimeReview()"
+participant FT as "Free-tier Detection"
+participant VR as "reviewGeneratedCode()"
 participant RR as "reviewGeneratedCode()"
 participant RP as "repairGeneratedCode()"
-R->>VR : Headless render + visual critique
+R->>FT : Check provider (google/groq)
+FT-->>R : isFreeTierProvider = true/false
+alt Free-tier provider
+R->>R : Skip review/repair entirely
+else Non-free-tier provider
+R->>VR : runVisionRuntimeReview() + visual critique
 VR-->>R : {runtimeOk?, visualPassed?, suggestedCode?}
 alt Needs repair
 R->>RP : repairGeneratedCode(code, reason)
@@ -252,14 +332,15 @@ alt needs repair
 R->>RP : repairGeneratedCode(code, repairInstructions)
 RP-->>R : repairedCode
 end
+end
 ```
 
 **Diagram sources**
-- [route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
+- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 
 **Section sources**
-- [route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
+- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 
 ### Accessibility Validation and Auto-Repair
@@ -322,6 +403,8 @@ Route --> Tests["lib/testGenerator.ts"]
 Route --> Persist["lib/ai/vectorStore.ts"]
 Route --> Schemas["lib/validation/schemas.ts"]
 Route --> InputVal["lib/intelligence/inputValidator.ts"]
+Route --> FreeTier["Free-tier Detection Logic"]
+Route --> Fallback["Deterministic Fallback Functions"]
 ```
 
 **Diagram sources**
@@ -341,13 +424,13 @@ Route --> InputVal["lib/intelligence/inputValidator.ts"]
 - [componentGenerator.ts:1-42](file://lib/ai/componentGenerator.ts#L1-L42)
 
 ## Performance Considerations
-- Streaming: Enables immediate token delivery for long generations; requires model parameter.
-- Parallelization: Accessibility and test generation run concurrently with review/repair.
-- Timeouts: Review phase bounded by a 60-second aggregate timeout to prevent exceeding platform limits.
-- Local model handling: Review/repair skipped for local/Ollama/Groq/LM Studio to avoid extra inference costs.
-- Caching: Adapter responses cached to reduce repeated calls.
-
-[No sources needed since this section provides general guidance]
+- **Enhanced Free-tier Optimization**: Automatic detection and optimization for Google/Groq free-tier providers
+- **Deterministic Fallbacks**: Instant fallback functions eliminate expensive LLM calls for think/classify/parse operations
+- **Conditional Review**: Review/repair loops skipped for free-tier providers to conserve API quotas
+- **Streaming**: Enables immediate token delivery for long generations; requires model parameter.
+- **Parallelization**: Accessibility and test generation run concurrently with review/repair.
+- **Local Model Handling**: Review/repair skipped for local/Ollama/Groq/LM Studio to avoid extra inference costs.
+- **Caching**: Adapter responses cached to reduce repeated calls.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -369,6 +452,10 @@ Common issues and resolutions:
 - Browser safety violation
   - Remove Node/TTY imports and ensure a valid React export.
   - Status: 422
+- **Free-tier quota conservation**
+  - Free-tier providers automatically skip expensive operations to prevent 429 errors.
+  - Expected behavior: Faster response times with reduced functionality for constrained providers.
+  - Status: 200 (successful generation)
 - Unexpected server error
   - Check server logs for stack traces.
   - Status: 500
@@ -382,4 +469,4 @@ Common issues and resolutions:
 - [route.ts:432-438](file://app/api/generate/route.ts#L432-L438)
 
 ## Conclusion
-The Generation API provides a robust, validated, and secure pathway from user intent to production-ready UI code. It integrates an extensible AI generation engine, optional expert review and repair, comprehensive accessibility validation, automated testing scaffolding, and persistent knowledge capture through embeddings. Proper configuration of provider credentials and adherence to validation rules ensure reliable outcomes.
+The Generation API provides a robust, validated, and secure pathway from user intent to production-ready UI code with enhanced free-tier provider optimization. The system now includes sophisticated free-tier detection logic that automatically optimizes resource usage, deterministic fallback functions that eliminate expensive LLM calls, and conditional execution of expensive operations. This ensures reliable outcomes for all provider tiers while maximizing efficiency and preventing quota exhaustion for constrained users. The integration of an extensible AI generation engine, optional expert review and repair, comprehensive accessibility validation, automated testing scaffolding, and persistent knowledge capture through embeddings makes it a comprehensive solution for modern UI development workflows.

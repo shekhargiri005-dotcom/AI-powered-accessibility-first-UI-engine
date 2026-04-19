@@ -8,12 +8,20 @@
 - [security.ts](file://lib/validation/security.ts)
 - [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
 - [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
-- [visionReviewer.ts](file://lib/ai/visionReviewer.ts)
 - [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - [A11yReport.tsx](file://components/A11yReport.tsx)
 - [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)
+- [security.test.ts](file://__tests__/security.test.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Removed visionReviewer component documentation (file no longer exists)
+- Updated UI Expert Review section to reflect simplified conditional logic for free-tier providers
+- Revised architecture overview to remove browserless rendering and visual critique
+- Updated troubleshooting guide to reflect new provider tier detection system
+- Enhanced performance considerations to account for provider tier awareness
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -39,9 +47,9 @@ This document describes the validation and auto-repair system embedded in the ge
 The validation and repair system spans several modules:
 - Route orchestration: [route.ts](file://app/api/generate/route.ts)
 - Validation utilities: [a11yValidator.ts](file://lib/validation/a11yValidator.ts), [codeValidator.ts](file://lib/intelligence/codeValidator.ts), [security.ts](file://lib/validation/security.ts), [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
-- Repair orchestration: [uiReviewer.ts](file://lib/ai/uiReviewer.ts), [visionReviewer.ts](file://lib/ai/visionReviewer.ts), [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
+- Repair orchestration: [uiReviewer.ts](file://lib/ai/uiReviewer.ts), [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - UI reporting: [A11yReport.tsx](file://components/A11yReport.tsx)
-- Tests: [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)
+- Tests: [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts), [security.test.ts](file://__tests__/security.test.ts)
 
 ```mermaid
 graph TB
@@ -56,7 +64,6 @@ IV["lib/intelligence/inputValidator.ts"]
 end
 subgraph "Repair"
 UR["lib/ai/uiReviewer.ts"]
-VR["lib/ai/visionReviewer.ts"]
 CG["lib/ai/componentGenerator.ts"]
 end
 subgraph "UI"
@@ -66,25 +73,23 @@ R --> IV
 R --> CV
 R --> SEC
 R --> AV
-R --> VR
 R --> UR
 R --> CG
 AV --> AR
 ```
 
 **Diagram sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [codeValidator.ts:1-388](file://lib/intelligence/codeValidator.ts#L1-L388)
 - [security.ts:1-129](file://lib/validation/security.ts#L1-L129)
 - [inputValidator.ts:1-137](file://lib/intelligence/inputValidator.ts#L1-L137)
 - [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
-- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-L181)
-- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
+- [componentGenerator.ts:1-419](file://lib/ai/componentGenerator.ts#L1-L419)
 - [A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
 
 ## Core Components
 - Input validation: [validatePromptInput:53-117](file://lib/intelligence/inputValidator.ts#L53-L117), [validateGenerationMode:119-125](file://lib/intelligence/inputValidator.ts#L119-L125)
@@ -92,8 +97,7 @@ AV --> AR
 - Browser safety validation: [validateBrowserSafeCode:6-34](file://lib/validation/security.ts#L6-L34), [sanitizeGeneratedCode:44-128](file://lib/validation/security.ts#L44-L128)
 - Accessibility validation and auto-repair: [validateAccessibility:264-297](file://lib/validation/a11yValidator.ts#L264-L297), [autoRepairA11y:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
 - UI expert review and repair: [reviewGeneratedCode:58-126](file://lib/ai/uiReviewer.ts#L58-L126), [repairGeneratedCode:137-199](file://lib/ai/uiReviewer.ts#L137-L199)
-- Vision runtime review: [runVisionRuntimeReview:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- Generation-time repair integration: [generateComponent:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- Generation-time repair integration: [generateComponent:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
 
 **Section sources**
 - [inputValidator.ts:53-125](file://lib/intelligence/inputValidator.ts#L53-L125)
@@ -101,18 +105,18 @@ AV --> AR
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
 
 ## Architecture Overview
 The generation pipeline performs validation and repair in stages:
 1. Input sanitization and intent parsing
 2. Deterministic syntax and structural validation
-3. Optional UI expert review and repair
+3. Optional UI expert review and repair (conditional based on provider tier)
 4. Browser safety validation and sanitization
 5. Parallel accessibility validation and test generation
-6. Optional vision runtime review and repair
-7. Dependency resolution and persistence
+6. Dependency resolution and persistence
+
+**Updated** The system now uses conditional logic to skip review/repair phases for free-tier providers rather than relying on browserless rendering. This simplifies the architecture while maintaining quality through deterministic fallbacks.
 
 ```mermaid
 sequenceDiagram
@@ -122,7 +126,6 @@ participant Gen as "generateComponent"
 participant CV as "validateGeneratedCode"
 participant UR as "reviewGeneratedCode"
 participant RR as "repairGeneratedCode"
-participant VR as "runVisionRuntimeReview"
 participant AV as "validateAccessibility/autoRepairA11y"
 participant SEC as "validateBrowserSafeCode/sanitize"
 Client->>Route : POST /api/generate
@@ -133,12 +136,7 @@ alt Deterministic fails
 Route->>RR : repairGeneratedCode(code, reason)
 RR-->>Route : repairedCode
 end
-opt Cloud reviewer available
-Route->>VR : runVisionRuntimeReview(code)
-alt Runtime crash or visual critique
-Route->>RR : repairGeneratedCode(code, error/critique)
-RR-->>Route : repairedCode
-end
+opt Cloud reviewer available (non-free tier)
 Route->>UR : reviewGeneratedCode(code, intent)
 alt Needs repair
 Route->>RR : repairGeneratedCode(code, critiques)
@@ -157,11 +155,10 @@ Route-->>Client : {code, a11yReport, tests, ...}
 ```
 
 **Diagram sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
+- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
 - [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 
@@ -281,15 +278,20 @@ Purpose:
 - Second-pass review for visual quality, layout, and production-readiness.
 - Optional AI-assisted repair when reviewer detects issues.
 
+**Updated** The system now uses conditional logic to skip review/repair phases for free-tier providers to conserve API quotas and avoid rate limiting.
+
 Workflow:
 - Reviewer evaluates code against a strict schema and returns a pass/fail score with critiques and optional repair instructions.
 - If failing, repair agent applies exact repair instructions to produce a fixed component.
+- Free-tier providers (Google without paid key) skip review entirely unless a dedicated REVIEW_MODEL is configured.
 
 ```mermaid
 sequenceDiagram
 participant Route as "Generate Route"
 participant UR as "reviewGeneratedCode"
 participant RR as "repairGeneratedCode"
+Route->>Route : Check provider tier (isFreeTierProvider)
+alt Not free tier
 Route->>UR : reviewGeneratedCode(code, intent)
 UR-->>Route : {passed, score, critiques, repairInstructions?}
 alt needs repair
@@ -298,50 +300,18 @@ RR-->>Route : repairedCode
 else pass
 Route-->>Route : continue with current code
 end
-```
-
-**Diagram sources**
-- [route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
-- [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-
-**Section sources**
-- [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
-
-### Vision Runtime Review
-Purpose:
-- Render the component in a headless browser to detect runtime crashes and visual issues.
-- Optionally suggest corrected code based on screenshot analysis.
-
-Behavior:
-- Launches a browser (local or via Browserless), renders the component, captures a screenshot, and critiques visual quality.
-- Returns runtimeOk, runtimeError, visualPassed, and suggestedCode when available.
-
-```mermaid
-sequenceDiagram
-participant Route as "Generate Route"
-participant VR as "runVisionRuntimeReview"
-participant OpenAI as "OpenAI Vision"
-Route->>VR : runVisionRuntimeReview(code)
-VR-->>Route : {runtimeOk, runtimeError?, visualPassed?, suggestedCode?}
-alt runtime error
-Route->>Route : repairGeneratedCode(code, runtimeError)
-else visual critique
-Route->>Route : replace code with suggestedCode
-end
-opt OPENAI_API_KEY present
-VR->>OpenAI : send code + screenshot
-OpenAI-->>VR : {passed, critique, suggestedCode}
+else free tier
+Route->>Route : Skip review/repair (conserving API quota)
 end
 ```
 
 **Diagram sources**
-- [route.ts:249-270](file://app/api/generate/route.ts#L249-L270)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
+- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
+- [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
 
 **Section sources**
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- [route.ts:249-270](file://app/api/generate/route.ts#L249-L270)
+- [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
+- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
 
 ### Generation-Time Repair Integration
 Purpose:
@@ -365,16 +335,18 @@ RunRPOnly --> Final
 ```
 
 **Diagram sources**
-- [componentGenerator.ts:353-391](file://lib/ai/componentGenerator.ts#L353-L391)
+- [componentGenerator.ts:370-398](file://lib/ai/componentGenerator.ts#L370-L398)
 
 **Section sources**
-- [componentGenerator.ts:353-391](file://lib/ai/componentGenerator.ts#L353-L391)
+- [componentGenerator.ts:370-398](file://lib/ai/componentGenerator.ts#L370-L398)
 
 ## Dependency Analysis
-- The generation route orchestrates all validations and repairs, conditionally invoking the reviewer and vision runtime review only when cloud providers are available.
+- The generation route orchestrates all validations and repairs, conditionally invoking the reviewer based on provider tier detection.
 - Deterministic validation is performed before expensive reviewer calls to reduce cost and latency.
 - Accessibility validation runs in parallel with test generation to optimize throughput.
 - Security sanitization occurs after reviewer repairs to preserve fixes while ensuring browser compatibility.
+
+**Updated** The simplified architecture removes the visionReviewer dependency, making the system more efficient and provider-tier aware.
 
 ```mermaid
 graph LR
@@ -382,7 +354,6 @@ Route["route.ts"] --> CV["codeValidator.ts"]
 Route --> SEC["security.ts"]
 Route --> AV["a11yValidator.ts"]
 Route --> UR["uiReviewer.ts"]
-Route --> VR["visionReviewer.ts"]
 Route --> CG["componentGenerator.ts"]
 CG --> CV
 CG --> UR
@@ -391,30 +362,31 @@ CG --> SEC
 ```
 
 **Diagram sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
 - [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
 
 ## Performance Considerations
 - Early deterministic validation reduces unnecessary reviewer calls and speeds up the pipeline.
 - Parallel execution of accessibility validation and test generation minimizes total latency.
-- Vision runtime review is gated behind timeouts and environment checks to avoid blocking.
-- Sanitization avoids costly retries by fixing parser-breaking artifacts upfront.
+- **Updated** Provider tier awareness skips expensive review/repair phases for free-tier providers, significantly reducing API costs and avoiding rate limiting.
+- Security sanitization avoids costly retries by fixing parser-breaking artifacts upfront.
 - Model tier awareness selects appropriate repair strategies to balance quality and cost.
+
+**Updated** The new provider tier detection system conserves API quotas by intelligently skipping review/repair for free-tier providers, making the system more cost-effective while maintaining quality standards.
 
 ## Troubleshooting Guide
 Common validation failures and resolutions:
 - Deterministic validation errors
   - Cause: Truncated or malformed code (unbalanced braces/brackets), missing export, or insufficient JSX.
   - Resolution: The pipeline attempts AI repair with specific reasons. If not available, ensure the model tier supports AI repair or rely on deterministic fixes.
-  - Reference: [route.ts:214-228](file://app/api/generate/route.ts#L214-L228), [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+  - Reference: [route.ts:196-207](file://app/api/generate/route.ts#L196-L207), [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
 
 - Browser safety violations
   - Cause: Node/tty imports, process.exit, or missing export.
@@ -429,12 +401,13 @@ Common validation failures and resolutions:
 - Reviewer/repair unavailability
   - Cause: Provider quota limits or missing API keys.
   - Resolution: The system defaults to pass and continues with original code; add keys or switch providers.
-  - Reference: [uiReviewer.ts:115-125](file://lib/ai/uiReviewer.ts#L115-L125), [route.ts:296-301](file://app/api/generate/route.ts#L296-L301)
+  - **Updated** Free-tier providers automatically skip review/repair to conserve API quotas.
+  - Reference: [uiReviewer.ts:115-125](file://lib/ai/uiReviewer.ts#L115-L125), [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
 
-- Vision runtime review not available
-  - Cause: Missing Playwright or Browserless credentials in serverless environments.
-  - Resolution: Install playwright-core on Vercel or configure BROWSERLESS_API_KEY; otherwise, proceed without visual critique.
-  - Reference: [visionReviewer.ts:33-58](file://lib/ai/visionReviewer.ts#L33-L58), [visionReviewer.ts:117-131](file://lib/ai/visionReviewer.ts#L117-L131)
+- Provider tier detection issues
+  - Cause: Incorrect provider configuration or missing REVIEW_MODEL environment variable.
+  - Resolution: Configure appropriate provider settings or set REVIEW_MODEL for dedicated review capabilities.
+  - Reference: [route.ts:220-222](file://app/api/generate/route.ts#L220-L222)
 
 ## Conclusion
-The validation and auto-repair system integrates deterministic checks, accessibility scanning, browser safety sanitization, and optional expert review and vision critique. It adapts repair strategies to model capabilities and environment constraints, ensuring high-quality, accessible, and production-ready React components are delivered efficiently.
+The validation and auto-repair system integrates deterministic checks, accessibility scanning, browser safety sanitization, and optional expert review. **Updated** The simplified architecture uses conditional logic to skip review/repair phases for free-tier providers, making the system more cost-effective while maintaining high-quality, accessible, and production-ready React components. The system adapts repair strategies to model capabilities and environment constraints, ensuring efficient delivery of quality UI components.

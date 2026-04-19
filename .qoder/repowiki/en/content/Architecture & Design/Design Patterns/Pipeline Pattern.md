@@ -14,7 +14,15 @@
 - [app/api/parse/route.ts](file://app/api/parse/route.ts)
 - [components/PipelineStatus.tsx](file://components/PipelineStatus.tsx)
 - [lib/ai/vectorStore.ts](file://lib/ai/vectorStore.ts)
+- [lib/ai/uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Expert Review and AI Repair section to remove references to 60-second aggregate timeout and vision review workflows
+- Revised Performance Considerations to reflect new conditional execution logic and simplified review system
+- Updated architecture diagrams to remove vision review components
+- Clarified that the review system now uses simpler conditional execution without browserless rendering
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -55,6 +63,7 @@ PR["prompts.ts"]
 Cache["cache.ts"]
 Adapter["adapters/index.ts"]
 Vec["vectorStore.ts"]
+Review["uiReviewer.ts"]
 end
 UI --> Parse
 Parse --> Gen
@@ -66,6 +75,7 @@ CG --> PR
 CG --> Adapter
 CG --> Cache
 CG --> Vec
+CG --> Review
 UI --> Status
 ```
 
@@ -81,6 +91,7 @@ UI --> Status
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 - [lib/ai/adapters/index.ts:78-125](file://lib/ai/adapters/index.ts#L78-L125)
 - [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [lib/ai/uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
 
 **Section sources**
 - [app/page.tsx:166-310](file://app/page.tsx#L166-L310)
@@ -94,6 +105,7 @@ UI --> Status
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 - [lib/ai/adapters/index.ts:78-125](file://lib/ai/adapters/index.ts#L78-L125)
 - [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [lib/ai/uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
 
 ## Core Components
 - Pipeline orchestration and UI:
@@ -133,6 +145,7 @@ participant Prompt as "Prompts"
 participant Adapter as "Adapter"
 participant Cache as "Cache"
 participant Vec as "VectorStore"
+participant Review as "UIReviewer"
 Client->>Parse : POST /api/parse
 Parse-->>Client : { success, intent }
 Client->>Gen : POST /api/generate { intent, mode, ... }
@@ -143,6 +156,7 @@ CG->>Prompt : buildModelAwarePrompt(...)
 CG->>Adapter : generate()/stream()
 Adapter->>Cache : get()/set() for caching
 CG->>Vec : upsertComponentEmbedding(...) (repair patterns)
+Gen->>Review : reviewGeneratedCode()/repairGeneratedCode()
 Gen-->>Client : { code, a11yReport, tests, generationId }
 ```
 
@@ -157,6 +171,7 @@ Gen-->>Client : { code, a11yReport, tests, generationId }
 - [lib/ai/adapters/index.ts:78-125](file://lib/ai/adapters/index.ts#L78-L125)
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 - [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [lib/ai/uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 
 ## Detailed Component Analysis
 
@@ -263,37 +278,33 @@ PipelineConfig <.. ModelCapabilityProfile : "derived from"
 
 ### Expert Review and AI Repair
 - The expert review and repair phase:
-  - Skips for local/Ollama models to avoid expensive secondary inference calls.
-  - Runs a 60-second aggregate timeout to prevent exceeding platform limits.
-  - Performs a vision runtime review with a 10-second hard escape hatch to avoid cold-start stalls.
-  - Applies text-based review and repair instructions when critiques fail.
+  - Uses conditional execution logic to determine when to run review/repair.
+  - Skips for free-tier providers (Google without paid key) to conserve API quota.
+  - Runs review for paid providers or when a dedicated REVIEW_MODEL is configured.
+  - Performs text-based review and repair instructions when critiques fail.
   - Logs review data and persists repair patterns as embeddings for reuse.
+
+**Updated** Removed references to 60-second aggregate timeout mechanism and vision review workflows. The system now uses simpler conditional execution logic without complex timeout management.
 
 ```mermaid
 flowchart TD
-Start(["After generation"]) --> Local{"Local model?"}
-Local --> |Yes| Skip["Skip review/repair"]
-Local --> |No| Vision["Vision Runtime Review (10s escape)"]
-Vision --> VisionOK{"Runtime OK?"}
-VisionOK --> |No| RepairRuntime["Repair runtime crash"]
-VisionOK --> |Yes| VisionCritique{"Visual critique?"}
-VisionCritique --> |Yes| ApplySuggested["Apply suggested code"]
-VisionCritique --> |No| TextReview["Text-based Review"]
-TextReview --> Passed{"Passed?"}
-Passed --> |No| RepairText["Repair with instructions"]
+Start(["After generation"]) --> FreeTier{"Free-tier provider?"}
+FreeTier --> |Yes| Skip["Skip review/repair"]
+FreeTier --> |No| Review["Run UI Review"]
+Review --> Passed{"Review passed?"}
 Passed --> |Yes| Done["Proceed"]
-RepairRuntime --> Done
-ApplySuggested --> Done
-RepairText --> Done
+Passed --> |No| Repair["Repair with instructions"]
+Repair --> Done
+Skip --> Done
 ```
 
 **Diagram sources**
-- [app/api/generate/route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
-- [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [app/api/generate/route.ts:209-260](file://app/api/generate/route.ts#L209-L260)
+- [lib/ai/uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 
 **Section sources**
-- [app/api/generate/route.ts:242-312](file://app/api/generate/route.ts#L242-L312)
-- [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [app/api/generate/route.ts:209-260](file://app/api/generate/route.ts#L209-L260)
+- [lib/ai/uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 
 ### Accessibility Validation and Test Generation
 - Parallel execution:
@@ -317,10 +328,10 @@ Patch --> Done["Return results"]
 ```
 
 **Diagram sources**
-- [app/api/generate/route.ts:328-406](file://app/api/generate/route.ts#L328-L406)
+- [app/api/generate/route.ts:275-300](file://app/api/generate/route.ts#L275-L300)
 
 **Section sources**
-- [app/api/generate/route.ts:328-406](file://app/api/generate/route.ts#L328-L406)
+- [app/api/generate/route.ts:275-300](file://app/api/generate/route.ts#L275-L300)
 
 ### Streaming Architecture and Real-Time Feedback
 - Streaming:
@@ -350,13 +361,13 @@ Gen-->>Client : SSE stream
 ```
 
 **Diagram sources**
-- [app/api/generate/route.ts:56-97](file://app/api/generate/route.ts#L56-L97)
-- [lib/ai/adapters/index.ts:109-125](file://lib/ai/adapters/index.ts#L109-L125)
+- [app/api/generate/route.ts:55-96](file://app/api/generate/route.ts#L55-L96)
+- [lib/ai/adapters/index.ts:108-137](file://lib/ai/adapters/index.ts#L108-L137)
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 
 **Section sources**
-- [app/api/generate/route.ts:56-97](file://app/api/generate/route.ts#L56-L97)
-- [lib/ai/adapters/index.ts:109-125](file://lib/ai/adapters/index.ts#L109-L125)
+- [app/api/generate/route.ts:55-96](file://app/api/generate/route.ts#L55-L96)
+- [lib/ai/adapters/index.ts:108-137](file://lib/ai/adapters/index.ts#L108-L137)
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 - [components/PipelineStatus.tsx:77-162](file://components/PipelineStatus.tsx#L77-L162)
 
@@ -373,8 +384,8 @@ Gen-->>Client : SSE stream
 ## Dependency Analysis
 - Client depends on server routes for parsing and generation.
 - Generate route depends on component generator, validators, reviewers, and persistence.
-- Component generator depends on tiered pipeline, model registry, prompts, adapters, and cache.
-- Vector store persists repair patterns for reuse.
+- Component generator depends on tiered pipeline, model registry, prompts, adapters, cache, and vector store.
+- UI reviewer provides expert critique and repair services.
 
 ```mermaid
 graph LR
@@ -387,6 +398,7 @@ CG --> PR["lib/ai/prompts.ts"]
 CG --> Adapter["lib/ai/adapters/index.ts"]
 CG --> Cache["lib/ai/cache.ts"]
 CG --> Vec["lib/ai/vectorStore.ts"]
+CG --> Review["lib/ai/uiReviewer.ts"]
 ```
 
 **Diagram sources**
@@ -400,6 +412,7 @@ CG --> Vec["lib/ai/vectorStore.ts"]
 - [lib/ai/adapters/index.ts:78-125](file://lib/ai/adapters/index.ts#L78-L125)
 - [lib/ai/cache.ts:108-113](file://lib/ai/cache.ts#L108-L113)
 - [lib/ai/vectorStore.ts:124-155](file://lib/ai/vectorStore.ts#L124-L155)
+- [lib/ai/uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
 
 **Section sources**
 - [app/page.tsx:166-310](file://app/page.tsx#L166-L310)
@@ -415,8 +428,11 @@ CG --> Vec["lib/ai/vectorStore.ts"]
   - Adapter wraps generate/stream calls with pluggable cache (memory or Upstash Redis) to avoid recomputation.
 - Tiered optimization:
   - Small/medium/large tiers cap blueprint sizes and disable tool calls to prevent silent 400s and reduce overhead.
-- Timeout management:
-  - Review phase is bounded by a 60-second aggregate timeout to prevent exceeding platform limits.
+- Conditional execution:
+  - Review phase is conditionally executed based on provider tier and configuration to conserve API quotas.
+  - Free-tier providers (Google without paid key) skip review entirely to avoid quota exhaustion.
+
+**Updated** Removed references to 60-second aggregate timeout mechanism. The system now uses simpler conditional execution logic that skips review for free-tier providers rather than implementing complex timeout management.
 
 [No sources needed since this section provides general guidance]
 
@@ -429,12 +445,16 @@ CG --> Vec["lib/ai/vectorStore.ts"]
   - PipelineStatus detects unauthorized conditions and offers a sign-in action.
 - Streaming issues:
   - Adapter caching and fallbacks ensure resilience; errors are propagated as stream deltas.
+- Review system issues:
+  - Review engine gracefully falls back to pass when quota is exceeded or provider errors occur.
+  - Review is automatically skipped for free-tier providers to prevent quota exhaustion.
 
 **Section sources**
 - [app/api/parse/route.ts:11-129](file://app/api/parse/route.ts#L11-L129)
 - [app/api/generate/route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [components/PipelineStatus.tsx:165-215](file://components/PipelineStatus.tsx#L165-L215)
-- [lib/ai/adapters/index.ts:109-125](file://lib/ai/adapters/index.ts#L109-L125)
+- [lib/ai/adapters/index.ts:108-137](file://lib/ai/adapters/index.ts#L108-L137)
+- [lib/ai/uiReviewer.ts:115-126](file://lib/ai/uiReviewer.ts#L115-L126)
 
 ## Conclusion
-The Pipeline Pattern implementation delivers a robust, model-agnostic, and performance-conscious generation workflow. By structuring stages, enforcing tiered configurations, leveraging parallelism and streaming, and implementing resilient caching and error handling, the system consistently produces accessible, validated, and testable UI components across diverse model capabilities and deployment environments.
+The Pipeline Pattern implementation delivers a robust, model-agnostic, and performance-conscious generation workflow. By structuring stages, enforcing tiered configurations, leveraging parallelism and streaming, implementing resilient caching and error handling, and using conditional execution logic for review systems, the system consistently produces accessible, validated, and testable UI components across diverse model capabilities and deployment environments. The simplified review system without complex timeout management provides better performance and reliability while maintaining quality standards.
