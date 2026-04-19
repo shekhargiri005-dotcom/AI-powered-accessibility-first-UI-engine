@@ -15,15 +15,17 @@
 - [auth.ts](file://lib/auth.ts)
 - [types.ts](file://lib/ai/types.ts)
 - [ENV_SETUP.md](file://docs/ENV_SETUP.md)
+- [adapters/index.ts](file://lib/ai/adapters/index.ts)
+- [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
+- [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Removed references to previously documented endpoints: /api/local-models, /api/models, /api/ollama/models, and /api/usage
-- Updated provider status API documentation to reflect comprehensive runtime environment variable checking, debugging capabilities, caching prevention, universal LLM_KEY support, and optimized provider settings
-- Enhanced provider configuration management with development environment debug information and immediate configuration reflection
-- Updated ModelSelectionGate integration to leverage real-time provider status detection
+- Enhanced providers status endpoint documentation to reflect comprehensive runtime environment variable checking, debugging capabilities, caching prevention with `unstable_noStore()`, universal LLM_KEY support, and optimized provider settings
+- Updated ModelSelectionGate integration to leverage real-time provider status detection with universal key support
 - Improved troubleshooting capabilities with detailed logging and diagnostic information
+- Added comprehensive security improvements including client-side key transmission prevention and simplified environment variable logging
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -60,9 +62,14 @@ FS["lib/ai/feedbackStore.ts"]
 CG["lib/ai/chunkGenerator.ts"]
 TY["lib/ai/types.ts"]
 MT["lib/ai/metrics.ts"]
+AD["lib/ai/adapters/index.ts"]
+RD["lib/ai/resolveDefaultAdapter.ts"]
 end
 subgraph "Persistence"
 SC["prisma/schema.prisma"]
+end
+subgraph "UI Components"
+MSG["components/ModelSelectionGate.tsx"]
 end
 subgraph "Configuration"
 ENV["docs/ENV_SETUP.md"]
@@ -72,18 +79,21 @@ F --> FS
 X --> CG
 X --> AU
 PS --> MT
+PS --> AD
+PS --> RD
 CG --> TY
 ME --> PR
 FS --> PR
 PR --> SC
 ENV --> PS
+MSG --> PS
 ```
 
 **Diagram sources**
 - [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
-- [providers/status/route.ts:1-215](file://app/api/providers/status/route.ts#L1-L215)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -92,13 +102,16 @@ ENV --> PS
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
 - [metrics.ts:1-88](file://lib/ai/metrics.ts#L1-L88)
+- [adapters/index.ts:190-315](file://lib/ai/adapters/index.ts#L190-L315)
+- [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
+- [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [ENV_SETUP.md:1-43](file://docs/ENV_SETUP.md#L1-L43)
 
 **Section sources**
 - [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
-- [providers/status/route.ts:1-215](file://app/api/providers/status/route.ts#L1-L215)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
@@ -107,6 +120,9 @@ ENV --> PS
 - [types.ts:1-130](file://lib/ai/types.ts#L1-L130)
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
 - [metrics.ts:1-88](file://lib/ai/metrics.ts#L1-L88)
+- [adapters/index.ts:190-315](file://lib/ai/adapters/index.ts#L190-L315)
+- [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
+- [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [ENV_SETUP.md:1-43](file://docs/ENV_SETUP.md#L1-L43)
 
 ## Core Components
@@ -121,7 +137,7 @@ ENV --> PS
 - [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
-- [providers/status/route.ts:1-215](file://app/api/providers/status/route.ts#L1-L215)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 
 ## Architecture Overview
 The utility APIs integrate with authentication, persistence, and AI adapters. The history endpoint uses Prisma-backed memory. The feedback endpoint writes to both Redis-backed stats and Prisma. The manifest endpoint uses the unified adapter layer to generate manifests securely. The new providers/status endpoint centralizes provider configuration detection from environment variables with enhanced debugging capabilities, caching prevention, and universal LLM_KEY support.
@@ -145,7 +161,7 @@ Engine-->>Client : {config}
 ```
 
 **Diagram sources**
-- [providers/status/route.ts:137-214](file://app/api/providers/status/route.ts#L137-L214)
+- [providers/status/route.ts:137-218](file://app/api/providers/status/route.ts#L137-L218)
 - [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 
 ## Detailed Component Analysis
@@ -401,10 +417,10 @@ SkipDebug --> Return
 ```
 
 **Diagram sources**
-- [providers/status/route.ts:137-214](file://app/api/providers/status/route.ts#L137-L214)
+- [providers/status/route.ts:137-218](file://app/api/providers/status/route.ts#L137-L218)
 
 **Section sources**
-- [providers/status/route.ts:1-215](file://app/api/providers/status/route.ts#L1-L215)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
 
 ## Dependency Analysis
 - History endpoint depends on:
@@ -423,6 +439,7 @@ SkipDebug --> Return
   - Universal LLM_KEY support for simplified configuration.
   - Provider settings optimization profiles.
   - Development environment debug logging for troubleshooting.
+  - Adapter resolution system for universal key support.
 
 **Updated** The providers status endpoint now includes runtime caching prevention, universal LLM_KEY support, provider settings optimization, and comprehensive debugging capabilities as dependencies.
 
@@ -438,6 +455,7 @@ Providers --> Cache["unstable_noStore()"]
 Providers --> Universal["LLM_KEY Universal Key"]
 Providers --> Settings["Provider Settings Profiles"]
 Providers --> Debug["Development Debug Logging"]
+Providers --> Adapters["Adapter Resolution System"]
 ```
 
 **Diagram sources**
@@ -445,14 +463,17 @@ Providers --> Debug["Development Debug Logging"]
 - [feedback/route.ts:1-8](file://app/api/feedback/route.ts#L1-L8)
 - [feedbackStore.ts:88-104](file://lib/ai/feedbackStore.ts#L88-L104)
 - [manifest/route.ts:21-36](file://app/api/manifest/route.ts#L21-L36)
-- [providers/status/route.ts:137-214](file://app/api/providers/status/route.ts#L137-L214)
+- [providers/status/route.ts:137-218](file://app/api/providers/status/route.ts#L137-L218)
+- [adapters/index.ts:190-315](file://lib/ai/adapters/index.ts#L190-L315)
 
 **Section sources**
 - [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [feedback/route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [feedbackStore.ts:1-356](file://lib/ai/feedbackStore.ts#L1-L356)
 - [manifest/route.ts:1-57](file://app/api/manifest/route.ts#L1-L57)
-- [providers/status/route.ts:1-215](file://app/api/providers/status/route.ts#L1-L215)
+- [providers/status/route.ts:1-219](file://app/api/providers/status/route.ts#L1-L219)
+- [adapters/index.ts:190-315](file://lib/ai/adapters/index.ts#L190-L315)
+- [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 
 ## Performance Considerations
 - History endpoint:
@@ -491,6 +512,7 @@ Common issues and resolutions:
   - **Enhanced** Clear browser cache and reload to ensure immediate reflection of environment variable changes.
   - **Enhanced** Test universal LLM_KEY configuration by setting LLM_KEY environment variable for all providers.
   - **Enhanced** Verify provider settings optimization is working by checking the settings field in the response.
+  - **Enhanced** Check ModelSelectionGate component integration for real-time provider status updates.
 
 **Enhanced** The troubleshooting guide now includes comprehensive debugging information for provider configuration issues, development environment diagnostics, caching prevention verification, and universal LLM_KEY testing procedures.
 
@@ -498,11 +520,12 @@ Common issues and resolutions:
 - [history/route.ts:55-58](file://app/api/history/route.ts#L55-L58)
 - [feedbackStore.ts:106-139](file://lib/ai/feedbackStore.ts#L106-L139)
 - [manifest/route.ts:42-55](file://app/api/manifest/route.ts#L42-L55)
-- [providers/status/route.ts:137-214](file://app/api/providers/status/route.ts#L137-L214)
+- [providers/status/route.ts:137-218](file://app/api/providers/status/route.ts#L137-L218)
+- [ModelSelectionGate.tsx:86-119](file://components/ModelSelectionGate.tsx#L86-L119)
 
 ## Conclusion
 The utility APIs provide a cohesive foundation for history tracking, feedback-driven improvements, and manifest generation. The new providers/status endpoint streamlines provider configuration by automatically detecting configured providers from environment variables, replacing the previous multi-step credential entry process with a streamlined approach.
 
 **Enhanced** The provider status API now includes comprehensive runtime environment variable checking, debugging capabilities, caching prevention with `unstable_noStore()`, universal LLM_KEY support, development environment debug information, and provider-specific optimized settings profiles. These enhancements provide immediate reflection of dynamic environment variable changes, comprehensive troubleshooting capabilities, and seamless integration with the ModelSelectionGate component for streamlined provider setup. The API now offers robust debugging for provider configuration issues while maintaining optimal performance through development-only debug logging, caching prevention mechanisms, and universal key support. The addition of provider settings optimization ensures that each provider is configured with the best parameters for UI/code generation tasks.
 
-**Updated** Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section, as they are no longer part of the streamlined configuration approach described in this document. The focus has shifted to the enhanced provider status discovery mechanism with comprehensive debugging capabilities, universal LLM_KEY support, and optimized provider settings for simplified provider setup and immediate configuration reflection.
+**Updated** Removed references to AIEngineConfigPanel component and AIEngineConfig interface from this documentation section, as they are no longer part of the streamlined configuration approach described in this document. The focus has shifted to the enhanced provider status discovery mechanism with comprehensive debugging capabilities, universal LLM_KEY support, and optimized provider settings for simplified provider setup and immediate configuration reflection. The integration with ModelSelectionGate provides real-time provider status updates with universal key support, enhancing the user experience and security posture of the system.

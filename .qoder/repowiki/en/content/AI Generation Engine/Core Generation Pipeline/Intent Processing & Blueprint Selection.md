@@ -9,7 +9,17 @@
 - [blueprintEngine.ts](file://lib/intelligence/blueprintEngine.ts)
 - [schemas.ts](file://lib/validation/schemas.ts)
 - [prompts.ts](file://lib/ai/prompts.ts)
+- [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [adapters/index.ts](file://lib/ai/adapters/index.ts)
+- [thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated intent classification system documentation to reflect provider preference preservation when LLM_KEY is configured
+- Added documentation for fallback mechanism improvements that prevent unintended provider switching
+- Updated troubleshooting guidance to address universal key fallback restrictions
+- Enhanced adapter resolution documentation to clarify LLM_KEY behavior
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,6 +34,8 @@
 
 ## Introduction
 This document explains the intent processing and blueprint selection phase of the generation pipeline. It covers how user intents are analyzed and transformed into actionable generation parameters, how blueprints are selected to match user requirements to UI patterns, and how design rules are applied consistently. It also details the depth UI mode evaluation for complex interactive components, the intent classification system, blueprint scoring mechanisms, and design rule conflict resolution. Practical examples and troubleshooting guidance are included to help developers and users achieve reliable, accessible, and visually coherent UI generation outcomes.
+
+**Updated** The intent classification system now respects user's provider choice when LLM_KEY is configured, preventing unintended provider switching during error conditions and preserving user preferences when using universal keys.
 
 ## Project Structure
 The intent processing and blueprint selection pipeline spans several modules:
@@ -51,15 +63,15 @@ Blueprint --> Rules["Assembly Rules & Best Practices"]
 ```
 
 **Diagram sources**
-- [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [intentParser.ts:1-259](file://lib/ai/intentParser.ts#L1-L259)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-467](file://lib/ai/prompts.ts#L1-L467)
 
 **Section sources**
-- [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [intentParser.ts:1-259](file://lib/ai/intentParser.ts#L1-L259)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-467](file://lib/ai/prompts.ts#L1-L467)
@@ -72,7 +84,7 @@ Blueprint --> Rules["Assembly Rules & Best Practices"]
 - Prompt templates: Define system prompts and user prompts for component, app, and depth UI modes.
 
 **Section sources**
-- [intentClassifier.ts:57-178](file://lib/ai/intentClassifier.ts#L57-L178)
+- [intentClassifier.ts:57-208](file://lib/ai/intentClassifier.ts#L57-L208)
 - [intentParser.ts:29-259](file://lib/ai/intentParser.ts#L29-L259)
 - [blueprintEngine.ts:9-215](file://lib/intelligence/blueprintEngine.ts#L9-L215)
 - [schemas.ts:16-340](file://lib/validation/schemas.ts#L16-L340)
@@ -102,8 +114,8 @@ API-->>U : JSON response
 ```
 
 **Diagram sources**
-- [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
-- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
+- [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
+- [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
 ## Detailed Component Analysis
@@ -115,12 +127,15 @@ The classifier interprets user input and returns a structured classification wit
 - shouldGenerateCode: Whether to proceed with code generation
 - Purpose, visualType, complexity, platform, layout, motionLevel, and preferredStack metadata for downstream decisions
 
+**Updated** The intent classification system now preserves user's provider choice when LLM_KEY is configured, preventing unintended provider switching during error conditions.
+
 Implementation highlights:
 - Uses a system prompt that defines intent types and output schema.
 - Sanitizes input and optionally injects context about an active project.
 - Resolves adapter/provider/model dynamically or falls back to defaults.
 - Implements retry-on-rate-limit logic for 429 responses.
 - Parses and validates JSON output against a Zod schema, with a coercion pass for known edge cases.
+- **Enhanced fallback logic**: When using LLM_KEY (universal key), the system prevents fallback to different providers if no provider-specific key is available, preserving user's provider preference.
 
 ```mermaid
 flowchart TD
@@ -143,12 +158,12 @@ ReturnErr --> End
 ```
 
 **Diagram sources**
-- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
+- [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
 **Section sources**
 - [intentClassifier.ts:10-53](file://lib/ai/intentClassifier.ts#L10-L53)
-- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
+- [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
 ### Intent Parsing and Generation Mode Routing
@@ -162,7 +177,7 @@ The parser builds a detailed intent from user input:
 
 Key behaviors:
 - Uses mode-specific system prompts and user prompts to guide the model.
-- Applies JSON mode when supported by the model profile; ensures “json” appears in the system prompt for Ollama.
+- Applies JSON mode when supported by the model profile; ensures "json" appears in the system prompt for Ollama.
 - Enforces context budgeting for small/local models.
 - Supports iterative context for refinements.
 
@@ -342,11 +357,46 @@ S-->>C : JSON response
 ```
 
 **Diagram sources**
-- [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
-- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
+- [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
+- [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
 
 **Section sources**
-- [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
+- [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
+
+### Enhanced Provider Resolution and Fallback Logic
+**Updated** The intent classification system now includes enhanced provider resolution and fallback logic designed to respect user preferences when using universal keys.
+
+Key enhancements:
+- **Provider Preference Preservation**: When a user explicitly specifies a provider, the system uses that provider regardless of LLM_KEY configuration.
+- **Universal Key Fallback Restrictions**: When using LLM_KEY (universal key), the system prevents fallback to different providers if no provider-specific key is available, preserving user's provider preference.
+- **Intelligent Fallback Detection**: The system checks for the presence of provider-specific API keys before attempting fallback to different providers.
+- **Consistent Behavior Across Engines**: Similar logic is implemented in the thinking engine to maintain consistency across the generation pipeline.
+
+```mermaid
+flowchart TD
+ProviderCheck{"Provider specified?"}
+ProviderCheck --> |Yes| UseUserProvider["Use user-selected provider"]
+ProviderCheck --> |No| CheckLLMKey{"LLM_KEY configured?"}
+UseUserProvider --> ResolveAdapter["Resolve adapter with user provider"]
+CheckLLMKey --> |Yes| CheckProviderKey{"Provider-specific key available?"}
+CheckLLMKey --> |No| UseDefault["Use default adapter resolution"]
+CheckProviderKey --> |Yes| UseLLMKey["Use LLM_KEY with user-selected provider"]
+CheckProviderKey --> |No| PreventFallback["Prevent fallback to different provider"]
+UseLLMKey --> ResolveAdapter
+PreventFallback --> UseDefault
+UseDefault --> ResolveAdapter
+ResolveAdapter --> CallAdapter["Call adapter.generate"]
+```
+
+**Diagram sources**
+- [intentClassifier.ts:90-150](file://lib/ai/intentClassifier.ts#L90-L150)
+- [adapters/index.ts:242-285](file://lib/ai/adapters/index.ts#L242-L285)
+- [resolveDefaultAdapter.ts:141-158](file://lib/ai/resolveDefaultAdapter.ts#L141-L158)
+
+**Section sources**
+- [intentClassifier.ts:90-150](file://lib/ai/intentClassifier.ts#L90-L150)
+- [adapters/index.ts:242-285](file://lib/ai/adapters/index.ts#L242-L285)
+- [resolveDefaultAdapter.ts:141-158](file://lib/ai/resolveDefaultAdapter.ts#L141-L158)
 
 ## Dependency Analysis
 The intent processing pipeline exhibits clear separation of concerns:
@@ -370,16 +420,16 @@ BP --> SCH3["Assembly Rules & Best Practices"]
 ```
 
 **Diagram sources**
-- [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [intentParser.ts:1-259](file://lib/ai/intentParser.ts#L1-L259)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
 - [prompts.ts:1-467](file://lib/ai/prompts.ts#L1-L467)
 
 **Section sources**
-- [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [intentParser.ts:1-259](file://lib/ai/intentParser.ts#L1-L259)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
@@ -390,8 +440,7 @@ BP --> SCH3["Assembly Rules & Best Practices"]
 - JSON mode gating: The system checks model profiles to safely enable JSON mode and adjusts prompts for Ollama compatibility.
 - Retry-on-rate-limit: The classifier retries 429 responses with exponential backoff to reduce transient failures.
 - Lightweight model selection: The API endpoint selects the fastest available model for classification to minimize latency and cost.
-
-[No sources needed since this section provides general guidance]
+- **Enhanced Provider Resolution**: The system optimizes adapter resolution by respecting user preferences and avoiding unnecessary fallback attempts when using universal keys.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -401,6 +450,10 @@ Common issues and resolutions:
 - Empty response: The parser and classifier both guard against empty content and return descriptive errors.
 - Rate limit errors: The classifier retries on 429 with exponential backoff; monitor logs for repeated failures.
 - JSON mode unsupported: The parser checks model capabilities and avoids enabling JSON mode when unsupported.
+- **Provider preference issues**: When using LLM_KEY, the system preserves user's provider choice and prevents fallback to different providers if no provider-specific key is available.
+- **Universal key fallback restrictions**: If LLM_KEY is configured but no provider-specific key exists, the system will not attempt fallback to different providers, maintaining consistency with user preferences.
+
+**Updated** Enhanced troubleshooting guidance for provider preference preservation and universal key fallback restrictions.
 
 **Section sources**
 - [intentParser.ts:151-227](file://lib/ai/intentParser.ts#L151-L227)
@@ -408,6 +461,9 @@ Common issues and resolutions:
 - [intentParser.ts:254-258](file://lib/ai/intentParser.ts#L254-L258)
 - [intentClassifier.ts:123-133](file://lib/ai/intentClassifier.ts#L123-L133)
 - [intentClassifier.ts:173-177](file://lib/ai/intentClassifier.ts#L173-L177)
+- [intentClassifier.ts:139-150](file://lib/ai/intentClassifier.ts#L139-L150)
 
 ## Conclusion
 The intent processing and blueprint selection pipeline provides a robust, schema-driven pathway from user intent to executable UI generation. By combining classification, parsing, and blueprint selection with strict validation and design rule enforcement, the system ensures consistent, accessible, and visually coherent outputs. Depth UI mode is evaluated explicitly to support immersive experiences, while conflict resolution prioritizes non-negotiable rules and best practices.
+
+**Updated** The enhanced intent classification system now provides improved provider preference preservation when using universal keys, preventing unintended provider switching during error conditions and maintaining user preferences throughout the generation pipeline. This enhancement ensures that users who configure LLM_KEY (universal keys) retain control over their provider choices while still benefiting from the flexibility of universal key usage.

@@ -2,10 +2,13 @@
 
 <cite>
 **Referenced Files in This Document**
+- [logger.ts](file://lib/logger.ts)
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/parse/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
 - [route.ts](file://app/api/think/route.ts)
+- [route.ts](file://app/api/chunk/route.ts)
+- [route.ts](file://app/api/providers/status/route.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 - [intentParser.ts](file://lib/ai/intentParser.ts)
@@ -22,19 +25,28 @@
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced error logging and debugging capabilities with structured request-scoped logging
+- Improved provider/model selection logic with better credential resolution and fallback mechanisms
+- Added comprehensive logging infrastructure for all pipeline stages
+- Strengthened debugging capabilities with detailed metadata and request tracing
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Enhanced Logging and Debugging System](#enhanced-logging-and-debugging-system)
+7. [Improved Provider and Model Selection](#improved-provider-and-model-selection)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
 
 ## Introduction
-This document describes the AI generation pipeline that transforms user intents into high-quality, accessible React components and applications. The pipeline is multi-stage, deterministic, and resilient:
+This document describes the AI generation pipeline that transforms user intents into high-quality, accessible React components and applications. The pipeline is multi-stage, deterministic, and resilient with enhanced error logging and debugging capabilities:
 - Intent classification and thinking plan generation
 - Intent parsing into structured UI intents
 - Multi-tiered generation orchestrated by model profiles
@@ -43,102 +55,103 @@ This document describes the AI generation pipeline that transforms user intents 
 - Accessibility validation and automated fixes
 - Parallel quality gates and persistence
 
-It emphasizes model-agnostic orchestration, robust prompt engineering, and tiered configuration to ensure consistent, high-quality output across local and cloud providers.
+The pipeline emphasizes model-agnostic orchestration, robust prompt engineering, tiered configuration, and comprehensive logging for reliable debugging and monitoring across local and cloud providers.
 
 ## Project Structure
-The pipeline spans API routes, AI orchestration modules, validators, and persistence:
-- API routes expose endpoints for classification, thinking, parsing, and generation
-- Orchestrators coordinate model selection, prompt building, and post-processing
+The pipeline spans API routes, AI orchestration modules, validators, persistence, and enhanced logging infrastructure:
+- API routes expose endpoints for classification, thinking, parsing, and generation with structured logging
+- Orchestrators coordinate model selection, prompt building, and post-processing with detailed error tracking
 - Validators enforce deterministic correctness, browser safety, and accessibility
 - Persistence stores generation history and embeddings for reuse
+- Comprehensive logging system provides request-scoped tracing and debugging
 
 ```mermaid
 graph TB
-subgraph "API Layer"
-C["/api/classify"]
-T["/api/think"]
-P["/api/parse"]
-G["/api/generate"]
+subgraph "API Layer with Logging"
+C["/api/classify<br/>Structured Logging"]
+T["/api/think<br/>Structured Logging"]
+P["/api/parse<br/>Structured Logging"]
+G["/api/generate<br/>Enhanced Logging"]
+CH["/api/chunk<br/>Debug Logging"]
+PS["/api/providers/status<br/>Provider Debug"]
 end
 subgraph "AI Orchestration"
-IC["intentClassifier.ts"]
-IP["intentParser.ts"]
-CG["componentGenerator.ts"]
-PB["promptBuilder.ts"]
-TP["tieredPipeline.ts"]
-MR["modelRegistry.ts"]
-CE["codeExtractor.ts"]
-UR["uiReviewer.ts"]
-VR["visionReviewer.ts"]
-AV["a11yValidator.ts"]
-MM["memory.ts"]
+IC["intentClassifier.ts<br/>Enhanced Error Handling"]
+IP["intentParser.ts<br/>Structured Validation"]
+CG["componentGenerator.ts<br/>Model-Agnostic"]
+PB["promptBuilder.ts<br/>Model-Aware Prompts"]
+TP["tieredPipeline.ts<br/>Tier Configuration"]
+MR["modelRegistry.ts<br/>Capability Profiles"]
+CE["codeExtractor.ts<br/>Multi-Strategy Extraction"]
+UR["uiReviewer.ts<br/>Review Override Logic"]
+VR["visionReviewer.ts<br/>Vision Debugging"]
+AV["a11yValidator.ts<br/>WCAG Compliance"]
+MM["memory.ts<br/>Persistence Layer"]
 end
-subgraph "Validators & Schemas"
-SC["schemas.ts"]
+subgraph "Logging Infrastructure"
+LOG["lib/logger.ts<br/>Structured Request Logger"]
 end
-C --> IC
-T --> IP
-P --> IP
-G --> CG
-IC --> SC
-IP --> SC
-CG --> PB
-CG --> TP
-CG --> MR
-CG --> CE
-CG --> UR
-CG --> VR
-CG --> AV
-CG --> MM
-G --> AV
-G --> MM
+subgraph "Provider Selection"
+AD["adapters/index.ts<br/>Credential Resolution"]
+RDA["resolveDefaultAdapter.ts<br/>Priority Logic"]
+end
+C --> LOG
+T --> LOG
+P --> LOG
+G --> LOG
+CH --> LOG
+PS --> LOG
+IC --> LOG
+IP --> LOG
+CG --> LOG
+UR --> LOG
+VR --> LOG
+AD --> LOG
+RDA --> LOG
 ```
 
 **Diagram sources**
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
 - [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
+- [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
+- [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
-- [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
-- [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
-- [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
-- [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
-- [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
-- [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
-- [schemas.ts:14-340](file://lib/validation/schemas.ts#L14-L340)
+- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
+- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-L181)
+- [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
+- [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
 
 **Section sources**
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
 - [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
+- [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
+- [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
-- [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
-- [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
-- [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
-- [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
-- [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
-- [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
-- [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
-- [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
-- [schemas.ts:14-340](file://lib/validation/schemas.ts#L14-L340)
+- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
+- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-L181)
+- [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
+- [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
 
 ## Core Components
-- Intent Classification: Determines intent type, confidence, and suggested mode; informs whether to proceed to generation.
+- Intent Classification: Determines intent type, confidence, and suggested mode; informs whether to proceed to generation with enhanced error logging.
 - Thinking Plan: Builds an execution plan aligned with the user's intent to guide generation.
 - Intent Parsing: Converts natural language into a validated UI intent with fields, layout, interactions, and accessibility requirements.
-- Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair.
-- Expert Review and AI Repair: Optional second-pass review and targeted repair using a reviewer agent.
+- Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair with comprehensive logging.
+- Expert Review and AI Repair: Optional second-pass review and targeted repair using a reviewer agent with provider override support.
 - Accessibility Validation and Auto-Repair: Static analysis and deterministic fixes for WCAG AA.
 - Parallel Quality Gates: Browser safety checks, test generation, and dependency resolution.
 - Persistence: Stores generations and embeddings for feedback and reuse.
+- **Enhanced Logging System**: Structured request-scoped logging with metadata tracking for all pipeline stages.
 
 **Section sources**
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
@@ -150,52 +163,64 @@ G --> MM
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 - [route.ts:329-352](file://app/api/generate/route.ts#L329-L352)
 - [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
 ## Architecture Overview
-The pipeline is model-agnostic and driven by capability profiles. It selects a pipeline configuration per model, builds model-aware prompts, executes generation with optional tool loops, extracts code deterministically, validates and repairs, and applies expert review and accessibility checks in parallel.
+The pipeline is model-agnostic and driven by capability profiles with enhanced logging infrastructure. It selects a pipeline configuration per model, builds model-aware prompts, executes generation with optional tool loops, extracts code deterministically, validates and repairs, and applies expert review and accessibility checks in parallel. The logging system provides comprehensive request tracing and debugging capabilities.
 
 ```mermaid
 sequenceDiagram
 participant U as "User"
-participant API as "/api/generate"
-participant CL as "intentClassifier"
+participant API as "/api/generate<br/>with Logger"
+participant LOG as "BackendLogger<br/>Structured Logging"
+participant CL as "intentClassifier<br/>Enhanced Error Handling"
 participant TH as "thinkingEngine"
-participant PP as "intentParser"
-participant CG as "componentGenerator"
+participant PP as "intentParser<br/>Structured Validation"
+participant CG as "componentGenerator<br/>Model-Agnostic"
 participant PB as "promptBuilder"
 participant TP as "tieredPipeline"
 participant MR as "modelRegistry"
 participant CE as "codeExtractor"
-participant UR as "uiReviewer"
-participant VR as "visionReviewer"
+participant UR as "uiReviewer<br/>Review Override"
+participant VR as "visionReviewer<br/>Vision Debugging"
 participant AV as "a11yValidator"
 participant MM as "memory"
 U->>API : Submit intent + optional prompt
+API->>LOG : Create request logger
 API->>CL : Classify intent (provider/model optional)
+CL->>LOG : Log classification attempt
 CL-->>API : Classification result
+CL->>LOG : Log classification outcome
 API->>TH : Generate thinking plan (provider/model optional)
 TH-->>API : Thinking plan (or fallback)
 API->>PP : Parse intent (provider/model optional)
+PP->>LOG : Log parsing attempt
 PP-->>API : Validated UI intent
+PP->>LOG : Log parsing outcome
 API->>CG : Generate component (mode, model, provider, thinkingPlan)
 CG->>PB : Build model-aware prompt
 CG->>TP : Resolve pipeline config
 CG->>MR : Resolve model profile
 CG->>CE : Extract code
+CG->>LOG : Log generation progress
 CG-->>API : Generation result
 API->>UR : Optional expert review (skip for local models)
+UR->>LOG : Log review attempt
 UR-->>API : Review result
 API->>VR : Optional vision/runtime review (skip for local models)
+VR->>LOG : Log vision review attempt
 VR-->>API : Vision result
 API->>AV : Accessibility validation + auto-repair
 AV-->>API : A11y report + fixes
 API->>MM : Persist generation (async)
+API->>LOG : Log completion with metrics
 API-->>U : Final code + reports + tests
 ```
 
 **Diagram sources**
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
-- [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
+- [logger.ts:66-85](file://lib/logger.ts#L66-L85)
+- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
@@ -215,6 +240,7 @@ API-->>U : Final code + reports + tests
 - Inputs: User prompt, optional active project context, provider/model hints.
 - Output: Classification result with intent type, confidence, suggested mode, and flags.
 - Robustness: Includes retry on rate-limit errors and schema coercion for local models.
+- **Enhanced Logging**: Comprehensive logging of classification attempts, outcomes, and errors with structured metadata.
 
 ```mermaid
 flowchart TD
@@ -259,6 +285,7 @@ API-->>API : Log and return result
 - Inputs: Prompt, mode, optional contextId for refinement, provider/model hints.
 - Processing: Retrieves knowledge, builds model-aware prompt, enforces JSON mode when safe, strips thinking blocks, and validates schema.
 - Outputs: Validated UI intent or minimal fallback for "not a UI description".
+- **Enhanced Logging**: Structured logging of parsing attempts, validation results, and error conditions.
 
 ```mermaid
 flowchart TD
@@ -292,6 +319,7 @@ Fallback --> Return
 - Deterministic Validation: Validates generated code and repairs when needed.
 - Beautification: Normalizes output for consistency.
 - Repair Strategy: Rules-only for cloud; configurable for others.
+- **Enhanced Logging**: Comprehensive logging of generation progress, model selection, and validation outcomes.
 
 ```mermaid
 flowchart TD
@@ -329,18 +357,22 @@ Final --> Return(["Return result"])
 - Review: JSON-based expert review with pass/fail, score, critiques, and repair instructions.
 - Repair: Dedicated repair agent that fixes issues and returns fixed code.
 - Skip Logic: **Updated** Now uses a direct approach targeting only the Groq provider for skipping expensive vision review processes. The pipeline no longer uses complex provider categorization logic that differentiated between local and cloud providers.
+- **Enhanced Logging**: Structured logging of review attempts, results, and repair operations with detailed metadata.
 
 ```mermaid
 sequenceDiagram
 participant API as "/api/generate"
-participant VR as "visionReviewer"
-participant UR as "uiReviewer"
+participant VR as "visionReviewer<br/>Enhanced Debugging"
+participant UR as "uiReviewer<br/>Review Override"
 participant RR as "repairGeneratedCode"
 API->>VR : Headless render + visual critique
+VR->>LOG : Log vision review attempt
 VR-->>API : Runtime OK + optional suggested code
 API->>UR : Expert review (JSON)
+UR->>LOG : Log review attempt
 UR-->>API : Passed/Score/Critiques/Repair instructions
 API->>RR : Repair agent (when needed)
+RR->>LOG : Log repair attempt
 RR-->>API : Fixed code
 ```
 
@@ -450,19 +482,106 @@ API->>MM : Upsert component embedding (repair patterns)
 - Purpose: Determine when to skip expensive vision review processes to optimize costs.
 - Implementation: **Updated** Now uses a direct approach targeting only the Groq provider for skipping expensive vision review processes. The pipeline no longer uses complex provider categorization logic that differentiated between local and cloud providers.
 - Logic: `const skipVisionReview = provider === 'groq';` - When the user explicitly selects the Groq provider, the pipeline skips the vision review to avoid cost-prohibitive second API calls.
+- **Enhanced Logging**: Comprehensive logging of provider detection, skip decisions, and credential resolution.
 
 **Section sources**
 - [route.ts:134-135](file://app/api/generate/route.ts#L134-L135)
 - [index.ts:45-47](file://lib/ai/adapters/index.ts#L45-L47)
 - [resolveDefaultAdapter.ts:49](file://lib/ai/resolveDefaultAdapter.ts#L49)
 
+## Enhanced Logging and Debugging System
+
+### Structured Request Logger
+The pipeline now features a comprehensive logging infrastructure that provides structured, request-scoped logging across all components:
+
+- **Request Tracking**: Each request gets a unique requestId for correlation across all pipeline stages
+- **Structured Metadata**: All log entries include endpoint, requestId, duration, and custom metadata
+- **Multiple Log Levels**: Support for info, warn, error, and debug levels with appropriate console styling
+- **Automatic Timing**: Built-in duration tracking from request receipt to completion
+- **Error Context**: Rich error logging with stack traces and contextual metadata
+
+```mermaid
+flowchart TD
+Start(["Request Received"]) --> CreateLogger["Create Request Logger<br/>with unique requestId"]
+CreateLogger --> Stage1["Stage 1 Operations<br/>Log Progress"]
+Stage1 --> Stage2["Stage 2 Operations<br/>Log Progress"]
+Stage2 --> Stage3["Stage 3 Operations<br/>Log Progress"]
+Stage3 --> End(["Request Completed<br/>Log Final Outcome"])
+End --> Cleanup["Cleanup & Metrics"]
+```
+
+**Diagram sources**
+- [logger.ts:66-85](file://lib/logger.ts#L66-L85)
+
+### Logging Integration Across Pipeline
+Every major component now integrates structured logging:
+
+- **API Routes**: Comprehensive logging of request processing, validation, and outcomes
+- **Intent Processing**: Detailed logging of classification, parsing, and thinking plan generation
+- **Generation Pipeline**: Progress tracking, model selection, and validation outcomes
+- **Review Systems**: Review attempts, results, and repair operations with metadata
+- **Provider Resolution**: Credential lookup, fallback mechanisms, and configuration status
+
+**Section sources**
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
+- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
+- [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
+
+## Improved Provider and Model Selection
+
+### Enhanced Credential Resolution
+The provider selection logic has been significantly enhanced with better fallback mechanisms and debugging capabilities:
+
+- **Priority-Based Resolution**: Purpose-specific overrides, provider-specific keys, and universal fallbacks
+- **Comprehensive Debugging**: Detailed logging of credential resolution decisions and failures
+- **Provider Detection**: Improved model-to-provider detection with OpenAI-compatible providers
+- **Fallback Strategies**: Multiple layers of fallback including universal LLM_KEY and local Ollama
+
+### Provider Selection Logic
+The system now follows a more sophisticated priority order:
+
+1. **Purpose-Specific Overrides**: `<PURPOSE>_MODEL`, `<PURPOSE>_PROVIDER`, `<PURPOSE>_API_KEY`
+2. **Generic Overrides**: `DEFAULT_MODEL`, `DEFAULT_PROVIDER` (no purpose prefix)
+3. **Provider Key Detection**: Sequential checking of provider API keys in priority order
+4. **Universal Fallback**: `LLM_KEY` working across all providers
+5. **Local Fallback**: Ollama as guaranteed fallback without credentials
+
+```mermaid
+flowchart TD
+Start(["Resolve Default Adapter"]) --> PurposeOverride["Check Purpose-Specific Overrides<br/>(INTENT_MODEL, CLASSIFIER_PROVIDER, etc.)"]
+PurposeOverride --> GenericOverride["Check Generic Overrides<br/>(DEFAULT_MODEL, DEFAULT_PROVIDER)"]
+GenericOverride --> ProviderDetection["Detect Provider Keys<br/>(GROQ, GOOGLE, ANTHROPIC, OPENAI)"]
+ProviderDetection --> Universal["Check Universal LLM_KEY"]
+Universal --> LocalFallback["Fallback to Local Ollama"]
+LocalFallback --> Result(["Return Adapter Config"])
+```
+
+**Diagram sources**
+- [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
+- [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
+
+### Enhanced Provider Status Endpoint
+The `/api/providers/status` endpoint now provides comprehensive debugging information:
+
+- **Real-time Status**: Current configuration status of all providers
+- **Environment Variable Inspection**: Lists available API keys without exposing values
+- **Universal Key Detection**: Identifies presence of `LLM_KEY` for all providers
+- **Debug Information**: Development-only debug data for troubleshooting
+
+**Section sources**
+- [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
+- [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
+- [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
+
 ## Dependency Analysis
-The pipeline's design centers around capability-driven orchestration:
+The pipeline's design centers around capability-driven orchestration with enhanced logging integration:
 - Model Registry defines capabilities and tiers.
 - Tiered Pipeline maps profiles to concrete configurations.
 - Prompt Builder composes model-aware prompts.
 - Code Extractor adapts to model output styles.
 - Component Generator coordinates all stages and applies deterministic checks.
+- **Enhanced Logging**: Comprehensive logging infrastructure integrated across all components.
 
 ```mermaid
 graph LR
@@ -477,6 +596,12 @@ CG --> MM["memory.ts"]
 IC["intentClassifier.ts"] --> API["/api/generate"]
 IP["intentParser.ts"] --> API
 API --> CG
+LOG["logger.ts"] --> API
+LOG --> IC
+LOG --> IP
+LOG --> CG
+LOG --> UR
+LOG --> VR
 ```
 
 **Diagram sources**
@@ -492,6 +617,7 @@ API --> CG
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
 **Section sources**
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
@@ -506,6 +632,7 @@ API --> CG
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
 ## Performance Considerations
 - Tiered Pipelines: Choose appropriate temperature, tool rounds, and extraction strategies per model capability to reduce retries and cost.
@@ -513,16 +640,19 @@ API --> CG
 - Parallelization: Run accessibility and tests in parallel to minimize end-to-end latency.
 - Budgeting: Enforce token budgets for system prompts and knowledge injection to avoid truncation and retries.
 - Timeouts: Apply per-stage timeouts and aggregate limits to prevent long-running requests.
-- **Skip Logic Optimization**: **Updated** The pipeline now uses a direct approach to skip vision review for Groq provider, reducing unnecessary API calls and costs.
+- **Skip Logic Optimization**: The pipeline now uses a direct approach to skip vision review for Groq provider, reducing unnecessary API calls and costs.
+- **Enhanced Monitoring**: Comprehensive logging enables better performance monitoring and debugging of bottlenecks.
 
 ## Troubleshooting Guide
-- Classification failures: Retry on rate limits; coerce schema for local models.
-- Parsing failures: Minimal fallback intent for "not a UI description"; inspect raw AI response for debugging.
-- Generation failures: Inspect model tier, extraction confidence, and validation warnings; leverage repair pipeline.
-- Review/Repair failures: Pipeline continues with original code; check quotas and provider availability.
-- Vision review failures: Missing Playwright binaries or Browserless credentials; fallback gracefully.
-- Accessibility issues: Apply auto-repair; review suggestions and fix remaining violations.
-- **Skip Logic Issues**: **Updated** If vision review is unexpectedly skipped for non-Groq providers, verify the provider parameter is correctly set to 'groq' to trigger the skip logic.
+- **Classification failures**: Retry on rate limits; coerce schema for local models; check structured logging for detailed error context.
+- **Parsing failures**: Minimal fallback intent for "not a UI description"; inspect raw AI response for debugging; leverage enhanced logging for parsing attempts.
+- **Generation failures**: Inspect model tier, extraction confidence, and validation warnings; leverage repair pipeline; check comprehensive generation logs.
+- **Review/Repair failures**: Pipeline continues with original code; check quotas and provider availability; enhanced logging provides detailed failure context.
+- **Vision review failures**: Missing Playwright binaries or Browserless credentials; fallback gracefully; comprehensive logging captures vision review attempts.
+- **Accessibility issues**: Apply auto-repair; review suggestions and fix remaining violations.
+- **Provider selection issues**: Check environment variables and credential resolution logs; verify provider status endpoint for configuration status.
+- **Skip Logic Issues**: If vision review is unexpectedly skipped for non-Groq providers, verify the provider parameter is correctly set to 'groq' to trigger the skip logic.
+- **Enhanced Debugging**: Use structured logs with requestId correlation to trace issues across the entire pipeline.
 
 **Section sources**
 - [intentClassifier.ts:104-133](file://lib/ai/intentClassifier.ts#L104-L133)
@@ -531,8 +661,11 @@ API --> CG
 - [uiReviewer.ts:115-125](file://lib/ai/uiReviewer.ts#L115-L125)
 - [visionReviewer.ts:117-131](file://lib/ai/visionReviewer.ts#L117-L131)
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
+- [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
 ## Conclusion
-The AI generation pipeline is designed for reliability and quality across diverse environments. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. Parallel quality gates and persistence further strengthen the system's robustness and usability.
+The AI generation pipeline is designed for reliability and quality across diverse environments with significantly enhanced logging and debugging capabilities. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. The comprehensive logging infrastructure provides detailed request tracing, error context, and performance monitoring. Parallel quality gates and persistence further strengthen the system's robustness and usability.
 
-**Updated** The pipeline now uses a simplified, direct approach for skip logic optimization, focusing specifically on the Groq provider to avoid unnecessary vision review costs. This change removes the complexity of provider categorization while maintaining the essential performance benefits of selective review skipping.
+The enhanced provider selection logic with improved credential resolution and fallback mechanisms ensures optimal resource utilization while maintaining system reliability. The structured logging system enables comprehensive debugging and monitoring across all pipeline stages, making it easier to diagnose issues and optimize performance. The simplified skip logic for Groq provider maintains performance benefits while removing complexity from provider categorization.
+
+**Updated** The pipeline now features a comprehensive logging infrastructure with structured request-scoped logging, enhanced provider selection with detailed debugging, and improved error handling across all components. These enhancements significantly improve the system's observability, debugging capabilities, and overall reliability in production environments.

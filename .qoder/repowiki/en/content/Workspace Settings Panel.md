@@ -9,16 +9,18 @@
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [schema.prisma](file://prisma/schema.prisma)
 - [Sidebar.tsx](file://components/ide/Sidebar.tsx)
-- [ARCHITECTURE.md](file://docs/ARCHITECTURE.md)
+- [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [migration.sql](file://prisma/migrations/20260403065359_init_workspace_settings/migration.sql)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated Provider Configuration section to reflect streamlined provider management with universal key support
-- Revised API Integration section to reflect new providers status endpoint and simplified workspace settings
-- Updated Security Implementation section to reflect universal LLM_KEY environment variable support
-- Modified troubleshooting guidance to reflect simplified configuration process
-- Enhanced user interface documentation to reflect streamlined provider status display
+- Updated Provider Configuration section to reflect database-driven configuration replacing localStorage
+- Revised API Integration section to reflect universal LLM_KEY support and enhanced provider selection logic
+- Updated Security Implementation section to reflect database-backed credential storage with universal key support
+- Modified troubleshooting guidance to reflect database configuration process
+- Enhanced user interface documentation to reflect streamlined provider status display with universal key detection
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,7 +39,7 @@
 
 The Workspace Settings Panel is a critical component of the AI-powered accessibility-first UI engine that manages API key configuration for multiple AI providers. This panel provides a secure, user-friendly interface for developers to configure and manage their workspace-specific API credentials for OpenAI, Anthropic, Google Gemini, Groq, and Ollama providers.
 
-The panel operates as a streamlined modal interface that integrates seamlessly with the application's workspace management system, allowing users to securely store their API keys while maintaining strict security protocols to prevent credential exposure. **Updated**: The panel now features a simplified architecture with universal key support and streamlined provider management.
+The panel operates as a streamlined modal interface that integrates seamlessly with the application's workspace management system, allowing users to securely store their API keys while maintaining strict security protocols to prevent credential exposure. **Updated**: The panel now features database-driven configuration with universal LLM_KEY support, eliminating the need for localStorage and providing simplified provider management.
 
 ## System Architecture
 
@@ -137,7 +139,7 @@ The component supports five major AI providers with streamlined configuration ma
 | Groq | GROQ_API_KEY | ✅ Yes | llama-3.3-70b-versatile, mixtral-8x7b |
 | Ollama | OLLAMA_API_KEY | ✅ Yes | llama3, mistral, codellama |
 
-**Updated**: All providers now support the universal LLM_KEY environment variable, eliminating the need for separate provider-specific keys.
+**Updated**: All providers now support the universal LLM_KEY environment variable, eliminating the need for separate provider-specific keys. The panel now features database-driven configuration with automatic provider status detection.
 
 **Section sources**
 - [WorkspaceSettingsPanel.tsx:10-16](file://components/WorkspaceSettingsPanel.tsx#L10-L16)
@@ -188,7 +190,7 @@ The system performs comprehensive validation with universal key support before s
 4. **Encryption**: Applies AES-256-GCM encryption before database storage
 5. **Cache Invalidation**: Updates in-memory cache to reflect new credentials
 
-**Updated**: Validation now includes universal key support, allowing users to configure a single key for all providers.
+**Updated**: Validation now includes universal key support, allowing users to configure a single key for all providers. The system automatically detects LLM_KEY presence and marks all providers as configured.
 
 **Section sources**
 - [route.ts:91-119](file://app/api/workspace/settings/route.ts#L91-L119)
@@ -240,8 +242,11 @@ The WorkspaceSettings model provides secure credential storage with universal ke
 | encryptedApiKey | String | AES-256-GCM encrypted key |
 | updatedAt | DateTime | Last modification timestamp |
 
+**Updated**: The database schema now supports workspace-specific API key storage with unique constraints on (workspaceId, provider) pairs, enabling multi-tenant configuration management.
+
 **Section sources**
 - [schema.prisma:99-110](file://prisma/schema.prisma#L99-L110)
+- [migration.sql:1-32](file://prisma/migrations/20260403065359_init_workspace_settings/migration.sql#L1-L32)
 
 ## User Interface Design
 
@@ -292,7 +297,7 @@ The panel includes several user-friendly features with universal key support:
 - **Error Handling**: Comprehensive error messaging and recovery options
 - **Environment Variable Fallback**: Consistent behavior across all providers with universal support
 
-**Updated**: The panel now features a universal key notice that displays when LLM_KEY is configured, simplifying the user experience.
+**Updated**: The panel now features a universal key notice that displays when LLM_KEY is configured, simplifying the user experience and eliminating the need for separate provider-specific key entries.
 
 **Section sources**
 - [WorkspaceSettingsPanel.tsx:124-136](file://components/WorkspaceSettingsPanel.tsx#L124-L136)
@@ -348,6 +353,8 @@ The component maintains streamlined state for optimal user experience:
 | `loading` | Loading state indicator | Component | Session |
 | `hasUniversalKey` | Universal key availability | Component | Session |
 
+**Updated**: The panel now uses database-driven state management, eliminating the need for localStorage and providing persistent configuration across browser sessions.
+
 **Section sources**
 - [WorkspaceSettingsPanel.tsx:32-36](file://components/WorkspaceSettingsPanel.tsx#L32-L36)
 
@@ -390,6 +397,8 @@ SettingsError --> UserInput
 | Encryption Failure | Crypto service unavailable | Generic error | Retry operation |
 | Database Error | Storage failure | Temporary unavailability | Retry after delay |
 | Network Error | Request timeout | Loading state | Manual refresh |
+
+**Updated**: Error handling now includes database-specific error responses and improved provider status detection with universal key support.
 
 **Section sources**
 - [WorkspaceSettingsPanel.tsx:47-51](file://components/WorkspaceSettingsPanel.tsx#L47-L51)
@@ -442,7 +451,7 @@ The implementation includes several performance optimizations:
 - **Conditional Rendering**: Only renders relevant provider sections
 - **Debounced Requests**: Prevents excessive API calls
 
-**Updated**: The panel now features universal key detection that reduces the number of API calls needed to check provider status.
+**Updated**: The panel now features universal key detection that reduces the number of API calls needed to check provider status, and database-driven caching eliminates the need for localStorage persistence.
 
 **Section sources**
 - [workspaceKeyService.ts:12-24](file://lib/security/workspaceKeyService.ts#L12-L24)
@@ -481,19 +490,6 @@ The implementation includes several performance optimizations:
 3. Restart the application to reload environment variables
 4. Test the key format and ensure it meets provider requirements
 
-#### Encryption Service Issues
-
-**Symptoms**: Application throws encryption-related errors
-**Causes**:
-- Missing ENCRYPTION_SECRET environment variable
-- Invalid key length or format
-- Corrupted encryption data
-
-**Solutions**:
-1. Generate proper 32-byte base64-encoded key
-2. Set ENCRYPTION_SECRET in deployment environment
-3. Restart application to reload encryption service
-
 #### Database Connection Problems
 
 **Symptoms**: Cannot save or retrieve workspace settings
@@ -506,6 +502,19 @@ The implementation includes several performance optimizations:
 1. Verify DATABASE_URL environment variable
 2. Run database migrations
 3. Check user permissions for workspace settings table
+
+#### Encryption Service Issues
+
+**Symptoms**: Application throws encryption-related errors
+**Causes**:
+- Missing ENCRYPTION_SECRET environment variable
+- Invalid key length or format
+- Corrupted encryption data
+
+**Solutions**:
+1. Generate proper 32-byte base64-encoded key
+2. Set ENCRYPTION_SECRET in deployment environment
+3. Restart application to reload encryption service
 
 **Updated**: Removed Ollama-specific troubleshooting steps as the panel now treats all providers uniformly with universal key support. All providers follow the same validation and configuration process through the universal LLM_KEY mechanism.
 
@@ -523,16 +532,17 @@ The system provides several debugging capabilities:
 - **Cache Inspection**: Cache hit/miss ratio tracking
 - **Universal Key Detection**: Debug information for LLM_KEY configuration
 
-**Updated**: The providers status endpoint now includes debug information for universal key detection and provider configuration status.
+**Updated**: The providers status endpoint now includes debug information for universal key detection and provider configuration status, helping developers troubleshoot configuration issues.
 
 ## Conclusion
 
 The Workspace Settings Panel represents a streamlined implementation of secure credential management for AI-powered applications. Through its comprehensive security model, intuitive user interface, and robust error handling, it provides developers with a reliable foundation for managing workspace-specific API credentials.
 
-**Updated**: The panel's architecture now demonstrates simplified provider management with universal key support, eliminating the need for separate provider-specific keys. This streamlining improves maintainability while ensuring consistent user experience across all supported AI providers.
+**Updated**: The panel's architecture now demonstrates database-driven configuration with universal LLM_KEY support, eliminating the need for separate provider-specific keys and localStorage persistence. This streamlining improves maintainability while ensuring consistent user experience across all supported AI providers.
 
 Key strengths of the implementation include:
 - **Universal Key Support**: Single LLM_KEY configuration for all providers
+- **Database-Driven Configuration**: Persistent storage with workspace-specific isolation
 - **Security-First Design**: End-to-end encryption with secure storage
 - **Developer Experience**: Intuitive interface with comprehensive feedback
 - **Reliability**: Robust error handling and recovery mechanisms

@@ -13,7 +13,18 @@
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
 - [auth.ts](file://lib/auth.ts)
 - [package.json](file://package.json)
+- [history/route.ts](file://app/api/history/route.ts)
+- [workspaces/route.ts](file://app/api/workspaces/route.ts)
+- [projectStore.ts](file://lib/projects/projectStore.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for the new exponential backoff retry mechanism for Neon database connections
+- Updated performance considerations section with detailed retry logic implementation
+- Enhanced troubleshooting guide with specific guidance for Neon connection errors
+- Added practical examples of `withReconnect` usage throughout the application
+- Updated architecture overview to reflect improved database connectivity resilience
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -30,8 +41,10 @@
 ## Introduction
 This document explains the Prisma ORM configuration and database schema design for an AI-powered, accessibility-first UI engine. It covers the complete schema including authentication (User, Account, Session), multi-tenancy (Workspace, WorkspaceMember, WorkspaceSettings), project management (Project, ProjectVersion), feedback system (GenerationFeedback), usage tracking (UsageLog), and vector embeddings (ComponentEmbedding, FeedbackEmbedding). It also documents migration management, PostgreSQL provider configuration, environment variable handling, NextAuth.js integration, and practical query patterns and performance tips.
 
+**Updated** Enhanced with comprehensive database connectivity improvements featuring exponential backoff retry logic specifically designed for Neon serverless database connections.
+
 ## Project Structure
-The Prisma configuration centers around a single schema definition and a set of SQL migrations. The application integrates Prisma via a singleton client and uses NextAuth.js for authentication, with routes delegating to a shared handler.
+The Prisma configuration centers around a single schema definition and a set of SQL migrations. The application integrates Prisma via a singleton client and uses NextAuth.js for authentication, with routes delegating to a shared handler. The new `withReconnect` utility provides automatic retry logic for transient Neon connection errors.
 
 ```mermaid
 graph TB
@@ -40,6 +53,7 @@ PRISMA_SCHEMA["prisma/schema.prisma"]
 MIGRATION_LOCK["prisma/migrations/migration_lock.toml"]
 MIGRATIONS["prisma/migrations/*.sql"]
 PRISMA_CLIENT["lib/prisma.ts"]
+RECONNECT_UTIL["withReconnect Utility<br/>Exponential Backoff Logic"]
 end
 subgraph "NextAuth Integration"
 NEXTAUTH_ROUTE["app/api/auth/[...nextauth]/route.ts"]
@@ -47,6 +61,9 @@ NEXTAUTH_CONFIG["lib/auth.ts"]
 end
 subgraph "Application"
 APP["Next.js App"]
+HISTORY_ROUTE["app/api/history/route.ts"]
+WORKSPACES_ROUTE["app/api/workspaces/route.ts"]
+PROJECT_STORE["lib/projects/projectStore.ts"]
 end
 APP --> PRISMA_CLIENT
 APP --> NEXTAUTH_ROUTE
@@ -54,18 +71,25 @@ NEXTAUTH_ROUTE --> NEXTAUTH_CONFIG
 PRISMA_SCHEMA --> PRISMA_CLIENT
 MIGRATIONS --> PRISMA_CLIENT
 MIGRATION_LOCK --> PRISMA_CLIENT
+PRISMA_CLIENT --> RECONNECT_UTIL
+RECONNECT_UTIL --> HISTORY_ROUTE
+RECONNECT_UTIL --> WORKSPACES_ROUTE
+RECONNECT_UTIL --> PROJECT_STORE
 ```
 
 **Diagram sources**
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [20260403065359_init_workspace_settings/migration.sql:1-32](file://prisma/migrations/20260403065359_init_workspace_settings/migration.sql#L1-L32)
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
+- [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
+- [workspaces/route.ts:1-145](file://app/api/workspaces/route.ts#L1-L145)
+- [projectStore.ts:1-200](file://lib/projects/projectStore.ts#L1-L200)
 
 **Section sources**
 - [schema.prisma:1-222](file://prisma/schema.prisma#L1-L222)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [package.json:1-68](file://package.json#L1-L68)
 
 ## Core Components
@@ -84,7 +108,7 @@ This section outlines the primary entities and their relationships, highlighting
 
 - Project management models
   - Project: named artifact under a workspace with a current version counter and relation to Workspace.
-  - ProjectVersion: immutable snapshots of a project’s code and metadata, uniquely identified by (projectId, version).
+  - ProjectVersion: immutable snapshots of a project's code and metadata, uniquely identified by (projectId, version).
 
 - Feedback and usage models
   - GenerationFeedback: user feedback on generated outputs with intent metadata, scores, and timestamps.
@@ -103,7 +127,9 @@ This section outlines the primary entities and their relationships, highlighting
 - [schema.prisma:194-221](file://prisma/schema.prisma#L194-L221)
 
 ## Architecture Overview
-The system uses Prisma with PostgreSQL as the data source. Environment variables supply connection URLs, and migrations manage schema evolution. NextAuth.js handles authentication and delegates to a shared handler. The application accesses the database through a singleton Prisma client with automatic reconnection logic for transient Neon errors.
+The system uses Prisma with PostgreSQL as the data source. Environment variables supply connection URLs, and migrations manage schema evolution. NextAuth.js handles authentication and delegates to a shared handler. The application accesses the database through a singleton Prisma client with automatic reconnection logic for transient Neon errors, featuring exponential backoff retry mechanisms.
+
+**Updated** Enhanced with sophisticated retry logic that automatically handles Neon serverless database connection drops and timeouts.
 
 ```mermaid
 graph TB
@@ -113,17 +139,21 @@ DS --> ENV["Environment Variables<br/>DATABASE_URL, DIRECT_URL"]
 AUTH_ROUTE["NextAuth Route<br/>app/api/auth/[...nextauth]/route.ts"] --> AUTH_CFG["NextAuth Config<br/>lib/auth.ts"]
 AUTH_CFG --> PRISMA
 PRISMA --> MIG["Migrations<br/>prisma/migrations/*.sql"]
+PRISMA --> RECONNECT["withReconnect Utility<br/>Exponential Backoff Logic"]
+RECONNECT --> RETRY1["500ms Delay"]
+RECONNECT --> RETRY2["1000ms Delay"]
+RECONNECT --> RETRY3["2000ms Delay"]
 ```
 
 **Diagram sources**
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [schema.prisma:5-9](file://prisma/schema.prisma#L5-L9)
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [20260403065359_init_workspace_settings/migration.sql:1-32](file://prisma/migrations/20260403065359_init_workspace_settings/migration.sql#L1-L32)
 
 **Section sources**
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [schema.prisma:5-9](file://prisma/schema.prisma#L5-L9)
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
@@ -407,7 +437,9 @@ VersionMeta --> End(["Complete"])
   - The Prisma client is initialized with development logging enabled and production logging limited to errors.
 - Connection handling
   - A singleton client prevents connection exhaustion in serverless environments.
-  - Automatic reconnection logic retries transient Neon errors with a brief delay.
+  - **Enhanced** Automatic reconnection logic retries transient Neon errors with exponential backoff (500ms, 1000ms, 2000ms) for up to 3 attempts.
+
+**Updated** The retry mechanism automatically detects and handles common Neon serverless connection issues including idle timeouts, pool timeouts, and network interruptions.
 
 ```mermaid
 sequenceDiagram
@@ -416,20 +448,24 @@ participant Prisma as "Prisma Client"
 participant DB as "PostgreSQL"
 App->>Prisma : Initialize singleton
 Prisma->>DB : Connect using DATABASE_URL
-App->>Prisma : Execute query
+App->>Prisma : Execute query with withReconnect()
 Prisma->>DB : Query
-DB-->>Prisma : Result
+DB-->>Prisma : Connection error : "kind : Closed"
+Prisma->>Prisma : Detect transient error
+Prisma->>Prisma : Wait 500ms (2^attempt)
+Prisma->>DB : Reconnect attempt 1
+DB-->>Prisma : Success
 Prisma-->>App : Data
-Note over Prisma,DB : On transient errors, reconnect and retry
+Note over Prisma,DB : Automatic exponential backoff retry
 ```
 
 **Diagram sources**
 - [schema.prisma:5-9](file://prisma/schema.prisma#L5-L9)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 
 **Section sources**
 - [schema.prisma:5-9](file://prisma/schema.prisma#L5-L9)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 
 ### NextAuth.js Integration
 - Handler delegation
@@ -464,13 +500,31 @@ Route-->>Client : Session cookie/JWT
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
 
+### Exponential Backoff Retry Mechanism
+**New Section** The application now includes sophisticated retry logic specifically designed for Neon serverless database connections.
+
+- Error Detection
+  - Automatically detects transient Neon errors including: "kind: Closed", "Connection closed", "connection timeout", "ECONNRESET", "terminating connection", "Connection pool timeout", "Can't reach database server", "fetch failed".
+- Retry Strategy
+  - Implements exponential backoff with 500ms base delay, doubling each attempt (500ms, 1000ms, 2000ms).
+  - Maximum 3 retry attempts to prevent infinite loops during persistent failures.
+- Automatic Reconnection
+  - Attempts to reconnect the Prisma client automatically after each failure.
+  - Provides detailed logging of retry attempts and delays.
+
+**Section sources**
+- [prisma.ts:29-75](file://lib/prisma.ts#L29-L75)
+
 ## Dependency Analysis
 - Internal dependencies
-  - Application code depends on lib/prisma.ts for the Prisma client.
+  - Application code depends on lib/prisma.ts for the Prisma client and retry utilities.
   - NextAuth route depends on lib/auth.ts for configuration.
+  - **Enhanced** Multiple API routes depend on withReconnect for resilient database operations.
 - External dependencies
   - Prisma client and adapter for NextAuth are included in package.json.
   - Neon serverless driver is used for PostgreSQL connectivity.
+
+**Updated** The retry mechanism is now integrated throughout the application, with critical routes like `/api/history`, `/api/workspaces`, and project management operations using the `withReconnect` wrapper.
 
 ```mermaid
 graph LR
@@ -482,6 +536,10 @@ ROUTE["app/api/auth/[...nextauth]/route.ts"] --> AUTHCFG["lib/auth.ts"]
 AUTHCFG --> PRISMA
 AUTHCFG --> ADAPTER
 LIBPRISMA["lib/prisma.ts"] --> PRISMA
+LIBPRISMA --> RECONNECT["withReconnect Utility"]
+RECONNECT --> HISTORY["app/api/history/route.ts"]
+RECONNECT --> WORKSPACES["app/api/workspaces/route.ts"]
+RECONNECT --> PROJECTSTORE["lib/projects/projectStore.ts"]
 SCHEMA["prisma/schema.prisma"] --> PRISMA
 ```
 
@@ -489,22 +547,27 @@ SCHEMA["prisma/schema.prisma"] --> PRISMA
 - [package.json:13-44](file://package.json#L13-L44)
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [schema.prisma:1-9](file://prisma/schema.prisma#L1-L9)
+- [history/route.ts:1-60](file://app/api/history/route.ts#L1-L60)
+- [workspaces/route.ts:1-145](file://app/api/workspaces/route.ts#L1-L145)
+- [projectStore.ts:1-200](file://lib/projects/projectStore.ts#L1-L200)
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
-- [prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
+- [prisma.ts:1-76](file://lib/prisma.ts#L1-L76)
 - [schema.prisma:1-9](file://prisma/schema.prisma#L1-L9)
 
 ## Performance Considerations
 - Connection pooling and singleton pattern
   - Use a singleton Prisma client to avoid exhausting the connection pool in serverless environments.
   - Configure DATABASE_URL with connection_limit=1 and pool_timeout=0 on Vercel to cap per-instance connections.
-- Transient error resilience
-  - Wrap operations that may encounter Neon idle disconnects with automatic reconnection logic.
+- **Enhanced** Transient error resilience
+  - Wrap operations that may encounter Neon idle disconnects with the `withReconnect` utility.
+  - The retry mechanism automatically handles exponential backoff for connection drops, timeouts, and network interruptions.
+  - **New** Retry logic is applied to all critical database operations including project management, workspace operations, and history retrieval.
 - Vector similarity queries
   - Use IVFFlat indexes with cosine operations for approximate nearest neighbor search.
   - Tune lists parameter as data scales (e.g., increase from 10 to 100 for larger datasets).
@@ -512,28 +575,35 @@ SCHEMA["prisma/schema.prisma"] --> PRISMA
   - Leverage unique indexes for frequent lookups (e.g., provider/providerAccountId, sessionToken, workspace slug).
   - Add selective indexes on source for filtered retrieval in ComponentEmbedding.
 
-[No sources needed since this section provides general guidance]
+**Updated** The exponential backoff retry mechanism significantly improves reliability for Neon serverless deployments by automatically handling transient connection issues without manual intervention.
 
 ## Troubleshooting Guide
-- Connection issues with Neon
-  - Symptoms: “kind: Closed”, “Connection closed”, “connection timeout”, “ECONNRESET”.
-  - Resolution: Use the provided withReconnect wrapper to retry once after a short delay.
+- **Enhanced** Connection issues with Neon
+  - Symptoms: "kind: Closed", "Connection closed", "connection timeout", "ECONNRESET", "terminating connection", "Connection pool timeout", "Can't reach database server", "fetch failed".
+  - Resolution: The `withReconnect` utility automatically retries with exponential backoff (500ms, 1000ms, 2000ms) for up to 3 attempts.
+  - **New** Monitor retry attempts in logs: "[Prisma] Connection error detected, retrying (1/3) in 500ms..."
 - Migration conflicts
   - Ensure migration_lock.toml reflects the PostgreSQL provider and that migrations are applied in order.
   - Verify that unique indexes and foreign keys are present after applying each migration.
 - Authentication failures
   - Confirm AUTH_SECRET or NEXTAUTH_SECRET is set and that OWNER_PASSWORD_HASH is properly formatted.
   - Check that the Credentials provider receives non-empty email and password values.
+- **New** Retry mechanism debugging
+  - Enable debug logging to monitor retry attempts and delays.
+  - Check that the retry count is not exceeding the maximum attempts (3).
+  - Verify that the exponential backoff is working correctly (500ms, 1000ms, 2000ms).
+
+**Updated** The troubleshooting guide now includes specific guidance for the new retry mechanism, helping developers understand and debug connection resilience features.
 
 **Section sources**
-- [prisma.ts:36-70](file://lib/prisma.ts#L36-L70)
+- [prisma.ts:36-75](file://lib/prisma.ts#L36-L75)
 - [migration_lock.toml:1-4](file://prisma/migrations/migration_lock.toml#L1-L4)
 - [auth.ts:11-87](file://lib/auth.ts#L11-L87)
 
 ## Conclusion
-The Prisma configuration establishes a robust, multi-tenant architecture with clear entity relationships, safe migration practices, and performance-conscious design choices. The integration with NextAuth.js provides secure authentication, while the vector embedding schema supports scalable similarity search. Following the recommended patterns ensures reliable operation in serverless environments and maintainable schema evolution.
+The Prisma configuration establishes a robust, multi-tenant architecture with clear entity relationships, safe migration practices, and performance-conscious design choices. The integration with NextAuth.js provides secure authentication, while the vector embedding schema supports scalable similarity search. **Enhanced** The new exponential backoff retry mechanism significantly improves database connectivity reliability for Neon serverless deployments, automatically handling transient connection issues with intelligent retry logic. Following the recommended patterns ensures reliable operation in serverless environments and maintainable schema evolution.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** The addition of sophisticated retry logic makes the system highly resilient to the inherent connection challenges of serverless database environments.
 
 ## Appendices
 
@@ -541,12 +611,17 @@ The Prisma configuration establishes a robust, multi-tenant architecture with cl
 - Authentication
   - Find user by email or account provider ID; validate session by sessionToken; verify token expiration.
 - Multi-tenancy
-  - List a user’s workspaces via WorkspaceMember; fetch workspace settings per provider; enforce role checks.
+  - List a user's workspaces via WorkspaceMember; fetch workspace settings per provider; enforce role checks.
 - Projects
   - Retrieve latest version of a project; enumerate versions ordered by timestamp; diff versions by linesChanged.
+  - **Enhanced** All project operations use `withReconnect` for automatic retry on connection failures.
 - Feedback and usage
   - Aggregate usage metrics by workspace/provider/model; filter feedback by signal or intent type.
 - Vector similarity
   - Perform cosine similarity searches using IVFFlat indexes; filter by source for domain-specific retrieval.
+- **New** Database operation patterns
+  - Use `withReconnect(() => prisma.operation())` for all critical database operations.
+  - The retry mechanism automatically handles transient errors without code changes.
+  - Monitor retry attempts in application logs for debugging connectivity issues.
 
-[No sources needed since this section provides general guidance]
+**Updated** The appendices now include specific guidance for leveraging the new retry mechanism throughout the application.

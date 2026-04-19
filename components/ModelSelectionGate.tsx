@@ -105,15 +105,7 @@ export default function ModelSelectionGate({
         const hasAnyConfigured = data.providers.some((p: ProviderStatus) => p.configured);
         if (!hasAnyConfigured) {
           setStep('error');
-          setError(
-            'No AI providers are configured. Please add API keys to your environment variables (Vercel).\n\n' +
-            'Required environment variable:\n' +
-            '• LLM_KEY - Universal key for all adapters\n\n' +
-            'Or use specific keys:\n' +
-            '• OPENAI_API_KEY, ANTHROPIC_API_KEY\n' +
-            '• GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY\n\n' +
-            'After adding keys, redeploy your Vercel project.'
-          );
+          setError('No AI providers are configured. Please add API keys to your environment variables (Vercel).');
         } else {
           setStep('provider');
         }
