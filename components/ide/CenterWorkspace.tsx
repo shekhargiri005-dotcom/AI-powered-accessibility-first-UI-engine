@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw, User, Bot } from 'lucide-react';
 import { PromptInput } from '@/components/prompt-input';
 import type { GenerationMode, SubmitOptions } from '@/components/prompt-input';
@@ -43,6 +43,10 @@ interface CenterWorkspaceProps {
   headerControls?: React.ReactNode;
   chatMessages: ChatMessage[];
   provider?: string | null;
+  /** Prompt to pre-fill when user clicks Refine Input */
+  refinePrompt?: string;
+  /** Incremented each time Refine Input is clicked — triggers focus */
+  refineFocusTrigger?: number;
 }
 
 export default function CenterWorkspace({
@@ -65,6 +69,8 @@ export default function CenterWorkspace({
   headerControls,
   chatMessages,
   provider,
+  refinePrompt,
+  refineFocusTrigger,
 }: CenterWorkspaceProps) {
   const t = useProviderTheme(provider);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -92,6 +98,8 @@ export default function CenterWorkspace({
         aiPayload={aiPayload}
         onIntentDetected={onIntentDetected}
         hasActiveProject={hasActiveProject}
+        initialPrompt={refinePrompt}
+        focusTrigger={refineFocusTrigger}
       />
       <div className="text-center mt-3">
         <p className="text-[10px] text-slate-600 flex items-center justify-center gap-1.5">

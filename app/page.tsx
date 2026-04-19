@@ -68,6 +68,10 @@ export default function HomePage() {
   // True while RightPanel bottom-bar refine is running; suppresses center workspace
   const [isDirectRefining, setIsDirectRefining] = useState(false);
 
+  // ─── Refine Input State ───────────────────────────────────────────────────
+  const [refinePrompt, setRefinePrompt] = useState<string | undefined>(undefined);
+  const [refineFocusTrigger, setRefineFocusTrigger] = useState(0);
+
   // ─── Chat History ──────────────────────────────────────────────────────────
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
@@ -457,6 +461,7 @@ export default function HomePage() {
     setPendingDepthUi(!!options?.depthUi);
     setThinkingPlan(null);
     setPipelineError(undefined);
+    setRefinePrompt(undefined); // Clear refine prompt so it doesn't interfere with next submission
 
     // Add user message to chat
     addChatMessage({ role: 'user', content: prompt, type: 'prompt' });
@@ -728,9 +733,14 @@ export default function HomePage() {
               await runGenerationPipeline(pendingPrompt, pendingMode, pendingDepthUi);
             }}
             onRefineUnderstanding={() => {
-              setStage('idle');
-              setPipelineStep('idle');
+              // Dismiss ThinkingPanel but keep chat visible
+              // Pre-fill the prompt input with the original prompt so the user can edit & resubmit
               setThinkingPlan(null);
+              setRefinePrompt(pendingPrompt);
+              setRefineFocusTrigger(prev => prev + 1);
+              // Transition to a stage that keeps the chat thread visible
+              // but hides the ThinkingPanel
+              setStage('awaiting_confirm'); // keeps chat visible, ThinkingPanel now hidden (thinkingPlan=null)
             }}
             onChangeIntent={async (intentType) => {
               setThinkingPlan(null);
@@ -749,14 +759,22 @@ export default function HomePage() {
             }}
             onDismissThinking={() => {
               setThinkingPlan(null);
-              setStage('idle');
-              setPipelineStep('idle');
+              // Keep chat visible but hide ThinkingPanel
+              // If we have chat messages, stay in awaiting_confirm; otherwise go idle
+              if (chatMessages.length > 0) {
+                setStage('awaiting_confirm');
+              } else {
+                setStage('idle');
+                setPipelineStep('idle');
+              }
             }}
             onAskClarification={(q) => {
               setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
             }}
             chatMessages={chatMessages}
             provider={aiConfig?.provider}
+            refinePrompt={refinePrompt}
+            refineFocusTrigger={refineFocusTrigger}
           />
         </div>
         )}

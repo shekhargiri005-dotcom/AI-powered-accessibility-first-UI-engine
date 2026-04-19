@@ -17,6 +17,10 @@ export interface PromptInputProps {
   onIntentDetected?: (classification: IntentClassification) => void;
   hasActiveProject?: boolean;
   aiPayload?: Record<string, any>;
+  /** Pre-fill the prompt textarea with this value (e.g. for refine) */
+  initialPrompt?: string;
+  /** Increment this counter to auto-focus the textarea (e.g. when refine is clicked) */
+  focusTrigger?: number;
 }
 
 // Speech Recognition types

@@ -28,6 +28,8 @@ export default function PromptInput({
   onIntentDetected,
   hasActiveProject,
   aiPayload,
+  initialPrompt,
+  focusTrigger,
 }: PromptInputProps) {
   const [prompt, setPrompt] = useState('');
   const [scopeMode, setScopeMode] = useState<'component' | 'app'>('component');
@@ -44,6 +46,7 @@ export default function PromptInput({
   
   const classifyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const maxChars = 10000;
@@ -61,6 +64,21 @@ export default function PromptInput({
       })
       .catch((err) => console.error('Failed to load history', err));
   }, []);
+
+  // Respond to initialPrompt / focusTrigger from parent (e.g. "Refine Input" click)
+  useEffect(() => {
+    if (initialPrompt !== undefined && initialPrompt !== '') {
+      setPrompt(initialPrompt);
+    }
+  }, [initialPrompt]);
+
+  useEffect(() => {
+    if (focusTrigger && focusTrigger > 0) {
+      // Small delay so the textarea is mounted before focusing
+      const timer = setTimeout(() => textareaRef.current?.focus(), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [focusTrigger]);
 
   // Initialize speech recognition
   useEffect(() => {
@@ -286,6 +304,7 @@ export default function PromptInput({
           {/* Text Area */}
           <div className="relative p-3 pb-0">
             <textarea
+              ref={textareaRef}
               id="component-prompt"
               name="component-prompt"
               rows={prompt.split('\n').length > 5 ? Math.min(prompt.split('\n').length, 15) : scopeMode === 'app' ? 4 : 5}
