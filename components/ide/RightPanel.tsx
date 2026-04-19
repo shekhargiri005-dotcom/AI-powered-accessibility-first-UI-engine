@@ -434,12 +434,12 @@ export default function RightPanel({
       </div>
 
       {/* ── Main Content Area ─────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-hidden relative min-h-0 bg-black/30 flex flex-col">
+      <div className="flex-1 overflow-hidden relative min-h-0 bg-[#0B0F19] flex flex-col">
 
         {/* Preview Tab */}
         {activeTab === 'preview' && (
-          <div className="flex-1 flex flex-col min-h-[400px]">
-            <div className="flex-1 relative min-h-0">
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 relative min-h-0 overflow-hidden">
               <SandpackPreview
                 key={`preview-${activeV.timestamp}-${currentVersion}`}
                 code={activeV.code as string | Record<string, string>}

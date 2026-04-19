@@ -139,7 +139,7 @@ export function buildSandpackFiles(
     <title>AI UI Engine</title>
     <style>
       #root { min-height: 100vh; display: flex; flex-direction: column; }
-      body { margin: 0; background: #000; color: #fff; }
+      body { margin: 0; background: #0f172a; color: #fff; }
     </style>
   </head>
   <body>

@@ -178,7 +178,7 @@ export default function SandpackPreviewComponent({
   return (
     <section
       aria-labelledby="preview-heading"
-      className="h-full w-full flex flex-col overflow-hidden"
+      className="h-full w-full flex flex-col overflow-hidden bg-[#0c0c0e]"
     >
       {/* Header bar */}
       <div className="flex-shrink-0 flex items-center gap-2 px-4 py-3 bg-gray-900/80 border-b border-gray-700/50">
@@ -214,7 +214,7 @@ export default function SandpackPreviewComponent({
       </div>
 
       {/* Preview (+ optional editor) fills remaining height */}
-      <div className="flex-1 min-h-0 relative flex flex-col">
+      <div className="flex-1 min-h-0 relative flex flex-col overflow-hidden">
         <PreviewErrorBoundary componentName={componentName}>
           <SandpackProvider
             key={`${componentName}-${editMode}-${refreshKey}`}
