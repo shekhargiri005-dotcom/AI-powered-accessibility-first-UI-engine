@@ -101,7 +101,7 @@ export const PROVIDER_CONFIG = [
     envVar: 'OLLAMA_API_KEY',
     models: ['llama3.2', 'qwen2.5-coder', 'deepseek-coder', 'phi4', 'mistral'],
     settings: PROVIDER_SETTINGS.ollama,
-    healthEndpoint: 'https://ollama.com/api/v1/models',
+    healthEndpoint: 'https://ollama.com/v1/models',
   },
 ];
 

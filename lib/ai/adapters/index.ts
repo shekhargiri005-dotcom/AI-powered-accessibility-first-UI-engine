@@ -41,7 +41,7 @@ export class ConfigurationError extends Error {
 
 const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
   groq: 'https://api.groq.com/openai/v1',
-  ollama: 'https://ollama.com/api/v1',
+  ollama: 'https://ollama.com/v1',
 };
 
 // ─── Provider Detection (fallback only — prefer explicit provider from config) ─
@@ -150,7 +150,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
 
   // 1. Ollama (OpenAI-compatible cloud API) ─────────────────────────────
   if (provId === 'ollama') {
-    const ollamaBaseUrl = 'https://ollama.com/api/v1';
+    const ollamaBaseUrl = 'https://ollama.com/v1';
     const ollamaKey = apiKey || process.env.OLLAMA_API_KEY;
     if (!ollamaKey) throw new Error('OLLAMA_API_KEY is required for Ollama. Get your key at https://ollama.com');
     return new CachedAdapter(new OpenAIAdapter(ollamaKey, ollamaBaseUrl));

@@ -42,7 +42,7 @@ const PROVIDER_CHECKS: Array<{
   baseUrl?: string;
 }> = [
   { id: 'groq',        envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
-  { id: 'ollama',      envKey: 'OLLAMA_API_KEY',      baseUrl: 'https://ollama.com/api/v1' },
+  { id: 'ollama',      envKey: 'OLLAMA_API_KEY',      baseUrl: 'https://ollama.com/v1' },
   { id: 'google',      envKey: 'GOOGLE_API_KEY' },
   { id: 'google',      envKey: 'GEMINI_API_KEY' },
 
