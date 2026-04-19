@@ -254,7 +254,19 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
   - \`import { Motion, MotionGroup } from '@ui/motion'\`
   - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
   - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens'\`
-You CAN use @ui/* imports — they exist in the sandbox. Use them for consistent, accessible UI building blocks. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
+You MUST use @ui/tokens and @ui/core when available. These are NOT optional — they are the project's design system.
+- @ui/tokens RULES (CRITICAL — VIOLATION = REJECT):
+  * If the user mentions colors.primary, colors.surface, space.stackMd, radius.xl, shadow.md, toStyle(), transition.normal, or ANY token name → you MUST import and use those exact tokens. Do NOT substitute with raw Tailwind values.
+  * Example: user says "colors.primary.bg" → use \`colors.primary.bg\` as the background style, NOT \`bg-violet-500\`.
+  * Example: user says "radius.xl" → use \`borderRadius: radius.xl\`, NOT \`rounded-2xl\`.
+  * Example: user says "toStyle(text.h3)" → use \`style={toStyle(text.h3)}\`, NOT \`className="text-2xl font-bold"\`.
+  * Apply tokens via the style prop when tokens return CSS values: \`<Card style={{ background: colors.primary.bg, borderRadius: radius.xl, boxShadow: shadow.md }}>\`
+  * You can still use Tailwind className for layout (flex, grid, gap, p-4) BUT color, radius, shadow, typography, and transitions MUST come from @ui/tokens when the user references them.
+- @ui/core RULES (CRITICAL):
+  * Use Card, CardHeader, CardContent, CardFooter instead of raw <div> containers when building card layouts.
+  * Use Badge instead of <span> for status badges, tags, and labels.
+  * Use Button instead of <button> for all interactive buttons.
+- Use lucide-react for icons that are not available in @ui/icons.
 
 ${blueprintText}
 
