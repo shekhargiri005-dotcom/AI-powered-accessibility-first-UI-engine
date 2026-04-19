@@ -16,15 +16,20 @@
 - [lib/ai/cache.ts](file://lib/ai/cache.ts)
 - [lib/ai/metrics.ts](file://lib/ai/metrics.ts)
 - [lib/ai/thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
+- [lib/ai/intentClassifier.ts](file://lib/ai/intentClassifier.ts)
+- [lib/ai/prompts.ts](file://lib/ai/prompts.ts)
+- [components/prompt-input/ModeToggle.tsx](file://components/prompt-input/ModeToggle.tsx)
+- [components/prompt-input/types.ts](file://components/prompt-input/types.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated retry logic documentation to reflect streamlined exponential backoff implementation with 30-second timeout
-- Enhanced fallback plan documentation with deterministic generation capabilities
-- Improved error handling patterns with comprehensive network error detection
-- Updated performance considerations to reflect caching optimizations and reduced code complexity
-- Enhanced troubleshooting guide with retry timing and error categorization guidance
+- Enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests
+- Improved execution mode suggestion logic incorporating depth_ui detection alongside existing component and app modes
+- Added comprehensive depth_ui schema validation and type definitions
+- Integrated depth_ui mode into the planning engine with intelligent keyword-based detection
+- Updated UI components to support depth_ui mode selection and visualization
+- Enhanced fallback plan generation with depth_ui awareness
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,8 +52,9 @@ The Thinking Engine consists of:
 - AI adapters for secure provider communication with caching and metrics
 - Robust logging and error handling with streamlined retry logic
 - Deterministic fallback mechanisms for resilience with enhanced performance
+- **Enhanced** Sophisticated depth_ui mode detection with keyword matching for immersive UI requests
 
-**Updated** The Thinking Engine now features streamlined retry logic with exponential backoff, enhanced fallback plan generation, and improved error handling patterns for better reliability and performance.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
 
 ## Project Structure
 The Thinking Engine spans frontend UI components, backend API routes, validation schemas, AI adapters, and infrastructure utilities. The following diagram shows the high-level structure and key interactions.
@@ -57,6 +63,8 @@ The Thinking Engine spans frontend UI components, backend API routes, validation
 graph TB
 subgraph "Frontend"
 TP["ThinkingPanel.tsx"]
+MT["ModeToggle.tsx"]
+TYPES["types.ts"]
 end
 subgraph "Backend API"
 API["app/api/think/route.ts"]
@@ -73,15 +81,20 @@ BASE["lib/ai/adapters/base.ts"]
 CACHE["lib/ai/cache.ts"]
 METRICS["lib/ai/metrics.ts"]
 END
-subgraph "Planning Engine"
+subgraph "Intelligence Layer"
 THINK["lib/ai/thinkingEngine.ts"]
+CLASSIFY["lib/ai/intentClassifier.ts"]
+PROMPTS["lib/ai/prompts.ts"]
 end
 TP --> API
+MT --> API
+TYPES --> MT
 API --> AUTH
 API --> LOG
 API --> SCHEMAS
 API --> THINK
 THINK --> ADAPTERS
+CLASSIFY --> PROMPTS
 ADAPTERS --> OPENAI
 ADAPTERS --> BASE
 ADAPTERS --> CACHE
@@ -91,13 +104,17 @@ ADAPTERS --> METRICS
 **Diagram sources**
 - [app/api/think/route.ts:1-86](file://app/api/think/route.ts#L1-L86)
 - [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
+- [components/prompt-input/ModeToggle.tsx:1-120](file://components/prompt-input/ModeToggle.tsx#L1-L120)
+- [components/prompt-input/types.ts:1-53](file://components/prompt-input/types.ts#L1-L53)
 - [lib/validation/schemas.ts:65-97](file://lib/validation/schemas.ts#L65-L97)
 - [lib/ai/adapters/index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
 - [lib/ai/adapters/openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
 - [lib/ai/adapters/base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
 - [lib/ai/cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
 - [lib/ai/metrics.ts:1-89](file://lib/ai/metrics.ts#L1-L89)
-- [lib/ai/thinkingEngine.ts:1-503](file://lib/ai/thinkingEngine.ts#L1-L503)
+- [lib/ai/thinkingEngine.ts:1-509](file://lib/ai/thinkingEngine.ts#L1-L509)
+- [lib/ai/intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
+- [lib/ai/prompts.ts:347-450](file://lib/ai/prompts.ts#L347-L450)
 - [lib/auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [lib/logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
@@ -112,8 +129,9 @@ ADAPTERS --> METRICS
 - AI Adapters: Provider-specific integrations for OpenAI and Anthropic, handling model constraints, streaming, and usage accounting with caching and metrics.
 - Authentication and Logging: JWT-based session retrieval and structured request-scoped logging for observability.
 - Planning Engine: Core logic that generates structured thinking plans with expert reasoning, streamlined retry mechanisms, and enhanced fallback capabilities.
+- **Enhanced** Depth UI Detection: Sophisticated keyword matching system that intelligently detects immersive UI requests and suggests depth_ui mode alongside component and app modes.
 
-**Updated** The Thinking Engine now features streamlined retry logic with exponential backoff, enhanced fallback plan generation, and improved error handling patterns for better reliability and performance.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
 
 **Section sources**
 - [app/api/think/route.ts:8-86](file://app/api/think/route.ts#L8-L86)
@@ -123,7 +141,8 @@ ADAPTERS --> METRICS
 - [lib/ai/adapters/index.ts:135-256](file://lib/ai/adapters/index.ts#L135-L256)
 - [lib/auth.ts:11-87](file://lib/auth.ts#L11-L87)
 - [lib/logger.ts:66-85](file://lib/logger.ts#L66-L85)
-- [lib/ai/thinkingEngine.ts:325-503](file://lib/ai/thinkingEngine.ts#L325-L503)
+- [lib/ai/thinkingEngine.ts:281-287](file://lib/ai/thinkingEngine.ts#L281-L287)
+- [lib/ai/intentClassifier.ts:87-90](file://lib/ai/intentClassifier.ts#L87-L90)
 
 ## Architecture Overview
 The Thinking Engine follows a layered architecture:
@@ -131,6 +150,7 @@ The Thinking Engine follows a layered architecture:
 - API Layer: The /api/think endpoint validates inputs, enforces security, and orchestrates planning.
 - Validation Layer: Zod schemas define the contract for intent classification and thinking plans.
 - AI Layer: Provider adapters encapsulate differences in API constraints and streaming behavior with caching and metrics.
+- Intelligence Layer: Enhanced intent classification with depth_ui detection and sophisticated keyword matching.
 - Infrastructure Layer: Authentication and logging provide session context and observability.
 - Planning Engine: Core logic that generates structured thinking plans with expert reasoning and streamlined retry mechanisms.
 
@@ -142,11 +162,14 @@ participant AUTH as "lib/auth.ts"
 participant LOG as "lib/logger.ts"
 participant ADAPT as "AI Adapters"
 participant PLAN as "Thinking Engine"
+participant CLASS as "Intent Classifier"
 UI->>API : "POST /api/think {prompt, intentType, projectContext}"
 API->>AUTH : "auth()"
 AUTH-->>API : "session {user.id}"
 API->>LOG : "createRequestLogger('/api/think')"
 API->>PLAN : "generateThinkingPlan(...)"
+PLAN->>CLASS : "classifyIntent() for depth_ui detection"
+CLASS-->>PLAN : "IntentClassification with suggestedMode"
 PLAN->>ADAPT : "generate({messages, responseFormat})"
 ADAPT-->>PLAN : "ThinkingPlan or error"
 PLAN-->>API : "ThinkingPlan or fallback"
@@ -159,7 +182,7 @@ API-->>UI : "{success : true, plan, _fallback : true}"
 end
 ```
 
-**Updated** The Thinking Engine now implements streamlined retry logic with exponential backoff and 30-second timeout for better reliability and performance.
+**Updated** The Thinking Engine now implements enhanced depth_ui mode detection with sophisticated keyword matching and streamlined retry logic with exponential backoff for better reliability and performance.
 
 **Diagram sources**
 - [app/api/think/route.ts:8-86](file://app/api/think/route.ts#L8-L86)
@@ -167,6 +190,7 @@ end
 - [lib/logger.ts:66-85](file://lib/logger.ts#L66-L85)
 - [lib/ai/adapters/openai.ts:59-152](file://lib/ai/adapters/openai.ts#L59-L152)
 - [lib/ai/thinkingEngine.ts:389-437](file://lib/ai/thinkingEngine.ts#L389-L437)
+- [lib/ai/intentClassifier.ts:87-90](file://lib/ai/intentClassifier.ts#L87-L90)
 
 ## Detailed Component Analysis
 
@@ -219,6 +243,8 @@ Defines the structure of the AI-generated plan:
 - suggestedMode: Component/app/depth_ui mode
 - shouldGenerateCode: Whether code generation should proceed immediately
 
+**Enhanced** The suggestedMode field now includes depth_ui as a third option, enabling intelligent detection of immersive UI requests through keyword matching.
+
 ```mermaid
 classDiagram
 class ThinkingPlan {
@@ -230,7 +256,7 @@ class ThinkingPlan {
 +string executionMode
 +ExpertReasoning expertReasoning
 +RequirementBreakdown requirementBreakdown
-+string suggestedMode
++GenerationMode suggestedMode
 +boolean shouldGenerateCode
 }
 class ExpertReasoning {
@@ -363,6 +389,7 @@ The core planning logic that generates structured thinking plans:
 - Streamlined retry logic for network and rate limit errors with exponential backoff
 - Model capability detection for JSON mode support
 - 30-second timeout for request processing to prevent resource exhaustion
+- **Enhanced** Intelligent depth_ui mode detection using sophisticated keyword matching
 
 Key features:
 - Expert reasoning framework with 8 contextual dimensions
@@ -372,14 +399,69 @@ Key features:
 - Provider fallback mechanisms when user-selected provider fails
 - Exponential backoff retry mechanism (up to 3 attempts) for transient network errors and rate limits
 - Comprehensive error categorization and logging
+- **Enhanced** Keyword-based depth_ui detection with patterns like parallax, depth, cinematic, floating, layered, immersive, 3d, landing page, hero section
 
-**Updated** The Thinking Engine now features streamlined retry logic with exponential backoff, enhanced fallback plan generation, and improved error handling patterns for better reliability and performance.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
 
 **Section sources**
 - [lib/ai/thinkingEngine.ts:11-64](file://lib/ai/thinkingEngine.ts#L11-L64)
 - [lib/ai/thinkingEngine.ts:66-114](file://lib/ai/thinkingEngine.ts#L66-L114)
 - [lib/ai/thinkingEngine.ts:117-157](file://lib/ai/thinkingEngine.ts#L117-L157)
-- [lib/ai/thinkingEngine.ts:325-503](file://lib/ai/thinkingEngine.ts#L325-L503)
+- [lib/ai/thinkingEngine.ts:281-287](file://lib/ai/thinkingEngine.ts#L281-L287)
+- [lib/ai/thinkingEngine.ts:325-509](file://lib/ai/thinkingEngine.ts#L325-L509)
+
+### Intent Classifier: Enhanced Mode Detection
+The intent classification system now includes sophisticated depth_ui detection:
+- Classifies user intent with enhanced keyword matching for immersive UI requests
+- Detects multi-component prompts for app mode suggestions
+- **Enhanced** Detects depth/parallax/immersive prompts for depth_ui mode suggestions
+- Provides intelligent fallback mechanisms when LLM classification fails
+
+Detection Logic:
+- Component indicators: Keywords like build, create, design, make (2+ suggests app mode)
+- **Enhanced** Depth indicators: Keywords like parallax, depth, cinematic, floating, layered, immersive, 3d, landing page, hero section (2+ suggests depth_ui mode)
+- Default to component mode when neither condition is met
+
+```mermaid
+flowchart TD
+Input["User Input"] --> Keywords["Extract Keywords"]
+Keywords --> ComponentCheck{"Component Indicators ≥ 2?"}
+ComponentCheck --> |Yes| AppMode["Suggest App Mode"]
+ComponentCheck --> |No| DepthCheck{"Depth Indicators ≥ 2?"}
+DepthCheck --> |Yes| DepthMode["Suggest Depth UI Mode"]
+DepthCheck --> |No| ComponentMode["Suggest Component Mode"]
+```
+
+**Diagram sources**
+- [lib/ai/intentClassifier.ts:87-90](file://lib/ai/intentClassifier.ts#L87-L90)
+
+**Section sources**
+- [lib/ai/intentClassifier.ts:87-90](file://lib/ai/intentClassifier.ts#L87-L90)
+
+### Depth UI Schema Validation
+Comprehensive schema validation for depth_ui mode:
+- Motion design specifications with premium, immersive, and minimal motion styles
+- Parallax coefficient definitions with deterministic layer speed factors
+- Depth UI preset configurations for consistent generation
+- Color scheme definitions optimized for immersive experiences
+
+**Enhanced** The depth_ui schema now includes comprehensive validation for immersive UI generation with deterministic parallax coefficients and motion specifications.
+
+**Section sources**
+- [lib/validation/schemas.ts:192-258](file://lib/validation/schemas.ts#L192-L258)
+
+### UI Components: Depth UI Mode Support
+Frontend components supporting depth_ui mode:
+- ModeToggle component with visual indicators for depth_ui mode
+- GenerationMode type definition supporting component, app, and depth_ui modes
+- Enhanced UI hints for depth_ui mode users
+- Visual feedback for immersive UI generation
+
+**Enhanced** The UI components now include depth_ui mode support with visual indicators and specialized hints for immersive UI generation.
+
+**Section sources**
+- [components/prompt-input/ModeToggle.tsx:100-109](file://components/prompt-input/ModeToggle.tsx#L100-L109)
+- [components/prompt-input/types.ts:8](file://components/prompt-input/types.ts#L8)
 
 ### Authentication and Authorization
 - Uses NextAuth with a credentials provider and bcrypt-based password verification
@@ -413,6 +495,7 @@ The Thinking Engine exhibits strong separation of concerns:
 - The UI panel depends on the ThinkingPlan schema and intent configuration
 - Adapters depend on provider-specific constraints and SDKs
 - The planning engine depends on validation schemas and intelligence modules
+- **Enhanced** The intent classifier depends on keyword matching algorithms and depth_ui detection logic
 
 ```mermaid
 graph LR
@@ -426,9 +509,11 @@ ADAPTERS --> BASE["lib/ai/adapters/base.ts"]
 ADAPTERS --> CACHE["lib/ai/cache.ts"]
 ADAPTERS --> METRICS["lib/ai/metrics.ts"]
 TP["components/ThinkingPanel.tsx"] --> SCHEMAS
+MT["ModeToggle.tsx"] --> TYPES["types.ts"]
+CLASS["lib/ai/intentClassifier.ts"] --> PROMPTS["lib/ai/prompts.ts"]
 ```
 
-**Updated** The Thinking Engine now features streamlined dependency management with enhanced caching and metrics integration.
+**Updated** The Thinking Engine now features enhanced dependency management with sophisticated depth_ui detection and comprehensive schema validation for immersive UI generation.
 
 **Diagram sources**
 - [app/api/think/route.ts:1-86](file://app/api/think/route.ts#L1-L86)
@@ -440,7 +525,11 @@ TP["components/ThinkingPanel.tsx"] --> SCHEMAS
 - [lib/ai/cache.ts:1-141](file://lib/ai/cache.ts#L1-L141)
 - [lib/ai/metrics.ts:1-89](file://lib/ai/metrics.ts#L1-L89)
 - [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
-- [lib/ai/thinkingEngine.ts:1-503](file://lib/ai/thinkingEngine.ts#L1-L503)
+- [components/prompt-input/ModeToggle.tsx:1-120](file://components/prompt-input/ModeToggle.tsx#L1-L120)
+- [components/prompt-input/types.ts:1-53](file://components/prompt-input/types.ts#L1-L53)
+- [lib/ai/thinkingEngine.ts:1-509](file://lib/ai/thinkingEngine.ts#L1-L509)
+- [lib/ai/intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
+- [lib/ai/prompts.ts:347-450](file://lib/ai/prompts.ts#L347-L450)
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -456,8 +545,10 @@ TP["components/ThinkingPanel.tsx"] --> SCHEMAS
 - JSON parsing: Multi-stage extraction reduces parsing failures and improves reliability
 - Error handling: Enhanced patterns for graceful degradation and fallback mechanisms
 - Metrics collection: Centralized metrics tracking for performance monitoring and optimization
+- **Enhanced** Keyword matching optimization: Efficient regex-based depth_ui detection reduces computational overhead
+- **Enhanced** Schema validation caching: Reused depth_ui schema validation reduces parsing overhead for immersive UI requests
 
-**Updated** Enhanced performance considerations now include caching optimizations, streamlined retry logic, and comprehensive metrics collection for better reliability and performance.
+**Updated** Enhanced performance considerations now include depth_ui keyword matching optimization, schema validation caching, and comprehensive metrics collection for immersive UI generation.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -472,6 +563,8 @@ Common issues and resolutions:
 - Timeout issues: 30-second timeout for thinking requests prevents resource exhaustion
 - Caching issues: Verify cache configuration and check for cache hit/miss ratios
 - Metrics collection: Monitor usage logs and cost estimates for optimization opportunities
+- **Enhanced** Depth UI detection failures: Verify keyword matching patterns and ensure depth_ui mode is properly configured
+- **Enhanced** Schema validation errors: Check depth_ui schema compliance and validate parallax coefficient ranges
 
 Operational checks:
 - Review structured logs for request IDs and durations
@@ -480,8 +573,10 @@ Operational checks:
 - Check provider quotas and rate limits for API failures
 - Observe retry patterns in logs for transient error handling effectiveness
 - Analyze cache performance and hit rates for optimization
+- **Enhanced** Monitor depth_ui keyword detection accuracy and mode suggestion effectiveness
+- **Enhanced** Validate depth_ui schema parsing and parallax coefficient validation
 
-**Updated** Enhanced troubleshooting guidance now includes caching considerations, streamlined retry behavior monitoring, and comprehensive metrics analysis for better operational visibility.
+**Updated** Enhanced troubleshooting guidance now includes depth_ui detection monitoring, schema validation troubleshooting, and comprehensive metrics analysis for immersive UI generation.
 
 **Section sources**
 - [app/api/think/route.ts:19-21](file://app/api/think/route.ts#L19-L21)
@@ -490,8 +585,9 @@ Operational checks:
 - [lib/ai/thinkingEngine.ts:389-437](file://lib/ai/thinkingEngine.ts#L389-L437)
 - [lib/ai/cache.ts:108-141](file://lib/ai/cache.ts#L108-L141)
 - [lib/ai/metrics.ts:36-89](file://lib/ai/metrics.ts#L36-L89)
+- [lib/ai/intentClassifier.ts:87-90](file://lib/ai/intentClassifier.ts#L87-L90)
 
 ## Conclusion
 The Thinking Engine provides a robust, secure, and user-friendly planning layer for AI-driven UI generation. By enforcing strict security boundaries, offering deterministic fallbacks with streamlined retry logic, and presenting a clear, iteratively refineable plan, it enables reliable workflows from initial intent to executable code. Its modular architecture with provider adapters and structured validation supports extensibility and maintainability across diverse AI backends. The enhanced retry mechanisms with exponential backoff and improved error handling patterns ensure resilience against network failures and rate limits, while caching optimizations and comprehensive metrics collection enhance performance and reduce cold-start latency. The streamlined architecture with over 150 lines of code removed demonstrates significant improvements in decision-making process efficiency and overall system reliability.
 
-**Updated** The Thinking Engine now features streamlined architecture with enhanced retry logic, improved fallback capabilities, and comprehensive performance optimizations, making it more reliable and efficient for production use cases.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive schema validation, and integrated depth_ui support throughout the architecture. These enhancements make it more reliable, efficient, and capable of handling visually rich interfaces with intelligent detection and generation capabilities.

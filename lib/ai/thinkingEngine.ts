@@ -148,6 +148,16 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
     summary = `Building a ${styleLabel} ${layoutLabel} — ${sanitized.substring(0, 120)}`;
   }
 
+  // ─── Extract component name early (needed for scope detection & planned approach) ──
+  const componentName = extractComponentName(sanitized);
+  
+  // ─── Detect component-scope vs app-scope ─────────────────────────────
+  // If the prompt describes a single element (card, badge, button, input, etc.)
+  // it should NOT get full-app scope even if the blueprint matches "dashboard".
+  const singleComponentHints = /\b(?:card|badge|button|input|textarea|chip|tag|avatar|tooltip|alert|stat|metric|toggle|checkbox|radio|slider|progress|calendar|clock|icon|pill|dot|separator|divider|breadcrumb|tab\s*item|nav\s*item|menu\s*item|list\s*item|table\s*row)\b/i;
+  const fullAppHints = /\b(?:full\s*app|entire\s*app|complete\s*app|multi\s*page|dashboard\s+app|admin\s+panel|saas\s+tool|layout\s+with\s+sidebar|app\s+with\s+nav|app\s+with\s+routing|multiple\s*screens|multi\s*screen)\b/i;
+  const isComponentScope = singleComponentHints.test(sanitized) && !fullAppHints.test(sanitized);
+
   // ─── Derive prompt-specific planned approach ────────────────────────────
   const plannedApproach: string[] = [];
 
@@ -165,8 +175,18 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
       'Update styles, layout, and interactions while maintaining structure',
       'Validate the refined UI meets accessibility and visual standards',
     );
+  } else if (isComponentScope) {
+    // Component-scope: build a single focused component, NOT a full page/layout
+    plannedApproach.push(
+      `Build a single ${componentName} component with focused structure`,
+      `Apply ${styleLabel} visual style with token-based theming`,
+      'Generate accessible, production-ready React + Tailwind code (100-350 lines)',
+    );
+    if (shouldGenerate) {
+      plannedApproach.push('Run WCAG 2.1 AA validation and auto-repair if needed');
+    }
   } else {
-    // ui_generation / product_requirement / ideation
+    // ui_generation / product_requirement / ideation — full app scope
     if (primaryLayout) {
       plannedApproach.push(
         `Set up ${layoutLabel} structure with ${blueprint.structuralSections.slice(0, 4).join(', ')}`,
@@ -194,7 +214,6 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
   }
 
   // ─── Derive affected scope ──────────────────────────────────────────────
-  const componentName = extractComponentName(sanitized);
   const affectedScope = isRefinement
     ? [`${componentName}.tsx`, 'styles']
     : [`${componentName}.tsx`];
@@ -282,6 +301,8 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
       // Suggest depth_ui for prompts that explicitly request parallax, depth, cinematic, or floating elements
       const depthKeywords = /parallax|depth|cinematic|floating|3d|layered|immersive|scroll.*(animation|effect)|hero.*(section|layout|page)|landing.*(page|site)|premium.*(ui|layout|interface)|visual.*rich/i;
       if (depthKeywords.test(prompt)) return 'depth_ui';
+      // Component-scope prompts (single card, badge, etc.) should always be 'component'
+      if (isComponentScope) return 'component';
       if (primaryLayout?.category === 'dashboard' || primaryLayout?.category === 'saas') return 'app';
       return 'component';
     })(),
@@ -299,9 +320,11 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
         : 'Modular functional components',
       usabilityCheck: 'Maintain visual hierarchy, spacing rhythm, and 4.5:1 contrast',
     },
-    likelySections: blueprint.structuralSections.length > 0
-      ? blueprint.structuralSections
-      : ['Header', 'Main Content', 'Footer'],
+    likelySections: isComponentScope
+      ? [componentName]
+      : (blueprint.structuralSections.length > 0
+        ? blueprint.structuralSections
+        : ['Header', 'Main Content', 'Footer']),
     requirementBreakdown,
   };
 }
@@ -409,7 +432,7 @@ export async function generateThinkingPlan(
           ],
           ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
           temperature: 0.3,
-          maxTokens: 800,
+          maxTokens: 1200,
         });
         break; // Success
       } catch (error) {
@@ -458,11 +481,23 @@ export async function generateThinkingPlan(
         try { parsed = JSON.parse(fenceMatch[1].trim()); } catch { /* fall through */ }
       }
 
-      // Stage 3: extract first {...} block
+      // Stage 3: extract first {...} block — use balanced brace matching to avoid
+      // matching too much (e.g. LLM explanation text after the JSON)
       if (parsed === undefined) {
-        const braceMatch = raw.match(/\{[\s\S]*\}/);
-        if (braceMatch) {
-          try { parsed = JSON.parse(braceMatch[0]); } catch { /* fall through */ }
+        const firstBrace = raw.indexOf('{');
+        if (firstBrace !== -1) {
+          let depth = 0;
+          let endIdx = -1;
+          for (let i = firstBrace; i < raw.length; i++) {
+            if (raw[i] === '{') depth++;
+            else if (raw[i] === '}') {
+              depth--;
+              if (depth === 0) { endIdx = i + 1; break; }
+            }
+          }
+          if (endIdx !== -1) {
+            try { parsed = JSON.parse(raw.substring(firstBrace, endIdx)); } catch { /* fall through */ }
+          }
         }
       }
 
@@ -473,6 +508,29 @@ export async function generateThinkingPlan(
         const repaired = repairTruncatedJson(candidate);
         if (repaired !== candidate) {
           try { parsed = JSON.parse(repaired); } catch { /* fall through */ }
+        }
+      }
+
+      if (parsed === undefined) {
+        // Stage 5: Strip common LLM preamble (e.g. "Here is the plan:\n")
+        // and try balanced brace matching again
+        const stripped = raw.replace(/^(?:Here(?:'s| is)|Sure|Below|The|I'll|Let me|Based on)[^\n]*\n*/i, '');
+        if (stripped !== raw) {
+          const firstBrace = stripped.indexOf('{');
+          if (firstBrace !== -1) {
+            let depth = 0;
+            let endIdx = -1;
+            for (let i = firstBrace; i < stripped.length; i++) {
+              if (stripped[i] === '{') depth++;
+              else if (stripped[i] === '}') {
+                depth--;
+                if (depth === 0) { endIdx = i + 1; break; }
+              }
+            }
+            if (endIdx !== -1) {
+              try { parsed = JSON.parse(stripped.substring(firstBrace, endIdx)); } catch { /* fall through */ }
+            }
+          }
         }
       }
 

@@ -36,13 +36,21 @@
 - [packages/command-palette/components/CommandPalette.tsx](file://packages/command-palette/components/CommandPalette.tsx)
 - [packages/command-palette/index.ts](file://packages/command-palette/index.ts)
 - [packages/core/components/Button.tsx](file://packages/core/components/Button.tsx)
+- [packages/core/components/Card.tsx](file://packages/core/components/Card.tsx)
 - [packages/core/components/Modal.tsx](file://packages/core/components/Modal.tsx)
+- [packages/core/index.ts](file://packages/core/index.ts)
+- [packages/tokens/index.ts](file://packages/tokens/index.ts)
+- [packages/tokens/transitions.ts](file://packages/tokens/transitions.ts)
+- [packages/tokens/colors.ts](file://packages/tokens/colors.ts)
+- [packages/charts/components/Charts.tsx](file://packages/charts/components/Charts.tsx)
+- [packages/charts/index.ts](file://packages/charts/index.ts)
 - [app/globals.css](file://app/globals.css)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect Applied Changes: Documented new internal implementations replacing external dependencies (cmdk for command palette, class-variance-authority for button variants, radix-ui for modal components)
+- Updated to reflect Applied Changes: Expanded @ui/core component library integration with new Card component variants (CardHeader, CardTitle, CardDescription, CardContent, CardFooter) and Modal components (ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter)
+- Added new tokens including easing, duration, and getChartColor utilities
 - Enhanced component registry documentation to include new internal implementations and their benefits
 - Updated dependency analysis to reflect reduced external dependency footprint
 - Added comprehensive documentation for internal command palette, button, and modal implementations
@@ -62,11 +70,12 @@
 10. [Enhanced User Experience Features](#enhanced-user-experience-features)
 11. [Detailed Component Analysis](#detailed-component-analysis)
 12. [Internal Implementation Strategy](#internal-implementation-strategy)
-13. [Dependency Analysis](#dependency-analysis)
-14. [Performance Considerations](#performance-considerations)
-15. [Troubleshooting Guide](#troubleshooting-guide)
-16. [Conclusion](#conclusion)
-17. [Appendices](#appendices)
+13. [Design Token System](#design-token-system)
+14. [Dependency Analysis](#dependency-analysis)
+15. [Performance Considerations](#performance-considerations)
+16. [Troubleshooting Guide](#troubleshooting-guide)
+17. [Conclusion](#conclusion)
+18. [Appendices](#appendices)
 
 ## Introduction
 This document describes the internal UI component system and design framework of an AI-powered, accessibility-first React application. The system has been comprehensively enhanced with production-ready components that prioritize accessibility, performance, and maintainability. It focuses on:
@@ -93,6 +102,7 @@ The repository is a Next.js application with a comprehensive monorepo-style pack
 - Micro-interaction system under packages/motion/
 - Accessibility components under @ui/a11y package
 - **Updated** Internal implementations under @ui/packages replacing external dependencies
+- **New** Design token system under @ui/tokens with easing, duration, and chart utilities
 
 ```mermaid
 graph TB
@@ -126,18 +136,19 @@ THINKING["components/ThinkingPanel.tsx<br/>Multi-State Animations"]
 MODE_GATE["components/ModelSelectionGate.tsx<br/>Provider Card Animations"]
 end
 subgraph "Enhanced UI Packages (@ui/*)"
-UI_CORE["@ui/core<br/>Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants"]
+UI_CORE["@ui/core<br/>Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants<br/>Card Variants: Header, Title, Description, Content, Footer"]
 UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking, Grid Systems"]
 UI_MOTION["@ui/motion<br/>Animation Primitives"]
-UI_CHARTS["@ui/charts<br/>Functional charts"]
+UI_CHARTS["@ui/charts<br/>Functional charts<br/>getChartColor utility"]
 UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
 UI_EDITOR["@ui/editor<br/>Rich text editor"]
 UI_ICONS["@ui/icons<br/>Comprehensive icon system"]
 UI_THEMING["@ui/theming<br/>Enhanced theming system"]
 UI_UTILS["@ui/utils<br/>Shared utilities"]
 UI_COMMAND_PALETTE["@ui/command-palette<br/>Internal Command Palette<br/>No cmdk dependency"]
+UI_TOKENS["@ui/tokens<br/>Design tokens<br/>Easing, Duration, Chart utilities"]
 end
 subgraph "Theming System"
 THEME_HOOK["lib/hooks/useProviderTheme.ts<br/>Provider Color Palettes"]
@@ -249,7 +260,8 @@ This section documents the primary UI components that form the backbone of the e
 - **ModelSelectionGate**: Provider selection with card-based animations and hover effects.
 - **Internal Command Palette**: Lightweight command palette implementation replacing external cmdk dependency.
 - **Internal Button Components**: Button variants with inlined class-variance-authority functionality.
-- **Internal Modal Components**: Modal implementation replacing external radix-ui dependency.
+- **Internal Modal Components**: Modal implementation replacing external radix-ui dependency with comprehensive variants.
+- **Enhanced Card Components**: Card with new variants including CardHeader, CardTitle, CardDescription, CardContent, and CardFooter.
 
 **New Accessibility Components**:
 - **FocusTrap**: Manages focus trapping for modal dialogs and overlays
@@ -259,7 +271,7 @@ This section documents the primary UI components that form the backbone of the e
 **Enhanced Core Components**:
 - **Avatar**: User profile images with fallback initials and status indicators
 - **Badge**: Status indicators with multiple variants and color schemes
-- **Card**: Content containers with enhanced styling and interactive states
+- **Card**: Content containers with enhanced styling and interactive states, now with comprehensive variant system
 - **Input**: Form input controls with validation states and error messaging
 - **Textarea**: Multi-line text inputs with character counting and validation
 
@@ -300,6 +312,7 @@ The UI architecture centers around a blueprint engine that enforces design syste
 - **Updated**: All interactive elements follow standardized hover, scale, and shadow animations
 - **New**: Accessibility-first design principles guide all component development and testing
 - **Updated**: Internal implementation strategy reduces external dependencies and improves performance
+- **New**: Design token system provides centralized easing, duration, and chart color management
 
 ```mermaid
 sequenceDiagram
@@ -481,7 +494,7 @@ THEME_HOOK --> GROQ_THEME
 Each theme provides the following properties:
 - **Text Colors**: Primary, muted, and faint variants
 - **Background Colors**: Light, medium, solid, and card variants
-- **Border Colors**: Standard, active, and focus variants
+- - **Border Colors**: Standard, active, and focus variants
 - **Shadow Effects**: Standard and glow variants
 - **Gradients**: Primary and subtle gradient variants
 - **Radial Orbs**: Inline CSS gradient values
@@ -989,7 +1002,7 @@ Key enhancements:
 - **Interactive Elements**: Thumbs up/down, correction, discard, and analytics buttons
 - **History Integration**: Access to feedback history with loading states
 - **Analytics Display**: Comprehensive metrics and statistics
-- **Accessibility**: Enhanced ARIA labels and keyboard navigation
+- **Accessibility**: Enhanced ARIA labels and keyboard navigation support
 
 **Updated** FeedbackBar now features enhanced micro-interaction patterns with consistent 200ms transition timing across all state changes.
 
@@ -1041,6 +1054,67 @@ Key enhancements:
 
 **Section sources**
 - [components/ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
+
+### Card Component System (Enhanced)
+Purpose: Comprehensive card component system with multiple variants and composition patterns.
+
+Key enhancements:
+- **Card Variants**: Five distinct variants (default, glass, elevated, outline, gradient) with hover effects
+- **Padding Options**: Four padding levels (none, sm, md, lg) for flexible content spacing
+- **Composition Pattern**: Five specialized components (CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
+- **Hover Interactions**: Consistent 200ms transition timing with scale and shadow enhancements
+- **Accessibility**: Semantic HTML structure with proper heading hierarchy
+
+**Card Variants**:
+- **Default**: Standard dark-themed card with subtle borders
+- **Glass**: Frosted glass effect with backdrop blur
+- **Elevated**: Strong shadow and elevated positioning
+- **Outline**: Transparent with visible border only
+- **Gradient**: Multi-color gradient background
+
+**Composition Components**:
+- **CardHeader**: Flex container with 1.5 spacing and bottom padding
+- **CardTitle**: Large, bold white text with tight leading
+- **CardDescription**: Secondary text with gray-400 color
+- **CardContent**: Flexible content container
+- **CardFooter**: Flex container with top padding and center alignment
+
+**Section sources**
+- [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
+- [packages/core/index.ts:1-8](file://packages/core/index.ts#L1-L8)
+
+### Modal Component System (Enhanced)
+Purpose: Comprehensive modal component system with full accessibility and composition patterns.
+
+Key enhancements:
+- **Full Composition**: Nine specialized components (Modal, ModalPortal, ModalOverlay, ModalTrigger, ModalClose, ModalContent, ModalHeader, ModalFooter, ModalTitle, ModalDescription)
+- **Context Management**: Centralized state management with ModalContext
+- **Focus Trapping**: Complete focus management with inert attributes
+- **Escape Key Support**: Full keyboard navigation support
+- **Portal Rendering**: Client-side rendering via React portals
+- **Accessibility**: Full ARIA support with role="dialog" and aria-modal="true"
+
+**Modal Components**:
+- **Modal**: Root component with open state management
+- **ModalPortal**: Portal rendering for proper z-index stacking
+- **ModalOverlay**: Semi-transparent overlay with click-through functionality
+- **ModalTrigger**: Button component for opening modals
+- **ModalClose**: Button component for closing modals
+- **ModalContent**: Main modal container with focus trap and escape key handling
+- **ModalHeader**: Header container with centered text on mobile
+- **ModalFooter**: Footer container with responsive button layout
+- **ModalTitle**: Large, bold title text
+- **ModalDescription**: Secondary description text
+
+**Accessibility Features**:
+- Focus management with inert attributes
+- Escape key handling for modal dismissal
+- ARIA attributes for screen readers
+- Role="dialog" and aria-modal="true" for proper semantics
+
+**Section sources**
+- [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
+- [packages/core/index.ts:1-8](file://packages/core/index.ts#L1-L8)
 
 ### Accessibility Components
 
@@ -1156,6 +1230,84 @@ The internal modal implementation replaces the external `@radix-ui/react-dialog`
 **Section sources**
 - [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
 
+## Design Token System
+
+**New** The UI system now includes a comprehensive design token system under @ui/tokens that provides centralized management of design values and animation utilities.
+
+### Token Categories
+The design token system organizes design values into logical categories:
+
+- **Colors**: Semantic color tokens with brand, status, and chart palettes
+- **Spacing**: Consistent spacing scale with responsive breakpoints
+- **Typography**: Font families, sizes, weights, and letter spacing
+- **Transitions**: Animation timing, easing curves, and keyframe definitions
+
+### Easing and Duration Tokens
+The transitions category provides comprehensive animation utilities:
+
+**Duration Tokens**:
+- `instant`: 0ms (for immediate feedback)
+- `fast`: 100ms (for quick transitions)
+- `normal`: 200ms (standard interaction timing)
+- `slow`: 300ms (for noticeable animations)
+- `slower`: 500ms (for major state changes)
+- `slowest`: 700ms (for dramatic transitions)
+
+**Easing Curves**:
+- `linear`: `cubic-bezier(0, 0, 1, 1)`
+- `in`: `cubic-bezier(0.4, 0, 1, 1)`
+- `out`: `cubic-bezier(0, 0, 0.2, 1)`
+- `inOut`: `cubic-bezier(0.4, 0, 0.2, 1)`
+- `outBack`: `cubic-bezier(0.34, 1.56, 0.64, 1)`
+- `inBack`: `cubic-bezier(0.36, 0, 0.66, -0.56)`
+- `outExpo`: `cubic-bezier(0.16, 1, 0.3, 1)`
+- `inOutExpo`: `cubic-bezier(0.87, 0, 0.13, 1)`
+- `spring`: Alias for `outBack`
+- `smooth`: Alias for `inOut`
+
+**Transition Presets**:
+- `fast`: `${duration.fast} ${easing.out}`
+- `normal`: `${duration.normal} ${easing.inOut}`
+- `slow`: `${duration.slow} ${easing.inOut}`
+- `spring`: `${duration.normal} ${easing.spring}`
+- `bounce`: `${duration.slow} ${easing.outBack}`
+- `smooth`: `${duration.slow} ${easing.outExpo}`
+
+**Keyframe Definitions**:
+- `fadeIn`, `fadeOut`: Opacity transitions
+- `slideUp`, `slideDown`: Vertical movement
+- `scaleIn`: Scaling entrance
+- `spin`: Continuous rotation
+- `pulse`: Breathing effect
+- `bounce`: Up-and-down movement
+- `shimmer`: Background gradient animation
+- `float`: Gentle vertical hover effect
+
+### Chart Color Utilities
+The colors category includes specialized utilities for data visualization:
+
+**Chart Palette**:
+- An array of eight professional colors suitable for data visualization
+- Includes indigo, violet, cyan, emerald, amber, red, pink, and blue
+
+**getChartColor Utility**:
+- Function that returns colors from the chart palette by index
+- Uses modulo arithmetic for infinite cycling
+- Returns hex color strings for direct SVG usage
+
+**Usage Examples**:
+```typescript
+// Get colors for charts
+const color1 = getChartColor(0); // #6366f1 (indigo)
+const color2 = getChartColor(1); // #8b5cf6 (violet)
+const color3 = getChartColor(8); // #10b981 (emerald) - cycles back to index 0
+```
+
+**Section sources**
+- [packages/tokens/index.ts:1-26](file://packages/tokens/index.ts#L1-L26)
+- [packages/tokens/transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
+- [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
+
 ## Dependency Analysis
 The UI components depend on shared tokens, theming, and utility packages. The application also relies on external libraries for icons, syntax highlighting, and runtime preview.
 
@@ -1163,18 +1315,19 @@ The UI components depend on shared tokens, theming, and utility packages. The ap
 
 ```mermaid
 graph LR
-UI_CORE["@ui/core<br/>Enhanced with Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants"]
+UI_CORE["@ui/core<br/>Enhanced with Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants<br/>Card Variants: Header, Title, Description, Content, Footer<br/>Modal Variants: Content, Trigger, Header, Footer, Title, Description"]
 UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking"]
 UI_MOTION["@ui/motion<br/>Animation Primitives"]
-UI_CHARTS["@ui/charts<br/>Functional charts"]
+UI_CHARTS["@ui/charts<br/>Functional charts<br/>getChartColor utility"]
 UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
 UI_EDITOR["@ui/editor<br/>Rich text editor"]
 UI_ICONS["@ui/icons<br/>Comprehensive icon system"]
 UI_THEMING["@ui/theming<br/>Enhanced theming"]
 UI_UTILS["@ui/utils<br/>Shared utilities"]
 UI_COMMAND_PALETTE["@ui/command-palette<br/>Internal Implementation<br/>No cmdk dependency"]
+UI_TOKENS["@ui/tokens<br/>Design tokens<br/>Easing, Duration, Chart utilities<br/>getChartColor"]
 THEME_HOOK["useProviderTheme.ts"]
 THEME_PROVIDER["ThemeProvider.ts"]
 THEME_AI["ai-theme.ts"]
@@ -1193,6 +1346,7 @@ UI_EDITOR -.-> UI_CORE
 UI_ICONS -.-> UI_CORE
 UI_A11Y -.-> UI_CORE
 UI_COMMAND_PALETTE -.-> UI_CORE
+UI_TOKENS -.-> UI_CORE
 THEME_HOOK -.-> UI_THEMING
 THEME_PROVIDER -.-> UI_THEMING
 THEME_AI -.-> UI_THEMING
@@ -1209,6 +1363,7 @@ APP_DEPS -.-> UI_EDITOR
 APP_DEPS -.-> UI_ICONS
 APP_DEPS -.-> UI_THEMING
 APP_DEPS -.-> UI_COMMAND_PALETTE
+APP_DEPS -.-> UI_TOKENS
 ```
 
 **Diagram sources**
@@ -1237,6 +1392,8 @@ APP_DEPS -.-> UI_COMMAND_PALETTE
 - **New**: Inlined variant definitions eliminate class-variance-authority dependency overhead.
 - **New**: Native dialog implementation reduces radix-ui dependency footprint.
 - **New**: Lightweight command palette eliminates cmdk dependency and associated bundle size.
+- **New**: Design token system provides centralized animation utilities for consistent performance.
+- **New**: getChartColor utility eliminates chart color calculation overhead with cached palette access.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -1259,6 +1416,10 @@ Common issues and resolutions:
 - **Enhanced**: Animation system integration: Check that animation utilities from `packages/motion/animations.ts` are properly utilized.
 - **Updated**: Internal implementation compatibility: Verify internal command palette, button, and modal components are properly imported.
 - **New**: Bundle size optimization: Monitor for unexpected increases due to internal implementations.
+- **New**: Design token system compatibility: Verify easing, duration, and getChartColor utilities are properly imported.
+- **New**: Card component variants: Ensure proper composition with CardHeader, CardTitle, CardDescription, CardContent, and CardFooter.
+- **New**: Modal component variants: Verify proper usage of ModalTrigger, ModalClose, ModalHeader, ModalFooter, ModalTitle, and ModalDescription.
+- **New**: Chart color utilities: Check that getChartColor function returns expected color values from chart palette.
 - **New**: Accessibility compliance: Verify internal implementations meet WCAG guidelines.
 - **New**: Performance regression: Monitor bundle size and load times after internal implementation changes.
 
@@ -1276,6 +1437,9 @@ Common issues and resolutions:
 - [packages/command-palette/components/CommandPalette.tsx:1-149](file://packages/command-palette/components/CommandPalette.tsx#L1-L149)
 - [packages/core/components/Button.tsx:1-61](file://packages/core/components/Button.tsx#L1-L61)
 - [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
+- [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
+- [packages/tokens/transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
+- [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
 
 ## Conclusion
 The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, enhanced user experience features, comprehensive chat message types, expanded theming capabilities, fullscreen preview functionality, and a comprehensive micro-interaction system. The new modular prompt input system demonstrates improved maintainability and component composition patterns. The addition of provider-specific color themes creates a more personalized user experience while maintaining design consistency. The newly implemented micro-interaction system provides consistent 200ms transition timing across all interactive elements, creating delightful user experiences with proper accessibility support.
@@ -1283,6 +1447,8 @@ The UI component system blends accessibility-first design with an AI-driven blue
 **Updated** The system now emphasizes production-ready components with comprehensive accessibility features, enhanced core components (Avatar, Badge, Card, Input, Textarea), and accessibility-first design principles. All AI-assisted features have been removed, focusing on reliable, accessible UI components that prioritize user experience and inclusive design.
 
 **Updated** The system has adopted an internal implementation strategy that replaces external dependencies (cmdk, class-variance-authority, radix-ui) with lightweight, custom implementations. This approach reduces bundle size, improves performance, and provides complete control over component behavior while maintaining full functionality and accessibility compliance.
+
+**New** The addition of the design token system provides centralized management of animation utilities, easing curves, duration values, and chart color palettes, ensuring consistency across all components and reducing code duplication.
 
 By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
@@ -1300,9 +1466,10 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Updated**: Micro-interaction system provides consistent 200ms transition timing across all components.
 - **New**: Internal command palette implementation replaces external cmdk dependency.
 - **New**: Internal button component replaces external class-variance-authority dependency.
-- **New**: Internal modal component replaces external radix-ui dependency.
-- **New**: Accessibility components (FocusTrap, VisuallyHidden, useKeyboardNav) provide comprehensive accessibility features.
-- **New**: Enhanced core components (Avatar, Badge, Card, Input, Textarea) offer improved functionality and styling.
+- **New**: Internal modal component replaces external radix-ui dependency with comprehensive variant system.
+- **New**: Enhanced Card component system with five variants and composition pattern.
+- **New**: Comprehensive design token system with easing, duration, and chart utilities.
+- **New**: getChartColor utility for consistent chart color management.
 - Compatibility requirements:
   - Use Tailwind classes aligned with @ui packages
   - Ensure ARIA attributes and semantic roles
@@ -1317,6 +1484,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
   - **Enhanced**: Support reduced motion accessibility compliance
   - **New**: Implement comprehensive accessibility component integration
   - **New**: Support internal implementation strategy with custom components
+  - **New**: Utilize design token system for consistent animation and color management
+  - **New**: Leverage getChartColor utility for data visualization consistency
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1354,23 +1523,25 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Enhanced**: Reduced motion accessibility compliance through UX state engine integration.
 - **New**: Internal implementation strategy ensures consistent component behavior and performance.
 - **New**: Accessibility-first design principles guide all component development and testing.
+- **New**: Design token system provides centralized animation and color management utilities.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
 
 ### Component Library Organization
-- @ui/core: Base components, tokens, and foundational utilities with enhanced Avatar, Badge, Card, Input, and Textarea components, plus internal Button implementation
+- @ui/core: Base components, tokens, and foundational utilities with enhanced Avatar, Badge, Card, Input, and Textarea components, plus internal Button implementation, and comprehensive Card and Modal variant systems
 - @ui/a11y: Accessibility-focused components including FocusTrap, VisuallyHidden, and useKeyboardNav hooks
 - @ui/forms: Form controls and validation helpers with enhanced accessibility
 - @ui/layout: Layout primitives and grid systems with responsive design and vertical stacking
 - @ui/motion: Motion primitives and animation utilities with spring and fade transitions
-- @ui/charts: Functional charting primitives and data visualization components
+- @ui/charts: Functional charting primitives and data visualization components with getChartColor utility
 - @ui/dragdrop: Drag-and-drop utilities and interactive components
 - @ui/editor: Rich text editor and content editing components
 - @ui/icons: Comprehensive icon system with 50+ inline SVG icons
 - @ui/theming: Enhanced theme provider and design system integrations
 - @ui/utils: Shared utilities and helper functions
 - **Updated** @ui/command-palette: Internal command palette implementation replacing external cmdk dependency
+- **New** @ui/tokens: Design token system with easing, duration, and chart color utilities
 
 **Updated** Package documentation files have been removed from multiple UI component packages. The organizational structure remains consistent, but some packages may lack dedicated README documentation.
 
@@ -1396,6 +1567,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Enhanced**: Implement reduced motion accessibility compliance
 - **New**: Implement comprehensive accessibility component patterns and best practices
 - **New**: Consider internal implementation strategy for external dependency replacement
+- **New**: Leverage design token system for consistent animation and color management
+- **New**: Utilize getChartColor utility for chart color consistency
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1423,6 +1596,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Updated**: Support reduced motion accessibility compliance across all components
 - **New**: Implement comprehensive accessibility component ecosystem with FocusTrap, VisuallyHidden, and useKeyboardNav
 - **New**: Adopt internal implementation strategy for external dependency replacement
+- **New**: Extend design token system with new easing curves and transition presets
+- **New**: Add chart color utilities for consistent data visualization across components
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -1441,7 +1616,9 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Updated**: Micro-interaction system creates consistent animation experience across the entire ecosystem
 - **Enhanced**: Reduced motion support ensures accessibility compliance throughout the component system
 - **New**: Internal implementations integrate seamlessly with the broader component ecosystem
-- **New**: Command palette, button, and modal components replace external dependencies throughout the ecosystem
+- **New**: Card and Modal variant systems provide consistent composition patterns across the ecosystem
+- **New**: Design token system ensures animation and color consistency across all components
+- **New**: getChartColor utility maintains chart color consistency in generated components
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
@@ -1477,6 +1654,10 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Use useKeyboardNav for keyboard navigation patterns
 - **New**: Consider internal implementation strategy for external dependency replacement
 - **New**: Evaluate bundle size impact when adopting internal implementations
+- **New**: Leverage design token system for consistent animation and color management
+- **New**: Utilize getChartColor utility for consistent chart color application
+- **New**: Compose Card components using CardHeader, CardTitle, CardDescription, CardContent, and CardFooter
+- **New**: Implement Modal components using ModalTrigger, ModalClose, ModalHeader, ModalFooter, ModalTitle, and ModalDescription
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1489,3 +1670,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [packages/layout/ai-layout.ts:1-7](file://packages/layout/ai-layout.ts#L1-L7)
 - [packages/motion/animations.ts:1-4](file://packages/motion/animations.ts#L1-L4)
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
+- [packages/tokens/transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
+- [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
+- [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
+- [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)

@@ -12,14 +12,18 @@
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
+- [depthEngine.ts](file://lib/intelligence/depthEngine.ts)
+- [layoutRegistry.ts](file://lib/intelligence/layoutRegistry.ts)
+- [componentRegistry.ts](file://lib/intelligence/componentRegistry.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced intent classification system documentation to reflect the new deterministic `buildLocalClassification()` function providing fallback responses
-- Updated error handling documentation to include improved rate limit detection and retry mechanisms
-- Added documentation for the new fallback logic that preserves user intent when LLM_KEY is configured
-- Updated troubleshooting guidance to address deterministic fallback responses and rate limit scenarios
+- Enhanced depth_ui mode evaluation with new keyword detection logic for parallax, depth, cinematic, floating, layered, immersive, and 3D elements
+- Updated intent classification system to automatically suggest depth_ui execution mode for visually rich interface requests
+- Improved deterministic fallback classification with expanded depth-related keyword detection
+- Enhanced blueprint selection algorithm to better handle depth UI requirements
+- Updated troubleshooting guidance for depth UI mode detection and automatic suggestions
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,7 +39,7 @@
 ## Introduction
 This document explains the intent processing and blueprint selection phase of the generation pipeline. It covers how user intents are analyzed and transformed into actionable generation parameters, how blueprints are selected to match user requirements to UI patterns, and how design rules are applied consistently. It also details the depth UI mode evaluation for complex interactive components, the intent classification system, blueprint scoring mechanisms, and design rule conflict resolution. Practical examples and troubleshooting guidance are included to help developers and users achieve reliable, accessible, and visually coherent UI generation outcomes.
 
-**Updated** The intent classification system now includes a deterministic fallback mechanism through the `buildLocalClassification()` function that provides reliable responses when LLM rate limits are exceeded or when the AI service is unavailable. This enhancement ensures pipeline reliability while maintaining user intent preservation.
+**Updated** The intent classification system now includes enhanced depth_ui mode detection through expanded keyword matching logic that automatically suggests depth_ui execution mode for visually rich interface requests containing parallax, depth, cinematic, floating, layered, immersive, and 3D elements. This enhancement improves the system's ability to recognize and prioritize immersive UI experiences.
 
 ## Project Structure
 The intent processing and blueprint selection pipeline spans several modules:
@@ -46,6 +50,7 @@ The intent processing and blueprint selection pipeline spans several modules:
 - Validation schemas for typed intent outputs
 - Prompt templates for different generation modes
 - A barrel export module for intent-related utilities
+- Depth experience engine for premium depth UI preset computation
 
 ```mermaid
 graph TB
@@ -61,21 +66,24 @@ Parser --> Prompts["Mode-specific Prompts (prompts.ts)"]
 Blueprint["selectBlueprint (blueprintEngine.ts)"] --> Layout["Layout Registry"]
 Blueprint --> Components["Component Registry"]
 Blueprint --> Rules["Assembly Rules & Best Practices"]
+DepthEngine["evaluateDepthExperience (depthEngine.ts)"] --> Blueprint
 ```
 
 **Diagram sources**
 - [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
-- [intentClassifier.ts:1-253](file://lib/ai/intentClassifier.ts#L1-L253)
+- [intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
 - [intentParser.ts:1-320](file://lib/ai/intentParser.ts#L1-L320)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
+- [depthEngine.ts:1-121](file://lib/intelligence/depthEngine.ts#L1-L121)
 
 **Section sources**
 - [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
-- [intentClassifier.ts:1-253](file://lib/ai/intentClassifier.ts#L1-L253)
+- [intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
 - [intentParser.ts:1-320](file://lib/ai/intentParser.ts#L1-L320)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
+- [depthEngine.ts:1-121](file://lib/intelligence/depthEngine.ts#L1-L121)
 
 ## Core Components
 - Intent classification: Converts raw user input into a structured classification with intent type, suggested generation mode, and metadata for routing, with deterministic fallback capability
@@ -83,13 +91,15 @@ Blueprint --> Rules["Assembly Rules & Best Practices"]
 - Blueprint engine: Selects a UI blueprint based on layout compatibility, visual style, motion, and depth requirements, and enforces design rules
 - Validation schemas: Provide strong typing and schema validation for classification and intent outputs
 - Prompt templates: Define system prompts and user prompts for component, app, and depth UI modes
+- Depth experience engine: Computes premium depth UI presets with quantified parallax coefficients and motion specifications
 
 **Section sources**
-- [intentClassifier.ts:57-253](file://lib/ai/intentClassifier.ts#L57-L253)
+- [intentClassifier.ts:57-255](file://lib/ai/intentClassifier.ts#L57-L255)
 - [intentParser.ts:36-320](file://lib/ai/intentParser.ts#L36-L320)
 - [blueprintEngine.ts:9-215](file://lib/intelligence/blueprintEngine.ts#L9-L215)
 - [schemas.ts:16-340](file://lib/validation/schemas.ts#L16-L340)
-- [prompts.ts:8-467](file://lib/ai/prompts.ts#L8-L467)
+- [prompts.ts:8-528](file://lib/ai/prompts.ts#L8-L528)
+- [depthEngine.ts:25-121](file://lib/intelligence/depthEngine.ts#L25-L121)
 
 ## Architecture Overview
 The intent processing pipeline consists of two primary stages:
@@ -109,7 +119,7 @@ U->>API : POST /api/classify {prompt, provider?, model?}
 API->>CL : classifyIntent(prompt, hasActiveProject, provider, model, workspaceId, userId)
 alt Rate limit or network error
 CL->>LF : buildLocalClassification(sanitized, hasActiveProject)
-LF-->>CL : Deterministic fallback classification
+LF-->>CL : Deterministic fallback classification with enhanced depth detection
 CL-->>API : {success : true, classification, _fallback : true}
 else Success response
 CL->>AD : generate(messages, responseFormat=json_object, temperature=0.1)
@@ -124,7 +134,7 @@ API-->>U : JSON response with fallback indicator
 **Diagram sources**
 - [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
 - [intentClassifier.ts:68-106](file://lib/ai/intentClassifier.ts#L68-L106)
-- [intentClassifier.ts:108-253](file://lib/ai/intentClassifier.ts#L108-L253)
+- [intentClassifier.ts:108-255](file://lib/ai/intentClassifier.ts#L108-L255)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
 ## Detailed Component Analysis
@@ -132,11 +142,15 @@ API-->>U : JSON response with fallback indicator
 ### Enhanced Intent Classification System with Deterministic Fallback
 The classifier now includes a sophisticated fallback mechanism through the `buildLocalClassification()` function that provides deterministic responses when LLM services are unavailable or rate-limited. This function uses simple heuristics to determine intent type from prompt text, ensuring pipeline reliability even under adverse conditions.
 
+**Updated** Enhanced depth UI detection logic with expanded keyword matching for visually rich interface requests. The system now automatically suggests depth_ui execution mode when prompts contain parallax, depth, cinematic, floating, layered, immersive, and 3D elements.
+
 Key features of the enhanced classification system:
 - **Deterministic fallback**: Uses keyword matching and pattern recognition to classify intents without relying on external LLM calls
 - **Enhanced error handling**: Comprehensive retry logic for rate limit (429) and network errors with exponential backoff
 - **Intent type detection**: Analyzes prompt keywords to distinguish between refinement and generation intents
 - **Multi-component detection**: Identifies when prompts reference multiple components and suggests app mode
+- **Enhanced depth UI detection**: Expanded keyword matching for depth-related terms including parallax, depth, cinematic, floating, layered, immersive, and 3D elements
+- **Automatic depth_ui suggestion**: When 2+ depth-related indicators are found, suggests 'depth_ui' mode automatically
 - **Lower confidence fallback**: Returns classifications with reduced confidence (0.6) to indicate fallback status
 
 Implementation highlights:
@@ -164,9 +178,9 @@ ValidateSchema --> |Failure| Coerce["Coerce null -> undefined for known fields"]
 Coerce --> ValidateSchema2["Retry Zod safeParse"]
 ValidateSchema2 --> |Success| ReturnOK
 ValidateSchema2 --> |Failure| CheckError["Check for rate limit/network error"]
-CheckError --> |Rate limit| LocalFallback["Call buildLocalClassification()"]
+CheckError --> |Rate limit| LocalFallback["Call buildLocalClassification() with enhanced depth detection"]
 LocalFallback --> ReturnFallback["Return deterministic fallback with _fallback=true"]
-CheckError --> |Network error| LocalFallback2["Call buildLocalClassification()"]
+CheckError --> |Network error| LocalFallback2["Call buildLocalClassification() with enhanced depth detection"]
 LocalFallback2 --> ReturnFallback
 CheckError --> |Other error| ReturnErr["Throw error"]
 ReturnOK --> End(["Exit"])
@@ -175,17 +189,19 @@ ReturnErr --> End
 ```
 
 **Diagram sources**
-- [intentClassifier.ts:108-253](file://lib/ai/intentClassifier.ts#L108-L253)
+- [intentClassifier.ts:108-255](file://lib/ai/intentClassifier.ts#L108-L255)
 - [intentClassifier.ts:68-106](file://lib/ai/intentClassifier.ts#L68-L106)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
 **Section sources**
 - [intentClassifier.ts:68-106](file://lib/ai/intentClassifier.ts#L68-L106)
-- [intentClassifier.ts:108-253](file://lib/ai/intentClassifier.ts#L108-L253)
+- [intentClassifier.ts:108-255](file://lib/ai/intentClassifier.ts#L108-L255)
 - [schemas.ts:16-46](file://lib/validation/schemas.ts#L16-L46)
 
-### Deterministic Fallback Classification Algorithm
+### Enhanced Deterministic Fallback Classification Algorithm
 The `buildLocalClassification()` function implements a keyword-based heuristic system that analyzes user prompts to determine intent type and suggested mode:
+
+**Updated** Enhanced depth UI detection logic with expanded keyword matching for visually rich interface requests.
 
 **Intent Type Detection:**
 - **Refinement detection**: Uses keywords like 'fix', 'change', 'update', 'improve', 'make the', 'adjust', 'modify', 'refine', 'edit', 'remove', 'add a', 'replace'
@@ -195,8 +211,11 @@ The `buildLocalClassification()` function implements a keyword-based heuristic s
 
 **Mode Selection Logic:**
 - **Component vs App detection**: Counts occurrences of component-indicating keywords to determine if multiple components are referenced
-- **App mode suggestion**: When 2+ component indicators are found, suggests 'app' mode
-- **Component mode suggestion**: Single component references suggest 'component' mode
+- **Enhanced Depth UI Detection**: Expanded keyword matching for depth-related terms:
+  - **Parallax detection**: parallax, depth, cinematic, floating, layered, immersive, 3D, landing page, hero section
+  - **Automatic suggestion**: When 2+ depth-related indicators are found, suggests 'depth_ui' mode automatically
+  - **Component mode suggestion**: Single component references suggest 'component' mode
+  - **App mode suggestion**: When 2+ component indicators are found, suggests 'app' mode
 
 **Fallback Characteristics:**
 - **Lower confidence**: Returns confidence score of 0.6 (lower than normal classifications)
@@ -243,12 +262,12 @@ P-->>U : {success, intent} or {success : false, error}
 
 **Diagram sources**
 - [intentParser.ts:36-320](file://lib/ai/intentParser.ts#L36-L320)
-- [prompts.ts:120-467](file://lib/ai/prompts.ts#L120-L467)
+- [prompts.ts:120-528](file://lib/ai/prompts.ts#L120-L528)
 - [schemas.ts:150-287](file://lib/validation/schemas.ts#L150-L287)
 
 **Section sources**
 - [intentParser.ts:36-320](file://lib/ai/intentParser.ts#L36-L320)
-- [prompts.ts:8-467](file://lib/ai/prompts.ts#L8-L467)
+- [prompts.ts:8-528](file://lib/ai/prompts.ts#L8-L528)
 - [schemas.ts:150-287](file://lib/validation/schemas.ts#L150-L287)
 
 ### Blueprint Selection and Design Rule Application
@@ -262,6 +281,8 @@ The blueprint engine selects a UI blueprint based on:
 - Assembly rules: enforces non-negotiable rules for imports, motion libraries, layout primitives, and safety constraints
 - Best practice notes: accessibility and responsive design guidelines
 
+**Updated** Enhanced depth UI evaluation with improved keyword detection logic that recognizes parallax, depth, cinematic, floating, layered, immersive, and 3D elements.
+
 ```mermaid
 flowchart TD
 BPStart(["selectBlueprint Entry"]) --> FindLayouts["findMatchingLayouts(prompt, k=2)"]
@@ -269,7 +290,8 @@ FindLayouts --> HasLayout{"Layout found?"}
 HasLayout --> |No| UseDefault["Return DEFAULT_BLUEPRINT"]
 HasLayout --> |Yes| ResolveStyle["resolveVisualStyle(prompt, classification)"]
 ResolveStyle --> IsDepth["Is depth UI? (layout.depthUISuitability OR prompt keywords)"]
-IsDepth --> HasMotion["Has motion? (layout.animationSuitability OR prompt keywords)"]
+IsDepth --> CheckDepthKeywords["Enhanced keyword detection for parallax, depth, cinematic, floating, layered, immersive, 3D"]
+CheckDepthKeywords --> HasMotion["Has motion? (layout.animationSuitability OR prompt keywords)"]
 HasMotion --> AnimDensity["resolveAnimationDensity(prompt, layout)"]
 AnimDensity --> IsPhysics["Is physics required? (layout.physicsSuitability OR prompt keywords)"]
 IsPhysics --> Compat["findCompatibleComponents(layout.id, visualStyle)"]
@@ -289,11 +311,13 @@ UseDefault --> BPEnd
 **Section sources**
 - [blueprintEngine.ts:9-215](file://lib/intelligence/blueprintEngine.ts#L9-L215)
 
-### Depth UI Mode Evaluation
+### Enhanced Depth UI Mode Evaluation
 Depth UI mode is evaluated when:
 - The layout indicates depth UI suitability
-- The prompt contains depth-related keywords (e.g., depth, parallax, layer)
+- The prompt contains depth-related keywords (enhanced detection for parallax, depth, cinematic, floating, layered, immersive, 3D)
 - The classification suggests depth-related visual types
+
+**Updated** Enhanced keyword detection logic that automatically recognizes visually rich interface requests containing parallax, depth, cinematic, floating, layered, immersive, and 3D elements.
 
 The blueprint engine sets:
 - depthUIRequired: true
@@ -305,7 +329,7 @@ The blueprint engine sets:
 flowchart TD
 DStart(["Evaluate Depth UI"]) --> CheckLayout["layout.depthUISuitability"]
 CheckLayout --> |True| SetDepth["Set depthUIRequired = true"]
-CheckLayout --> |False| CheckPrompt["Prompt contains 'depth'/'parallax'/'layer'?"]
+CheckLayout --> |False| CheckPrompt["Enhanced keyword detection for parallax, depth, cinematic, floating, layered, immersive, 3D"]
 CheckPrompt --> |Yes| SetDepth
 CheckPrompt --> |No| KeepDefault["Keep depthUIRequired = false"]
 SetDepth --> MotionRules["Add depth UI assembly rules"]
@@ -323,6 +347,37 @@ KeepDefault --> DEnd
 - [blueprintEngine.ts:132-136](file://lib/intelligence/blueprintEngine.ts#L132-L136)
 - [blueprintEngine.ts:102-111](file://lib/intelligence/blueprintEngine.ts#L102-L111)
 - [blueprintEngine.ts:147-148](file://lib/intelligence/blueprintEngine.ts#L147-L148)
+
+### Depth Experience Engine and Premium Preset Computation
+The depth experience engine computes premium depth UI presets with quantified parallax coefficients and motion specifications:
+
+**Updated** Enhanced depth experience computation with deterministic per-layer speed factors and container-scoped scroll positioning.
+
+Key features:
+- **Quantified parallax coefficients**: Computes exact speed factors per layer based on intensity and layer count
+- **Container-scoped scroll positioning**: Uses relative scroll offsets to prevent parallax "jump" when loading mid-scroll
+- **Intensity-based coefficient ranges**: Low (barely noticeable), medium (polished premium), high (cinematic/immersive)
+- **Accessibility compliance**: Includes reduced motion support and performance mode optimization
+- **Forbidden zones enforcement**: Prevents parallax or heavy animations in sensitive UI areas
+
+```mermaid
+flowchart TD
+DEStart(["evaluateDepthExperience"]) --> CheckPurpose["Check page purpose (dashboard, admin, form, marketing)"]
+CheckPurpose --> ComputeLayers["Compute depth layers based on intensity and purpose"]
+ComputeLayers --> MinimizeMotion{"Should minimize motion?"}
+MinimizeMotion --> |Yes| CollapseLayers["Collapse to 1 layer for reduced motion"]
+MinimizeMotion --> |No| UseLayers["Use computed depth layers"]
+CollapseLayers --> ComputeCoeffs["computeCoefficients(intensity, depthLayers, shouldMinimizeMotion)"]
+UseLayers --> ComputeCoeffs
+ComputeCoeffs --> BuildPreset["Build DepthUIModePreset with quantified coefficients"]
+BuildPreset --> DEnd(["Return premium depth UI preset"])
+```
+
+**Diagram sources**
+- [depthEngine.ts:25-121](file://lib/intelligence/depthEngine.ts#L25-L121)
+
+**Section sources**
+- [depthEngine.ts:25-121](file://lib/intelligence/depthEngine.ts#L25-L121)
 
 ### Blueprint Scoring Mechanisms and Design Rule Conflict Resolution
 Scoring and selection:
@@ -393,7 +448,7 @@ C->>R : JSON {prompt, provider?, model?, hasActiveProject?}
 R->>S : Route handler
 S->>CL : classifyIntent(prompt, hasActiveProject, provider, model, workspaceId, userId)
 alt Rate limit or network error
-CL->>LF : buildLocalClassification(sanitized, hasActiveProject)
+CL->>LF : buildLocalClassification(sanitized, hasActiveProject) with enhanced depth detection
 LF-->>CL : Deterministic fallback classification
 CL-->>S : {success : true, classification, _fallback : true}
 else Success response
@@ -407,7 +462,7 @@ S-->>C : JSON response with fallback indicator
 **Diagram sources**
 - [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
 - [intentClassifier.ts:68-106](file://lib/ai/intentClassifier.ts#L68-L106)
-- [intentClassifier.ts:108-253](file://lib/ai/intentClassifier.ts#L108-L253)
+- [intentClassifier.ts:108-255](file://lib/ai/intentClassifier.ts#L108-L255)
 
 **Section sources**
 - [route.ts:8-77](file://app/api/classify/route.ts#L8-L77)
@@ -421,6 +476,7 @@ Key enhancements:
 - **Intelligent Fallback Detection**: The system checks for the presence of provider-specific API keys before attempting fallback to different providers
 - **Consistent Behavior Across Engines**: Similar logic is implemented in the thinking engine to maintain consistency across the generation pipeline
 - **Deterministic Fallback Responses**: The `buildLocalClassification()` function provides reliable fallback responses when rate limits are exceeded
+- **Enhanced Depth UI Detection**: The deterministic fallback now includes expanded keyword matching for depth-related UI elements
 
 ```mermaid
 flowchart TD
@@ -437,7 +493,7 @@ PreventFallback --> UseDefault
 UseDefault --> ResolveAdapter
 ResolveAdapter --> CallAdapter["Call adapter.generate"]
 CallAdapter --> RateLimit{"Rate limit/network error?"}
-RateLimit --> |Yes| LocalFallback["buildLocalClassification()"]
+RateLimit --> |Yes| LocalFallback["buildLocalClassification() with enhanced depth detection"]
 LocalFallback --> ReturnFallback["Return deterministic fallback"]
 RateLimit --> |No| ParseResponse["Parse and validate response"]
 ```
@@ -460,6 +516,7 @@ The intent processing pipeline exhibits clear separation of concerns:
 - Classification service depends on workspace adapters and validation schemas, with deterministic fallback capabilities
 - Parsing service depends on semantic knowledge base, prompts, and validation schemas
 - Blueprint engine depends on layout and component registries and produces design rule artifacts
+- Depth experience engine depends on blueprint and intent specifications to compute premium presets
 - All outputs are validated by Zod schemas to ensure type safety
 - Fallback mechanisms are integrated throughout the pipeline for enhanced reliability
 
@@ -475,23 +532,26 @@ PARSER --> PROMPTS["Mode Prompts (prompts.ts)"]
 BP["selectBlueprint (blueprintEngine.ts)"] --> LREG["Layout Registry"]
 BP --> CREG["Component Registry"]
 BP --> SCH3["Assembly Rules & Best Practices"]
+DE["evaluateDepthExperience (depthEngine.ts)"] --> BP
 ```
 
 **Diagram sources**
 - [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
-- [intentClassifier.ts:1-253](file://lib/ai/intentClassifier.ts#L1-L253)
+- [intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
 - [intentParser.ts:1-320](file://lib/ai/intentParser.ts#L1-L320)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
-- [prompts.ts:1-467](file://lib/ai/prompts.ts#L1-L467)
+- [prompts.ts:1-528](file://lib/ai/prompts.ts#L1-L528)
+- [depthEngine.ts:1-121](file://lib/intelligence/depthEngine.ts#L1-L121)
 
 **Section sources**
 - [route.ts:1-77](file://app/api/classify/route.ts#L1-L77)
-- [intentClassifier.ts:1-253](file://lib/ai/intentClassifier.ts#L1-L253)
+- [intentClassifier.ts:1-255](file://lib/ai/intentClassifier.ts#L1-L255)
 - [intentParser.ts:1-320](file://lib/ai/intentParser.ts#L1-L320)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [schemas.ts:1-340](file://lib/validation/schemas.ts#L1-L340)
-- [prompts.ts:1-467](file://lib/ai/prompts.ts#L1-L467)
+- [prompts.ts:1-528](file://lib/ai/prompts.ts#L1-L528)
+- [depthEngine.ts:1-121](file://lib/intelligence/depthEngine.ts#L1-L121)
 
 ## Performance Considerations
 - Token budgeting: The parser estimates tokens and fits knowledge within model capacity tiers to avoid context overflow for small/local models
@@ -501,6 +561,7 @@ BP --> SCH3["Assembly Rules & Best Practices"]
 - **Enhanced Provider Resolution**: The system optimizes adapter resolution by respecting user preferences and avoiding unnecessary fallback attempts when using universal keys
 - **Deterministic Fallback**: The `buildLocalClassification()` function provides immediate responses without external API calls, improving overall pipeline performance under stress conditions
 - **Reduced Retry Attempts**: Classification uses fewer retry attempts (2 max) compared to other engines (3 max) to fail fast and maintain responsiveness
+- **Enhanced Depth Detection**: The deterministic fallback now includes expanded keyword matching for depth-related UI elements, improving automatic depth_ui mode suggestions
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -514,8 +575,10 @@ Common issues and resolutions:
 - **Universal key fallback restrictions**: If LLM_KEY is configured but no provider-specific key exists, the system will not attempt fallback to different providers, maintaining consistency with user preferences
 - **Fallback detection**: When `_fallback: true` is present in the classification result, it indicates the response came from the deterministic fallback mechanism
 - **Lower confidence responses**: Fallback classifications have reduced confidence (0.6) to distinguish them from normal classifications
+- **Enhanced depth UI detection**: When prompts contain multiple depth-related keywords (parallax, depth, cinematic, floating, layered, immersive, 3D), the system automatically suggests depth_ui mode
+- **Depth UI mode suggestions**: The enhanced keyword detection logic now recognizes visually rich interface requests and automatically proposes depth_ui execution mode for premium immersive experiences
 
-**Updated** Enhanced troubleshooting guidance for deterministic fallback responses, rate limit scenarios, and fallback detection mechanisms.
+**Updated** Enhanced troubleshooting guidance for deterministic fallback responses, rate limit scenarios, fallback detection mechanisms, and automatic depth_ui mode suggestions based on expanded keyword detection.
 
 **Section sources**
 - [intentParser.ts:151-227](file://lib/ai/intentParser.ts#L151-L227)
@@ -529,4 +592,4 @@ Common issues and resolutions:
 ## Conclusion
 The intent processing and blueprint selection pipeline provides a robust, schema-driven pathway from user intent to executable UI generation. By combining classification, parsing, and blueprint selection with strict validation and design rule enforcement, the system ensures consistent, accessible, and visually coherent outputs. Depth UI mode is evaluated explicitly to support immersive experiences, while conflict resolution prioritizes non-negotiable rules and best practices.
 
-**Updated** The enhanced intent classification system now provides improved reliability through deterministic fallback responses via the `buildLocalClassification()` function, ensuring pipeline continuity even when LLM services are rate-limited or unavailable. The system maintains user intent preservation while providing consistent, predictable behavior across different provider configurations and error conditions. This enhancement ensures that users who configure LLM_KEY (universal keys) retain control over their provider choices while still benefiting from the flexibility of universal key usage and the reliability of deterministic fallback responses.
+**Updated** The enhanced intent classification system now provides improved reliability through deterministic fallback responses via the `buildLocalClassification()` function, ensuring pipeline continuity even when LLM services are rate-limited or unavailable. The system maintains user intent preservation while providing consistent, predictable behavior across different provider configurations and error conditions. The enhanced depth UI detection logic automatically recognizes visually rich interface requests containing parallax, depth, cinematic, floating, layered, immersive, and 3D elements, and suggests depth_ui execution mode for premium immersive experiences. This enhancement ensures that users who configure LLM_KEY (universal keys) retain control over their provider choices while still benefiting from the flexibility of universal key usage and the reliability of deterministic fallback responses with automatic depth_ui mode suggestions.

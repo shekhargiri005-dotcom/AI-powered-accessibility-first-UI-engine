@@ -83,18 +83,24 @@ export function buildLocalClassification(prompt: string, hasActiveProject: boole
     intentType = 'ui_generation'; // Default to generation
   }
 
-  // Detect multi-component prompts → suggest app mode
-  const componentIndicators = (lower.match(/\b(build|create|design|make)\b/g) || []).length;
-  // Detect depth/parallax/immersive prompts → suggest depth_ui mode
+  // Detect single-component vs full-app vs depth prompts
+  const singleComponentHints = /\b(?:card|badge|button|input|textarea|chip|tag|avatar|tooltip|alert|stat|metric|toggle|checkbox|radio|slider|progress|calendar|clock|icon|pill|dot|separator|divider|breadcrumb|tab\s*item|nav\s*item|menu\s*item|list\s*item|table\s*row)\b/i;
+  const fullAppHints = /\b(?:full\s*app|entire\s*app|complete\s*app|multi\s*page|dashboard\s+app|admin\s+panel|saas\s+tool|layout\s+with\s+sidebar|app\s+with\s+nav|app\s+with\s+routing|multiple\s*screens|multi\s*screen)\b/i;
+  const isComponentScope = singleComponentHints.test(prompt) && !fullAppHints.test(prompt);
+
   const depthIndicators = (lower.match(/\b(parallax|depth|cinematic|floating|layered|immersive|3d|landing\s*page|hero\s*(section|layout))\b/g) || []).length;
-  const suggestedMode = componentIndicators >= 2 ? 'app' : depthIndicators >= 2 ? 'depth_ui' : 'component';
+  const suggestedMode: 'component' | 'app' | 'depth_ui' =
+    depthIndicators >= 2 ? 'depth_ui' :
+    isComponentScope ? 'component' :
+    (lower.match(/\b(build|create|design|make)\b/g) || []).length >= 2 ? 'app' :
+    'component';
 
   return {
     intentType: intentType as IntentClassification['intentType'],
     confidence: 0.6, // Lower confidence for local fallback
     summary: prompt.substring(0, 150),
     shouldGenerateCode: ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType),
-    suggestedMode: suggestedMode as 'component' | 'app',
+    suggestedMode: suggestedMode,
     needsClarification: false,
     clarificationQuestion: undefined,
     purpose: 'unknown',
