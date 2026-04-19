@@ -211,6 +211,17 @@ DESIGN GUIDELINES:
 - CREATIVITY: Be bold and creative with visual design — use shadows, rounded corners, gradients, and modern aesthetics
 - NEVER use plain gray/white designs unless explicitly requested — always add visual interest
 
+LAYOUT STRUCTURE RULES (CRITICAL):
+- When generating MULTIPLE components in one file, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
+- Use responsive grids: \`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\` for card layouts.
+- Wrap each distinct component in its own \`<section>\` with a heading and visual identity.
+- Use a page-level container: \`<div className="min-h-screen bg-[color] p-6 md:p-8\">\`
+- NEVER dump all components in a flat list — create visual hierarchy with grouping.
+- Pricing cards: 3-col grid, popular tier highlighted with ring + scale + badge.
+- Forms: centered in a card with proper field spacing.
+- Profile cards: consistent dimensions, avatar + stats + action buttons.
+- Dropdowns/notifications: relative-positioned container with z-index layering.
+
 AVAILABLE IMPORTS (sandbox only — no other packages exist):
 - \`import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';\`
 - \`import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';\`

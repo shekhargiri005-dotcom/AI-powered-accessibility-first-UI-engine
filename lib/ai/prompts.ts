@@ -69,7 +69,13 @@ REFINEMENT & MODIFICATION RULES:
 - If the user prompt refers to an existing project (e.g., "Change the color", "Add a button to the hero", "Fix the navbar"), set "isRefinement": true.
 - Identify the likely target files/components if mentioned (e.g., "navbar", "Hero.tsx") and list them in "targetFiles".
 - Ensure "description" reflects the specific modification requested.
-- If it's a new request, set "isRefinement": false.`;
+- If it's a new request, set "isRefinement": false.
+
+MULTI-COMPONENT DETECTION:
+- If the user describes 2+ SEPARATE UI components in one prompt (e.g., "Build a pricing card... Create a login form..."), set "componentType": "app" and "componentName" to a descriptive dashboard/showcase name like "ComponentShowcase" or "{Theme}Dashboard".
+- In the "screens" field, list each requested component as a separate screen/section.
+- In the "description", summarize the overall purpose: "A dashboard showcasing [component1], [component2], and [component3] in a structured grid layout."
+- This ensures the generator creates a cohesive layout with each component in its own section, rather than cramming everything into one disorganized component.`;
 
 export const COMPONENT_GENERATOR_SYSTEM_PROMPT = `You are an expert frontend developer. Generate production-ready React components with TypeScript and Tailwind CSS.
 
@@ -89,6 +95,18 @@ MANDATORY RULES:
 8. Responsive + accessible: mobile-first, semantic HTML (section, article, nav, header, main, footer), ARIA labels, focus rings.
 9. All event handlers must have a REAL implementation — NEVER use comments or placeholders inside onClick/onChange handlers.
 
+LAYOUT STRUCTURE RULES (CRITICAL):
+- When the intent describes MULTIPLE components/sections, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
+- Use a responsive grid: \`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\` for cards/tiers.
+- Wrap each distinct component in its own \`<section>\` or \`<article>\` with a heading.
+- Use a page-level container with consistent padding and a header: \`<div className="min-h-screen bg-[color] p-6 md:p-8">\`
+- Each section should have: title, description, and its own visual identity (border, rounded corners, shadow).
+- NEVER dump all elements in a single flat list — always create visual hierarchy and grouping.
+- For pricing cards: use a 3-column grid with the "popular" card highlighted (scale, border, badge).
+- For forms: center them in a card container with proper spacing between fields.
+- For profile cards: use consistent card dimensions with avatar, stats row, and action buttons.
+- For dropdowns/notifications: render them in-context with a relative-positioned container.
+
 CRITICAL OUTPUT RULES:
 - Generate 300-600 lines with 3+ sub-components, rich mock data (10+ items), and meaningful state.
 - Return ONLY raw TSX. No markdown fences. No explanation. Export default the main component.
@@ -96,7 +114,9 @@ CRITICAL OUTPUT RULES:
 - NEVER use: block comments as handler bodies (onClick={() => /* ... */}), stray semicolons between JSX attributes, or undefined variables.
 
 === FEW-SHOT EXAMPLE ===
-SaaS Dashboard: 1) Gradient header with avatar. 2) 4 KPI stat cards with icons. 3) Recharts LineChart with mock data. 4) Sortable data table with hover states.
+Single Component: Pricing tiers — 3-column grid with each tier as a card. The "popular" tier has ring-2 ring-violet-500, scale-105, and a badge. Each card lists features with Check icons.
+
+Multi-Component: Dashboard — Header with title. Grid of 4 distinct sections: (1) Pricing cards in 3-col grid, (2) Login form centered in a card, (3) Profile card with avatar + stats, (4) Notification dropdown. Each section is its own <section> with a heading.
 `;
 
 export const REFINEMENT_SYSTEM_PROMPT = `You are an expert React/TypeScript refactoring agent.
@@ -225,11 +245,25 @@ ARCHITECTURE:
 7. ICONS: \`import { ArrowRight } from 'lucide-react'\` — NEVER append 'Icon' suffix.
 8. All event handlers must have REAL implementations — no comments or placeholders as handler bodies.
 
+LAYOUT STRUCTURE RULES (CRITICAL):
+- When generating multiple components in one app, organize them in a STRUCTURED GRID — NOT a flat vertical list.
+- Use responsive grids: \`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\` for card layouts.
+- Wrap each distinct component/section in its own \`<section>\` with a heading and visual identity.
+- Use a page-level container: \`<div className="min-h-screen bg-[color] p-6 md:p-8\">\`
+- Each section should have: title, description, rounded corners, border/shadow, consistent internal spacing.
+- NEVER dump all components in a single flat list — create visual hierarchy with proper grouping.
+- Pricing cards: 3-column grid, popular tier highlighted with ring + scale + badge.
+- Forms: centered in a card with proper field spacing.
+- Profile cards: consistent dimensions, avatar + stats row + action buttons.
+- Dropdowns/notifications: relative-positioned container with proper z-index layering.
+
 CRITICAL: 400-600 lines, 4+ distinct interactive sections, 15+ mock data items. NEVER truncate.
 OUTPUT: Return ONLY raw TSX. No markdown fences. No explanations. Export default the main component.
 
 === FEW-SHOT EXAMPLE ===
 SaaS Dashboard: 1) Sidebar nav with icons. 2) Header with search. 3) KPI cards with skeletons. 4) Recharts LineChart. 5) Sortable table with filters.
+
+Multi-Component Showcase: 1) Page header with title. 2) Pricing cards in 3-col grid (popular highlighted). 3) Login form centered in a card. 4) Profile card with avatar and stats. 5) Notification dropdown with unread badges. Each in its own <section>.
 `;
 
 export function buildAppModeIntentPrompt(userInput: string, knowledge: string | null = null): string {
