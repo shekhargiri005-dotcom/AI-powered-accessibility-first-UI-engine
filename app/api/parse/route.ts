@@ -82,6 +82,42 @@ export async function POST(request: NextRequest) {
     const providerId = provider ? (provider as ProviderName) : undefined;
     const modelId = model || undefined;
 
+    // FREE-TIER FAST PATH: For free-tier providers, build a local fallback intent
+    // instead of calling the LLM. This saves the API call for actual generation.
+    // The fallback intent is sufficient for most component generations.
+    const isFreeTierProvider = provider === 'google' || provider === 'groq';
+    if (isFreeTierProvider) {
+      const componentName = sanitizedPrompt.trim().split(' ').slice(0, 3).map(
+        (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+      ).join('').replace(/[^a-zA-Z0-9]/g, '') || 'GeneratedComponent';
+      const fallbackIntent = {
+        componentType: generationMode === 'app' ? 'app' : generationMode === 'depth_ui' ? 'depth_ui' : 'component',
+        componentName,
+        description: sanitizedPrompt.trim().substring(0, 200),
+        fields: [],
+        layout: { type: 'single-column', maxWidth: 'lg', alignment: 'center' },
+        interactions: [],
+        theme: { variant: 'default', size: 'md' },
+        a11yRequired: ['keyboard navigation', 'aria-labels'],
+        semanticElements: ['main', 'section'],
+        isRefinement: !!contextId,
+        ...(generationMode === 'app' ? {
+          appType: 'web-app',
+          screens: [{ name: 'Home', description: 'Main screen', isDefault: true }],
+          colorScheme: { primary: '#6366f1', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' },
+          features: [], navStyle: 'sidebar',
+        } : {}),
+      };
+      const { UIIntentSchema, AppIntentSchema, DepthUIIntentSchema } = await import('@/lib/validation/schemas');
+      const schema = generationMode === 'app' ? AppIntentSchema : generationMode === 'depth_ui' ? DepthUIIntentSchema : UIIntentSchema;
+      const validation = schema.safeParse(fallbackIntent);
+      if (validation.success) {
+        reqLogger.info('Free-tier provider detected — using local intent (no API call)', { provider });
+        return NextResponse.json({ success: true, intent: depthUi ? { ...validation.data, depthUi: true } : validation.data });
+      }
+      // If validation fails, fall through to LLM parse
+    }
+
     reqLogger.debug('Parsing intent', { 
       mode: generationMode, 
       model: modelId ?? 'env-resolved',

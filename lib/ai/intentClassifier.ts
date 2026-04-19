@@ -65,7 +65,7 @@ export interface ClassificationResult {
  * Build a deterministic local classification when the LLM is rate-limited or unavailable.
  * Uses simple heuristics to determine intent type from the prompt text.
  */
-function buildLocalClassification(prompt: string, hasActiveProject: boolean): IntentClassification {
+export function buildLocalClassification(prompt: string, hasActiveProject: boolean): IntentClassification {
   const lower = prompt.toLowerCase();
   
   // Detect refinement vs generation

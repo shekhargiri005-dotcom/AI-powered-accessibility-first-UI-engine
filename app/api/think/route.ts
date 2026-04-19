@@ -42,6 +42,16 @@ export async function POST(request: NextRequest) {
     const providerId = provider ? (provider as ProviderName) : undefined;
     const modelId = model || undefined;
 
+    // FREE-TIER FAST PATH: Skip LLM think for free-tier providers.
+    // The thinking plan is a "nice to have" enrichment — deterministic fallback
+    // works well enough and saves the API call for actual code generation.
+    const isFreeTierProvider = provider === 'google' || provider === 'groq';
+    if (isFreeTierProvider) {
+      const fallback = buildFallbackPlan(prompt, intentType);
+      reqLogger.info('Free-tier provider detected — using local thinking plan (no API call)', { provider });
+      return NextResponse.json({ success: true, plan: fallback, _fallback: true });
+    }
+
     reqLogger.info('Generating thinking plan', { 
       intentType, 
       model: modelId ?? 'not-provided', 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { classifyIntent } from '@/lib/ai/intentClassifier';
-import { getFastModelForProvider } from '@/lib/ai/modelRegistry';
+import { classifyIntent, buildLocalClassification } from '@/lib/ai/intentClassifier';
 import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import type { ProviderName } from '@/lib/ai/types';
@@ -39,6 +38,16 @@ export async function POST(request: NextRequest) {
 
     const providerId = provider ? (provider as ProviderName) : undefined;
     const modelId = model || undefined;
+
+    // FREE-TIER FAST PATH: Skip LLM classify for free-tier providers.
+    // Google/Groq free tiers have ~15-30 RPM — classify is a "nice to have"
+    // that can be done locally, saving the API call for the actual generation.
+    const isFreeTierProvider = provider === 'google' || provider === 'groq';
+    if (isFreeTierProvider) {
+      const localResult = buildLocalClassification(prompt, hasActiveProject ?? false);
+      reqLogger.info('Free-tier provider detected — using local classification (no API call)', { provider });
+      return NextResponse.json({ success: true, classification: localResult, _fallback: true });
+    }
 
     reqLogger.info('Classifying prompt intent', { 
       hasActiveProject, 

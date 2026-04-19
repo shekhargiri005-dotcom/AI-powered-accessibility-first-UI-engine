@@ -16,7 +16,6 @@ import { validateGeneratedCode } from '@/lib/intelligence/codeValidator';
 import { logger } from '@/lib/logger';
 import { getWorkspaceAdapter } from '@/lib/ai/adapters/index';
 import { auth } from '@/lib/auth';
-import { runVisionRuntimeReview } from '@/lib/ai/visionReviewer';
 import { upsertComponentEmbedding } from '@/lib/ai/vectorStore';
 import type { ProviderName } from '@/lib/ai/types';
 
@@ -131,9 +130,6 @@ export async function POST(request: NextRequest) {
     const intent = intentValidation.data;
     const generationMode: GenerationMode = mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component';
 
-    // Skip vision review for Groq to avoid cost-prohibitive second API call
-    const skipVisionReview = provider === 'groq';
-
 
     // Step 0: Handle Refinement Context
     let refinementContext: { code: string; manifest?: unknown } | undefined;
@@ -211,87 +207,55 @@ export async function POST(request: NextRequest) {
     }
 
     // Step 1.6: UI Expert Critique & Repair Agent
-    // Skipped for local/Ollama models — review would queue a 2nd+ slow local inference call.
-    // Only runs when a fast cloud model (REVIEW_MODEL env var or a configured cloud key) is available.
-    //
-    // adapterOverride ensures the engine uses the SAME provider the user selected in the UI
-    // instead of re-resolving independently from env vars (which may point to an over-quota key).
+    // SKIPPED for free-tier / rate-limited providers to conserve API quota.
+    // Only runs when a dedicated REVIEW_MODEL is configured or the provider
+    // has sufficient quota (not Google free tier).
     const adapterOverride: ReviewerAdapterOverride | undefined = provider
       ? { provider, model, workspaceId, userId }
       : undefined;
 
+    // Free-tier providers (google without paid key) have ~15 RPM.
+    // Review + repair would consume 2 more API calls, guaranteeing 429.
+    // Skip review entirely for these providers unless a dedicated REVIEW_MODEL is set.
+    const isFreeTierProvider = !process.env.REVIEW_MODEL && (
+      provider === 'google' || provider === 'groq'
+    );
+
     let critiqueData: unknown;
     let repairedByReviewer = false;
-    if (!skipVisionReview) {
-      // Wrap the entire review+repair phase in a 60s aggregate timeout.
-      // Each repair call can take 30-60s — without this the chain can exceed
-      // Vercel's 300s maxDuration when multiple repairs trigger in sequence.
-      const reviewPhaseTimeout = new Promise<void>((resolve) => setTimeout(resolve, 60_000));
-      const reviewPhase = (async () => {
-        try {
-          // BUG-02 FIX: Hard 10s escape hatch so Browserless cold-starts never block the pipeline.
-          // Cast the timeout branch to VisionRuntimeReviewResult to avoid a union type mismatch.
-          const visionTimeout = new Promise<import('@/lib/ai/visionReviewer').VisionRuntimeReviewResult>((resolve) =>
-            setTimeout(() => resolve({ runtimeOk: true }), 10_000)
-          );
-          const visionResult = await Promise.race([runVisionRuntimeReview(finalSourceCode), visionTimeout]);
-          if (!visionResult.runtimeOk && visionResult.runtimeError) {
-            const repaired = await repairGeneratedCode(
-              finalSourceCode,
-              `Runtime crash detected in headless render. Fix this error:\n${visionResult.runtimeError}`,
-              adapterOverride,
-            );
-            if (repaired && repaired.length > 100) {
-              finalSourceCode = repaired;
-              repairedByReviewer = true;
-              reviewData = { source: 'runtime', passed: false, reason: visionResult.runtimeError };
-            }
-          } else if (visionResult.visualPassed === false && visionResult.suggestedCode) {
-            finalSourceCode = visionResult.suggestedCode;
-            repairedByReviewer = true;
-            reviewData = { source: 'vision', passed: false, reason: visionResult.visualCritique ?? 'Vision critique failed.' };
-          }
+    if (!isFreeTierProvider) {
+      try {
+        const reviewResult = await reviewGeneratedCode(
+          finalSourceCode,
+          JSON.stringify({ ...intent, mode, model }),
+          adapterOverride,
+        );
+        critiqueData = reviewResult;
 
-          const reviewResult = await reviewGeneratedCode(
+        if (!reviewResult.passed && reviewResult.repairInstructions) {
+          reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
+          const repairedCode = await repairGeneratedCode(
             finalSourceCode,
-            JSON.stringify({ ...intent, mode, model }),
+            reviewResult.repairInstructions,
             adapterOverride,
           );
-          critiqueData = reviewResult;
-
-          if (!reviewResult.passed && reviewResult.repairInstructions) {
-            reqLogger.info('Critique failed, triggering UI Repair Agent', { score: reviewResult.score });
-            const repairedCode = await repairGeneratedCode(
-              finalSourceCode,
-              reviewResult.repairInstructions,
-              adapterOverride,
-            );
-            if (repairedCode && repairedCode.length > 200) {
-              reqLogger.info('Repair success. UI improved by agent.');
-              finalSourceCode = repairedCode;
-              repairedByReviewer = true;
-              reviewData = { source: 'text-review', passed: false, reason: reviewResult.repairInstructions };
-            }
-          } else {
-            reqLogger.info('Critique passed', { score: reviewResult.score });
-            if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
+          if (repairedCode && repairedCode.length > 200) {
+            reqLogger.info('Repair success. UI improved by agent.');
+            finalSourceCode = repairedCode;
+            repairedByReviewer = true;
+            reviewData = { source: 'text-review', passed: false, reason: reviewResult.repairInstructions };
           }
-        } catch (e) {
-          // BUG-01 FIX: Reviewer/repair failure must never kill valid generated code.
-          const reviewErrMsg = e instanceof Error ? e.message : String(e);
-          reqLogger.warn('UI Reviewer failed — continuing with original generated code', { error: reviewErrMsg });
-          if (!reviewData) reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Reviewer unavailable: ' + reviewErrMsg.slice(0, 200) };
+        } else {
+          reqLogger.info('Critique passed', { score: reviewResult.score });
+          if (!reviewData) reviewData = { source: 'text-review', passed: true, reason: 'Passed reviewer checks.' };
         }
-      })();
-
-      // Race: review phase vs 60s aggregate wall-clock timeout
-      await Promise.race([reviewPhase, reviewPhaseTimeout]);
-      if (!reviewData) {
-        reqLogger.warn('Review phase timed out after 60s — continuing with generated code as-is');
-        reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Review phase exceeded 60s budget' };
+      } catch (e) {
+        const reviewErrMsg = e instanceof Error ? e.message : String(e);
+        reqLogger.warn('UI Reviewer failed — continuing with original generated code', { error: reviewErrMsg });
+        if (!reviewData) reviewData = { source: 'reviewer-skipped', passed: true, reason: 'Reviewer unavailable: ' + reviewErrMsg.slice(0, 200) };
       }
     } else {
-      reqLogger.info('Skipping review/repair — local model detected, no fast cloud reviewer available');
+      reqLogger.info('Skipping review/repair — free-tier provider detected, conserving API quota for generation');
     }
 
     // Step 1.6: Sanitize — flatten multi-line template literals that break Sandpack's Babel parser
