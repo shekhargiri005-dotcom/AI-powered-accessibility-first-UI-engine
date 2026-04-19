@@ -86,7 +86,17 @@ MANDATORY RULES:
    - \`import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';\` (for animations)
    - \`import { BarChart, LineChart, PieChart, Bar, Line, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';\` (for charts)
    - \`import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Heart, Plus, Edit, Trash2, Eye, Download, Upload, Filter, RefreshCw, ExternalLink, Clock, Calendar, Mail, Phone, Globe, Lock, Shield, Zap, TrendingUp, TrendingDown, Activity, BarChart2, PieChart as PieChartIcon, Target, Award, Bookmark, Share2, MessageSquare, ThumbsUp, AlertCircle, Info, CheckCircle, XCircle } from 'lucide-react';\`
-   - NO OTHER IMPORTS. Do NOT import from '@ui/core', '@ui/layout', '@ui/motion', 'react-router-dom', 'three', or any non-listed package.
+   - @ui/* COMPONENT ECOSYSTEM (available in Sandpack — use for consistent, accessible UI):
+     - \`import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Textarea, Badge, Avatar, Modal, ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from '@ui/core'\`
+     - \`import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms'\`
+     - \`import { Grid, Stack, Container, Divider, Section } from '@ui/layout'\`
+     - \`import { Icon } from '@ui/icons'\` (50+ inline SVG icons by name: arrow-right, check, search, settings, etc.)
+     - \`import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer, useKeyboardNav } from '@ui/a11y'\`
+     - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
+     - \`import { DragDrop, DropZone } from '@ui/dragdrop'\`
+     - \`import { Motion, MotionGroup } from '@ui/motion'\`
+     - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
+   - You CAN import from @ui/* — these packages exist in the sandbox. Use @ui/core for Button/Card/Input/Modal, @ui/forms for form controls, @ui/layout for Grid/Stack/Container, @ui/icons for icons, @ui/charts for SVG charts. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 3. SPACING: Use ONLY valid Tailwind scale values (p-4, m-2, gap-6). NEVER use arbitrary px values (p-[13px]).
 4. WCAG AA contrast: text-gray-700+ on light, text-white/gray-100 on dark. Use vibrant gradients. No CSS variables.
 5. Icons: \`import { ArrowRight } from 'lucide-react'\` — NEVER append 'Icon' suffix to icon names.
@@ -236,7 +246,16 @@ ARCHITECTURE:
    - \`import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';\`
    - \`import { BarChart, LineChart, PieChart, Bar, Line, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';\`
    - \`import { ArrowRight, Check, X, ChevronDown, ChevronUp, Search, Bell, Settings, User, Menu, Home, Star, Heart, Plus, Edit, Trash2, Eye, Download, Upload, Filter, LogOut, Shield, Zap, TrendingUp, TrendingDown, Activity, BarChart2, Target, Award, Bookmark, Share2, MessageSquare, ThumbsUp, AlertCircle, Info, CheckCircle, XCircle, Clock, Calendar, Mail, Phone, Globe, Lock } from 'lucide-react';\`
-   - DO NOT import from '@ui/core', '@ui/layout', 'react-router-dom', 'three', or any other package.
+   - @ui/* COMPONENT ECOSYSTEM (available in Sandpack — use for consistent, accessible UI):
+     - \`import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Textarea, Badge, Avatar, Modal, ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from '@ui/core'\`
+     - \`import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms'\`
+     - \`import { Grid, Stack, Container, Divider, Section } from '@ui/layout'\`
+     - \`import { Icon } from '@ui/icons'\` (50+ inline SVG icons by name)
+     - \`import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer, useKeyboardNav } from '@ui/a11y'\`
+     - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
+     - \`import { Motion, MotionGroup } from '@ui/motion'\`
+     - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
+   - You CAN import from @ui/* — these packages exist in the sandbox. Use them for forms, cards, modals, layouts, and complex patterns. Prefer raw Tailwind + lucide-react for simple needs.
 2. COLORFUL AESTHETICS: Tailwind native colors (bg-indigo-600, from-rose-500 to-pink-500). WCAG AA contrast strictly. Distinct colorful personality per app.
 3. REALISTIC LOGIC: useState + useEffect for data. Loading skeletons + error states with realistic mock data.
 4. INTERACTIONS: hover effects, sortable/filterable tables, Recharts charts with tooltips, modals.

@@ -62,8 +62,21 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { BarChart, LineChart, PieChart, Bar, Line, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Plus, Edit, Trash2, Eye, Filter, TrendingUp, TrendingDown, Activity, BarChart2, Target, Award, MessageSquare, AlertCircle, Info, CheckCircle, XCircle, Clock, Calendar, Mail, Phone, Globe, Lock, Shield, Zap } from 'lucide-react';
 
+// @ui/* COMPONENT ECOSYSTEM (available in Sandpack sandbox):
+import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Textarea, Modal, ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter, Badge, Avatar } from '@ui/core';
+import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms';
+import { Grid, Stack, Container, Divider, Section } from '@ui/layout';
+import { Icon } from '@ui/icons';
+import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer, useKeyboardNav } from '@ui/a11y';
+import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts';
+import { DragDrop, DropZone } from '@ui/dragdrop';
+import { RichTextEditor } from '@ui/editor';
+import { Motion, MotionGroup } from '@ui/motion';
+import { ThemeProvider, useTheme } from '@ui/theming';
+import { CommandPalette, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@ui/command-palette';
+
 // TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*, hover:*, focus:*
-// DO NOT import ANY other packages — they do not exist in the sandbox.`.trim();
+// DO NOT import ANY packages not listed above — they do not exist in the sandbox.`.trim();
 
 // ─── Fill-in-Blank Template (tiny models) ────────────────────────────────────
 
@@ -227,7 +240,16 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
 - \`import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';\`
 - \`import { BarChart, LineChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';\`
 - \`import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Plus, Edit, Trash2, Eye, Filter, TrendingUp, TrendingDown, Activity } from 'lucide-react';\`
-DO NOT use @ui/* imports — they do not exist in this sandbox.
+- @ui/* COMPONENTS (available in Sandpack — use when appropriate):
+  - \`import { Button, Card, Input, Textarea, Badge, Avatar, Modal } from '@ui/core'\`
+  - \`import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms'\`
+  - \`import { Grid, Stack, Container, Divider, Section } from '@ui/layout'\`
+  - \`import { Icon } from '@ui/icons'\` (50+ SVG icons by name)
+  - \`import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer } from '@ui/a11y'\`
+  - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
+  - \`import { Motion, MotionGroup } from '@ui/motion'\`
+  - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
+You CAN use @ui/* imports — they exist in the sandbox. Use them for consistent, accessible UI building blocks. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 
 ${blueprintText}
 
