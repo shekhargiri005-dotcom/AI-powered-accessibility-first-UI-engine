@@ -15,9 +15,9 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive crash detection observer and recovery mechanism
-- Implemented dependency reduction and tree-shaking improvements
-- Enhanced performance with lazy loading of html2canvas
+- Fixed html2canvas import errors by converting to conditional dependency for generated code only
+- Improved sandbox environment loading efficiency by avoiding unnecessary imports
+- Enhanced performance with lazy loading of html2canvas in host environment
 - Updated dependency management to remove unnecessary packages
 - Improved error handling and user experience
 
@@ -34,10 +34,10 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the CodeSandbox Sandpack integration that powers the real-time component preview. It covers how the Sandpack environment is configured, how dependencies are managed, how the UI ecosystem is injected, and how the preview renders generated components with styling and interactivity. The integration now includes comprehensive crash detection, recovery mechanisms, dependency reduction, and enhanced performance optimizations.
+This document explains the CodeSandbox Sandpack integration that powers the real-time component preview. It covers how the Sandpack environment is configured, how dependencies are managed, how the UI ecosystem is injected, and how the preview renders generated components with styling and interactivity. The integration now includes comprehensive crash detection, recovery mechanisms, dependency reduction, and enhanced performance optimizations with improved html2canvas handling.
 
 ## Project Structure
-The Sandpack integration spans several modules with enhanced crash detection and performance improvements:
+The Sandpack integration spans several modules with enhanced crash detection, performance improvements, and optimized html2canvas handling:
 - The preview component that hosts Sandpack and orchestrates observers and error handling
 - The Sandpack configuration builder that generates the virtual file system and dependency set
 - The import sanitizer that guards against unresolved or hallucinated imports
@@ -66,6 +66,9 @@ subgraph "Crash Detection"
 CD["Crash Detection Observer"]
 RM["Recovery Mechanism"]
 end
+subgraph "html2canvas Optimization"
+HC["Conditional Import Handler"]
+end
 RC --> SP
 FR --> SP
 SP --> CFG
@@ -76,6 +79,7 @@ BLD --> UIM
 GC -. displays code .-> RC
 SP --> CD
 CD --> RM
+SP --> HC
 ```
 
 **Diagram sources**
@@ -96,6 +100,7 @@ CD --> RM
 - **UI ecosystem snapshot**: A prebuilt JSON of @ui/* package files injected into the virtual FS when referenced by generated code.
 - **Crash detection observer**: Monitors Sandpack status and detects runtime crashes with automatic recovery.
 - **Observers**: Change observer to surface inline edits, screenshot observer to signal when the preview iframe is ready, and crash observer for runtime monitoring.
+- **html2canvas optimization**: Conditional import handling that prevents Vite build-time resolution errors and improves loading efficiency.
 
 **Section sources**
 - [SandpackPreview.tsx:105-151](file://components/SandpackPreview.tsx#L105-L151)
@@ -103,7 +108,7 @@ CD --> RM
 - [sandpackConfig.ts:454-510](file://lib/sandbox/sandpackConfig.ts#L454-L510)
 
 ## Architecture Overview
-The preview pipeline with enhanced crash detection and performance optimizations:
+The preview pipeline with enhanced crash detection, performance optimizations, and improved html2canvas handling:
 - The parent panel passes generated code and component name to SandpackPreview.
 - The preview builds a virtual file system and dependency set using the configuration builder.
 - The configuration builder sanitizes imports, injects the @ui/* ecosystem snapshot, and sets Vite aliases.
@@ -111,6 +116,7 @@ The preview pipeline with enhanced crash detection and performance optimizations
 - Sandpack runs the preview in a Vite-powered environment with Tailwind and React.
 - Observers monitor for code changes, preview readiness, and runtime crashes.
 - Crash detection observer monitors Sandpack status and triggers recovery mechanism.
+- html2canvas is conditionally imported only when needed for screenshot capture.
 
 ```mermaid
 sequenceDiagram
@@ -121,6 +127,7 @@ participant Resolver as "dependencyResolver"
 participant Sandpack as "SandpackProvider"
 participant CrashObs as "CrashObserver"
 participant ScreenshotObs as "ScreenshotObserver"
+participant HC as "html2canvas Handler"
 Panel->>Preview : props { code, componentName, callbacks }
 Preview->>Config : buildSandpackFiles(code, componentName)
 Config->>Resolver : resolveDependencies()
@@ -129,6 +136,7 @@ Config-->>Preview : files, activeFile, dependencies
 Preview->>Sandpack : template="vite-react-ts"<br/>theme="dark"<br/>files, customSetup.dependencies
 Preview->>CrashObs : mount CrashObserver
 Preview->>ScreenshotObs : mount ScreenshotObserver
+Preview->>HC : conditional html2canvas import
 Sandpack-->>Preview : status "running"/"done"
 CrashObs-->>Preview : onCrashDetected()
 Preview-->>Panel : show crash overlay
@@ -152,6 +160,7 @@ Responsibilities:
   - ChangeObserver: emits captured edits when the active file changes from its initial state.
   - ScreenshotObserver: detects when the preview iframe is ready and posts back the iframe URL for capture.
   - **CrashObserver**: monitors Sandpack status and triggers crash recovery mechanism.
+- **html2canvas optimization**: Conditionally imports html2canvas only when screenshot capture is needed.
 
 Preview rendering:
 - Uses SandpackLayout with a custom split between editor and preview panes.
@@ -200,7 +209,7 @@ Responsibilities:
   - HTML shell and Vite/Tailwind setup
   - React entry point and styles
   - Tailwind/postcss configs
-  - A capture wrapper for screenshots with lazy loading
+  - A capture wrapper for screenshots with **intentionally avoided html2canvas import** to prevent Vite build-time resolution errors
   - Either a single App.tsx + component file or a multi-file structure
   - Vite resolve aliases for @ui/* and @/lib/utils
 - Inject the @ui/* ecosystem snapshot only when the code references it.
@@ -212,6 +221,7 @@ Key behaviors:
 - Multi-file inputs are normalized and App.tsx is ensured to exist.
 - Vite aliases are required because Vite 4 does not honor tsconfig paths.
 - **Dependency reduction**: Only include essential packages to minimize bundle size.
+- **html2canvas optimization**: CaptureWrapper intentionally avoids importing html2canvas to prevent Vite build-time resolution errors.
 
 ```mermaid
 flowchart TD
@@ -292,7 +302,7 @@ Responsibilities:
 Behavior:
 - Maintains a strict allow-list of known packages and prefixes.
 - Supports relative imports and aliased imports via Vite aliases.
-- **Enhanced performance**: html2canvas is now lazy-loaded to reduce initial bundle size.
+- **Enhanced performance**: html2canvas is now conditionally imported only when needed for screenshot capture.
 
 ```mermaid
 flowchart TD
@@ -370,15 +380,50 @@ Reload --> Reset["Reset crash state<br/>Refresh preview"]
 **Section sources**
 - [SandpackPreview.tsx:113-151](file://components/SandpackPreview.tsx#L113-L151)
 
+### html2canvas Optimization and Conditional Import Handling
+**New** Enhanced html2canvas import handling for improved performance
+
+Responsibilities:
+- **Conditional import**: html2canvas is imported only when screenshot capture is needed.
+- **Prevent Vite build-time errors**: CaptureWrapper intentionally avoids importing html2canvas to prevent Vite build-time resolution errors in the sandbox.
+- **Host environment optimization**: html2canvas is loaded lazily in the host environment to improve initial load performance.
+- **Fallback handling**: When html2canvas is not available, the system falls back to alternative capture mechanisms.
+
+Key improvements:
+- **Build-time prevention**: html2canvas import is avoided in sandboxed components to prevent Vite resolution failures.
+- **Runtime optimization**: html2canvas is loaded only when the screenshot API requires it.
+- **Error resilience**: System gracefully handles cases where html2canvas is unavailable.
+
+```mermaid
+flowchart TD
+A["Generated code contains html2canvas?"] --> B{"Screenshot capture needed?"}
+B --> |No| C["Avoid html2canvas import<br/>in sandbox<br/>Use alternative capture"]
+B --> |Yes| D["Conditional import<br/>Load html2canvas only when needed"]
+D --> E["Execute screenshot capture"]
+C --> F["Use built-in capture methods"]
+E --> G["Return capture result"]
+F --> G
+```
+
+**Diagram sources**
+- [sandpackConfig.ts:257-280](file://lib/sandbox/sandpackConfig.ts#L257-L280)
+- [RightPanel.tsx:131-169](file://components/ide/RightPanel.tsx#L131-L169)
+
+**Section sources**
+- [sandpackConfig.ts:257-280](file://lib/sandbox/sandpackConfig.ts#L257-L280)
+- [RightPanel.tsx:131-169](file://components/ide/RightPanel.tsx#L131-L169)
+
 ### Observers and Integration Points
 - **ChangeObserver**: Watches the active file's code and emits changes once the content diverges from the initial state and exceeds a minimum length threshold. Used to capture inline edits for feedback loops.
 - **ScreenshotObserver**: Waits for the preview to reach a running/done state, then locates the preview iframe and posts back either its external src or a special internal URL for capture. This is used by the final round to generate screenshots.
 - **CrashObserver**: Monitors Sandpack status and triggers crash detection when runtime failures occur.
+- **html2canvas handler**: Manages conditional import and capture operations for screenshot functionality.
 
 Integration with panels:
 - RightPanel receives the generated code and can trigger the preview.
 - FinalRoundPanel coordinates with the preview to capture screenshots and display review results.
 - **Enhanced integration**: Crash observer integrates seamlessly with the preview lifecycle.
+- **Optimized integration**: html2canvas handler integrates with the preview to provide efficient screenshot capture.
 
 **Section sources**
 - [SandpackPreview.tsx:105-151](file://components/SandpackPreview.tsx#L105-L151)
@@ -391,10 +436,12 @@ The Sandpack environment relies on:
 - UI ecosystem packages aliased via Vite
 - Optional extras based on code content (e.g., Three.js, Framer Motion, Recharts)
 - **Reduced dependencies**: Removed @radix-ui and class-variance-authority for better performance
+- **Optimized html2canvas**: Now conditionally imported only when needed for screenshot capture
 
 Dynamic dependency detection:
 - The builder augments a base set of dependencies with extras inferred from the code content.
 - **Enhanced optimization**: Dependency resolver performs tree-shaking to eliminate unused packages.
+- **Conditional optimization**: html2canvas is only included when generated code specifically requests it.
 
 ```mermaid
 graph LR
@@ -405,6 +452,7 @@ Extras --> Runtime
 BaseDeps["Base deps"] --> Runtime
 TreeShake["Dependency Resolver<br/>Tree-shaking"] --> Optimized["Optimized deps"]
 Runtime --> Optimized
+HC["Conditional html2canvas<br/>import"] --> Optimized
 ```
 
 **Diagram sources**
@@ -420,9 +468,10 @@ Runtime --> Optimized
 - **Virtual FS stubs**: Missing relative imports are stubbed to prevent Vite resolution errors and reduce rebuild cycles.
 - **Vite aliases**: Aliases are defined in a dedicated Vite config injected into the preview to ensure fast and correct resolution.
 - **Tailwind JIT**: Tailwind is configured for content paths within the preview to minimize build overhead.
-- **Lazy loading**: html2canvas is now lazy-loaded to reduce initial bundle size and improve startup performance.
+- **Lazy loading**: html2canvas is now conditionally imported only when screenshot capture is needed, reducing initial bundle size and improving startup performance.
 - **Dependency reduction**: Removed unnecessary packages like @radix-ui and class-variance-authority to minimize bundle size.
 - **Tree-shaking**: Enhanced dependency resolver eliminates unused code and dependencies.
+- **Build-time prevention**: html2canvas import is intentionally avoided in sandboxed components to prevent Vite resolution errors.
 
 ## Troubleshooting Guide
 Common preview issues and remedies:
@@ -447,6 +496,12 @@ Common preview issues and remedies:
 - **Large bundle size affecting performance**:
   - Cause: Unnecessary dependencies like @radix-ui or class-variance-authority.
   - Remedy: The dependency resolver removes unused packages; ensure code doesn't import unnecessary UI libraries.
+- **html2canvas import errors in sandbox**:
+  - Cause: Direct html2canvas import in sandboxed components causing Vite build-time resolution errors.
+  - Remedy: html2canvas import is intentionally avoided in sandboxed components; use the host environment's conditional import mechanism instead.
+- **Screenshot capture failures**:
+  - Cause: html2canvas not available or timing issues.
+  - Remedy: The system uses conditional import and fallback mechanisms; ensure the host environment has proper html2canvas availability.
 
 **Section sources**
 - [sandpackConfig.ts:400-452](file://lib/sandbox/sandpackConfig.ts#L400-L452)
@@ -454,7 +509,7 @@ Common preview issues and remedies:
 - [SandpackPreview.tsx:113-151](file://components/SandpackPreview.tsx#L113-L151)
 
 ## Conclusion
-The Sandpack integration provides a robust, configurable, and performant live preview environment with comprehensive crash detection and recovery mechanisms. By sanitizing imports, injecting only necessary UI ecosystem files, performing dependency reduction and tree-shaking, and implementing lazy loading optimizations, it supports real-time editing and screenshot capture while maintaining stability and speed. The preview component's observers, crash detection system, and error boundaries further enhance usability by surfacing changes, detecting runtime failures, and handling recoveries gracefully.
+The Sandpack integration provides a robust, configurable, and performant live preview environment with comprehensive crash detection and recovery mechanisms. By sanitizing imports, injecting only necessary UI ecosystem files, performing dependency reduction and tree-shaking, and implementing optimized html2canvas handling, it supports real-time editing and screenshot capture while maintaining stability and speed. The preview component's observers, crash detection system, error boundaries, and conditional html2canvas import further enhance usability by surfacing changes, detecting runtime failures, handling recoveries gracefully, and preventing build-time resolution errors.
 
 ## Appendices
 
@@ -471,6 +526,8 @@ The Sandpack integration provides a robust, configurable, and performant live pr
   - After the preview reaches a running state, the observer posts back the iframe URL for capture; the final round panel uses this to generate images.
 - **Crash recovery**:
   - When runtime crashes are detected, the crash observer triggers a crash overlay with retry option; users can click reload to restart the preview.
+- **html2canvas optimization**:
+  - html2canvas is conditionally imported only when screenshot capture is needed, preventing Vite build-time resolution errors.
 
 **Section sources**
 - [SandpackPreview.tsx:105-151](file://components/SandpackPreview.tsx#L105-L151)
@@ -485,12 +542,13 @@ The Sandpack integration provides a robust, configurable, and performant live pr
   - Base dependencies include React, ReactDOM, Tailwind, and UI ecosystem packages.
   - Extra dependencies are added based on detected imports (e.g., Three.js, Framer Motion, Recharts).
   - **Optimized**: Removed @radix-ui and class-variance-authority to reduce bundle size.
+  - **Conditional**: html2canvas is only included when generated code specifically requests it.
 - **File system simulation**:
-  - Includes HTML shell, index entry, Tailwind/postcss configs, and a capture wrapper with lazy loading.
+  - Includes HTML shell, index entry, Tailwind/postcss configs, and a capture wrapper with **intentionally avoided html2canvas import**.
   - Vite resolve aliases for @ui/* and @/lib/utils are defined in a dedicated vite.config.ts injected into the preview.
 - **Runtime execution**:
   - The index entry mounts the App inside a StrictMode wrapper and applies the capture wrapper for screenshotting.
-  - **Enhanced**: html2canvas is lazy-loaded to improve initial load performance.
+  - **Enhanced**: html2canvas is conditionally imported only when screenshot capture is needed.
 
 **Section sources**
 - [SandpackPreview.tsx:278-361](file://components/SandpackPreview.tsx#L278-L361)
@@ -502,6 +560,7 @@ The Sandpack integration provides a robust, configurable, and performant live pr
 - Aliases in Vite ensure that imports like @ui/core, @ui/forms, and @/lib/utils resolve correctly within the preview.
 - The capture wrapper ensures screenshots capture the full component content reliably.
 - **Optimized integration**: Dependency resolver removes unnecessary packages, reducing bundle size and improving performance.
+- **html2canvas optimization**: Conditional import prevents Vite build-time resolution errors while enabling efficient screenshot capture when needed.
 
 **Section sources**
 - [sandpackConfig.ts:400-452](file://lib/sandbox/sandpackConfig.ts#L400-L452)

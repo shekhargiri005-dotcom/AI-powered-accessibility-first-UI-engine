@@ -24,7 +24,7 @@ RULES:
 - For "product_requirement", "ideation", "context_clarification" — shouldGenerateCode is false (we need to show the thinking panel first)
 - confidence: 0.0-1.0 representing how certain you are
 - summary: 1-2 sentences describing what the user wants in plain English
-- suggestedMode: "component" for single components, "app" for multi-screen apps, "webgl" for 3D scenes
+- suggestedMode: "component" for single components, "app" for multi-screen apps, "depth_ui" for parallax/depth/cinematic/landing-page UI
 - clarificationQuestion: only set if needsClarification is true
 
 OUTPUT: Return ONLY valid JSON matching this exact schema:
@@ -32,7 +32,7 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
   "intentType": string,
   "confidence": number,
   "summary": string,
-  "suggestedMode": "component" | "app" | "webgl",
+  "suggestedMode": "component" | "app" | "depth_ui",
   "needsClarification": boolean,
   "clarificationQuestion": string | null,
   "shouldGenerateCode": boolean,
@@ -85,7 +85,9 @@ export function buildLocalClassification(prompt: string, hasActiveProject: boole
 
   // Detect multi-component prompts → suggest app mode
   const componentIndicators = (lower.match(/\b(build|create|design|make)\b/g) || []).length;
-  const suggestedMode = componentIndicators >= 2 ? 'app' : 'component';
+  // Detect depth/parallax/immersive prompts → suggest depth_ui mode
+  const depthIndicators = (lower.match(/\b(parallax|depth|cinematic|floating|layered|immersive|3d|landing\s*page|hero\s*(section|layout))\b/g) || []).length;
+  const suggestedMode = componentIndicators >= 2 ? 'app' : depthIndicators >= 2 ? 'depth_ui' : 'component';
 
   return {
     intentType: intentType as IntentClassification['intentType'],

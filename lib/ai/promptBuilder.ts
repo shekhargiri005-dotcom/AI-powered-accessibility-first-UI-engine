@@ -226,15 +226,18 @@ DESIGN GUIDELINES:
 - NEVER use plain gray/white designs unless explicitly requested — always add visual interest
 
 LAYOUT STRUCTURE RULES (CRITICAL):
+- Component mode = ONE focused, self-contained component. NOT a full page with sidebar, nav, routing, or multiple unrelated sections.
+- A "dashboard card" = a single card with metric + trend. NOT an entire dashboard with sidebar + charts + tables + feeds.
+- If the user wants a multi-section page layout with navigation, that is APP mode — do NOT generate that here.
 - When generating MULTIPLE components in one file, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
 - Use responsive grids: \`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\` for card layouts.
 - Wrap each distinct component in its own \`<section>\` with a heading and visual identity.
-- Use a page-level container: \`<div className="min-h-screen bg-[color] p-6 md:p-8\">\`
 - NEVER dump all components in a flat list — create visual hierarchy with grouping.
 - Pricing cards: 3-col grid, popular tier highlighted with ring + scale + badge.
 - Forms: centered in a card with proper field spacing.
 - Profile cards: consistent dimensions, avatar + stats + action buttons.
 - Dropdowns/notifications: relative-positioned container with z-index layering.
+- NEVER generate sidebar navigation, multi-screen routing, or full-page layouts in COMPONENT mode.
 
 AVAILABLE IMPORTS (sandbox only — no other packages exist):
 - \`import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';\`
@@ -250,12 +253,14 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
   - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
   - \`import { Motion, MotionGroup } from '@ui/motion'\`
   - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-  - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, chartPalette } from '@ui/tokens'\`
+  - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens'\`
 You CAN use @ui/* imports — they exist in the sandbox. Use them for consistent, accessible UI building blocks. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 
 ${blueprintText}
 
-OUTPUT: Return ONLY raw TSX code. No markdown. No explanation. Export default the main component.`;
+OUTPUT: Return ONLY raw TSX code. No markdown. No explanation. Export default the main component.
+Generate 100-350 lines of FOCUSED code — a single component, NOT a full application with sidebar and routing.
+Include 1-3 sub-components max and 5-8 mock data items.`;
 
 
   const userPrompt = buildComponentGeneratorPrompt(intent, knowledge, memory, false);

@@ -4,7 +4,6 @@
 **Referenced Files in This Document**
 - [base.ts](file://lib/ai/adapters/base.ts)
 - [openai.ts](file://lib/ai/adapters/openai.ts)
-- [anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [google.ts](file://lib/ai/adapters/google.ts)
 - [index.ts](file://lib/ai/adapters/index.ts)
 - [types.ts](file://lib/ai/types.ts)
@@ -24,12 +23,12 @@
 
 ## Update Summary
 **Changes Made**
-- Updated adapter factory documentation to reflect 4 supported providers instead of 5
-- Removed Ollama-specific configuration examples, local runtime detection, and model support documentation
-- Updated project structure to reflect the removal of Ollama adapter implementation
-- Revised architecture diagrams and component analyses to exclude Ollama references
-- Updated troubleshooting guide to remove Ollama-specific connectivity issues
-- Modified implementation examples to reflect the simplified provider configuration approach
+- Updated adapter factory documentation to reflect 3 supported providers instead of 4
+- Removed Anthropic and Ollama-specific configuration examples, local runtime detection, and model support documentation
+- Updated project structure to reflect the removal of Anthropic and Ollama adapter implementations
+- Revised architecture diagrams and component analyses to exclude Anthropic and Ollama references
+- Updated troubleshooting guide to remove Anthropic and Ollama-specific connectivity issues
+- Modified implementation examples to reflect the simplified provider configuration approach with only OpenAI, Google, and Groq providers
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -46,7 +45,7 @@
 12. [Appendices](#appendices)
 
 ## Introduction
-This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Anthropic, Google, and DeepSeek (OpenAI-compatible). The system now features enhanced security with proper universal LLM_KEY scoping, ensuring credentials are only applied to their designated provider rather than all providers.
+This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Google, and Groq (OpenAI-compatible). The system now features enhanced security with proper universal LLM_KEY scoping, ensuring credentials are only applied to their designated provider rather than all providers.
 
 **Updated** The system has been enhanced with comprehensive security features including proper universal LLM_KEY scoping implementation, explicit provider validation when using universal keys, and simplified provider configuration that requires explicit per-provider setup rather than auto-detection. The adapter system now enforces explicit provider configuration through the ModelSelectionGate interface, ensuring users understand which provider they're configuring.
 
@@ -58,7 +57,6 @@ graph TB
 subgraph "Adapters"
 BASE["base.ts<br/>AIAdapter interface"]
 OA["openai.ts<br/>OpenAIAdapter"]
-AA["anthropic.ts<br/>AnthropicAdapter"]
 GA["google.ts<br/>GoogleAdapter"]
 IDX["index.ts<br/>Factory + Registry + Explicit Provider Config"]
 UNC["unconfigured.ts<br/>UnconfiguredAdapter"]
@@ -78,7 +76,6 @@ TYPES["types.ts<br/>Message/Options/Results"]
 TOOLS["tools.ts<br/>Tool/ToolCall/Exec"]
 END
 IDX --> OA
-IDX --> AA
 IDX --> GA
 IDX --> UNC
 RDA --> IDX
@@ -87,7 +84,6 @@ MSG --> WSP
 MSG --> PSTATUS
 PSTATUS --> RDA
 OA --> TYPES
-AA --> TYPES
 GA --> TYPES
 OA --> TOOLS
 GA --> TOOLS
@@ -96,11 +92,10 @@ WKS --> ENC
 ```
 
 **Diagram sources**
-- [index.ts:1-305](file://lib/ai/adapters/index.ts#L1-L305)
+- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
-- [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
 - [types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
@@ -112,7 +107,7 @@ WKS --> ENC
 - [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
 
 **Section sources**
-- [index.ts:1-305](file://lib/ai/adapters/index.ts#L1-L305)
+- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
@@ -124,7 +119,7 @@ WKS --> ENC
 
 ## Core Components
 - AIAdapter interface: Defines the provider-agnostic contract with generate() and stream().
-- Provider adapters: Implementations for OpenAI, Anthropic, Google, and DeepSeek (OpenAI-compatible).
+- Provider adapters: Implementations for OpenAI, Google, and Groq (OpenAI-compatible).
 - Factory and registry: Centralized creation logic with workspace-aware resolution, fallbacks, and enhanced universal key validation.
 - **Enhanced security system**: Comprehensive server-side credential management with AES-256-GCM encryption, workspace-scoped keys, caching, global fallback, and universal key provider scoping.
 - **Universal LLM_KEY scoping**: Explicit provider validation ensuring LLM_KEY credentials are only applied to their designated provider via LLM_PROVIDER environment variable.
@@ -137,7 +132,7 @@ WKS --> ENC
 - [base.ts:48-72](file://lib/ai/adapters/base.ts#L48-L72)
 - [types.ts:19-55](file://lib/ai/types.ts#L19-L55)
 - [tools.ts:47-79](file://lib/ai/tools.ts#L47-L79)
-- [index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
+- [index.ts:146-184](file://lib/ai/adapters/index.ts#L146-L184)
 - [resolveDefaultAdapter.ts:58-138](file://lib/ai/resolveDefaultAdapter.ts#L58-L138)
 - [unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
 
@@ -176,7 +171,7 @@ MSG-->>UI : "Configuration complete with explicit provider notice"
 - [ModelSelectionGate.tsx:70-102](file://components/ModelSelectionGate.tsx#L70-L102)
 - [route.ts:137-207](file://app/api/providers/status/route.ts#L137-L207)
 - [resolveDefaultAdapter.ts:73-138](file://lib/ai/resolveDefaultAdapter.ts#L73-L138)
-- [index.ts:223-290](file://lib/ai/adapters/index.ts#L223-L290)
+- [index.ts:205-256](file://lib/ai/adapters/index.ts#L205-L256)
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
 - [encryption.ts:27-69](file://lib/security/encryption.ts#L27-L69)
 
@@ -222,37 +217,13 @@ AIAdapter <|.. OpenAIAdapter
 ```
 
 **Diagram sources**
-- [openai.ts:36-223](file://lib/ai/adapters/openai.ts#L36-L223)
+- [openai.ts:36-218](file://lib/ai/adapters/openai.ts#L36-L218)
 - [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
 
 **Section sources**
 - [openai.ts:23-32](file://lib/ai/adapters/openai.ts#L23-L32)
-- [openai.ts:64-157](file://lib/ai/adapters/openai.ts#L64-L157)
-- [openai.ts:159-222](file://lib/ai/adapters/openai.ts#L159-L222)
-
-### Anthropic Adapter
-Uses the native Anthropic Messages API via fetch(), handling system prompts, JSON mode instructions, token caps, and streaming events.
-
-```mermaid
-classDiagram
-class AnthropicAdapter {
-+string provider
--apiKey string
-+constructor(apiKey?)
--getKey() string
-+generate(options) GenerateResult
-+stream(options) AsyncGenerator~StreamChunk~
-}
-AIAdapter <|.. AnthropicAdapter
-```
-
-**Diagram sources**
-- [anthropic.ts:71-210](file://lib/ai/adapters/anthropic.ts#L71-L210)
-- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
-
-**Section sources**
-- [anthropic.ts:71-145](file://lib/ai/adapters/anthropic.ts#L71-L145)
-- [anthropic.ts:147-207](file://lib/ai/adapters/anthropic.ts#L147-L207)
+- [openai.ts:59-152](file://lib/ai/adapters/openai.ts#L59-L152)
+- [openai.ts:154-217](file://lib/ai/adapters/openai.ts#L154-L217)
 
 ### Google Adapter
 Wraps Google AI Studio's OpenAI-compatible endpoint, forwarding tools and streaming support.
@@ -295,26 +266,23 @@ D --> |found| C
 D --> |not found| E["process.env.LLM_KEY (universal fallback)"]
 E --> |found| F{"providerId === LLM_PROVIDER?"}
 F --> |yes| C
-F --> |no| G["process.env.OLLAMA_API_KEY (fallback)"]
-G --> |found| H["new OllamaAdapter(OLLAMA_BASE_URL)"]
-G --> |not found| I["return UnconfiguredAdapter"]
-C --> J{"provId in ['openai','anthropic','google','groq']?"}
+F --> |no| I["return UnconfiguredAdapter"]
+C --> J{"provId in ['openai','google','groq']?"}
 J --> |yes| K["new NamedAdapter(...)"]
 J --> |no| L["OpenAIAdapter(key, compatUrl)"]
 K --> M["CachedAdapter(...)"]
 L --> M
-H --> M
 ```
 
 **Diagram sources**
-- [index.ts:223-290](file://lib/ai/adapters/index.ts#L223-L290)
-- [index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
-- [index.ts:262-280](file://lib/ai/adapters/index.ts#L262-L280)
+- [index.ts:205-256](file://lib/ai/adapters/index.ts#L205-L256)
+- [index.ts:146-184](file://lib/ai/adapters/index.ts#L146-L184)
+- [index.ts:236-246](file://lib/ai/adapters/index.ts#L236-L246)
 
 **Section sources**
 - [index.ts:50-64](file://lib/ai/adapters/index.ts#L50-L64)
-- [index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
-- [index.ts:223-290](file://lib/ai/adapters/index.ts#L223-L290)
+- [index.ts:146-184](file://lib/ai/adapters/index.ts#L146-L184)
+- [index.ts:205-256](file://lib/ai/adapters/index.ts#L205-L256)
 
 ### Unconfigured Adapter
 Returns a friendly UI component or JSON payload when no credentials are available, preventing server errors and guiding users to configure settings.
@@ -365,7 +333,7 @@ ToolCall <.. Tools
 ### Types and Pricing
 Client-safe types define messages, generation options/results, and streaming chunks. Pricing utilities estimate costs per provider/model.
 
-**Updated** Pricing information reflects the simplified provider structure with uniform treatment of all providers excluding Ollama and enhanced security validation.
+**Updated** Pricing information reflects the simplified provider structure with uniform treatment of all providers excluding Anthropic and Ollama and enhanced security validation.
 
 **Section sources**
 - [types.ts:10-55](file://lib/ai/types.ts#L10-L55)
@@ -383,7 +351,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 - **Interactive Provider Cards**: Feature gradient backgrounds, provider-specific theming, and security badges
 - **Universal Key Notice**: Prominent badge indicating LLM_KEY configuration status
 - **Enhanced Visual Design**: Provider brand color integration with recommended provider highlighting
-- **Standard Configuration Approach**: All providers including Ollama use unified configuration
+- **Standard Configuration Approach**: All providers including Groq use unified configuration
 
 **Explicit Provider Configuration**
 - Fetches configured providers from `/api/providers/status` which checks environment variables
@@ -396,7 +364,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 - **LLM_KEY Notice**: Prominent badge indicating universal key configuration
 - **Provider Binding Validation**: Ensures universal keys are only applied to designated provider
 - **Security Warning**: Prevents credential misuse across providers
-- **Standard configuration for all providers** including Ollama
+- **Standard configuration for all providers** including Groq
 
 **Section sources**
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
@@ -405,7 +373,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 The WorkspaceSettingsPanel offers detailed provider configuration with comprehensive provider definitions, automatic credential validation, and universal key status:
 
 **Enhanced Provider Options with Uniform Treatment**
-- **All Providers**: OpenAI, Anthropic, Google, Groq, Ollama with explicit key detection
+- **All Providers**: OpenAI, Google, Groq with explicit key detection
 - **Enhanced Visual Design**: Provider cards with brand-specific color schemes and visual indicators
 - **Universal Key Notice**: Clear indication of LLM_KEY configuration status
 - **Recommended provider highlighting**: Prominent badges for optimal provider selection
@@ -497,7 +465,7 @@ The system now enforces explicit provider validation when using universal LLM_KE
 - Supports both purpose-specific and generic model overrides
 
 **Section sources**
-- [index.ts:262-280](file://lib/ai/adapters/index.ts#L262-L280)
+- [index.ts:236-246](file://lib/ai/adapters/index.ts#L236-L246)
 - [resolveDefaultAdapter.ts:141-190](file://lib/ai/resolveDefaultAdapter.ts#L141-L190)
 
 ### Provider Status API Enhancement
@@ -554,12 +522,10 @@ Both ModelSelectionGate and WorkspaceSettingsPanel now provide universal key not
 ```mermaid
 graph LR
 TYPES["types.ts"] --> OA["openai.ts"]
-TYPES --> AA["anthropic.ts"]
 TYPES --> GA["google.ts"]
 TOOLS["tools.ts"] --> OA
 TOOLS --> GA
 IDX["index.ts"] --> OA
-IDX --> AA
 IDX --> GA
 IDX --> UNC["unconfigured.ts"]
 IDX --> WKS["workspaceKeyService.ts"]
@@ -572,7 +538,7 @@ WSP["WorkspaceSettingsPanel.tsx"] --> MR["modelRegistry.ts"]
 ```
 
 **Diagram sources**
-- [index.ts:1-305](file://lib/ai/adapters/index.ts#L1-L305)
+- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
@@ -583,7 +549,7 @@ WSP["WorkspaceSettingsPanel.tsx"] --> MR["modelRegistry.ts"]
 - [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
 
 **Section sources**
-- [index.ts:1-305](file://lib/ai/adapters/index.ts#L1-L305)
+- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
@@ -610,7 +576,7 @@ Common issues and resolutions:
 - **Provider shows as configured but fails**: Verify LLM_KEY provider binding matches actual provider configuration
 - **Credential misuse errors**: Ensure LLM_KEY is only applied to its designated provider via LLM_PROVIDER
 - **Provider configuration issues**: All providers now use standard configuration approach without special local handling.
-- **Ollama connectivity problems**: Use standard provider configuration with OLLAMA_BASE_URL environment variable.
+- **Groq connectivity problems**: Use standard provider configuration with GROQ_API_KEY environment variable.
 - **Local runtime detection removed**: No longer applicable as all providers are treated uniformly.
 - Encryption key issues: Check ENCRYPTION_SECRET environment variable format and length.
 - Cache invalidation: WorkspaceKeyService automatically invalidates cache on configuration changes.
@@ -620,7 +586,7 @@ Common issues and resolutions:
 - **Explicit provider configuration required**: All providers must be explicitly configured via environment variables
 - **Universal key validation failures**: Check LLM_KEY and LLM_PROVIDER environment variables for proper binding
 - **Configuration problems**: Use comprehensive ModelSelectionGate workflow with standard provider configuration.
-- **Local model issues**: No longer applicable as Ollama is treated like any other provider.
+- **Anthropic/Ollama issues**: No longer applicable as these providers are removed from the system.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
@@ -637,7 +603,7 @@ Common issues and resolutions:
 ## Conclusion
 The AI adapter system provides a robust, provider-agnostic abstraction over multiple AI providers with comprehensive security enhancements and streamlined configuration workflows. The recent enhancement introduces proper universal LLM_KEY scoping implementation, ensuring credentials are only applied to their designated provider rather than all providers. This significantly improves security while maintaining the unified experience across all providers through the ModelSelectionGate component.
 
-The system now features enhanced security with explicit provider validation for universal keys, comprehensive server-side credential management using AES-256-GCM encryption, and explicit provider configuration that eliminates auto-detection. The removal of the isLocal property and Ollama-specific local execution logic has created a more maintainable and consistent system that provides flexible configuration options for different use cases and performance requirements.
+The system now features enhanced security with explicit provider validation for universal keys, comprehensive server-side credential management using AES-256-GCM encryption, and explicit provider configuration that eliminates auto-detection. The removal of the isLocal property and Anthropic/Ollama-specific local execution logic has created a more maintainable and consistent system that provides flexible configuration options for different use cases and performance requirements.
 
 By centralizing credential resolution, enforcing server-only secrets, implementing universal key provider scoping, and normalizing provider differences through a unified interface, the system enables seamless switching between models and providers with enterprise-grade security and user-friendly configuration. The enhanced UI components provide clear security notices and validation feedback, ensuring users understand the security benefits of the universal key system.
 
@@ -656,7 +622,7 @@ Steps to add a new provider:
 
 References:
 - [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
-- [index.ts:146-215](file://lib/ai/adapters/index.ts#L146-L215)
+- [index.ts:146-184](file://lib/ai/adapters/index.ts#L146-L184)
 - [types.ts:19-55](file://lib/ai/types.ts#L19-L55)
 - [tools.ts:108-133](file://lib/ai/tools.ts#L108-L133)
 - [resolveDefaultAdapter.ts:141-190](file://lib/ai/resolveDefaultAdapter.ts#L141-L190)
@@ -670,13 +636,13 @@ References:
 - **Workspace-level**: Store encrypted keys in workspace settings; retrieved via workspaceKeyService with global fallback
 - **Environment Variables**: Set provider-specific environment variables for explicit credential detection and universal key provider binding
 - **Unconfigured fallback**: When no keys are found, UnconfiguredAdapter returns a helpful UI or JSON
-- **Standard Configuration**: All providers including Ollama use standard environment variable configuration with universal key validation
+- **Standard Configuration**: All providers including Groq use standard environment variable configuration with universal key validation
 
 References:
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [WorkspaceSettingsPanel.tsx:1-211](file://components/WorkspaceSettingsPanel.tsx#L1-L211)
 - [route.ts:88-164](file://app/api/providers/status/route.ts#L88-L164)
-- [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+- [index.ts:224-256](file://lib/ai/adapters/index.ts#L224-L256)
 - [workspaceKeyService.ts:32-67](file://lib/security/workspaceKeyService.ts#L32-L67)
 - [unconfigured.ts:13-99](file://lib/ai/adapters/unconfigured.ts#L13-L99)
 - [resolveDefaultAdapter.ts:141-190](file://lib/ai/resolveDefaultAdapter.ts#L141-L190)
@@ -712,14 +678,13 @@ References:
 
 References:
 - [tools.ts:47-79](file://lib/ai/tools.ts#L47-L79)
-- [openai.ts:64-157](file://lib/ai/adapters/openai.ts#L64-L157)
-- [anthropic.ts:89-145](file://lib/ai/adapters/anthropic.ts#L89-L145)
+- [openai.ts:59-152](file://lib/ai/adapters/openai.ts#L59-L152)
 - [google.ts:35-69](file://lib/ai/adapters/google.ts#L35-L69)
 - [ModelSelectionGate.tsx:259-282](file://components/ModelSelectionGate.tsx#L259-L282)
 - [resolveDefaultAdapter.ts:141-190](file://lib/ai/resolveDefaultAdapter.ts#L141-L190)
 
 ### Example Workflows and Tests
-- Adapter usage and streaming are validated in tests for OpenAI, Anthropic, Google, and Ollama.
+- Adapter usage and streaming are validated in tests for OpenAI, Google, and Groq.
 - **Tests validate unified provider configuration** without special local handling.
 - Tests demonstrate tool-calling and streaming behavior across all providers.
 - Encryption service tests validate AES-256-GCM implementation with fallback mechanisms.
@@ -731,7 +696,7 @@ References:
 **Updated** Example workflows now reflect the enhanced adapter system with universal key validation and improved security features.
 
 References:
-- [adapterIndex.test.ts:1-72](file://__tests__/adapterIndex.test.ts#L1-L72)
+- [adapterIndex.test.ts:1-32](file://__tests__/adapterIndex.test.ts#L1-L32)
 - [security.test.ts:1-60](file://__tests__/security.test.ts#L1-L60)
 - [encryption.test.ts:1-49](file://__tests__/encryption.test.ts#L1-L49)
 - [route.ts:88-164](file://app/api/providers/status/route.ts#L88-L164)

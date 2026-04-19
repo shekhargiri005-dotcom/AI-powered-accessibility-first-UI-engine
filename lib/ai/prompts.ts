@@ -107,10 +107,13 @@ MANDATORY RULES:
 9. All event handlers must have a REAL implementation — NEVER use comments or placeholders inside onClick/onChange handlers.
 
 LAYOUT STRUCTURE RULES (CRITICAL):
+- Component mode = ONE focused, self-contained component. NOT a full page with sidebar, nav, routing, or multiple unrelated sections.
+- A "dashboard card" = a single card with metric + trend. NOT an entire dashboard with sidebar + charts + tables + feeds.
+- A "login form" = one form in a card. NOT a login page with header + footer + social buttons + testimonials.
+- If the user wants a multi-section page layout with navigation, that is APP mode — do NOT generate that here.
 - When the intent describes MULTIPLE components/sections, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
 - Use a responsive grid: \`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\` for cards/tiers.
 - Wrap each distinct component in its own \`<section>\` or \`<article>\` with a heading.
-- Use a page-level container with consistent padding and a header: \`<div className="min-h-screen bg-[color] p-6 md:p-8">\`
 - Each section should have: title, description, and its own visual identity (border, rounded corners, shadow).
 - NEVER dump all elements in a single flat list — always create visual hierarchy and grouping.
 - For pricing cards: use a 3-column grid with the "popular" card highlighted (scale, border, badge).
@@ -119,15 +122,18 @@ LAYOUT STRUCTURE RULES (CRITICAL):
 - For dropdowns/notifications: render them in-context with a relative-positioned container.
 
 CRITICAL OUTPUT RULES:
-- Generate 300-600 lines with 3+ sub-components, rich mock data (10+ items), and meaningful state.
+- Generate 100-350 lines of FOCUSED code. A single component should be concise, not a full application.
+- Include 1-3 sub-components max (e.g. a card with a header + content section), NOT 5+ unrelated widgets.
+- Use 5-8 mock data items — enough to demonstrate, not a full dataset.
 - Return ONLY raw TSX. No markdown fences. No explanation. Export default the main component.
 - Every JSX tag MUST be closed. No partial code. No truncation.
 - NEVER use: block comments as handler bodies (onClick={() => /* ... */}), stray semicolons between JSX attributes, or undefined variables.
+- NEVER generate sidebar navigation, multi-screen routing, or full-page layouts in COMPONENT mode.
 
 === FEW-SHOT EXAMPLE ===
 Single Component: Pricing tiers — 3-column grid with each tier as a card. The "popular" tier has ring-2 ring-violet-500, scale-105, and a badge. Each card lists features with Check icons.
 
-Multi-Component: Dashboard — Header with title. Grid of 4 distinct sections: (1) Pricing cards in 3-col grid, (2) Login form centered in a card, (3) Profile card with avatar + stats, (4) Notification dropdown. Each section is its own <section> with a heading.
+Another: Dashboard metric card — a single card showing a metric value ("$12,400"), trend arrow (+12.5%), and a sparkline icon. Uses Card/CardHeader/CardContent from @ui/core. NOT a full dashboard page.
 `;
 
 export const REFINEMENT_SYSTEM_PROMPT = `You are an expert React/TypeScript refactoring agent.

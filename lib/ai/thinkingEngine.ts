@@ -25,7 +25,7 @@ OUTPUT: Return ONLY valid JSON matching this exact schema:
   "clarificationOpportunities": string[], // 1-3 critical questions to ask the user for further rectification or missing details
   "executionMode": "Generate New UI" | "Edit Existing UI" | "Structure Requirements" | "Debug UI" | "Improve Design" | "Ideation Response",
   "shouldGenerateCode": boolean,  // true only for ui_generation, ui_refinement, debug_fix
-  "suggestedMode": "component" | "app" | "webgl",
+  "suggestedMode": "component" | "app" | "depth_ui",
   
   // NEW: Expert UI Thinking Framework
   "expertReasoning": {
@@ -278,7 +278,13 @@ export function buildFallbackPlan(prompt: string, intentType: IntentType): Think
     affectedScope,
     clarificationOpportunities,
     executionMode: executionModeMap[intentType] || 'Generate New UI',
-    suggestedMode: primaryLayout?.category === 'dashboard' || primaryLayout?.category === 'saas' ? 'app' : 'component',
+    suggestedMode: (() => {
+      // Suggest depth_ui for prompts that explicitly request parallax, depth, cinematic, or floating elements
+      const depthKeywords = /parallax|depth|cinematic|floating|3d|layered|immersive|scroll.*(animation|effect)|hero.*(section|layout|page)|landing.*(page|site)|premium.*(ui|layout|interface)|visual.*rich/i;
+      if (depthKeywords.test(prompt)) return 'depth_ui';
+      if (primaryLayout?.category === 'dashboard' || primaryLayout?.category === 'saas') return 'app';
+      return 'component';
+    })(),
     shouldGenerateCode: shouldGenerate,
     expertReasoning: {
       purpose,

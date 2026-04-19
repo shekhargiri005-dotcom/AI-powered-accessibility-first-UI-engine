@@ -6,9 +6,7 @@
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [lib/ai/types.ts](file://lib/ai/types.ts)
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/tools.ts](file://lib/ai/tools.ts)
 - [lib/ai/cache.ts](file://lib/ai/cache.ts)
@@ -20,12 +18,12 @@
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect the removal of universal LLM_KEY support and automatic provider detection
-- Enhanced documentation to clarify the current explicit provider configuration requirement
-- Updated credential resolution hierarchy to only include workspace keys and provider-specific environment variables
-- Removed references to universal fallback mechanism and automatic provider detection
-- Enhanced error messaging documentation for missing provider-specific keys
-- Updated troubleshooting guidance to reflect current explicit configuration requirements
+- Updated to reflect the simplified adapter configuration system with removal of Ollama and Anthropic support
+- Removed references to Ollama and Anthropic adapters throughout the documentation
+- Updated provider support matrix to reflect three cloud providers: OpenAI, Google, and Groq
+- Removed complex multi-provider setup and fallback mechanisms documentation
+- Updated troubleshooting guidance to reflect current explicit configuration requirements for three providers
+- Revised architecture diagrams to show simplified provider landscape
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,14 +38,14 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the universal AI adapter system that powers the AI engine. The system currently supports five distinct AI providers: OpenAI, Anthropic, Google, Groq (OpenAI-compatible), and Ollama (local). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. **Current State**: The system requires explicit provider configuration through dedicated environment variables for each provider, with enhanced security measures and improved error messaging.
+This document describes the universal AI adapter system that powers the AI engine. The system currently supports three distinct AI providers: OpenAI, Google, and Groq (OpenAI-compatible). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. **Current State**: The system requires explicit provider configuration through dedicated environment variables for each provider, with enhanced security measures and improved error messaging.
 
-**Important Note**: The universal LLM_KEY fallback mechanism and automatic provider detection have been completely removed from the codebase. The system now enforces explicit provider configuration for all providers.
+**Important Note**: The universal LLM_KEY fallback mechanism and automatic provider detection have been completely removed from the codebase. The system now enforces explicit provider configuration for all providers. Ollama and Anthropic support has been removed, simplifying the configuration to three cloud providers.
 
 ## Project Structure
 The AI adapter system lives under lib/ai and is composed of:
 - A base adapter interface and shared types
-- Provider-specific adapters (OpenAI, Anthropic, Google, Groq, Ollama)
+- Provider-specific adapters (OpenAI, Google, Groq)
 - A factory and registry that selects and instantiates adapters with explicit provider configuration
 - A pluggable cache layer for generation results and streams
 - Tool definitions and conversion helpers for function calling
@@ -63,9 +61,7 @@ TOOLS["tools.ts"]
 CACHE["cache.ts"]
 IDX["adapters/index.ts"]
 OA["adapters/openai.ts"]
-AA["adapters/anthropic.ts"]
 GA["adapters/google.ts"]
-OLA["adapters/ollama.ts"]
 UCA["adapters/unconfigured.ts"]
 CFG["config.ts"]
 RDA["resolveDefaultAdapter.ts"]
@@ -83,9 +79,7 @@ TOOLS --> OA
 TOOLS --> GA
 CACHE --> IDX
 IDX --> OA
-IDX --> AA
 IDX --> GA
-IDX --> OLA
 IDX --> UCA
 CFG --> IDX
 RDA --> IDX
@@ -101,9 +95,7 @@ GR --> IDX
 - [lib/ai/tools.ts](file://lib/ai/tools.ts)
 - [lib/ai/cache.ts](file://lib/ai/cache.ts)
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
@@ -116,7 +108,7 @@ GR --> IDX
 ## Core Components
 - Base adapter interface: Defines the provider-agnostic contract for generating and streaming completions.
 - Shared types: Provide client-safe message, generation, streaming, and pricing types.
-- Provider adapters: Implementations for OpenAI, Anthropic, Google, Groq (cloud providers), and Ollama (local provider); plus a fallback adapter for unconfigured environments.
+- Provider adapters: Implementations for OpenAI, Google, and Groq (cloud providers); plus a fallback adapter for unconfigured environments.
 - Factory and registry: Securely resolves credentials through explicit provider configuration and instantiates adapters.
 - Caching: Adds a pluggable cache around generation and streaming calls.
 - Tools: Canonical tool schema and conversion helpers for cross-provider function calling.
@@ -132,13 +124,13 @@ GR --> IDX
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ## Architecture Overview
-The system separates concerns with enhanced credential resolution supporting both cloud providers and local Ollama execution, now with explicit provider configuration:
+The system separates concerns with enhanced credential resolution supporting cloud providers, now with explicit provider configuration:
 - Application code interacts with the AIAdapter interface.
 - The factory selects a concrete adapter based on explicit provider configuration.
 - Adapters normalize provider differences and expose a unified request/response model.
 - A caching layer improves performance and reduces costs.
 - Tools enable function calling across providers with a single canonical schema.
-- **Current State**: Explicit provider configuration system supports all five providers including Ollama.
+- **Current State**: Explicit provider configuration system supports three cloud providers.
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential leakage.
 
 ```mermaid
@@ -176,7 +168,7 @@ Provider-->>Caller : "GenerateResult/StreamChunk"
 - AIAdapter defines provider, generate(), and stream().
 - GenerateOptions and GenerateResult define the standardized request/response contract.
 - StreamChunk captures incremental deltas and optional usage on the final chunk.
-- ProviderName enumerates supported providers (OpenAI, Anthropic, Google, Groq, Ollama, unconfigured).
+- ProviderName enumerates supported providers (OpenAI, Google, Groq, unconfigured).
 - Pricing utilities estimate USD cost based on provider/model.
 
 ```mermaid
@@ -259,12 +251,12 @@ CacheWrap --> End(["AIAdapter"])
 
 **Enhanced Credential Resolution Hierarchy:**
 1. **Database Check**: Workspace-scoped keys via workspaceKeyService
-2. **Environment Variable Check**: Provider-specific keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY)
+2. **Environment Variable Check**: Provider-specific keys (OPENAI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY)
 3. **Failure**: UnconfiguredAdapter for graceful degradation
 
 **Explicit Provider Configuration Implementation:**
 - The system checks for provider-specific environment variables for all providers
-- Each provider has its own dedicated environment variable including Ollama
+- Each provider has its own dedicated environment variable
 - If no provider-specific key is found, the system returns UnconfiguredAdapter with clear error messaging
 - Works transparently across all cloud providers with proper validation
 - Provides simplified deployment configuration with explicit provider scoping
@@ -289,11 +281,11 @@ F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
 ### Enhanced Provider Detection Logic
 
 #### Current Provider Support Matrix
-**Current State** The system supports five providers with explicit configuration:
+**Current State** The system supports three providers with explicit configuration:
 
 **resolveLlmProvider Function:**
 - Analyzes provider-specific environment variables for explicit provider specification
-- Supports all five providers: OpenAI, Anthropic, Google, Groq, and Ollama
+- Supports three providers: OpenAI, Google, and Groq
 - Returns clear error messages when provider-specific keys are missing
 
 **Enhanced Security Features:**
@@ -304,10 +296,8 @@ F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
 
 **Key Format Patterns:**
 - **OpenAI**: OPENAI_API_KEY (sk-proj-..., sk-..., sk_live_...)
-- **Anthropic**: ANTHROPIC_API_KEY (sk-ant-..., sk-ant-api...)
 - **Google**: GOOGLE_API_KEY (AIzaSy...) or GEMINI_API_KEY (AIzaSy...)
 - **Groq**: GROQ_API_KEY (gsk_..., gsk_live_...)
-- **Ollama**: OLLAMA_API_KEY (supports local models at localhost:11434)
 
 **Enhanced Debugging Output:**
 - Console logs show provider resolution process with explicit configuration
@@ -345,42 +335,12 @@ OA-->>App : "GenerateResult"
 **Section sources**
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 
-#### AnthropicAdapter
-- Uses the native Anthropic /v1/messages API via fetch.
-- Converts messages to Anthropic's expected shape and enforces per-model output caps.
-- Streams via SSE-like events and yields delta chunks.
-
-```mermaid
-sequenceDiagram
-participant App as "Application"
-participant AA as "AnthropicAdapter"
-participant API as "Anthropic API"
-App->>AA : "stream(options)"
-AA->>API : "POST /v1/messages (stream=true)"
-API-->>AA : "SSE events"
-AA-->>App : "StreamChunk (delta/done)"
-```
-
-**Diagram sources**
-- [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
-
-**Section sources**
-- [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
-
 #### GoogleAdapter
 - Wraps Google AI Studio via OpenAI-compatible endpoint.
 - Applies provider-specific constraints (e.g., response_format rejected).
 
 **Section sources**
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-
-#### OllamaAdapter
-- Uses the OpenAI-compatible API exposed by Ollama at http://localhost:11434/v1.
-- Supports local model execution with tool calling for compatible models.
-- Works independently of other credential resolution mechanisms.
-
-**Section sources**
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 
 #### UnconfiguredAdapter
 - Graceful fallback when no credentials are available.
@@ -493,9 +453,7 @@ TOOLS --> GA
 BASE --> IDX["adapters/index.ts"]
 CACHE["cache.ts"] --> IDX
 IDX --> OA
-IDX --> AA["adapters/anthropic.ts"]
 IDX --> GA
-IDX --> OLA["adapters/ollama.ts"]
 IDX --> UCA["adapters/unconfigured.ts"]
 CFG["config.ts"] --> IDX
 RDA["resolveDefaultAdapter.ts"] --> IDX
@@ -511,9 +469,7 @@ GR["api/generate/route.ts"] --> IDX
 - [lib/ai/tools.ts](file://lib/ai/tools.ts)
 - [lib/ai/cache.ts](file://lib/ai/cache.ts)
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [lib/ai/adapters/google.ts](file://lib/ai/adapters/google.ts)
-- [lib/ai/adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
@@ -529,15 +485,15 @@ GR["api/generate/route.ts"] --> IDX
 - Use streaming for long-form generation to improve perceived latency.
 - Monitor token usage via pricing utilities and metrics.
 - For cloud providers, ensure network connectivity to provider endpoints; otherwise use UnconfiguredAdapter for graceful UX.
-- **Current State**: Explicit provider configuration provides consistent performance across all five providers with simplified credential management.
+- **Current State**: Explicit provider configuration provides consistent performance across three providers with simplified credential management.
 - **Enhanced Security**: Provider-specific environment variables add minimal overhead while preventing costly authentication failures.
 
 ## Troubleshooting Guide
 - Missing API key: Expect UnconfiguredAdapter behavior. Configure provider-specific key in workspace settings or environment variables.
 - **Enhanced Security**: Cross-provider credential issues: Verify the correct provider-specific environment variable is set.
-- **New**: Provider-specific environment variable configuration: Set the appropriate environment variable (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY) for each provider.
+- **New**: Provider-specific environment variable configuration: Set the appropriate environment variable (OPENAI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY) for each provider.
 - Provider-specific constraints: Some providers reject certain parameters (e.g., response_format, tools, temperature). The adapters normalize these differences.
-- Network connectivity: All providers require internet access for cloud-based execution except Ollama which runs locally.
+- Network connectivity: All providers require internet access for cloud-based execution.
 - Tool execution: Ensure tool names match and parameters conform to the declared schema; mismatches are handled gracefully.
 - **Enhanced**: Provider-specific key troubleshooting: Verify the correct environment variable is set and accessible to all provider adapters.
 - **New**: Explicit provider configuration: Set the appropriate provider-specific environment variable when configuring credentials.
@@ -551,7 +507,7 @@ GR["api/generate/route.ts"] --> IDX
 - [lib/ai/adapters/unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ## Conclusion
-The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. **Current State**: The system supports five distinct provider options: OpenAI, Anthropic, Google, Groq (cloud providers), and Ollama (local provider). The enhanced security features prevent cross-provider credential leakage through explicit provider configuration. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, add provider-specific environment variable handling with proper validation, and leverage the enhanced security features.
+The AI adapter system cleanly separates provider logic behind a unified interface, enforces secure credential resolution, and standardizes request/response formats. **Current State**: The system supports three distinct provider options: OpenAI, Google, and Groq. The enhanced security features prevent cross-provider credential leakage through explicit provider configuration. It offers robust caching, streaming, tool calling, and graceful fallbacks. Extending the system with new providers is straightforward: implement an adapter, register it in the factory, add provider-specific environment variable handling with proper validation, and leverage the enhanced security features.
 
 ## Appendices
 
@@ -580,10 +536,8 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 **Setting Up Provider-Specific Keys:**
 1. Set the appropriate environment variable for each provider in your deployment platform:
    - OPENAI_API_KEY for OpenAI
-   - ANTHROPIC_API_KEY for Anthropic
    - GOOGLE_API_KEY or GEMINI_API_KEY for Google
    - GROQ_API_KEY for Groq
-   - OLLAMA_API_KEY for Ollama (supports local models)
 2. The system will automatically detect and use the correct provider-specific key
 3. Check console logs for confirmation: "[getWorkspaceAdapter] ✓ Using [PROVIDER]_API_KEY for [provider]"
 
@@ -607,10 +561,8 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 
 **Enhanced Key Format Patterns:**
 - **OpenAI**: sk-proj-... (specific) | sk-... (generic) | sk_live_...
-- **Anthropic**: sk-ant-... | sk-ant-api...
 - **Google**: AIzaSy... (GOOGLE_API_KEY) | AIzaSy... (GEMINI_API_KEY)
 - **Groq**: gsk_... | gsk_live_...
-- **Ollama**: Supports local models at localhost:11434 with dedicated OLLAMA_API_KEY
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -621,18 +573,15 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Provider detection prioritizes explicit provider-specific environment variables over model-based inference
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential usage
 - **Enhanced Error Messaging**: Comprehensive logging helps diagnose provider configuration issues
-- This prevents conflicts between local Ollama models and cloud provider models
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
 - [lib/ai/resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 
 ### Vision Review Optimization
-**Current State** The system now uses a simplified skipVisionReview approach:
-- Vision review is skipped for Groq provider to avoid cost-prohibitive second API call
-- This replaces the previous complex isLocalModel detection across multiple providers
-- Reduces latency and cost for local model execution scenarios
-- Maintains quality assurance through cloud-based review when available
+**Current State** The system now uses a simplified approach:
+- Vision review considerations are streamlined for the current three-provider configuration
+- Reduces complexity while maintaining quality assurance through cloud-based review when available
 
 **Section sources**
 - [app/api/generate/route.ts](file://app/api/generate/route.ts)
