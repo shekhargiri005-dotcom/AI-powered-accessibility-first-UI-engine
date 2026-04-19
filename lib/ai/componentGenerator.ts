@@ -267,10 +267,16 @@ export async function generateComponent(
     // Fallback/unknown models must NOT receive tools — they may silently reject them (400 no body).
     let toolsEnabled = explicitProfile !== null && maxToolRounds > 0;
 
+    // Generation-level retry for 429 rate limit errors
+    const MAX_GEN_RETRIES = 3;
+    const GEN_RETRY_BASE_MS = 3000;
+    let generationAttempt = 0;
+
     for (let round = 0; round <= maxToolRounds; round++) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let result: any;
       try {
+        generationAttempt++;
         result = await adapter.generate({
           model:       effectiveModel,
           messages,
@@ -282,6 +288,17 @@ export async function generateComponent(
           }),
         });
       } catch (genErr: unknown) {
+        const errMsg = genErr instanceof Error ? genErr.message : String(genErr);
+        const is429 = errMsg.includes('429') || errMsg.includes('rate_limit') || errMsg.includes('quota');
+        const isRetryable = is429 || errMsg.includes('502') || errMsg.includes('503') || errMsg.includes('504') || errMsg.includes('Connection error') || errMsg.includes('fetch failed');
+
+        if (isRetryable && generationAttempt <= MAX_GEN_RETRIES) {
+          const delay = GEN_RETRY_BASE_MS * Math.pow(2, generationAttempt - 1);
+          console.warn(`[componentGenerator] ${is429 ? 'Rate limit' : 'Network'} error on attempt ${generationAttempt}/${MAX_GEN_RETRIES}. Retrying in ${delay}ms...`);
+          await new Promise(res => setTimeout(res, delay));
+          round--; // redo this round
+          continue;
+        }
         throw genErr;
       }
 
