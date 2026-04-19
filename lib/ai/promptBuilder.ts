@@ -74,6 +74,7 @@ import { RichTextEditor } from '@ui/editor';
 import { Motion, MotionGroup } from '@ui/motion';
 import { ThemeProvider, useTheme } from '@ui/theming';
 import { CommandPalette, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@ui/command-palette';
+import { colors, brand, spacing, space, radius, shadow, zIndex, fontSize, fontWeight, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens';
 
 // TAILWIND AVAILABLE: bg-*, text-*, p-*, m-*, flex, grid, rounded-*, shadow-*, border-*, transition-*, hover:*, focus:*
 // DO NOT import ANY packages not listed above — they do not exist in the sandbox.`.trim();
@@ -249,6 +250,7 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
   - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
   - \`import { Motion, MotionGroup } from '@ui/motion'\`
   - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
+  - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, chartPalette } from '@ui/tokens'\`
 You CAN use @ui/* imports — they exist in the sandbox. Use them for consistent, accessible UI building blocks. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 
 ${blueprintText}

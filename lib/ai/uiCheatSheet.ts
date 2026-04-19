@@ -84,6 +84,18 @@ const { theme, setTheme } = useTheme();
 import { CommandPalette, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@ui/command-palette';
 <CommandPalette isOpen={bool} onClose={fn}><CommandInput placeholder="Search..." /><CommandList><CommandGroup heading="Actions"><CommandItem onSelect={fn}>Action</CommandItem></CommandGroup><CommandEmpty>No results</CommandEmpty></CommandList></CommandPalette>
 
+[@ui/tokens] — Design tokens (colors, spacing, typography, transitions)
+import { colors, brand, spacing, space, radius, shadow, zIndex, breakpoint, fontSize, fontWeight, text, toStyle, transition, easing, duration, keyframes, chartPalette, getChartColor } from '@ui/tokens';
+Semantic colors: colors.primary.bg, colors.destructive.hover, colors.success.text, colors.surface.base, colors.text.primary, colors.border.default
+Gradients: colors.gradient.primary, .warm, .cool, .sunset, .aurora, .midnight, .glass
+Brand scale: brand[50..950] — use brand[500] for primary, brand[600] for hover
+Spacing: space.inlineXs (4px), .inlineSm (8px), .inlineMd (12px), .stackMd (16px), .stackLg (24px), .insetMd (16px)
+Radius: radius.sm (4px), .md (6px), .lg (8px), .xl (12px), .full (pill)
+Shadows: shadow.sm, .md, .lg, .glow, .glowSm
+Typography: text.h1..h4, .body, .bodySm, .caption, .label, .overline, .code — toStyle(text.h1) → CSSProperties
+Transitions: transition.fast, .normal, .slow, .spring — duration.fastMs (100), .normalMs (200)
+Chart palette: chartPalette[0..7], getChartColor(index)
+
 [framer-motion]
 import { motion, AnimatePresence, useReducedMotion, useScroll, useTransform, useSpring } from 'framer-motion';
 <motion.div animate={{ opacity: 1 }} initial={{ opacity: 0 }} transition={{ duration: 0.3 }}>

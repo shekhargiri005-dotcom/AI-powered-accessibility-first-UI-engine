@@ -96,7 +96,8 @@ MANDATORY RULES:
      - \`import { DragDrop, DropZone } from '@ui/dragdrop'\`
      - \`import { Motion, MotionGroup } from '@ui/motion'\`
      - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-   - You CAN import from @ui/* — these packages exist in the sandbox. Use @ui/core for Button/Card/Input/Modal, @ui/forms for form controls, @ui/layout for Grid/Stack/Container, @ui/icons for icons, @ui/charts for SVG charts. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
+     - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, chartPalette, getChartColor } from '@ui/tokens'\`
+   - You CAN import from @ui/* — these packages exist in the sandbox. Use @ui/core for Button/Card/Input/Modal, @ui/forms for form controls, @ui/layout for Grid/Stack/Container, @ui/icons for icons, @ui/charts for SVG charts, @ui/tokens for semantic colors/spacing/typography. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 3. SPACING: Use ONLY valid Tailwind scale values (p-4, m-2, gap-6). NEVER use arbitrary px values (p-[13px]).
 4. WCAG AA contrast: text-gray-700+ on light, text-white/gray-100 on dark. Use vibrant gradients. No CSS variables.
 5. Icons: \`import { ArrowRight } from 'lucide-react'\` — NEVER append 'Icon' suffix to icon names.
@@ -255,7 +256,8 @@ ARCHITECTURE:
      - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
      - \`import { Motion, MotionGroup } from '@ui/motion'\`
      - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-   - You CAN import from @ui/* — these packages exist in the sandbox. Use them for forms, cards, modals, layouts, and complex patterns. Prefer raw Tailwind + lucide-react for simple needs.
+     - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, chartPalette, getChartColor } from '@ui/tokens'\`
+   - You CAN import from @ui/* — these packages exist in the sandbox. Use @ui/core for Button/Card/Input/Modal, @ui/forms for form controls, @ui/layout for Grid/Stack/Container, @ui/tokens for semantic colors/spacing/typography. Prefer raw Tailwind + lucide-react for simple needs, but use @ui/* for forms, cards, modals, and complex patterns.
 2. COLORFUL AESTHETICS: Tailwind native colors (bg-indigo-600, from-rose-500 to-pink-500). WCAG AA contrast strictly. Distinct colorful personality per app.
 3. REALISTIC LOGIC: useState + useEffect for data. Loading skeletons + error states with realistic mock data.
 4. INTERACTIONS: hover effects, sortable/filterable tables, Recharts charts with tooltips, modals.

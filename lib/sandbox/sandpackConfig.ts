@@ -369,6 +369,7 @@ export default defineConfig({
       '@ui/dragdrop':        '/packages/dragdrop/index.ts',
       '@ui/editor':          '/packages/editor/index.ts',
       '@ui/command-palette': '/packages/command-palette/index.ts',
+      '@ui/tokens':          '/packages/tokens/index.ts',
       '@ui/utils':           '/packages/utils',
       // Next.js-style @/ alias used by some generated code
       '@/lib/utils':         '/packages/utils/cn.ts',
