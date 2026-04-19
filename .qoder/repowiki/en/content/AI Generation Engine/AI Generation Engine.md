@@ -18,11 +18,13 @@
 - [promptBudget.ts](file://lib/ai/promptBudget.ts)
 - [designRules.ts](file://lib/intelligence/designRules.ts)
 - [blueprintEngine.ts](file://lib/intelligence/blueprintEngine.ts)
+- [prompts.ts](file://lib/ai/prompts.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced model registry with improved design guidelines emphasizing visually stunning UI components
+- Enhanced multi-component prompt handling with intent parsing capabilities that detect when users request multiple separate UI components
+- Updated COMPONENT_GENERATOR_SYSTEM_PROMPT and APP_MODE_SYSTEM_PROMPT now include comprehensive LAYOUT STRUCTURE RULES requiring structured grid layouts and proper visual hierarchy
 - Refined tiered pipeline configuration with adjusted token budgets, temperature settings, and timeouts
 - Updated architectural improvements for better performance and quality
 - Added new design rules for Depth UI and modern visual aesthetics
@@ -35,21 +37,23 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Enhanced Design System](#enhanced-design-system)
-7. [Dependency Analysis](#dependency-analysis)
-8. [Performance Considerations](#performance-considerations)
-9. [Troubleshooting Guide](#troubleshooting-guide)
-10. [Conclusion](#conclusion)
+7. [Multi-Component Generation Pipeline](#multi-component-generation-pipeline)
+8. [Dependency Analysis](#dependency-analysis)
+9. [Performance Considerations](#performance-considerations)
+10. [Troubleshooting Guide](#troubleshooting-guide)
+11. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the AI generation engine that powers UI component creation. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with enhanced design guidelines and refined architectural improvements for superior output quality.
+This document explains the AI generation engine that powers UI component creation. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with enhanced design guidelines, refined architectural improvements for superior output quality, and comprehensive multi-component generation capabilities.
 
 ## Project Structure
-The generation engine spans API routes, adapters, and orchestration logic with enhanced design intelligence:
+The generation engine spans API routes, adapters, and orchestration logic with enhanced design intelligence and multi-component handling:
 - API routes handle requests, validate inputs, and coordinate the pipeline.
 - Adapters encapsulate provider-specific clients behind a unified interface.
 - Orchestrators assemble prompts, manage tool loops, and post-process outputs.
 - Utilities provide model profiles, classification, review/repair logic, and enhanced design systems.
 - Intelligence modules handle blueprint selection, design rules application, and visual style detection.
+- Enhanced intent parsing system detects and handles multi-component requests with structured layout requirements.
 
 ```mermaid
 graph TB
@@ -61,6 +65,7 @@ subgraph "Orchestration"
 CG["componentGenerator"]
 IC["intentClassifier"]
 UR["uiReviewer"]
+IP["intentParser"]
 end
 subgraph "Intelligence Layer"
 DE["designRules"]
@@ -78,6 +83,7 @@ subgraph "Support"
 MR["modelRegistry"]
 TP["tieredPipeline"]
 PB["promptBuilder"]
+PR["prompts.ts"]
 end
 GEN --> CG
 GEN --> UR
@@ -87,6 +93,8 @@ UR --> ADI
 CG --> DE
 CG --> BE
 CG --> UE
+CG --> IP
+IP --> PR
 ADI --> OAI
 ADI --> AN
 ADI --> GG
@@ -104,67 +112,73 @@ CG --> PB
 - [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
+- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
 
 **Section sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
 - [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
+- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
 
 ## Core Components
 - Universal Adapter Interface: A single AIAdapter contract defines generate() and stream(), enabling provider-agnostic code.
 - Adapter Factory: Securely resolves credentials from workspace settings or environment variables, selects the correct adapter, and caches results.
 - Component Generator: Orchestrates intent-driven generation with model-aware prompts, tool loops, extraction, beautification, and deterministic repair.
-- Intent Classifier: Classifies user input into intent categories and suggests generation mode and context-appropriate pipeline.
+- Enhanced Intent Parser: Advanced intent classification system with multi-component detection capabilities that can identify when users request multiple separate UI components.
 - Expert Reviewer and Repair Agent: Second-pass review with JSON schema validation and targeted repair using a dedicated repair model.
 - Model Registry: Static capability profiles drive pipeline tiers, token budgets, extraction strategies, and timeouts.
-- Enhanced Design Intelligence: Advanced design rules, blueprint engine, and visual style detection for creating visually stunning components.
+- Enhanced Design Intelligence: Advanced design rules, blueprint engine, and visual style detection for creating visually stunning components with structured layouts.
 - Tiered Pipeline: Refined configuration system with optimized token budgets, temperature settings, and timeout management.
 
 **Section sources**
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
 - [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
+- [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
 
 ## Architecture Overview
-The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced design intelligence.
+The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced design intelligence and multi-component handling.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant GenRoute as "/api/generate"
+participant Parser as "intentParser"
 participant Classifier as "intentClassifier"
 participant Gen as "componentGenerator"
 participant Adapter as "getWorkspaceAdapter"
 participant Review as "uiReviewer"
 participant Repair as "repairGeneratedCode"
 Client->>GenRoute : POST /api/generate
+GenRoute->>Parser : parseMultiComponentIntent(prompt)
+Parser-->>GenRoute : Multi-component detection + structured layout requirements
 GenRoute->>Classifier : classifyIntent(prompt, ...)
-Classifier-->>GenRoute : Intent classification
+Classifier-->>GenRoute : Intent classification with multi-component support
 GenRoute->>Gen : generateComponent(intent, mode, ...)
 Gen->>Adapter : getWorkspaceAdapter(cfg, workspaceId, userId)
 Adapter-->>Gen : AIAdapter
-Gen-->>GenRoute : Generated code (TSX)
+Gen-->>GenRoute : Generated code (TSX) with structured grid layout
 GenRoute->>Review : reviewGeneratedCode(code, intentContext, override?)
 Review-->>GenRoute : Review result (JSON)
 alt Needs repair
@@ -177,7 +191,8 @@ GenRoute-->>Client : {success, code, a11yReport, tests, ...}
 **Diagram sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 
@@ -246,8 +261,36 @@ AIAdapter <|.. UnconfiguredAdapter
 **Section sources**
 - [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
+### Enhanced Intent Parsing and Multi-Component Detection
+The intent parser now includes comprehensive multi-component detection capabilities that identify when users request multiple separate UI components and automatically sets up structured layout requirements.
+
+```mermaid
+flowchart TD
+Start(["Enhanced Intent Parsing"]) --> Detect["Detect Multiple Components"]
+Detect --> MultiComp{"Multiple Components?"}
+MultiComp -- Yes --> SetAppMode["Set componentType: 'app'"]
+SetAppMode --> CreateScreens["Create Screens Array"]
+CreateScreens --> SetLayout["Apply Structured Grid Layout Rules"]
+SetLayout --> UpdateDescription["Update Description: 'Dashboard showcasing components in structured grid'"]
+MultiComp -- No --> SingleComponent["Standard Component Generation"]
+SingleComponent --> Proceed["Proceed with normal generation"]
+UpdateDescription --> Proceed
+Proceed --> End(["Return Enhanced Intent"])
+```
+
+- Multi-component detection: Identifies when users describe 2+ separate UI components in one prompt.
+- Automatic app mode activation: Converts multi-component requests to app mode with structured layout requirements.
+- Screen organization: Creates individual screens for each requested component with proper visual hierarchy.
+- Layout enforcement: Ensures structured grid layouts with proper visual identity for each component section.
+
+**Diagram sources**
+- [prompts.ts:74-78](file://lib/ai/prompts.ts#L74-L78)
+
+**Section sources**
+- [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
+
 ### Component Generator Orchestration
-The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence.
+The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence, now including comprehensive multi-component support.
 
 ```mermaid
 flowchart TD
@@ -255,7 +298,7 @@ Start(["Start generateComponent"]) --> Blueprint["Select blueprint + design rule
 Blueprint --> ResolveCfg["Resolve model + credentials"]
 ResolveCfg --> Profiles["Get model profile + pipeline config"]
 Profiles --> Memory["Fetch memory + semantic context"]
-Memory --> Prompt["Build model-aware prompt"]
+Memory --> Prompt["Build model-aware prompt with layout rules"]
 Prompt --> Tools{"Tools enabled?"}
 Tools -- Yes --> ToolLoop["Execute tool-call loop (0..maxToolRounds)"]
 Tools -- No --> Generate["Single adapter.generate()"]
@@ -276,14 +319,15 @@ RunRepair --> Done
 - Extraction: Strategies vary by model capability (fence/heuristic/aggressive).
 - Beautification and deterministic repair: Cleans and validates output before optional AI repair.
 - Enhanced design integration: Blueprint engine and design rules provide visual style guidance throughout the generation process.
+- Multi-component layout enforcement: Structured grid layouts with proper visual hierarchy for multi-component requests.
 
 **Diagram sources**
-- [componentGenerator.ts:61-408](file://lib/ai/componentGenerator.ts#L61-L408)
+- [componentGenerator.ts:61-402](file://lib/ai/componentGenerator.ts#L61-L402)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 
 **Section sources**
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 
@@ -322,8 +366,8 @@ end
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 - [route.ts:241-323](file://app/api/generate/route.ts#L241-L323)
 
-### Intent Classification Pipeline
-The intent classifier determines intent type, suggested mode, and whether code generation should proceed immediately or require clarification.
+### Enhanced Intent Classification Pipeline
+The intent classifier determines intent type, suggested mode, and whether code generation should proceed immediately or require clarification, now with enhanced multi-component detection capabilities.
 
 ```mermaid
 flowchart TD
@@ -338,31 +382,35 @@ Validate --> Result(["Return classification"])
 
 - Output format: Strict JSON schema with intent type, confidence, summary, suggested mode, and metadata.
 - Retry on rate limits: Implements exponential backoff for 429 errors.
+- Multi-component awareness: Enhanced classification that recognizes multi-component requests and suggests appropriate modes.
 
 **Diagram sources**
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
+- [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
 - [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
 
 **Section sources**
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 
 ### Model Selection and Configuration
 - Model registry: Centralized capability profiles define tiers, prompt strategies, token budgets, tool support, extraction strategy, and timeouts.
 - Tiered pipeline: Different strategies for tiny/small/medium/large/cloud models govern temperature, tool rounds, and repair priority.
 - Prompt engineering: Model-aware prompt building, token budget enforcement, and merging of system prompts for providers that do not support system roles.
 - Enhanced design integration: Visual style detection and design rules application integrated into model selection process.
+- Layout structure enforcement: Comprehensive layout rules embedded in system prompts for structured grid layouts and visual hierarchy.
 
 **Section sources**
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
+- [prompts.ts:80-120](file://lib/ai/prompts.ts#L80-L120)
+- [prompts.ts:231-267](file://lib/ai/prompts.ts#L231-L267)
 
 ## Enhanced Design System
 
 ### Visual Style Detection and Blueprint Engineering
-The engine now includes sophisticated visual style detection and blueprint engineering for creating visually stunning UI components.
+The engine now includes sophisticated visual style detection and blueprint engineering for creating visually stunning UI components with structured layouts.
 
 ```mermaid
 flowchart TD
@@ -394,7 +442,7 @@ AS --> Cinematic["Cinematic"]
 - [blueprintEngine.ts:83-90](file://lib/intelligence/blueprintEngine.ts#L83-L90)
 
 ### Design Rules Application
-The design rules system provides comprehensive guidance for creating visually appealing and accessible components.
+The design rules system provides comprehensive guidance for creating visually appealing and accessible components with structured layout requirements.
 
 - Navigation styles: Sidebar, top-nav, bottom-nav, or none based on content complexity
 - Layout complexity: Minimal, standard, rich, or immersive based on design choices
@@ -403,18 +451,56 @@ The design rules system provides comprehensive guidance for creating visually ap
 - Content density: Sparse for landing pages, balanced for most applications, dense for data-heavy interfaces
 - Typography scales: Compact for admin interfaces, balanced for general use, display for hero sections
 - Accessibility prioritization: WCAG 2.1 AA compliance with proper contrast ratios and semantic HTML
+- **Updated**: Structured grid layout requirements for multi-component scenarios with proper visual hierarchy
 
 **Section sources**
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 
+## Multi-Component Generation Pipeline
+
+### Enhanced Layout Structure Rules
+Both component generator and app mode system prompts now include comprehensive layout structure rules that enforce structured grid layouts and proper visual hierarchy.
+
+```mermaid
+flowchart TD
+LayoutRules["Layout Structure Rules"] --> MultiComp{"Multiple Components?"}
+MultiComp -- Yes --> GridLayout["Structured Grid Layout"]
+GridLayout --> Sectioning["Individual Component Sections"]
+Sectioning --> Hierarchy["Visual Hierarchy"]
+Hierarchy --> Identity["Visual Identity per Section"]
+MultiComp -- No --> StandardLayout["Standard Component Layout"]
+GridLayout --> Enforce["Enforce Rules"]
+Sectioning --> Enforce
+Hierarchy --> Enforce
+Identity --> Enforce
+StandardLayout --> Enforce
+Enforce --> Output["Structured Output"]
+```
+
+- **Critical**: When the intent describes MULTIPLE components/sections, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
+- **Responsive Grid**: Use `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6` for cards/tiers.
+- **Individual Sections**: Wrap each distinct component in its own `<section>` or `<article>` with a heading.
+- **Page Container**: Use a page-level container with consistent padding and a header: `<div className="min-h-screen bg-[color] p-6 md:p-8">`.
+- **Visual Identity**: Each section should have: title, description, and its own visual identity (border, rounded corners, shadow).
+- **Proper Grouping**: NEVER dump all elements in a single flat list — always create visual hierarchy and grouping.
+
+**Diagram sources**
+- [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
+- [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
+
+**Section sources**
+- [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
+- [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
+
 ## Dependency Analysis
-The generation engine exhibits clear separation of concerns with enhanced design intelligence:
+The generation engine exhibits clear separation of concerns with enhanced design intelligence and multi-component handling:
 - API routes depend on orchestrators and validators.
 - Orchestrators depend on adapters, model registry, and intelligence modules.
 - Intelligence modules handle design rules, blueprint selection, and visual style detection.
 - Adapters depend on provider SDKs or direct APIs.
 - Utilities (classification, review, registry) are shared across flows.
+- Enhanced intent parsing system provides multi-component detection capabilities.
 
 ```mermaid
 graph LR
@@ -428,6 +514,8 @@ CG --> TP["tieredPipeline"]
 CG --> PB["promptBuilder"]
 CG --> DE["designRules"]
 CG --> BE["blueprintEngine"]
+CG --> IP["intentParser"]
+IP --> PR["prompts.ts"]
 ADI --> OAI["OpenAIAdapter"]
 ADI --> AN["AnthropicAdapter"]
 ADI --> GG["GoogleAdapter"]
@@ -437,26 +525,28 @@ ADI --> OL["OllamaAdapter"]
 **Diagram sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
+- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
 
 **Section sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [componentGenerator.ts:1-408](file://lib/ai/componentGenerator.ts#L1-L408)
+- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [intentClassifier.ts:1-178](file://lib/ai/intentClassifier.ts#L1-L178)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
+- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
 
 ## Performance Considerations
 - Streaming vs non-streaming: Streaming is used for live previews; non-streaming is used for production generation. Streaming reliability varies by model and provider.
@@ -466,6 +556,7 @@ ADI --> OL["OllamaAdapter"]
 - Timeout management: Per-model timeouts and aggregate timeouts protect against slow providers and chained operations.
 - Enhanced design processing: Blueprint and design rule computation adds overhead but significantly improves output quality.
 - Visual style optimization: Pre-computed visual styles reduce runtime processing during generation.
+- **Updated**: Multi-component layout enforcement adds computational overhead but ensures structured, professional output.
 
 [No sources needed since this section provides general guidance]
 
@@ -478,12 +569,16 @@ Common issues and resolutions:
 - Reviewer/repair failures: Failures are non-fatal and do not block valid code; the pipeline continues with original output.
 - Design rule conflicts: When design rules conflict (e.g., performance-first vs Depth UI), the system provides warnings and adjusts accordingly.
 - Visual style mismatch: If the generated component doesn't match the intended visual style, adjust the prompt or blueprint parameters.
+- **Updated**: Multi-component layout issues: If components aren't properly structured in grid layouts, check that the intent parser correctly detected multiple components and that layout structure rules are being enforced.
+- **Updated**: Structured grid layout problems: Ensure that the generated code follows the structured grid layout requirements with proper sectioning and visual hierarchy.
 
 **Section sources**
 - [componentGenerator.ts:330-397](file://lib/ai/componentGenerator.ts#L330-L397)
 - [uiReviewer.ts:106-116](file://lib/ai/uiReviewer.ts#L106-L116)
 - [route.ts:254-323](file://app/api/generate/route.ts#L254-L323)
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
+- [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
+- [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
 
 ## Conclusion
-The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, and expert review/repair to deliver high-quality, visually stunning UI components. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection and blueprint engineering. The expert reviewer stage ensures accessibility compliance and overall quality. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive and accessible user interfaces.
+The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, and structured layout enforcement. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive and accessible user interfaces that properly handle both single components and complex multi-component scenarios.

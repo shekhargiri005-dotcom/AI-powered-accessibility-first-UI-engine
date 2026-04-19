@@ -26,6 +26,7 @@
 - Updated provider detection logic to exclude Ollama from model-based detection
 - Removed Ollama-specific configuration examples and troubleshooting guides
 - Updated architecture diagrams and dependency analysis to reflect Ollama removal
+- Removed universal LLM_KEY system and provider configuration now requires explicit provider-specific keys only
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -40,12 +41,12 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the AI provider adapter system that powers provider-agnostic AI integration in the engine. It covers the universal AIAdapter interface, the adapter factory pattern, dynamic adapter instantiation, and provider-specific implementations for OpenAI, Anthropic, Google, and Groq. The system features enhanced provider configuration detection with universal LLM_KEY support, improved provider status reporting, and refined API key management interface that automatically detects provider types from key formats.
+This document explains the AI provider adapter system that powers provider-agnostic AI integration in the engine. It covers the universal AIAdapter interface, the adapter factory pattern, dynamic adapter instantiation, and provider-specific implementations for OpenAI, Anthropic, Google, and Groq. The system features explicit provider configuration with dedicated API keys for each provider, enhanced provider status reporting, and refined API key management interface that requires explicit provider-specific key configuration.
 
-**Updated** Removed Ollama adapter support, reducing supported providers from 5 to 4. The system now focuses on cloud-based providers with enhanced universal key management capabilities.
+**Updated** Removed Ollama adapter support, reducing supported providers from 5 to 4. The system now focuses on cloud-based providers with explicit key management requirements.
 
 ## Project Structure
-The adapter system lives under lib/ai/adapters and is complemented by shared types, tool definitions, caching, metrics, and the universal key management system. Note: Ollama adapter has been removed from the current implementation.
+The adapter system lives under lib/ai/adapters and is complemented by shared types, tool definitions, caching, metrics, and explicit provider configuration management. Note: Ollama adapter has been removed from the current implementation.
 
 ```mermaid
 graph TB
@@ -63,8 +64,8 @@ TOOLS["tools.ts<br/>Tool schema & helpers"]
 CACHE["cache.ts<br/>Caching layer"]
 METRICS["metrics.ts<br/>Metrics dispatcher"]
 end
-subgraph "Universal Key Management"
-RDA["resolveDefaultAdapter.ts<br/>Universal LLM_KEY detection"]
+subgraph "Explicit Provider Configuration"
+RDA["resolveDefaultAdapter.ts<br/>Provider-specific key resolution"]
 end
 subgraph "API Layer"
 STATUS["status/route.ts<br/>Provider Status API"]
@@ -99,18 +100,17 @@ RDA --> IDX
 
 ## Core Components
 - Universal AIAdapter interface: Defines provider-agnostic generate() and stream() methods, plus a provider identifier. See [AIAdapter:50-72](file://lib/ai/adapters/base.ts#L50-L72).
-- Enhanced adapter factory and registry: Resolves credentials securely with universal LLM_KEY support, detects provider automatically from key formats, and instantiates the appropriate adapter. See [getWorkspaceAdapter:223-297](file://lib/ai/adapters/index.ts#L223-L297) and [createAdapter:147-202](file://lib/ai/adapters/index.ts#L147-L202).
-- Universal key management: Provides automatic provider detection from API key formats and LLM_PROVIDER binding for explicit provider specification. See [detectProviderFromKey:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84) and [resolveLlmProvider:87-101](file://lib/ai/resolveDefaultAdapter.ts#L87-L101).
+- Enhanced adapter factory and registry: Resolves credentials securely with explicit provider-specific key requirements, detects provider automatically from model names, and instantiates the appropriate adapter. See [getWorkspaceAdapter:223-297](file://lib/ai/adapters/index.ts#L223-L297) and [createAdapter:147-202](file://lib/ai/adapters/index.ts#L147-L202).
+- Explicit provider configuration: Requires dedicated API keys for each provider (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY) with no universal fallback support. See [getWorkspaceAdapter:235-257](file://lib/ai/adapters/index.ts#L235-L257) and [resolveApiKeyForProvider:136-149](file://lib/ai/resolveDefaultAdapter.ts#L136-L149).
 - Caching wrapper: Adds deterministic caching for generate() and stream() with cache key generation. See [CachedAdapter:83-139](file://lib/ai/adapters/index.ts#L83-L139) and [generateCacheKey:128-140](file://lib/ai/cache.ts#L128-L140).
 - Metrics dispatcher: Centralized logging and persistence of usage and latency. See [dispatchMetrics:36-88](file://lib/ai/metrics.ts#L36-L88).
 - Shared types and tools: Client-safe types and unified tool schema for cross-provider compatibility. See [types.ts:1-130](file://lib/ai/types.ts#L1-L130) and [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175).
-- Enhanced provider Status API: Comprehensive debugging capabilities with LLM_KEY awareness and runtime environment variable checking. See [GET:138-233](file://app/api/providers/status/route.ts#L138-L233).
+- Enhanced provider Status API: Comprehensive debugging capabilities with explicit provider configuration awareness and runtime environment variable checking. See [GET:138-233](file://app/api/providers/status/route.ts#L138-L233).
 
 **Section sources**
 - [base.ts:48-72](file://lib/ai/adapters/base.ts#L48-L72)
 - [index.ts:147-202](file://lib/ai/adapters/index.ts#L147-L202)
 - [index.ts:83-139](file://lib/ai/adapters/index.ts#L83-L139)
-- [resolveDefaultAdapter.ts:73-101](file://lib/ai/resolveDefaultAdapter.ts#L73-L101)
 - [cache.ts:128-140](file://lib/ai/cache.ts#L128-L140)
 - [metrics.ts:36-88](file://lib/ai/metrics.ts#L36-L88)
 - [types.ts:19-55](file://lib/ai/types.ts#L19-L55)
@@ -118,7 +118,7 @@ RDA --> IDX
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Architecture Overview
-The system enforces strict server-only credential resolution with enhanced universal key management. The factory resolves keys from workspace storage, environment variables, or universal LLM_KEY with automatic provider detection, selects a provider adapter, wraps it in a cache-aware adapter, and returns it to callers.
+The system enforces strict server-only credential resolution with explicit provider configuration requirements. The factory resolves keys from workspace storage or environment variables using dedicated provider-specific keys, selects a provider adapter, wraps it in a cache-aware adapter, and returns it to callers.
 
 ```mermaid
 sequenceDiagram
@@ -126,8 +126,6 @@ participant Caller as "Caller"
 participant Factory as "getWorkspaceAdapter"
 participant WSKey as "workspaceKeyService"
 participant Env as "Environment"
-participant Detector as "detectProvider"
-participant UniversalKey as "detectProviderFromKey"
 participant Creator as "createAdapter"
 participant Adapter as "AIAdapter (CachedAdapter)"
 participant Metrics as "dispatchMetrics"
@@ -142,16 +140,9 @@ alt "Env key found"
 Env-->>Factory : "env key"
 Factory->>Creator : "createAdapter({provider, model, apiKey})"
 else "No env key"
-Factory->>Env : "process.env.LLM_KEY"
-alt "Universal key found"
-UniversalKey->>UniversalKey : "detectProviderFromKey(LLM_KEY)"
-UniversalKey-->>Factory : "detected provider"
-Factory->>Creator : "createAdapter({provider : detectedProvider, model, apiKey : LLM_KEY})"
-else "No universal key"
 Factory->>Creator : "createAdapter({provider : 'unconfigured'})"
 end
 end
-Creator->>Detector : "detectProvider(model) if needed"
 Creator-->>Factory : "AIAdapter (CachedAdapter)"
 Factory-->>Caller : "AIAdapter"
 Caller->>Adapter : "generate()/stream()"
@@ -163,7 +154,6 @@ Adapter->>Metrics : "dispatchMetrics(...)"
 **Diagram sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
 - [index.ts:147-202](file://lib/ai/adapters/index.ts#L147-L202)
-- [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)
 
 **Section sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
@@ -197,13 +187,13 @@ class AIAdapter {
 ### Enhanced Adapter Factory Pattern and Dynamic Instantiation
 - Enhanced credential resolution hierarchy:
   1) Workspace key service lookup (encrypted keys per workspace).
-  2) Environment variables fallback (provider-specific and generic).
-  3) **New**: Universal LLM_KEY with automatic provider detection from key formats.
+  2) **Updated**: Environment variables fallback using dedicated provider-specific keys only.
+  3) **Updated**: No universal fallback mechanism - each provider requires its own specific key.
   4) Unconfigured fallback for graceful degradation.
-- **Updated**: Universal key management with automatic provider detection:
-  - LLM_KEY is checked for all providers, but only used when it matches the target provider.
-  - Automatic detection uses key format patterns: gsk_ for Groq, sk-ant- for Anthropic, AIzaSy for Google, sk-proj-/sk- for OpenAI.
-  - Explicit LLM_PROVIDER environment variable overrides auto-detection.
+- **Updated**: Explicit provider configuration requirements:
+  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
+  - No automatic provider detection from key formats - keys must match the provider they represent.
+  - Provider-specific key resolution: resolveApiKeyForProvider() checks only the specific provider's environment variable.
 - Provider detection:
   - Explicit provider overrides model-based detection.
   - Model-based detection supports OpenAI, Anthropic, Google, and Groq-hosted models.
@@ -221,13 +211,7 @@ FoundWS -- Yes --> Create["createAdapter with workspace key"]
 FoundWS -- No --> Env["Check env var"]
 Env --> FoundEnv{"Key found?"}
 FoundEnv -- Yes --> Create
-FoundEnv -- No --> Universal["Check LLM_KEY"]
-Universal --> HasUniversal{"Universal key present?"}
-HasUniversal -- Yes --> Detect["detectProviderFromKey(LLM_KEY)"]
-Detect --> Match{"Matches provider?"}
-Match -- Yes --> Create
-Match -- No --> Unconfigured["createAdapter({provider : 'unconfigured'})"]
-HasUniversal -- No --> Unconfigured
+FoundEnv -- No --> Unconfigured["createAdapter({provider : 'unconfigured'})"]
 Create --> Detect["detectProvider(model) if needed"]
 Detect --> Compat{"OpenAI-compatible?"}
 Compat -- Yes --> OA["OpenAIAdapter(baseUrl)"]
@@ -243,46 +227,42 @@ Wrap --> End
 **Diagram sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
 - [index.ts:147-202](file://lib/ai/adapters/index.ts#L147-L202)
-- [resolveDefaultAdapter.ts:73-101](file://lib/ai/resolveDefaultAdapter.ts#L73-L101)
 
 **Section sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
 - [index.ts:147-202](file://lib/ai/adapters/index.ts#L147-L202)
-- [resolveDefaultAdapter.ts:73-101](file://lib/ai/resolveDefaultAdapter.ts#L73-L101)
 
-### Universal LLM_KEY Management System
-- **New**: Universal API key system that allows a single LLM_KEY to work across multiple providers.
-- Automatic provider detection from key formats:
-  - Groq: gsk_ prefix (e.g., gsk_...skv)
-  - Anthropic: sk-ant- prefix (e.g., sk-ant-...skv)
-  - Google: AIzaSy... pattern (e.g., AIzaSy...X123)
-  - OpenAI: sk-proj- or sk- prefix (e.g., sk-proj-...skv, sk-...skv)
-- Explicit provider binding via LLM_PROVIDER environment variable.
+### Explicit Provider Configuration System
+- **Updated**: No universal LLM_KEY system - each provider requires its own specific key.
+- Dedicated provider-specific keys:
+  - OpenAI: OPENAI_API_KEY
+  - Anthropic: ANTHROPIC_API_KEY
+  - Google: GOOGLE_API_KEY or GEMINI_API_KEY
+  - Groq: GROQ_API_KEY
 - Provider-specific key resolution:
-  - LLM_KEY is only returned when the provider matches LLM_PROVIDER.
-  - resolveApiKeyForProvider() checks LLM_KEY only for the specified provider.
+  - resolveApiKeyForProvider() checks only the specific provider's environment variable.
+  - No automatic key format detection or universal fallback mechanisms.
+- Environment variable fallback hierarchy:
+  - Workspace key service lookup (encrypted keys per workspace).
+  - Provider-specific environment variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
+  - Google supports both GOOGLE_API_KEY and GEMINI_API_KEY as alternatives.
 
 ```mermaid
 flowchart TD
-UniversalKey["LLM_KEY"] --> Check{"Key present?"}
-Check -- Yes --> Detect["detectProviderFromKey(LLM_KEY)"]
-Check -- No --> Explicit["Check LLM_PROVIDER"]
-Detect --> Provider["Detected Provider"]
-Explicit --> Provider
-Provider --> Match{"Matches target provider?"}
-Match -- Yes --> Use["Use LLM_KEY for target provider"]
-Match -- No --> Skip["Skip LLM_KEY"]
-Use --> Return["Return LLM_KEY"]
-Skip --> Return
+ProviderKey["Provider-specific Key"] --> Check{"Key present?"}
+Check -- Yes --> Use["Use provider-specific key"]
+Check -- No --> Unconfigured["Return UnconfiguredAdapter"]
+Use --> Return["Return adapter"]
+Unconfigured --> Return
 ```
 
 **Diagram sources**
-- [resolveDefaultAdapter.ts:58-101](file://lib/ai/resolveDefaultAdapter.ts#L58-L101)
-- [resolveDefaultAdapter.ts:188-206](file://lib/ai/resolveDefaultAdapter.ts#L188-L206)
+- [index.ts:235-257](file://lib/ai/adapters/index.ts#L235-L257)
+- [resolveDefaultAdapter.ts:136-149](file://lib/ai/resolveDefaultAdapter.ts#L136-L149)
 
 **Section sources**
-- [resolveDefaultAdapter.ts:58-101](file://lib/ai/resolveDefaultAdapter.ts#L58-L101)
-- [resolveDefaultAdapter.ts:188-206](file://lib/ai/resolveDefaultAdapter.ts#L188-L206)
+- [index.ts:235-257](file://lib/ai/adapters/index.ts#L235-L257)
+- [resolveDefaultAdapter.ts:136-149](file://lib/ai/resolveDefaultAdapter.ts#L136-L149)
 
 ### OpenAI Adapter
 - Supports OpenAI models including reasoning models (o1/o3 series).
@@ -435,7 +415,7 @@ Append --> Next["Resume generation()"]
 - ConfigurationError is thrown when a cloud provider lacks credentials; surfaced to the UI for configuration.
 - **Updated**: Ollama support has been completely removed from the factory pattern.
 - UnconfiguredAdapter is returned when no credentials are available (including Vercel environments where local daemons are unreachable).
-- **New**: Enhanced error logging with LLM_KEY and LLM_PROVIDER context for debugging.
+- **Updated**: Enhanced error logging with explicit provider configuration context for debugging.
 - Upstash Redis initialization failure falls back to in-memory cache; cache write errors are swallowed to avoid blocking requests.
 
 **Section sources**
@@ -453,9 +433,9 @@ Append --> Next["Resume generation()"]
 - Google:
   - Response format exclusion due to proxy limitations.
 - **Updated**: Ollama support has been completely removed from provider-specific optimizations.
-- **New**: Universal key management optimization:
-  - Automatic provider detection reduces configuration complexity.
-  - LLM_PROVIDER allows explicit provider binding for ambiguous key formats.
+- **Updated**: Explicit provider configuration optimization:
+  - Dedicated environment variables eliminate universal key detection overhead.
+  - Direct provider-specific key access reduces configuration complexity.
 
 **Section sources**
 - [openai.ts:46-62](file://lib/ai/adapters/openai.ts#L46-L62)
@@ -464,22 +444,20 @@ Append --> Next["Resume generation()"]
 - [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
 
 ### Enhanced Provider Status API
-- **New**: Comprehensive debugging capabilities for provider configuration verification with LLM_KEY awareness.
-- **Updated**: Runtime environment variable checking with detailed logging including LLM_KEY and LLM_PROVIDER.
-- **New**: Automatic provider detection from LLM_KEY format for status reporting.
+- **Updated**: Comprehensive debugging capabilities for provider configuration verification with explicit provider configuration awareness.
+- **Updated**: Runtime environment variable checking with detailed logging including provider-specific key status.
+- **Updated**: No universal key detection - only provider-specific keys are checked for status reporting.
 - Debug information includes available environment variables, configuration status, provider detection results, and Node.js environment details.
 - Prevents caching to ensure real-time status checks.
 
 ```mermaid
 flowchart TD
 Start(["GET /api/providers/status"]) --> NoStore["unstable_noStore()"]
-NoStore --> CheckLLM["Check LLM_KEY and LLM_PROVIDER"]
-CheckLLM --> Detect["detectProviderFromKey(LLM_KEY)"]
-Detect --> StatusLoop["Check each provider"]
+NoStore --> CheckProviders["Check provider-specific env vars"]
+CheckProviders --> StatusLoop["Check each provider"]
 StatusLoop --> Primary["Check primary env var"]
 Primary --> Alt["Check alternate env var (Google)"]
-Alt --> Universal["Check LLM_KEY match"]
-Universal --> Configured{"Key found?"}
+Alt --> Configured{"Key found?"}
 Configured -- Yes --> Mark["Mark as configured"]
 Configured -- No --> Skip["Mark as unconfigured"]
 Mark --> Next["Next provider"]
@@ -499,37 +477,36 @@ AddDebug --> Return
 
 ### Practical Usage Examples and Configuration Patterns
 - Enhanced secure credential resolution:
-  - Use getWorkspaceAdapter(providerId, modelId, workspaceId, userId) to resolve keys from workspace storage, environment variables, or universal LLM_KEY.
-  - **New**: Universal LLM_KEY with automatic provider detection: set LLM_KEY and optionally LLM_PROVIDER for explicit binding.
+  - Use getWorkspaceAdapter(providerId, modelId, workspaceId, userId) to resolve keys from workspace storage or provider-specific environment variables.
+  - **Updated**: No universal LLM_KEY fallback - each provider requires its own specific key.
   - Example invocation pattern is demonstrated in tests for all adapters.
 - Provider selection:
   - Explicit provider via getWorkspaceAdapter or model-based detection via detectProvider.
   - **Updated**: Model-based detection no longer includes Ollama or DeepSeek models.
-- **New**: Universal key configuration:
-  - Single LLM_KEY works across multiple providers with automatic detection.
-  - Use LLM_PROVIDER to explicitly bind LLM_KEY to a specific provider.
-  - Key format patterns: gsk_ (Groq), sk-ant- (Anthropic), AIzaSy (Google), sk-proj-/sk- (OpenAI).
+- **Updated**: Explicit provider configuration:
+  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
+  - No automatic key format detection or universal fallback mechanisms.
+  - Key format patterns: standard API key formats for each provider.
 - Streaming:
   - Iterate over adapter.stream(options) to render deltas progressively.
 - Tool calling:
   - Provide tools in GenerateOptions; handle ToolCall results and append role='tool' messages before continuing generation.
-- **New**: Enhanced provider status checking:
-  - Use GET /api/providers/status to verify configuration and debug environment variables including LLM_KEY detection.
+- **Updated**: Enhanced provider status checking:
+  - Use GET /api/providers/status to verify configuration and debug environment variables including provider-specific key status.
   - Check console logs for debug information including available env vars, provider detection results, and configuration status.
 
 **Section sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
 - [index.ts:55-65](file://lib/ai/adapters/index.ts#L55-L65)
-- [resolveDefaultAdapter.ts:66-84](file://lib/ai/resolveDefaultAdapter.ts#L66-L84)
 - [adapters.test.ts:57-108](file://__tests__/adapters.test.ts#L57-L108)
 - [adapterIndex.test.ts:48-70](file://__tests__/adapterIndex.test.ts#L48-L70)
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Dependency Analysis
-The adapter system exhibits low coupling and high cohesion with enhanced universal key management:
+The adapter system exhibits low coupling and high cohesion with explicit provider configuration:
 - AIAdapter is the central contract; all providers implement it.
-- Factory encapsulates provider selection and credential resolution with universal key support.
-- **New**: resolveDefaultAdapter provides centralized universal key management and provider detection.
+- Factory encapsulates provider selection and credential resolution with explicit key requirements.
+- **Updated**: resolveDefaultAdapter provides centralized provider-specific key management without universal fallback.
 - Caching and metrics are orthogonal concerns wrapped around the adapter.
 - Tools and types are shared utilities consumed by adapters.
 - **Updated**: Removed dependencies on Ollama, DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers.
@@ -558,7 +535,6 @@ STATUS --> RDA
 - [index.ts:18-21](file://lib/ai/adapters/index.ts#L18-L21)
 - [index.ts:297-301](file://lib/ai/adapters/index.ts#L297-L301)
 - [index.ts:145-194](file://lib/ai/adapters/index.ts#L145-L194)
-- [resolveDefaultAdapter.ts:19-207](file://lib/ai/resolveDefaultAdapter.ts#L19-L207)
 
 **Section sources**
 - [index.ts:18-21](file://lib/ai/adapters/index.ts#L18-L21)
@@ -575,17 +551,17 @@ STATUS --> RDA
 - Provider-specific caps:
   - Prevents upstream 400 errors and wasted compute.
 - **Updated**: Provider status API uses unstable_noStore() to prevent caching and ensure real-time configuration verification.
-- **New**: Universal key detection overhead is minimal and cached internally by resolveDefaultAdapter.
+- **Updated**: Explicit provider configuration eliminates universal key detection overhead and reduces memory usage.
 
 ## Troubleshooting Guide
 - Missing API key:
   - Symptom: ConfigurationError thrown during adapter creation.
   - Action: Configure provider key in workspace settings or environment variables.
   - **Updated**: Ollama support has been completely removed; no longer available as a fallback option.
-- **New**: Universal LLM_KEY issues:
-  - Symptom: LLM_KEY not being used despite presence.
-  - Action: Set LLM_PROVIDER to explicitly bind LLM_KEY to the correct provider.
-  - Action: Verify LLM_KEY format matches expected patterns (gsk_, sk-ant-, AIzaSy, sk-proj-, sk-).
+- **Updated**: Provider-specific key issues:
+  - Symptom: Provider not working despite key being set.
+  - Action: Verify the key matches the correct provider-specific environment variable (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY).
+  - Action: Ensure the key format matches the provider's expected format.
 - Local daemon unreachable (Vercel):
   - Behavior: UnconfiguredAdapter returned to show helpful UI.
   - Action: Use cloud providers or run locally with reachable daemons.
@@ -596,55 +572,39 @@ STATUS --> RDA
   - **Updated**: Ollama is no longer supported; remove any Ollama configuration attempts.
 - Streaming issues:
   - Verify provider supports streaming and that usage is only available on the final chunk when supported.
-- **New**: Enhanced provider status debugging:
-  - Use GET /api/providers/status to verify configuration and check environment variables including LLM_KEY detection.
+- **Updated**: Enhanced provider status debugging:
+  - Use GET /api/providers/status to verify configuration and check environment variables including provider-specific key status.
   - Check console logs for debug information including available env vars, provider detection results, and configuration status.
-  - Look for "[providers/status]" logs showing detected LLM_KEY provider and configuration status.
+  - Look for "[providers/status]" logs showing provider-specific key configuration status.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
 - [index.ts:204-207](file://lib/ai/adapters/index.ts#L204-L207)
-- [resolveDefaultAdapter.ts:66-84](file://lib/ai/resolveDefaultAdapter.ts#L66-L84)
 - [openai.ts:98-111](file://lib/ai/adapters/openai.ts#L98-L111)
 - [anthropic.ts:105-108](file://lib/ai/adapters/anthropic.ts#L105-L108)
 - [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Conclusion
-The adapter system provides a robust, provider-agnostic foundation for AI integration with enhanced universal key management. By enforcing secure credential resolution, offering a unified interface, and encapsulating provider-specific quirks, it simplifies multi-provider orchestration while maintaining performance and reliability through caching and metrics. The recent updates streamline supported providers from 5 to 4 (OpenAI, Anthropic, Google, Groq), enhance Ollama integration removal, provide comprehensive debugging capabilities for configuration management, and introduce universal LLM_KEY support that dramatically simplifies multi-provider deployment scenarios.
+The adapter system provides a robust, provider-agnostic foundation for AI integration with explicit provider configuration requirements. By enforcing secure credential resolution with dedicated provider-specific keys, offering a unified interface, and encapsulating provider-specific quirks, it simplifies multi-provider orchestration while maintaining performance and reliability through caching and metrics. The recent updates streamline supported providers from 5 to 4 (OpenAI, Anthropic, Google, Groq), enhance Ollama integration removal, provide comprehensive debugging capabilities for configuration management, and introduce explicit provider configuration requirements that eliminate universal key management complexity.
 
 ## Appendices
 
 ### Supported Providers and Authentication
 - **Updated**: Currently supported providers: OpenAI, Anthropic, Google, and Groq.
 - **Removed**: Ollama, DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers.
-- **New**: Universal LLM_KEY support allows single-key multi-provider configuration.
+- **Updated**: Explicit provider configuration requirements with dedicated API keys for each provider.
 - Authentication requirements:
-  - OpenAI: OPENAI_API_KEY or LLM_KEY with LLM_PROVIDER=openai.
-  - Anthropic: ANTHROPIC_API_KEY or LLM_KEY with LLM_PROVIDER=anthropic.
-  - Google: GOOGLE_API_KEY or GEMINI_API_KEY or LLM_KEY with LLM_PROVIDER=google.
-  - Groq: GROQ_API_KEY or LLM_KEY with LLM_PROVIDER=groq.
+  - OpenAI: OPENAI_API_KEY
+  - Anthropic: ANTHROPIC_API_KEY
+  - Google: GOOGLE_API_KEY or GEMINI_API_KEY
+  - Groq: GROQ_API_KEY
 
 **Section sources**
 - [index.ts:10-12](file://lib/ai/adapters/index.ts#L10-L12)
 - [index.ts:167-191](file://lib/ai/adapters/index.ts#L167-L191)
-- [resolveDefaultAdapter.ts:194-206](file://lib/ai/resolveDefaultAdapter.ts#L194-L206)
 - [openai.ts:53-61](file://lib/ai/adapters/openai.ts#L53-L61)
 - [status.route.ts:146-157](file://app/api/providers/status/route.ts#L146-L157)
-
-### Universal LLM_KEY Configuration Patterns
-- **New**: Key format patterns for automatic detection:
-  - Groq: gsk_...skv (e.g., gsk_...skv)
-  - Anthropic: sk-ant-...skv (e.g., sk-ant-...skv)
-  - Google: AIzaSy...X123 (e.g., AIzaSy...X123)
-  - OpenAI: sk-proj-...skv or sk-...skv (e.g., sk-proj-...skv, sk-...skv)
-- **New**: Explicit binding via LLM_PROVIDER environment variable.
-- **New**: LLM_KEY only works for the provider it belongs to; mismatched providers are ignored.
-
-**Section sources**
-- [resolveDefaultAdapter.ts:66-84](file://lib/ai/resolveDefaultAdapter.ts#L66-L84)
-- [resolveDefaultAdapter.ts:87-101](file://lib/ai/resolveDefaultAdapter.ts#L87-L101)
-- [index.ts:265-286](file://lib/ai/adapters/index.ts#L265-L286)
 
 ### Provider Capability Matrix
 - Tool calling: OpenAI, Google (provider-dependent).
@@ -658,7 +618,7 @@ The adapter system provides a robust, provider-agnostic foundation for AI integr
 
 ### Provider Detection Logic
 - **Updated**: Model-based detection no longer includes Ollama or DeepSeek models.
-- **New**: Universal key detection with automatic provider identification.
+- **Updated**: No universal key detection - relies solely on explicit provider configuration.
 - Detection rules:
   - gpt-*, o1 series → OpenAI
   - claude series → Anthropic
@@ -668,4 +628,3 @@ The adapter system provides a robust, provider-agnostic foundation for AI integr
 
 **Section sources**
 - [index.ts:55-65](file://lib/ai/adapters/index.ts#L55-L65)
-- [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)

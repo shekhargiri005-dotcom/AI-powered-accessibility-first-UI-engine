@@ -30,6 +30,27 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# Debug output files — prevent tsc/eslint/test scratch from being committed
+tsc_*.txt
+ts_errors.*
+tsc-errors*.txt
+eslint_*.txt
+eslint_*.log
+eslint_*.json
+test_output*.txt
+verify_out*.txt
+build_check.txt
+env_test_output.txt
+error*.txt
+final-tsc-errors*.txt
+new_eslint_report*.txt
+scratch.*
+test_ai.*
+ai_exports.json
+generate_test.json
+generationResult.json
+HEAD.diff
+
 # env files (can opt-in for committing if needed)
 .env*
 

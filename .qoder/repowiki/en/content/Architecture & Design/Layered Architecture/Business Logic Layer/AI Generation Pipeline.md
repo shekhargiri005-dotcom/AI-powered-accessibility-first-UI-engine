@@ -9,6 +9,7 @@
 - [route.ts](file://app/api/think/route.ts)
 - [route.ts](file://app/api/chunk/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
+- [thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 - [intentParser.ts](file://lib/ai/intentParser.ts)
@@ -23,14 +24,16 @@
 - [schemas.ts](file://lib/validation/schemas.ts)
 - [index.ts](file://lib/ai/adapters/index.ts)
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced error logging and debugging capabilities with structured request-scoped logging
-- Improved provider/model selection logic with better credential resolution and fallback mechanisms
-- Added comprehensive logging infrastructure for all pipeline stages
-- Strengthened debugging capabilities with detailed metadata and request tracing
+- Enhanced retry mechanisms with exponential backoff (3s → 6s → 12s) for Google Gemini rate limits
+- Improved classification deduplication to prevent quota waste
+- Better error handling for network failures with comprehensive detection
+- Added specific 429 retry system targeting HTTP 429 errors with comprehensive network error detection
+- Enhanced rate limit awareness and improved error handling patterns throughout the pipeline
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -38,16 +41,18 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Enhanced Logging and Debugging System](#enhanced-logging-and-debugging-system)
-7. [Improved Provider and Model Selection](#improved-provider-and-model-selection)
-8. [Dependency Analysis](#dependency-analysis)
-9. [Performance Considerations](#performance-considerations)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
+6. [Enhanced Thinking Engine with Deterministic Fallback](#enhanced-thinking-engine-with-deterministic-fallback)
+7. [Improved Error Handling and Rate Limit Awareness](#improved-error-handling-and-rate-limit-awareness)
+8. [Enhanced Logging and Debugging System](#enhanced-logging-and-debugging-system)
+9. [Improved Provider and Model Selection](#improved-provider-and-model-selection)
+10. [Dependency Analysis](#dependency-analysis)
+11. [Performance Considerations](#performance-considerations)
+12. [Troubleshooting Guide](#troubleshooting-guide)
+13. [Conclusion](#conclusion)
 
 ## Introduction
 This document describes the AI generation pipeline that transforms user intents into high-quality, accessible React components and applications. The pipeline is multi-stage, deterministic, and resilient with enhanced error logging and debugging capabilities:
-- Intent classification and thinking plan generation
+- Intent classification and thinking plan generation with deterministic fallback
 - Intent parsing into structured UI intents
 - Multi-tiered generation orchestrated by model profiles
 - Deterministic validation and repair
@@ -55,7 +60,7 @@ This document describes the AI generation pipeline that transforms user intents 
 - Accessibility validation and automated fixes
 - Parallel quality gates and persistence
 
-The pipeline emphasizes model-agnostic orchestration, robust prompt engineering, tiered configuration, and comprehensive logging for reliable debugging and monitoring across local and cloud providers.
+The pipeline emphasizes model-agnostic orchestration, robust prompt engineering, tiered configuration, and comprehensive logging for reliable debugging and monitoring across local and cloud providers. Recent enhancements include a deterministic fallback mechanism for thinking plan generation, comprehensive rate limit awareness, and improved error handling patterns throughout the entire pipeline.
 
 ## Project Structure
 The pipeline spans API routes, AI orchestration modules, validators, persistence, and enhanced logging infrastructure:
@@ -69,7 +74,7 @@ The pipeline spans API routes, AI orchestration modules, validators, persistence
 graph TB
 subgraph "API Layer with Logging"
 C["/api/classify<br/>Structured Logging"]
-T["/api/think<br/>Structured Logging"]
+T["/api/think<br/>Enhanced Fallback & Rate Limit Handling"]
 P["/api/parse<br/>Structured Logging"]
 G["/api/generate<br/>Enhanced Logging"]
 CH["/api/chunk<br/>Debug Logging"]
@@ -77,6 +82,7 @@ PS["/api/providers/status<br/>Provider Debug"]
 end
 subgraph "AI Orchestration"
 IC["intentClassifier.ts<br/>Enhanced Error Handling"]
+TE["thinkingEngine.ts<br/>Deterministic Fallback Plans"]
 IP["intentParser.ts<br/>Structured Validation"]
 CG["componentGenerator.ts<br/>Model-Agnostic"]
 PB["promptBuilder.ts<br/>Model-Aware Prompts"]
@@ -102,6 +108,7 @@ G --> LOG
 CH --> LOG
 PS --> LOG
 IC --> LOG
+TE --> LOG
 IP --> LOG
 CG --> LOG
 UR --> LOG
@@ -118,11 +125,12 @@ RDA --> LOG
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
 - [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
-- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
-- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-L181)
+- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-199)
+- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-181)
 - [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
 - [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
 
@@ -134,17 +142,18 @@ RDA --> LOG
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
 - [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
-- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
-- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-L181)
+- [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-199)
+- [visionReviewer.ts:1-181](file://lib/ai/visionReviewer.ts#L1-181)
 - [index.ts:223-285](file://lib/ai/adapters/index.ts#L223-L285)
 - [resolveDefaultAdapter.ts:72-138](file://lib/ai/resolveDefaultAdapter.ts#L72-L138)
 
 ## Core Components
 - Intent Classification: Determines intent type, confidence, and suggested mode; informs whether to proceed to generation with enhanced error logging.
-- Thinking Plan: Builds an execution plan aligned with the user's intent to guide generation.
+- Thinking Plan: Builds an execution plan aligned with the user's intent to guide generation, with deterministic fallback for resilience.
 - Intent Parsing: Converts natural language into a validated UI intent with fields, layout, interactions, and accessibility requirements.
 - Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair with comprehensive logging.
 - Expert Review and AI Repair: Optional second-pass review and targeted repair using a reviewer agent with provider override support.
@@ -154,6 +163,7 @@ RDA --> LOG
 - **Enhanced Logging System**: Structured request-scoped logging with metadata tracking for all pipeline stages.
 
 **Section sources**
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:52-73](file://app/api/think/route.ts#L52-L73)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
@@ -174,7 +184,7 @@ participant U as "User"
 participant API as "/api/generate<br/>with Logger"
 participant LOG as "BackendLogger<br/>Structured Logging"
 participant CL as "intentClassifier<br/>Enhanced Error Handling"
-participant TH as "thinkingEngine"
+participant TE as "thinkingEngine<br/>Deterministic Fallback"
 participant PP as "intentParser<br/>Structured Validation"
 participant CG as "componentGenerator<br/>Model-Agnostic"
 participant PB as "promptBuilder"
@@ -191,8 +201,13 @@ API->>CL : Classify intent (provider/model optional)
 CL->>LOG : Log classification attempt
 CL-->>API : Classification result
 CL->>LOG : Log classification outcome
-API->>TH : Generate thinking plan (provider/model optional)
-TH-->>API : Thinking plan (or fallback)
+API->>TE : Generate thinking plan (provider/model optional)
+TE->>LOG : Log thinking attempt with rate limit handling
+alt Rate limit or network error
+TE->>TE : Apply exponential backoff retry
+TE->>TE : Build deterministic fallback plan
+end
+TE-->>API : Thinking plan (fallback if needed)
 API->>PP : Parse intent (provider/model optional)
 PP->>LOG : Log parsing attempt
 PP-->>API : Validated UI intent
@@ -220,6 +235,7 @@ API-->>U : Final code + reports + tests
 **Diagram sources**
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [logger.ts:66-85](file://lib/logger.ts#L66-L85)
+- [thinkingEngine.ts:223-271](file://lib/ai/thinkingEngine.ts#L223-L271)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
@@ -260,24 +276,45 @@ Coerce --> Done(["Return classification"])
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:8-76](file://app/api/classify/route.ts#L8-L76)
 
-### Thinking Plan
-- Purpose: Build a structured execution plan aligned with the intent to guide generation.
-- Behavior: On failure, returns a deterministic fallback plan to keep the flow uninterrupted.
+### Enhanced Thinking Engine with Deterministic Fallback
+- Purpose: Build a structured execution plan aligned with the intent to guide generation, with comprehensive fallback mechanisms.
+- Behavior: Implements exponential backoff retry for rate limits and network errors, with deterministic fallback plan generation when AI fails.
+- Fallback Strategy: Instantly generates a deterministic plan using blueprint selection and intent analysis when AI models fail.
+- Rate Limit Awareness: Detects 429 errors, connection failures, and network timeouts with automatic retry logic.
+- **Enhanced Error Handling**: Comprehensive logging of retry attempts, fallback triggers, and error contexts.
 
 ```mermaid
 sequenceDiagram
 participant API as "/api/think"
-participant TH as "generateThinkingPlan"
-API->>TH : Build plan (prompt, intentType, provider/model)
-TH-->>API : Plan or fallback
+participant TE as "generateThinkingPlan<br/>Enhanced Fallback"
+participant AD as "Adapter<br/>Retry Logic"
+API->>TE : Build plan (prompt, intentType, provider/model)
+loop Up to 3 retries
+TE->>AD : Call adapter.generate
+alt Rate limit or network error
+AD-->>TE : Error (429/Connection/Timeout)
+TE->>TE : Apply exponential backoff (1s, 2s, 4s)
+else Success
+AD-->>TE : Valid JSON response
+end
+end
+alt All retries failed
+TE->>TE : Build deterministic fallback plan
+TE-->>API : Fallback plan
+else Success
+TE-->>API : Valid thinking plan
+end
 API-->>API : Log and return result
 ```
 
 **Diagram sources**
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:62-69](file://app/api/think/route.ts#L62-L69)
+- [thinkingEngine.ts:223-271](file://lib/ai/thinkingEngine.ts#L223-L271)
 
 **Section sources**
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
+- [thinkingEngine.ts:223-271](file://lib/ai/thinkingEngine.ts#L223-L271)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 
 ### Intent Parsing
@@ -489,6 +526,63 @@ API->>MM : Upsert component embedding (repair patterns)
 - [index.ts:45-47](file://lib/ai/adapters/index.ts#L45-L47)
 - [resolveDefaultAdapter.ts:49](file://lib/ai/resolveDefaultAdapter.ts#L49)
 
+## Enhanced Thinking Engine with Deterministic Fallback
+
+### Deterministic Fallback Plan Generation
+The thinking engine now includes a comprehensive fallback mechanism that ensures the pipeline never fails due to thinking plan generation issues:
+
+- **Instant Fallback**: When AI models fail to produce valid JSON (common with local models), the system instantly generates a deterministic plan
+- **Blueprint Integration**: Uses blueprint selection to infer structural requirements from the prompt
+- **Intent-Aware Planning**: Creates appropriate execution modes based on intent type (generation vs refinement)
+- **Consistent Structure**: Always returns the same plan structure regardless of model failures
+
+```mermaid
+flowchart TD
+Start(["Thinking Plan Failure"]) --> Detect["Detect AI Failure<br/>(Rate limit, timeout, malformed JSON)"]
+Detect --> Blueprint["Select Blueprint<br/>(prompt analysis)"]
+Blueprint --> Intent["Analyze Intent Type"]
+Intent --> Mode["Determine Execution Mode<br/>(Generate/Edit)"]
+Mode --> Generate["Generate Deterministic Plan"]
+Generate --> Return["Return Fallback Plan"]
+```
+
+**Diagram sources**
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
+
+### Enhanced Rate Limit and Network Error Handling
+The thinking engine implements sophisticated retry logic with exponential backoff:
+
+- **Exponential Backoff**: 1s, 2s, 4s delays between retry attempts
+- **Error Detection**: Automatically detects 429 rate limits, connection errors, and network timeouts
+- **User-Provided Adapter**: Special handling when users explicitly specify a provider
+- **Graceful Degradation**: Returns fallback plans instead of failing requests
+
+**Section sources**
+- [thinkingEngine.ts:223-271](file://lib/ai/thinkingEngine.ts#L223-L271)
+- [route.ts:64-71](file://app/api/think/route.ts#L64-L71)
+
+## Improved Error Handling and Rate Limit Awareness
+
+### Comprehensive Retry Patterns
+The pipeline now features systematic error handling across all components:
+
+- **Thinking Engine**: Automatic retry with exponential backoff for rate limits and network failures
+- **Provider Adapters**: Structured retry logic with detailed error logging
+- **API Routes**: Graceful fallback to deterministic plans when AI services fail
+- **Component Generation**: Robust error handling with validation and repair fallbacks
+
+### Rate Limit Detection and Response
+The system intelligently detects various types of rate limit scenarios:
+
+- **HTTP 429 Errors**: Direct rate limit exceeded responses
+- **Connection Errors**: Network connectivity issues and timeouts
+- **Service Unavailable**: 502/503/504 gateway errors
+- **Model Limitations**: Local model token budget constraints
+
+**Section sources**
+- [thinkingEngine.ts:243-271](file://lib/ai/thinkingEngine.ts#L243-L271)
+- [route.ts:64-71](file://app/api/think/route.ts#L64-L71)
+
 ## Enhanced Logging and Debugging System
 
 ### Structured Request Logger
@@ -596,10 +690,12 @@ CG --> MM["memory.ts"]
 IC["intentClassifier.ts"] --> API["/api/generate"]
 IP["intentParser.ts"] --> API
 API --> CG
+TE["thinkingEngine.ts"] --> API
 LOG["logger.ts"] --> API
 LOG --> IC
 LOG --> IP
 LOG --> CG
+LOG --> TE
 LOG --> UR
 LOG --> VR
 ```
@@ -616,6 +712,7 @@ LOG --> VR
 - [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
@@ -631,6 +728,7 @@ LOG --> VR
 - [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
+- [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
 - [logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
@@ -642,9 +740,12 @@ LOG --> VR
 - Timeouts: Apply per-stage timeouts and aggregate limits to prevent long-running requests.
 - **Skip Logic Optimization**: The pipeline now uses a direct approach to skip vision review for Groq provider, reducing unnecessary API calls and costs.
 - **Enhanced Monitoring**: Comprehensive logging enables better performance monitoring and debugging of bottlenecks.
+- **Rate Limit Optimization**: Exponential backoff reduces API pressure during rate limit events.
+- **Fallback Efficiency**: Deterministic fallback plans ensure pipeline continuity without additional API calls.
 
 ## Troubleshooting Guide
 - **Classification failures**: Retry on rate limits; coerce schema for local models; check structured logging for detailed error context.
+- **Thinking plan failures**: Enhanced fallback mechanism now provides deterministic plans; check retry logs for rate limit detection.
 - **Parsing failures**: Minimal fallback intent for "not a UI description"; inspect raw AI response for debugging; leverage enhanced logging for parsing attempts.
 - **Generation failures**: Inspect model tier, extraction confidence, and validation warnings; leverage repair pipeline; check comprehensive generation logs.
 - **Review/Repair failures**: Pipeline continues with original code; check quotas and provider availability; enhanced logging provides detailed failure context.
@@ -652,9 +753,11 @@ LOG --> VR
 - **Accessibility issues**: Apply auto-repair; review suggestions and fix remaining violations.
 - **Provider selection issues**: Check environment variables and credential resolution logs; verify provider status endpoint for configuration status.
 - **Skip Logic Issues**: If vision review is unexpectedly skipped for non-Groq providers, verify the provider parameter is correctly set to 'groq' to trigger the skip logic.
+- **Rate Limit Issues**: Monitor exponential backoff patterns; check 429 error detection and retry mechanisms.
 - **Enhanced Debugging**: Use structured logs with requestId correlation to trace issues across the entire pipeline.
 
 **Section sources**
+- [thinkingEngine.ts:243-271](file://lib/ai/thinkingEngine.ts#L243-L271)
 - [intentClassifier.ts:104-133](file://lib/ai/intentClassifier.ts#L104-L133)
 - [intentParser.ts:193-227](file://lib/ai/intentParser.ts#L193-L227)
 - [componentGenerator.ts:392-400](file://lib/ai/componentGenerator.ts#L392-L400)
@@ -666,6 +769,8 @@ LOG --> VR
 ## Conclusion
 The AI generation pipeline is designed for reliability and quality across diverse environments with significantly enhanced logging and debugging capabilities. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. The comprehensive logging infrastructure provides detailed request tracing, error context, and performance monitoring. Parallel quality gates and persistence further strengthen the system's robustness and usability.
 
+The enhanced thinking engine with deterministic fallback mechanisms ensures pipeline resilience even when AI services experience rate limits or failures. The comprehensive rate limit awareness and retry patterns provide robust error handling across all components. The improved error handling patterns with exponential backoff and structured logging enable better observability and debugging capabilities.
+
 The enhanced provider selection logic with improved credential resolution and fallback mechanisms ensures optimal resource utilization while maintaining system reliability. The structured logging system enables comprehensive debugging and monitoring across all pipeline stages, making it easier to diagnose issues and optimize performance. The simplified skip logic for Groq provider maintains performance benefits while removing complexity from provider categorization.
 
-**Updated** The pipeline now features a comprehensive logging infrastructure with structured request-scoped logging, enhanced provider selection with detailed debugging, and improved error handling across all components. These enhancements significantly improve the system's observability, debugging capabilities, and overall reliability in production environments.
+**Updated** The pipeline now features a comprehensive logging infrastructure with structured request-scoped logging, enhanced provider selection with detailed debugging, and improved error handling across all components. The deterministic fallback mechanism for thinking plan generation ensures pipeline resilience, while the enhanced rate limit awareness and retry patterns provide robust error handling throughout the entire system. These enhancements significantly improve the system's observability, debugging capabilities, and overall reliability in production environments.

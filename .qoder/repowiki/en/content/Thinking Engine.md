@@ -12,7 +12,16 @@
 - [lib/logger.ts](file://lib/logger.ts)
 - [lib/ai/adapters/openai.ts](file://lib/ai/adapters/openai.ts)
 - [lib/ai/adapters/anthropic.ts](file://lib/ai/adapters/anthropic.ts)
+- [lib/ai/thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced retry logic documentation with exponential backoff for network errors and rate limits
+- Added caching considerations for deterministic fallback plans
+- Improved error handling patterns documentation
+- Updated performance considerations to reflect new retry mechanisms
+- Enhanced troubleshooting guide with retry-related guidance
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -33,7 +42,10 @@ The Thinking Engine consists of:
 - A planning schema that captures intent, scope, approach, and clarifications
 - A UI panel that renders the plan and enables iterative refinement
 - AI adapters for secure provider communication
-- Robust logging and error handling
+- Robust logging and error handling with enhanced retry logic
+- Deterministic fallback mechanisms for resilience
+
+**Updated** Enhanced retry logic with exponential backoff and improved error handling patterns are now core components of the Thinking Engine's resilience strategy.
 
 ## Project Structure
 The Thinking Engine spans frontend UI components, backend API routes, validation schemas, AI adapters, and infrastructure utilities. The following diagram shows the high-level structure and key interactions.
@@ -55,6 +67,9 @@ subgraph "AI Layer"
 OA["lib/ai/adapters/openai.ts"]
 AC["lib/ai/adapters/anthropic.ts"]
 TYPES["lib/ai/types.ts"]
+END
+subgraph "Planning Engine"
+THINK["lib/ai/thinkingEngine.ts"]
 end
 TP --> API
 API --> AUTH
@@ -63,6 +78,7 @@ API --> SCHEMAS
 API --> OA
 API --> AC
 API --> TYPES
+API --> THINK
 ```
 
 **Diagram sources**
@@ -72,6 +88,7 @@ API --> TYPES
 - [lib/ai/adapters/openai.ts:36-223](file://lib/ai/adapters/openai.ts#L36-L223)
 - [lib/ai/adapters/anthropic.ts:71-210](file://lib/ai/adapters/anthropic.ts#L71-L210)
 - [lib/ai/types.ts:1-128](file://lib/ai/types.ts#L1-L128)
+- [lib/ai/thinkingEngine.ts:1-337](file://lib/ai/thinkingEngine.ts#L1-L337)
 - [lib/auth.ts:1-87](file://lib/auth.ts#L1-L87)
 - [lib/logger.ts:1-89](file://lib/logger.ts#L1-L89)
 
@@ -85,6 +102,9 @@ API --> TYPES
 - UI Panel: Renders the plan with collapsible sections, intent badges, requirement breakdown, and actionable controls (Proceed, Refine, Regenerate, Skip).
 - AI Adapters: Provider-specific integrations for OpenAI and Anthropic, handling model constraints, streaming, and usage accounting.
 - Authentication and Logging: JWT-based session retrieval and structured request-scoped logging for observability.
+- Planning Engine: Core logic that generates structured thinking plans with expert reasoning, enhanced retry logic, and fallback mechanisms.
+
+**Updated** Enhanced retry logic with exponential backoff and improved error handling patterns are now integral parts of the planning engine's resilience strategy.
 
 **Section sources**
 - [app/api/think/route.ts:8-80](file://app/api/think/route.ts#L8-L80)
@@ -94,6 +114,7 @@ API --> TYPES
 - [lib/ai/adapters/anthropic.ts:71-210](file://lib/ai/adapters/anthropic.ts#L71-L210)
 - [lib/auth.ts:11-87](file://lib/auth.ts#L11-L87)
 - [lib/logger.ts:66-85](file://lib/logger.ts#L66-L85)
+- [lib/ai/thinkingEngine.ts:117-157](file://lib/ai/thinkingEngine.ts#L117-L157)
 
 ## Architecture Overview
 The Thinking Engine follows a layered architecture:
@@ -102,6 +123,7 @@ The Thinking Engine follows a layered architecture:
 - Validation Layer: Zod schemas define the contract for intent classification and thinking plans.
 - AI Layer: Provider adapters encapsulate differences in API constraints and streaming behavior.
 - Infrastructure Layer: Authentication and logging provide session context and observability.
+- Planning Engine: Core logic that generates structured thinking plans with expert reasoning and enhanced retry mechanisms.
 
 ```mermaid
 sequenceDiagram
@@ -110,20 +132,25 @@ participant API as "/api/think/route.ts"
 participant AUTH as "lib/auth.ts"
 participant LOG as "lib/logger.ts"
 participant ADAPT as "AI Adapters"
+participant PLAN as "Thinking Engine"
 UI->>API : "POST /api/think {prompt, intentType, projectContext}"
 API->>AUTH : "auth()"
 AUTH-->>API : "session {user.id}"
 API->>LOG : "createRequestLogger('/api/think')"
-API->>ADAPT : "generateThinkingPlan(...)"
-ADAPT-->>API : "ThinkingPlan or error"
+API->>PLAN : "generateThinkingPlan(...)"
+PLAN->>ADAPT : "generateThinkingPlan(...)"
+ADAPT-->>PLAN : "ThinkingPlan or error"
+PLAN-->>API : "ThinkingPlan or fallback"
 alt "Success"
 API-->>UI : "{success : true, plan}"
-else "Failure"
-API->>ADAPT : "buildFallbackPlan(prompt, intentType)"
-ADAPT-->>API : "fallback plan"
+else "Network/Rate Limit Error"
+PLAN->>PLAN : "Exponential backoff retry (up to 3 attempts)"
+PLAN-->>API : "Retry or fallback"
 API-->>UI : "{success : true, plan, _fallback : true}"
 end
 ```
+
+**Updated** Enhanced retry logic with exponential backoff is now a core part of the architecture, providing resilience against network errors and rate limits.
 
 **Diagram sources**
 - [app/api/think/route.ts:8-80](file://app/api/think/route.ts#L8-L80)
@@ -131,6 +158,7 @@ end
 - [lib/logger.ts:66-85](file://lib/logger.ts#L66-L85)
 - [lib/ai/adapters/openai.ts:64-157](file://lib/ai/adapters/openai.ts#L64-L157)
 - [lib/ai/adapters/anthropic.ts:89-145](file://lib/ai/adapters/anthropic.ts#L89-L145)
+- [lib/ai/thinkingEngine.ts:167-337](file://lib/ai/thinkingEngine.ts#L167-L337)
 
 ## Detailed Component Analysis
 
@@ -309,6 +337,31 @@ AnthropicAdapter ..|> AIAdapter
 - [lib/ai/adapters/anthropic.ts:71-210](file://lib/ai/adapters/anthropic.ts#L71-L210)
 - [lib/ai/types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 
+### Planning Engine: Thinking Engine Core
+The core planning logic that generates structured thinking plans:
+- System prompt defines expert UI thinking framework
+- JSON repair utility handles truncated responses from local models
+- Fallback plan builder creates deterministic plans when AI fails
+- Blueprint integration for UI structure enrichment
+- Enhanced retry logic for network and rate limit errors with exponential backoff
+- Model capability detection for JSON mode support
+
+Key features:
+- Expert reasoning framework with 8 contextual dimensions
+- Prompt understanding enrichment with likely sections
+- Deterministic fallback generation for reliability
+- Multi-stage JSON extraction for robust parsing
+- Provider fallback mechanisms when user-selected provider fails
+- Exponential backoff retry mechanism (up to 3 attempts) for transient network errors and rate limits
+
+**Updated** Enhanced retry logic with exponential backoff and improved error handling patterns are now core components of the planning engine's resilience strategy.
+
+**Section sources**
+- [lib/ai/thinkingEngine.ts:11-64](file://lib/ai/thinkingEngine.ts#L11-L64)
+- [lib/ai/thinkingEngine.ts:66-114](file://lib/ai/thinkingEngine.ts#L66-L114)
+- [lib/ai/thinkingEngine.ts:117-157](file://lib/ai/thinkingEngine.ts#L117-L157)
+- [lib/ai/thinkingEngine.ts:167-337](file://lib/ai/thinkingEngine.ts#L167-L337)
+
 ### Authentication and Authorization
 - Uses NextAuth with a credentials provider and bcrypt-based password verification
 - Stores a hashed access password in environment variables
@@ -340,6 +393,7 @@ The Thinking Engine exhibits strong separation of concerns:
 - The planning orchestration depends on AI adapters and provider configurations
 - The UI panel depends on the ThinkingPlan schema and intent configuration
 - Adapters depend on provider-specific constraints and SDKs
+- The planning engine depends on validation schemas and intelligence modules
 
 ```mermaid
 graph LR
@@ -349,7 +403,12 @@ API --> SCHEMAS["lib/validation/schemas.ts"]
 API --> OA["lib/ai/adapters/openai.ts"]
 API --> AC["lib/ai/adapters/anthropic.ts"]
 TP["components/ThinkingPanel.tsx"] --> SCHEMAS
+THINK["lib/ai/thinkingEngine.ts"] --> SCHEMAS
+THINK --> OA
+THINK --> AC
 ```
+
+**Updated** Enhanced retry logic and error handling mechanisms are now integrated dependencies in the planning engine.
 
 **Diagram sources**
 - [app/api/think/route.ts:1-81](file://app/api/think/route.ts#L1-L81)
@@ -359,6 +418,7 @@ TP["components/ThinkingPanel.tsx"] --> SCHEMAS
 - [lib/ai/adapters/openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
 - [lib/ai/adapters/anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
 - [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
+- [lib/ai/thinkingEngine.ts:1-337](file://lib/ai/thinkingEngine.ts#L1-L337)
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -367,8 +427,13 @@ TP["components/ThinkingPanel.tsx"] --> SCHEMAS
 - Token limits: Adapters apply provider-specific caps to prevent API errors and reduce latency spikes
 - Streaming vs non-streaming: Choose streaming for long-form generation to improve perceived responsiveness
 - Cost estimation: Use the pricing utilities to estimate costs based on prompt and completion tokens
-- Caching: Consider caching deterministic fallback plans to reduce cold-start latency
+- Caching: Consider caching deterministic fallback plans to reduce cold-start latency and improve response times during repeated requests
 - Concurrency: Ensure adapters are instantiated once per provider to reuse connections and minimize overhead
+- Retry logic: Built-in exponential backoff for network errors and rate limits (up to 3 attempts with 1s, 2s, and 4s delays)
+- JSON parsing: Multi-stage extraction reduces parsing failures and improves reliability
+- Error handling: Enhanced patterns for graceful degradation and fallback mechanisms
+
+**Updated** Added caching considerations for deterministic fallback plans and enhanced retry logic documentation with exponential backoff timing details.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -377,17 +442,28 @@ Common issues and resolutions:
 - Provider configuration errors: Ensure the selected provider and model are supported and properly configured
 - API key or base URL exposure attempts: The endpoint rejects apiKey and baseUrl from the client; use server-side configuration
 - Adapter-specific errors: Check provider-specific constraints (e.g., reasoning models, response_format) and adjust parameters accordingly
+- Planning failures: The system automatically falls back to deterministic plans when AI generation fails
+- Network connectivity: Built-in retry logic handles transient network errors and rate limits with exponential backoff (up to 3 attempts)
+- Rate limiting: Automatic retry mechanism with exponential backoff reduces impact of provider rate limits
+- Timeout issues: 30-second timeout for thinking requests prevents resource exhaustion
 
 Operational checks:
 - Review structured logs for request IDs and durations
 - Monitor fallback plan usage to identify planning failures
 - Validate schema compliance for ThinkingPlan and intent classifications
+- Check provider quotas and rate limits for API failures
+- Observe retry patterns in logs for transient error handling effectiveness
+
+**Updated** Enhanced troubleshooting guidance now includes retry-related scenarios and exponential backoff behavior monitoring.
 
 **Section sources**
 - [app/api/think/route.ts:14-21](file://app/api/think/route.ts#L14-L21)
 - [lib/logger.ts:66-85](file://lib/logger.ts#L66-L85)
 - [lib/ai/adapters/openai.ts:98-126](file://lib/ai/adapters/openai.ts#L98-L126)
 - [lib/ai/adapters/anthropic.ts:93-117](file://lib/ai/adapters/anthropic.ts#L93-L117)
+- [lib/ai/thinkingEngine.ts:223-337](file://lib/ai/thinkingEngine.ts#L223-L337)
 
 ## Conclusion
-The Thinking Engine provides a robust, secure, and user-friendly planning layer for AI-driven UI generation. By enforcing strict security boundaries, offering deterministic fallbacks, and presenting a clear, iteratively refineable plan, it enables reliable workflows from initial intent to executable code. Its modular architecture with provider adapters and structured validation supports extensibility and maintainability across diverse AI backends.
+The Thinking Engine provides a robust, secure, and user-friendly planning layer for AI-driven UI generation. By enforcing strict security boundaries, offering deterministic fallbacks with enhanced retry logic, and presenting a clear, iteratively refineable plan, it enables reliable workflows from initial intent to executable code. Its modular architecture with provider adapters and structured validation supports extensibility and maintainability across diverse AI backends. The enhanced retry mechanisms with exponential backoff and improved error handling patterns ensure resilience against network failures and rate limits, while caching considerations for deterministic fallback plans optimize performance and reduce cold-start latency.
+
+**Updated** Enhanced retry logic with exponential backoff and improved error handling patterns now provide comprehensive resilience against network errors and rate limits, making the Thinking Engine more reliable for production use cases.

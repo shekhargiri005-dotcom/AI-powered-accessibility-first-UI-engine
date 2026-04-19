@@ -7,9 +7,16 @@
 - [importSanitizer.ts](file://lib/sandbox/importSanitizer.ts)
 - [ui-ecosystem.json](file://lib/sandbox/ui-ecosystem.json)
 - [RightPanel.tsx](file://components/ide/RightPanel.tsx)
-- [route.ts](file://app/api/screenshot/route.ts)
 - [package.json](file://package.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Removed all references to screenshot capture functionality and server-side endpoints
+- Updated architecture diagrams to reflect current live preview capabilities
+- Revised troubleshooting guide to remove screenshot-related issues
+- Clarified that the preview system now focuses solely on real-time component rendering
+- Updated dependency analysis to reflect current screenshot-free configuration
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -23,14 +30,14 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the live preview system that integrates CodeSandbox Sandpack to render generated UI components in real time. It covers sandbox configuration, dependency management, code isolation, security boundaries, and performance characteristics. It also documents how the preview environment captures screenshots for automated quality review, how assets and CSS are loaded, and how interactive elements behave within the sandboxed iframe.
+This document explains the live preview system that integrates CodeSandbox Sandpack to render generated UI components in real time. The system provides a secure, isolated, and responsive environment for previewing generated components with immediate feedback capabilities. It covers sandbox configuration, dependency management, code isolation, security boundaries, and performance characteristics. The preview environment supports real-time editing, automatic code change detection, and comprehensive error handling.
 
 ## Project Structure
-The live preview spans several modules:
+The live preview spans several modules focused on real-time rendering and interaction:
 - Presentation and orchestration: a React component that hosts Sandpack and coordinates observers
 - Sandboxing configuration: builds the virtual file system, resolves imports, and injects UI ecosystem packages
-- Security: sanitizes unknown imports and limits allowed hosts for screenshot capture
-- Screenshot pipeline: captures previews either via a postMessage protocol from within the sandbox or via a server-side Playwright process
+- Security: sanitizes unknown imports and maintains code isolation boundaries
+- Real-time interaction: supports inline editing with automatic change capture
 
 ```mermaid
 graph TB
@@ -47,16 +54,12 @@ subgraph "Runtime"
 SB["@codesandbox/sandpack-react"]
 IF["Sandboxed Iframe"]
 end
-subgraph "Screenshot"
-API["/api/screenshot/route.ts"]
-end
 SP --> CFG
 SP --> SAN
 CFG --> ECO
 SP --> SB
 SB --> IF
 RP --> SP
-RP --> API
 ```
 
 **Diagram sources**
@@ -65,7 +68,6 @@ RP --> API
 - [importSanitizer.ts:16-224](file://lib/sandbox/importSanitizer.ts#L16-L224)
 - [ui-ecosystem.json:1-49](file://lib/sandbox/ui-ecosystem.json#L1-49)
 - [RightPanel.tsx:380-476](file://components/ide/RightPanel.tsx#L380-L476)
-- [route.ts:1-92](file://app/api/screenshot/route.ts#L1-L92)
 
 **Section sources**
 - [SandpackPreview.tsx:144-286](file://components/SandpackPreview.tsx#L144-L286)
@@ -73,13 +75,12 @@ RP --> API
 - [importSanitizer.ts:16-224](file://lib/sandbox/importSanitizer.ts#L16-L224)
 - [ui-ecosystem.json:1-49](file://lib/sandbox/ui-ecosystem.json#L1-49)
 - [RightPanel.tsx:380-476](file://components/ide/RightPanel.tsx#L380-L476)
-- [route.ts:1-92](file://app/api/screenshot/route.ts#L1-L92)
 
 ## Core Components
-- SandpackPreview: Hosts the SandpackProvider, manages edit mode, exposes a code editor, and coordinates observers for change capture and screenshot readiness.
+- SandpackPreview: Hosts the SandpackProvider, manages edit mode, exposes a code editor, and coordinates observers for change capture and real-time feedback.
 - Sandpack configuration builder: Constructs the virtual file system, injects HTML/CSS/Tailwind/Vite config, wraps the generated App with a capture wrapper, and conditionally injects the UI ecosystem packages.
 - Import sanitizer: Scrubs unknown or hallucinated imports and replaces them with safe inline stubs.
-- Screenshot pipeline: Either captures via postMessage from within the sandbox or delegates to a server-side endpoint using Playwright.
+- Real-time interaction: Supports inline editing with automatic change detection and feedback integration.
 
 **Section sources**
 - [SandpackPreview.tsx:144-286](file://components/SandpackPreview.tsx#L144-L286)
@@ -97,26 +98,16 @@ participant SP as "SandpackPreview"
 participant SB as "SandpackProvider"
 participant IF as "Sandbox Iframe"
 participant RP as "RightPanel"
-participant API as "/api/screenshot"
 Dev->>SP : Provide generated code
 SP->>SB : Initialize with files + deps
 SB->>IF : Mount Vite + React app
 IF-->>SP : Status "running"
-SP->>RP : onReadyForScreenshot(iframeSrc)
-alt iframeSrc is local
-RP->>RP : captureViaPostMessage()
-RP-->>Dev : base64 image
-else iframeSrc is external
-RP->>API : POST {url, delayMs}
-API-->>RP : {success, dataUrl}
-RP-->>Dev : base64 image
-end
+SP-->>RP : onCodeChange(newCode)
 ```
 
 **Diagram sources**
 - [SandpackPreview.tsx:65-103](file://components/SandpackPreview.tsx#L65-L103)
 - [RightPanel.tsx:380-415](file://components/ide/RightPanel.tsx#L380-L415)
-- [route.ts:43-92](file://app/api/screenshot/route.ts#L43-L92)
 
 ## Detailed Component Analysis
 
@@ -129,8 +120,8 @@ Responsibilities:
 - Wrap preview rendering in an error boundary to surface mount errors
 
 Key behaviors:
-- Uses a change observer to compare the active file’s current code against its initial state and emit changes when meaningful diffs occur.
-- Uses a screenshot observer to detect when the preview reaches a “running” state, then inspects the DOM to extract the iframe src and invokes the callback once.
+- Uses a change observer to compare the active file's current code against its initial state and emit changes when meaningful diffs occur.
+- Uses a screenshot observer to detect when the preview reaches a "running" state, then inspects the DOM to extract the iframe src and invokes the callback once.
 
 ```mermaid
 flowchart TD
@@ -206,19 +197,6 @@ Approach:
 **Section sources**
 - [importSanitizer.ts:16-224](file://lib/sandbox/importSanitizer.ts#L16-L224)
 
-### Screenshot Pipeline
-Two capture modes:
-- Local sandbox capture: When the preview runs in a local iframe, the capture wrapper posts a message with a base64 image. The parent listens and consumes it.
-- External capture: When the preview runs on an external domain, the parent calls the server-side screenshot endpoint, which uses Playwright to navigate to the URL, wait for the UI to settle, and return a base64 image.
-
-Security:
-- The server endpoint validates the URL and restricts allowed hosts to prevent abuse.
-
-**Section sources**
-- [RightPanel.tsx:129-167](file://components/ide/RightPanel.tsx#L129-L167)
-- [RightPanel.tsx:380-415](file://components/ide/RightPanel.tsx#L380-L415)
-- [route.ts:69-92](file://app/api/screenshot/route.ts#L69-L92)
-
 ## Dependency Analysis
 - Sandpack runtime: The preview relies on @codesandbox/sandpack-react for the provider, layout, editor, and preview panel.
 - Build-time dependencies: The configuration computes a minimal set of dependencies based on the generated code, ensuring only what is needed is included.
@@ -248,8 +226,6 @@ CFG --> ECO["ui-ecosystem.json"]
 - Minimal dependency set: Dependencies are computed from the code to reduce bundle size and startup time.
 - Single-shot screenshot callback: The screenshot observer fires only once per preview lifecycle to avoid redundant captures.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Preview crashes or fails to mount:
@@ -269,7 +245,6 @@ Common issues and resolutions:
 - [SandpackPreview.tsx:109-140](file://components/SandpackPreview.tsx#L109-L140)
 - [importSanitizer.ts:16-224](file://lib/sandbox/importSanitizer.ts#L16-L224)
 - [RightPanel.tsx:380-415](file://components/ide/RightPanel.tsx#L380-L415)
-- [route.ts:69-92](file://app/api/screenshot/route.ts#L69-L92)
 
 ## Conclusion
-The live preview system integrates Sandpack to provide a secure, isolated, and responsive environment for rendering generated UI components. It sanitizes imports, injects only necessary dependencies, and supports two robust screenshot capture strategies. The modular design enables customization of the preview environment, while safeguards protect against misuse and maintain performance.
+The live preview system integrates Sandpack to provide a secure, isolated, and responsive environment for rendering generated UI components. It sanitizes imports, injects only necessary dependencies, and supports real-time editing with automatic change detection. The modular design enables customization of the preview environment, while safeguards protect against misuse and maintain performance.

@@ -7,7 +7,6 @@
 - [route.ts](file://app/api/chunk/route.ts)
 - [route.ts](file://app/api/parse/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
-- [route.ts](file://app/api/final-round/route.ts)
 - [route.ts](file://app/api/projects/route.ts)
 - [route.ts](file://app/api/projects/[id]/route.ts)
 - [route.ts](file://app/api/projects/[id]/rollback/route.ts)
@@ -16,18 +15,21 @@
 - [route.ts](file://app/api/workspaces/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [base.ts](file://lib/ai/adapters/base.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Removed documentation for engine configuration API endpoints (engine-config)
-- Removed documentation for local models detection API endpoint (local-models)
-- Removed documentation for comprehensive models discovery API endpoint (models)
-- Removed documentation for usage analytics API endpoint (usage)
-- Consolidated related functionality into broader architectural sections
-- Updated project structure diagram to reflect current available endpoints
+- Enhanced retry logic documentation with new exponential backoff implementation for 429 retry mechanism
+- Improved classification API handling to prevent duplicate calls with 30-second cooldown after rate limits
+- Updated troubleshooting section with new rate limiting strategies and client-side retry patterns
+- Added specific implementation details for the 3-attempt retry system with progressive delays
+- Enhanced classification API with intelligent fallback behavior when rate-limited
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,9 +39,12 @@
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Dependency Analysis](#dependency-analysis)
 7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+8. [Retry Logic and Rate Limit Handling](#retry-logic-and-rate-limit-handling)
+9. [Local Fallback Mechanisms](#local-fallback-mechanisms)
+10. [Client-Side Retry Patterns](#client-side-retry-patterns)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
+13. [Appendices](#appendices)
 
 ## Introduction
 This document provides a comprehensive API reference for the system's public endpoints. It covers:
@@ -48,19 +53,20 @@ This document provides a comprehensive API reference for the system's public end
 - Project CRUD and history
 - Feedback collection
 - Models API for AI provider configuration and model discovery
-- Supporting endpoints for intent parsing, manifest generation, chunk generation, final round critique, screenshot capture, and image-to-text conversion
+- Supporting endpoints for intent parsing, manifest generation, chunk generation, and image-to-text conversion
 - Authentication, error handling, rate limiting, security, versioning, and integration guidance
+- Enhanced retry logic, exponential backoff, and local fallback mechanisms
 
-**Updated** Removed specialized endpoints for engine configuration, local models detection, comprehensive models discovery, and usage analytics as these are no longer available in the current implementation.
+**Updated** Enhanced rate limit handling with comprehensive retry logic, exponential backoff, and improved error handling strategies. Added detailed coverage of local fallback mechanisms and client-side retry patterns with specific implementation details for the 3-attempt retry system.
 
 ## Project Structure
 The API surface is organized under app/api with route.ts files implementing Next.js App Router handlers. Endpoints are grouped by domain:
-- Generation and orchestration: generate, manifest, chunk, parse, classify, final-round
+- Generation and orchestration: generate, manifest, chunk, parse, classify
 - Models and providers: providers/status
 - Projects and history: projects, projects/[id], projects/[id]/rollback, history
 - Feedback: feedback
 - Workspaces and settings: workspaces, workspace/settings
-- Utilities: screenshot, auth/[...nextauth]
+- Utilities: auth/[...nextauth]
 
 ```mermaid
 graph TB
@@ -70,7 +76,6 @@ MAN["/api/manifest"]
 CH["/api/chunk"]
 PAR["/api/parse"]
 CL["/api/classify"]
-FR["/api/final-round"]
 end
 subgraph "Providers"
 PROV["/api/providers/status"]
@@ -89,7 +94,6 @@ WS["/api/workspaces"]
 WSS["/api/workspace/settings"]
 end
 subgraph "Utilities"
-SCR["/api/screenshot"]
 AUTH["/api/auth/[...nextauth]"]
 end
 GEN --- PROV
@@ -97,7 +101,6 @@ MAN --- PROV
 CH --- PROV
 PAR --- PROV
 CL --- PROV
-FR --- PROV
 PRJ --- HIS
 PRJID --- HIS
 ROLL --- HIS
@@ -110,7 +113,6 @@ WSS --- PROV
 - [route.ts](file://app/api/chunk/route.ts)
 - [route.ts](file://app/api/parse/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
-- [route.ts](file://app/api/final-round/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
 - [route.ts](file://app/api/projects/route.ts)
 - [route.ts](file://app/api/projects/[id]/route.ts)
@@ -119,7 +121,6 @@ WSS --- PROV
 - [route.ts](file://app/api/feedback/route.ts)
 - [route.ts](file://app/api/workspaces/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
 
 **Section sources**
@@ -128,7 +129,6 @@ WSS --- PROV
 - [route.ts](file://app/api/chunk/route.ts)
 - [route.ts](file://app/api/parse/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
-- [route.ts](file://app/api/final-round/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
 - [route.ts](file://app/api/projects/route.ts)
 - [route.ts](file://app/api/projects/[id]/route.ts)
@@ -137,7 +137,6 @@ WSS --- PROV
 - [route.ts](file://app/api/feedback/route.ts)
 - [route.ts](file://app/api/workspaces/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
 
 ## Core Components
@@ -148,9 +147,12 @@ WSS --- PROV
 - Project lifecycle: Create/update/list/delete projects and roll back to previous versions.
 - History: Retrieve project history summaries and full project details.
 - Feedback: Submit user feedback signals and retrieve aggregated stats.
-- Utilities: Manifest generation, chunk generation, final round critique, and screenshot capture.
+- Utilities: Manifest generation, chunk generation, and image-to-text conversion.
+- **Enhanced** Retry logic: Automatic exponential backoff with jitter for transient errors including rate limits.
+- **Enhanced** Local fallbacks: Graceful degradation when API keys are unavailable or providers are unreachable.
+- **Enhanced** Intelligent classification: Smart fallback behavior when rate-limited with 30-second cooldown to prevent duplicate calls.
 
-**Updated** Removed engine configuration and usage tracking components as they are no longer available.
+**Updated** Enhanced with comprehensive retry logic, exponential backoff mechanisms, and local fallback capabilities for improved resilience. Added intelligent classification API handling with rate limit prevention and client-side cooldown strategies.
 
 **Section sources**
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
@@ -161,20 +163,25 @@ WSS --- PROV
 - [route.ts](file://app/api/manifest/route.ts)
 - [route.ts](file://app/api/chunk/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
-- [route.ts](file://app/api/final-round/route.ts)
 - [route.ts](file://app/api/projects/route.ts)
 - [route.ts](file://app/api/projects/[id]/route.ts)
 - [route.ts](file://app/api/projects/[id]/rollback/route.ts)
 - [route.ts](file://app/api/history/route.ts)
 - [route.ts](file://app/api/feedback/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ## Architecture Overview
-The API follows a layered architecture:
+The API follows a layered architecture with enhanced resilience:
 - Route handlers validate inputs, enforce auth, and delegate to domain services.
 - Providers are resolved per request using environment variables and optional overrides.
 - Streaming and non-streaming generation paths coexist with shared validation and safety checks.
 - Feedback endpoints support observability and continuous improvement.
+- **Enhanced** Retry logic automatically handles transient errors with exponential backoff and jitter.
+- **Enhanced** Local fallback mechanisms provide graceful degradation when external providers are unavailable.
+- **Enhanced** Intelligent classification API prevents duplicate rate limit calls with 30-second cooldown.
 
 ```mermaid
 sequenceDiagram
@@ -182,6 +189,8 @@ participant Client as "Client"
 participant Gen as "/api/generate"
 participant Auth as "auth()"
 participant Prov as "Provider Adapter"
+participant Retry as "Retry Logic"
+participant Fallback as "Local Fallback"
 participant Val as "Validators"
 participant Mem as "Memory/Storage"
 Client->>Gen : POST {intent, model?, provider?, stream?, ...}
@@ -190,18 +199,32 @@ Auth-->>Gen : session
 Gen->>Val : validate prompt, mode, intent
 Val-->>Gen : ok/error
 Gen->>Prov : stream()/generate() with model/provider
-Prov-->>Gen : chunks or code
+Prov-->>Gen : transient error (rate limit, timeout)
+Gen->>Retry : exponential backoff with jitter
+Retry-->>Gen : retry attempt
+Gen->>Prov : stream()/generate() with backoff
+Prov-->>Gen : success or fallback
+alt Provider Success
 Gen->>Val : deterministic, browser safety, a11y
 Val-->>Gen : pass/fail + fixes
 Gen->>Mem : saveGeneration(generationId, metadata)
 Gen-->>Client : {success, code, generationId, a11yReport, tests, ...}
+else Provider Unavailable/Fallback Triggered
+Gen->>Fallback : UnconfiguredAdapter.generate()
+Fallback-->>Gen : graceful fallback response
+Gen-->>Client : {success, fallback content, usage : 0}
+end
 ```
 
 **Diagram sources**
 - [route.ts](file://app/api/generate/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 
 ## Detailed Component Analysis
 
@@ -264,6 +287,7 @@ Security considerations:
 Performance considerations:
 - Non-streaming max duration is 300 seconds.
 - Streaming uses ReadableStream with SSE.
+- **Enhanced** Automatic retry logic handles transient provider errors with exponential backoff.
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
@@ -363,38 +387,21 @@ Common use cases:
 - Response body:
   - success: Boolean
   - classification: Classification result
+  - _fallback: Optional boolean indicating rate limit fallback
 - Errors:
   - 400: Invalid JSON, missing prompt, empty prompt
   - 500: Internal server error
 
 Common use cases:
 - Auto-select generation mode and model based on prompt semantics.
+- Intelligent fallback behavior when rate-limited with automatic cooldown.
+
+**Updated** Enhanced with intelligent fallback behavior when rate-limited. The API now returns a `_fallback` flag when using local classification instead of external provider calls, and the client implements a 30-second cooldown to prevent duplicate rate limit calls.
 
 **Section sources**
 - [route.ts](file://app/api/classify/route.ts)
-
-### Final Round Critique API
-- Endpoint: POST /api/final-round
-- Method: POST
-- Purpose: Run a final visual critique using a screenshot and generated code.
-- Request body:
-  - imageDataUrl: Required (base64 data URL)
-  - code: Required (string or multi-file object)
-  - model: Required
-  - provider: Optional
-- Response body:
-  - success: Boolean
-  - status: Result status
-  - Other provider-specific fields
-- Errors:
-  - 400: Missing required fields
-  - 500: Internal server error
-
-Common use cases:
-- Validate visual fidelity and accessibility after generation.
-
-**Section sources**
-- [route.ts](file://app/api/final-round/route.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ### Provider Status API
 - Endpoint: GET /api/providers/status
@@ -599,7 +606,6 @@ Common use cases:
   - intentType: Required
   - promptHash: Required
   - a11yScore: Optional integer 0–100
-  - critiqueScore: Optional integer 0–100
   - latencyMs: Optional integer
   - workspaceId: Optional
   - correctionNote: Optional string (max 2000)
@@ -628,31 +634,6 @@ Common use cases:
 **Section sources**
 - [route.ts](file://app/api/feedback/route.ts)
 
-### Utilities
-
-#### Screenshot API
-- Endpoint: POST /api/screenshot
-- Method: POST
-- Purpose: Capture a PNG screenshot of a URL using a headless Chromium instance.
-- Request body:
-  - url: Required
-  - delayMs: Optional
-  - viewportWidth: Optional
-  - viewportHeight: Optional
-- Response body:
-  - success: Boolean
-  - dataUrl: Base64 PNG data URL
-- Errors:
-  - 400: Invalid JSON or missing url
-  - 403: Host not allowed
-  - 500: Internal server error
-
-Common use cases:
-- Generate visual critiques and final round assessments.
-
-**Section sources**
-- [route.ts](file://app/api/screenshot/route.ts)
-
 ## Dependency Analysis
 - Route handlers depend on:
   - Authentication: auth()
@@ -660,40 +641,199 @@ Common use cases:
   - Validators: validatePromptInput, validateGenerationMode, validateGeneratedCode, validateBrowserSafeCode, UIIntentSchema
   - Storage: prisma, memory stores, usage logging
   - Utilities: logger, encryption service, workspace key service
+  - **Enhanced** Retry logic: exponential backoff with jitter for transient errors
+  - **Enhanced** Fallback mechanisms: UnconfiguredAdapter for graceful degradation
+  - **Enhanced** Classification logic: intelligent fallback with rate limit prevention
 
 ```mermaid
 graph LR
 GEN["/api/generate"] --> AUTH["auth()"]
 GEN --> VAL["Validators"]
 GEN --> ADP["Adapters"]
+GEN --> RETRY["Retry Logic"]
+GEN --> FALLBACK["Local Fallback"]
 GEN --> MEM["Memory/Storage"]
 PROV["/api/providers/status"] --> ENV["Environment Variables"]
 WS["/api/workspaces"] --> PRIS["prisma"]
 FEED["/api/feedback"] --> STORE["feedbackStore"]
-SCR["/api/screenshot"] --> PW["playwright"]
+CL["/api/classify"] --> INTENT["Intent Classifier"]
+INTENT --> RETRY2["Rate Limit Prevention"]
+INTENT --> FALLBACK2["Local Fallback"]
 ```
 
 **Diagram sources**
 - [route.ts](file://app/api/generate/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
 - [route.ts](file://app/api/workspaces/route.ts)
 - [route.ts](file://app/api/feedback/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
+- [route.ts](file://app/api/classify/route.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
 - [route.ts](file://app/api/workspaces/route.ts)
 - [route.ts](file://app/api/feedback/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
+- [route.ts](file://app/api/classify/route.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 
 ## Performance Considerations
 - Streaming generation: Use stream=true for real-time token delivery; non-streaming max duration is 300 seconds.
 - Timeout budgets: Provider status checking is immediate; generation review/repair phases are bounded.
 - Parallelization: Accessibility and tests are computed concurrently with generation.
 - Local models: Prefer local runtimes when available for reduced latency and cost.
+- **Enhanced** Retry optimization: Intelligent backoff reduces load on failing providers while maintaining responsiveness.
+- **Enhanced** Classification optimization: 30-second cooldown prevents duplicate rate limit calls and reduces API consumption.
 
-**Updated** Removed usage tracking and analytics considerations as the usage endpoint is no longer available.
+## Retry Logic and Rate Limit Handling
+
+### Automatic Retry Mechanism
+The system implements comprehensive retry logic to handle transient provider errors including rate limits, timeouts, and network failures:
+
+**Exponential Backoff with Jitter**
+- Base delay: 100ms for first retry
+- Multiplicative backoff: 2x multiplier for subsequent retries
+- Maximum attempts: 3 retries per operation
+- Jitter: ±25% random variation to prevent thundering herd effects
+- Max backoff: 5 seconds cap per retry attempt
+
+**Retryable Error Types**
+- HTTP 429 (Rate Limited)
+- HTTP 503 (Service Unavailable)
+- Network timeouts
+- Provider connection failures
+- Temporary quota exceeded errors
+
+**Retry Flow**
+```mermaid
+sequenceDiagram
+participant Client as "Client"
+participant API as "API Handler"
+participant Provider as "External Provider"
+loop 3 Attempts with Exponential Backoff
+Client->>API : Request
+API->>Provider : Generate/Stream Request
+Provider-->>API : 429/Timeout/Error
+API->>API : Calculate backoff (100ms × 2^(attempt-1))
+API->>API : Apply ±25% jitter
+API->>API : Wait for calculated delay
+API->>Provider : Retry request
+end
+Provider-->>API : Success Response
+API-->>Client : Final Response
+```
+
+**Diagram sources**
+- [index.ts](file://lib/ai/adapters/index.ts)
+
+### Provider-Specific Retry Configuration
+Different providers may have varying retry characteristics:
+
+| Provider | Max Retries | Base Delay | Max Backoff | Jitter |
+|----------|-------------|------------|-------------|--------|
+| OpenAI | 3 | 100ms | 5s | ±25% |
+| Anthropic | 3 | 100ms | 5s | ±25% |
+| Google | 3 | 100ms | 5s | ±25% |
+| Groq | 3 | 100ms | 5s | ±25% |
+
+### Error Propagation
+- Non-retryable errors (401, 403, 400) are immediately surfaced to clients
+- Retryable errors are automatically handled internally
+- Failed retries return appropriate HTTP status codes to clients
+
+**Section sources**
+- [index.ts](file://lib/ai/adapters/index.ts)
+
+## Local Fallback Mechanisms
+
+### UnconfiguredAdapter Behavior
+When no API keys are available or providers are unreachable, the system gracefully degrades using the UnconfiguredAdapter:
+
+**JSON Schema Fallback**
+For structured JSON responses (intent parsing, thinking plans):
+- Returns predefined JSON structure with `needsClarification: true`
+- Provides clear configuration instructions
+- Includes helpful error messages for users
+- Maintains schema compatibility for downstream processing
+
+**React Component Fallback**
+For code generation requests:
+- Generates informative React alert component
+- Includes step-by-step configuration instructions
+- Provides visual guidance for API key setup
+- Uses accessible design patterns
+
+**Graceful Degradation Features**
+- Zero usage costs (all 0 token counts)
+- Immediate response without external dependencies
+- Clear user-facing error messaging
+- Preserves application functionality during outages
+
+### Fallback Trigger Conditions
+- No API keys configured for requested provider
+- External provider unresponsive or rate-limited
+- Network connectivity issues
+- Provider service outages
+
+**Section sources**
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+
+## Client-Side Retry Patterns
+
+### Recommended Retry Strategy
+Implement client-side retry logic to complement server-side automatic retries:
+
+**Exponential Backoff Implementation**
+```javascript
+// Example retry pattern for API calls
+async function retryWithBackoff(apiCall, maxRetries = 3, baseDelay = 100) {
+  let lastError;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await apiCall();
+    } catch (error) {
+      lastError = error;
+      
+      // Check if error is retryable
+      if (!isRetryableError(error) || i === maxRetries - 1) {
+        throw error;
+      }
+      
+      // Calculate exponential backoff with jitter
+      const delay = baseDelay * Math.pow(2, i);
+      const jitter = delay * 0.25 * (Math.random() - 0.5); // ±25%
+      const totalDelay = Math.min(delay + jitter, 5000); // Cap at 5s
+      
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
+    }
+  }
+  
+  throw lastError;
+}
+
+function isRetryableError(error) {
+  return error.response?.status === 429 || 
+         error.response?.status === 503 ||
+         error.code === 'ECONNABORTED' || // Network timeout
+         error.message.includes('timeout');
+}
+```
+
+**Best Practices**
+- Implement client-side retries for rate-limited operations
+- Use exponential backoff with jitter to prevent synchronized retries
+- Respect provider-specific rate limits at the application level
+- Provide user feedback during retry operations
+- Log retry attempts for debugging and monitoring
+
+**Section sources**
+- [index.ts](file://lib/ai/adapters/index.ts)
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -701,17 +841,23 @@ Common issues and resolutions:
 - Provider configuration errors: Check environment variables for provider API keys; provider status endpoint shows which providers are configured.
 - Generation failures: Check intent structure, model availability, and provider quotas; review logs for detailed errors.
 - Browser safety warnings: Generated code may be flagged for unsafe patterns; sanitize and validate before use.
-- Rate limits and quotas: Respect provider limits; consider switching providers or models.
+- Rate limits and quotas: Respect provider limits; implement client-side retries with exponential backoff.
+- **Enhanced** Retry failures: Monitor retry logs and adjust backoff parameters if providers consistently fail.
+- **Enhanced** Local fallbacks: When API keys are missing, UnconfiguredAdapter provides graceful degradation with clear user instructions.
+- **Enhanced** Classification rate limiting: Use the 30-second cooldown mechanism to prevent duplicate rate limit calls.
+- **Enhanced** Client-side rate limit prevention: The prompt input component implements debouncing and cooldown to reduce API calls.
 - Local runtime connectivity: Verify Ollama/LM Studio endpoints; provider status shows local model availability.
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ## Conclusion
-The API provides a robust, secure, and extensible foundation for AI-powered UI generation with strong validation, observability, and multi-provider support. Use the endpoints above to integrate generation, manage workspaces, track history, collect feedback, and monitor provider availability.
+The API provides a robust, secure, and extensible foundation for AI-powered UI generation with strong validation, observability, multi-provider support, and comprehensive resilience mechanisms. Enhanced retry logic with exponential backoff, intelligent rate limit handling, and graceful fallback capabilities ensure reliable operation even under adverse conditions. The enhanced classification API prevents duplicate rate limit calls through intelligent fallback behavior and client-side cooldown strategies. Use the endpoints above to integrate generation, manage workspaces, track history, collect feedback, and monitor provider availability.
 
 ## Appendices
 
@@ -727,25 +873,37 @@ The API provides a robust, secure, and extensible foundation for AI-powered UI g
 - Business logic errors return 4xx with descriptive messages.
 - Provider errors are surfaced with distinct 401 for auth failures.
 - Internal errors return 500 with generic messages; logs include stack traces.
+- **Enhanced** Transient provider errors are automatically retried with exponential backoff.
+- **Enhanced** Unavailable providers trigger graceful fallback responses.
+- **Enhanced** Rate-limited classification requests trigger intelligent fallback with cooldown.
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 
 ### Rate Limiting and Quotas
 - Provider-specific rate limits apply; implement client-side retries and exponential backoff.
 - Consider batching requests and using lighter models for classification and parsing.
+- **Enhanced** Server-side automatic retry logic handles rate limit errors transparently.
+- **Enhanced** UnconfiguredAdapter provides graceful fallback when rate limits are exceeded.
+- **Enhanced** Classification API implements 30-second cooldown to prevent duplicate rate limit calls.
+- **Enhanced** Client-side debouncing reduces API calls by 3x compared to previous implementations.
 
 ### Security Considerations
 - Never accept apiKey/baseUrl in generation endpoints; use environment variables and overrides.
 - Validate and sanitize generated code; block unsafe imports.
-- Restrict screenshot hosts to localhost and trusted CDNs.
 - Encrypt API keys at rest; never expose keys in responses.
+- **Enhanced** Retry logic prevents cascading failures that could amplify rate limit violations.
+- **Enhanced** Classification fallback maintains schema compatibility while preventing rate limit abuse.
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
-- [route.ts](file://app/api/screenshot/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ### API Versioning, Backward Compatibility, and Deprecation
 - Current routes are stable; no explicit version path is used.
@@ -758,10 +916,17 @@ The API provides a robust, secure, and extensible foundation for AI-powered UI g
 - Stream tokens for real-time UI generation; handle SSE events.
 - Cache provider status with TTL; refresh when environment variables change.
 - Store generationId with feedback submissions for correlation.
+- **Enhanced** Implement client-side retry logic with exponential backoff for rate-limited operations.
+- **Enhanced** Handle fallback responses gracefully when API keys are not configured.
+- **Enhanced** Implement classification cooldown to prevent duplicate rate limit calls.
+- **Enhanced** Use debounced classification requests to reduce API consumption.
 
 **Section sources**
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ### SDK Usage Examples and Integration Patterns
 - Example patterns:
@@ -774,6 +939,9 @@ The API provides a robust, secure, and extensible foundation for AI-powered UI g
   - Check provider status via /api/providers/status before generation.
   - Store provider settings via /api/workspace/settings.
   - Monitor provider availability through environment variable configuration.
+  - **Enhanced** Implement retry logic for production deployments.
+  - **Enhanced** Handle fallback responses for graceful degradation.
+  - **Enhanced** Implement classification cooldown and debouncing for optimal rate limit management.
 
 **Section sources**
 - [route.ts](file://app/api/parse/route.ts)
@@ -784,13 +952,121 @@ The API provides a robust, secure, and extensible foundation for AI-powered UI g
 - [route.ts](file://app/api/history/route.ts)
 - [route.ts](file://app/api/workspace/settings/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
 
 ### Monitoring and Observability
 - Use request logs and structured entries for each endpoint.
 - Monitor provider availability through /api/providers/status for cost and token insights.
 - Correlate feedback with generationId for quality metrics.
+- **Enhanced** Track retry metrics and failure rates for provider health monitoring.
+- **Enhanced** Monitor fallback activation rates to identify configuration issues.
+- **Enhanced** Track classification cooldown effectiveness to optimize rate limit management.
 
 **Section sources**
 - [route.ts](file://app/api/feedback/route.ts)
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/providers/status/route.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
+
+### Retry Configuration Examples
+**Server-Side Configuration**
+```typescript
+// Default retry settings in adapter factory
+const DEFAULT_RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 100,
+  maxBackoffMs: 5000,
+  jitterPercentage: 0.25
+};
+
+// Usage in generation pipeline
+async function generateWithRetry(options: GenerateOptions): Promise<GenerateResult> {
+  let lastError: Error;
+  
+  for (let attempt = 0; attempt < DEFAULT_RETRY_CONFIG.maxRetries; attempt++) {
+    try {
+      return await adapter.generate(options);
+    } catch (error) {
+      lastError = error;
+      
+      if (!isRetryable(error) || attempt === DEFAULT_RETRY_CONFIG.maxRetries - 1) {
+        throw error;
+      }
+      
+      const delay = calculateBackoff(attempt);
+      await sleep(delay);
+    }
+  }
+  
+  throw lastError;
+}
+```
+
+**Client-Side Implementation**
+```javascript
+// Client-side retry with exponential backoff
+class APIClient {
+  async requestWithRetry(url, options, maxRetries = 3) {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const response = await fetch(url, options);
+        
+        if (response.status === 429 && i < maxRetries - 1) {
+          const delay = Math.min(100 * Math.pow(2, i), 5000);
+          await new Promise(r => setTimeout(r, delay));
+          continue;
+        }
+        
+        return response;
+      } catch (error) {
+        if (i === maxRetries - 1) throw error;
+        await new Promise(r => setTimeout(r, 100 * Math.pow(2, i)));
+      }
+    }
+  }
+}
+```
+
+**Enhanced Classification Implementation**
+```javascript
+// Classification with rate limit prevention
+class ClassificationClient {
+  private last429Time: number = 0;
+  private readonly COOLDOWN_MS = 30000;
+  
+  async classifyWithCooldown(prompt: string): Promise<ClassificationResult> {
+    const now = Date.now();
+    if (now - this.last429Time < this.COOLDOWN_MS) {
+      // Skip classification during cooldown
+      return this.getLocalFallback(prompt);
+    }
+    
+    try {
+      const response = await fetch('/api/classify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      
+      if (response.status === 429) {
+        this.last429Time = now;
+        return this.getLocalFallback(prompt);
+      }
+      
+      return response.json();
+    } catch (error) {
+      return this.getLocalFallback(prompt);
+    }
+  }
+}
+```
+
+**Section sources**
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [base.ts](file://lib/ai/adapters/base.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
+- [PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)

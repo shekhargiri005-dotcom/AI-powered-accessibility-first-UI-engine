@@ -1,2 +1,0 @@
-app/api/generate/route.ts(2,10): error TS2724: '"ai"' has no exported member named 'createDataStreamResponse'. Did you mean 'createTextStreamResponse'?
-app/api/generate/route.ts(55,25): error TS7006: Parameter 'dataStream' implicitly has an 'any' type.

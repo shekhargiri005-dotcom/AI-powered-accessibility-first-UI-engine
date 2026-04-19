@@ -1,5 +1,0 @@
-🚀 Starting Multi-tenancy Isolation Test...
-✅ Mock data seeded.
-Test 1 (Owner Access): PASS ✅
-Test 2 (Cross-tenant Access Blocked): PASS ✅
-🧹 Cleanup finished.

@@ -8,10 +8,9 @@
 - [lib/prisma.ts](file://lib/prisma.ts)
 - [__tests__/security.test.ts](file://__tests__/security.test.ts)
 - [__tests__/encryption.test.ts](file://__tests__/encryption.test.ts)
-- [app/api/engine-config/route.ts](file://app/api/engine-config/route.ts)
 - [lib/security/encryption.ts](file://lib/security/encryption.ts)
 - [lib/security/workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
-- [app/api/models/route.ts](file://app/api/models/route.ts)
+- [__tests__/workspaceKeyService.test.ts](file://__tests__/workspaceKeyService.test.ts)
 - [components/ProviderSelector.tsx](file://components/ProviderSelector.tsx)
 - [components/AIEngineConfigPanel.tsx](file://components/AIEngineConfigPanel.tsx)
 - [components/ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
@@ -20,12 +19,11 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive automatic LLM configuration reset system with 15-minute inactivity monitoring
-- Documented comprehensive event tracking system including mouse movement, keyboard input, touch interactions, and scroll events
-- Added secure configuration cleanup process that clears AI configuration from React state, localStorage, sessionStorage, and server-side storage
-- Enhanced browser safety validation with new security features
-- Updated authentication and authorization sections with new security features
-- Enhanced server-side credential management with automatic cleanup capabilities
+- Enhanced error handling for corrupted encrypted keys in workspace key management system
+- Added comprehensive try-catch blocks around decryption operations to prevent application crashes
+- Implemented graceful fallback to environment variables when encrypted data is malformed or corrupted
+- Strengthened workspace key service resilience with nested error handling patterns
+- Improved encryption service robustness with better error propagation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -51,9 +49,9 @@ Security-critical components are organized across authentication, session manage
 - Session provider for client-side session handling
 - Database connectivity with automatic reconnection for transient errors
 - Enhanced server-side credential management with AES-256 encryption
-- Workspace-scoped key management and caching
+- Workspace-scoped key management and caching with comprehensive error handling
 - Validation and sanitization for generated code
-- Encryption utilities for secure storage of secrets
+- Encryption utilities for secure storage of secrets with graceful fallback mechanisms
 - Comprehensive security indicators and status displays
 - Automatic LLM configuration reset system with inactivity monitoring
 - Event tracking and secure cleanup mechanisms
@@ -68,7 +66,7 @@ end
 subgraph "Enhanced Credential Management"
 D["lib/security/encryption.ts"]
 E["lib/security/workspaceKeyService.ts"]
-F["app/api/engine-config/route.ts"]
+F["__tests__/workspaceKeyService.test.ts"]
 end
 subgraph "Data Access Layer"
 G["lib/prisma.ts"]
@@ -109,8 +107,8 @@ O --> P
 - [app/api/auth/[...nextauth]/route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [components/auth/SessionProvider.tsx:1-8](file://components/auth/SessionProvider.tsx#L1-L8)
 - [lib/security/encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [lib/security/workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
-- [app/api/engine-config/route.ts:1-153](file://app/api/engine-config/route.ts#L1-L153)
+- [lib/security/workspaceKeyService.ts:1-147](file://lib/security/workspaceKeyService.ts#L1-L147)
+- [__tests__/workspaceKeyService.test.ts:1-69](file://__tests__/workspaceKeyService.test.ts#L1-L69)
 - [lib/prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [components/ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [components/AIEngineConfigPanel.tsx:494-520](file://components/AIEngineConfigPanel.tsx#L494-L520)
@@ -126,8 +124,7 @@ O --> P
 - [app/api/auth/[...nextauth]/route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
 - [components/auth/SessionProvider.tsx:1-8](file://components/auth/SessionProvider.tsx#L1-L8)
 - [lib/security/encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [lib/security/workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
-- [app/api/engine-config/route.ts:1-153](file://app/api/engine-config/route.ts#L1-L153)
+- [lib/security/workspaceKeyService.ts:1-147](file://lib/security/workspaceKeyService.ts#L1-L147)
 - [lib/prisma.ts:1-70](file://lib/prisma.ts#L1-L70)
 - [components/ProviderSelector.tsx:1-375](file://components/ProviderSelector.tsx#L1-L375)
 - [components/AIEngineConfigPanel.tsx:494-520](file://components/AIEngineConfigPanel.tsx#L494-L520)
@@ -138,11 +135,11 @@ O --> P
 
 ## Core Components
 - Authentication and Authorization: Implements a single-owner credential provider using bcrypt-hashed passwords, JWT sessions, and NextAuth.js callbacks for token/session propagation.
-- Enhanced Credential Management: Features AES-256-GCM encryption for API keys, workspace-scoped key storage, and intelligent key resolution with caching.
+- Enhanced Credential Management: Features AES-256-GCM encryption for API keys, workspace-scoped key storage, and intelligent key resolution with caching and comprehensive error handling.
 - Session Management: Client-side provider wraps the application to enable session-aware components.
-- Database Connectivity: Singleton Prisma client with automatic reconnection for transient Neon errors.
+- Database Connectivity: Singleton Prisma client with automatic reconnection for transient errors.
 - Validation and Sanitization: Tests define expected behaviors for validating and sanitizing generated code to ensure browser safety.
-- Encryption: Tests demonstrate encryption and decryption of sensitive data using a 32-byte secret with fallback mechanisms.
+- Encryption: Tests demonstrate encryption and decryption of sensitive data using a 32-byte secret with fallback mechanisms and graceful error handling.
 - Security Indicators: Comprehensive visual indicators including shield icons, emerald badges, and security status banners throughout the UI.
 - Automatic LLM Configuration Reset: Implements 15-minute inactivity monitoring with comprehensive event tracking and secure cleanup mechanisms.
 
@@ -151,7 +148,7 @@ O --> P
 - [components/auth/SessionProvider.tsx:3-7](file://components/auth/SessionProvider.tsx#L3-L7)
 - [lib/prisma.ts:20-70](file://lib/prisma.ts#L20-L70)
 - [lib/security/encryption.ts:27-68](file://lib/security/encryption.ts#L27-L68)
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
+- [lib/security/workspaceKeyService.ts:32-104](file://lib/security/workspaceKeyService.ts#L32-L104)
 - [components/ProviderSelector.tsx:161-178](file://components/ProviderSelector.tsx#L161-L178)
 - [components/AIEngineConfigPanel.tsx:495-520](file://components/AIEngineConfigPanel.tsx#L495-L520)
 - [components/ModelSelectionGate.tsx:159-169](file://components/ModelSelectionGate.tsx#L159-L169)
@@ -160,7 +157,7 @@ O --> P
 - [__tests__/encryption.test.ts:15-47](file://__tests__/encryption.test.ts#L15-L47)
 
 ## Architecture Overview
-The system enforces authentication at the API boundary and propagates identity through JWT to the client. Enhanced server-side credential management stores API keys securely using AES-256 encryption with workspace scoping. Sessions are managed client-side and persisted securely. Data access uses a singleton Prisma client with resilience against transient database errors. Generated code is validated and sanitized to prevent unsafe constructs and browser-incompatible patterns. Comprehensive security indicators provide visual assurance of secure operations throughout the user interface. The new automatic LLM configuration reset system monitors user inactivity for 15 minutes, tracks comprehensive user events (mouse movement, keyboard input, touch interactions, scroll events), and securely cleans up AI configuration from React state, localStorage, sessionStorage, and server-side storage.
+The system enforces authentication at the API boundary and propagates identity through JWT to the client. Enhanced server-side credential management stores API keys securely using AES-256 encryption with workspace scoping and comprehensive error handling. Sessions are managed client-side and persisted securely. Data access uses a singleton Prisma client with resilience against transient database errors. Generated code is validated and sanitized to prevent unsafe constructs and browser-incompatible patterns. Comprehensive security indicators provide visual assurance of secure operations throughout the user interface. The new automatic LLM configuration reset system monitors user inactivity for 15 minutes, tracks comprehensive user events (mouse movement, keyboard input, touch interactions, scroll events), and securely cleans up AI configuration from React state, localStorage, sessionStorage, and server-side storage.
 
 ```mermaid
 sequenceDiagram
@@ -193,7 +190,7 @@ WKS-->>U : "Secure cleanup confirmed"
 - [lib/auth.ts:25-59](file://lib/auth.ts#L25-L59)
 - [components/auth/SessionProvider.tsx:5-6](file://components/auth/SessionProvider.tsx#L5-L6)
 - [lib/security/encryption.ts:27-68](file://lib/security/encryption.ts#L27-L68)
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
+- [lib/security/workspaceKeyService.ts:32-104](file://lib/security/workspaceKeyService.ts#L32-L104)
 - [app/page.tsx:68-96](file://app/page.tsx#L68-L96)
 - [app/page.tsx:147-180](file://app/page.tsx#L147-L180)
 
@@ -265,23 +262,25 @@ NA --> APP["App Components"]
 - Encryption Service: Implements AES-256-GCM encryption with automatic fallback mechanisms. Supports both base64 and raw 32-byte secrets, with SHA-256 derived fallback for zero-config deployment.
 - API Key Management: Treat API keys as secrets; store encrypted values in the database and decrypt only when needed for adapter layer operations.
 - Key Resolution: Intelligent key resolution prioritizes client-supplied keys, falls back to workspace-scoped encrypted keys, then environment variables.
+- **Enhanced Error Handling**: Comprehensive try-catch blocks around decryption operations prevent application crashes and enable graceful fallback to environment variables when encrypted data is malformed or corrupted.
 
 ```mermaid
 flowchart TD
 In(["API Key Input"]) --> Encrypt["AES-256-GCM Encryption<br/>with random IV/auth tag"]
 Encrypt --> Store["Store in DB (workspace-scoped)"]
-Store --> Decrypt["Decrypt on-demand via workspaceKeyService"]
-Decrypt --> Adapter["Adapter Layer Usage"]
+Store --> Decrypt["Decrypt on-demand via workspaceKeyService<br/>with nested try-catch blocks"]
+Decrypt --> ErrorCheck{"Decryption error?"}
+ErrorCheck --> |Yes| Fallback["Graceful fallback to null<br/>and environment variables"]
+ErrorCheck --> |No| Adapter["Adapter Layer Usage"]
 ```
 
 **Diagram sources**
 - [lib/security/encryption.ts:27-68](file://lib/security/encryption.ts#L27-L68)
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
+- [lib/security/workspaceKeyService.ts:61-74](file://lib/security/workspaceKeyService.ts#L61-L74)
 
 **Section sources**
 - [lib/security/encryption.ts:27-68](file://lib/security/encryption.ts#L27-L68)
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
-- [app/api/engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
+- [lib/security/workspaceKeyService.ts:32-104](file://lib/security/workspaceKeyService.ts#L32-L104)
 
 #### Privacy Considerations for User-Generated Content
 - Minimization: Collect only necessary data for functionality.
@@ -474,7 +473,7 @@ The server-side cleanup process ensures complete removal of AI configurations:
 
 **Section sources**
 - [app/api/engine-config/route.ts:129-153](file://app/api/engine-config/route.ts#L129-L153)
-- [lib/security/workspaceKeyService.ts:100-106](file://lib/security/workspaceKeyService.ts#L100-L106)
+- [lib/security/workspaceKeyService.ts:109-115](file://lib/security/workspaceKeyService.ts#L109-L115)
 
 ## Server-Side Credential Management
 
@@ -507,12 +506,14 @@ Format --> Store["Store in DB"]
 - [lib/security/encryption.ts:71-94](file://lib/security/encryption.ts#L71-L94)
 
 ### Workspace-Key Service Architecture
-The workspace-key service provides secure, cached access to workspace-scoped API keys:
+The workspace-key service provides secure, cached access to workspace-scoped API keys with comprehensive error handling:
 
 - **Caching**: In-memory cache with 5-minute TTL per workspace/provider combination
 - **Authorization**: Verifies user membership for workspace access
 - **Resolution Priority**: Client key → DB encrypted key → Environment variable fallback
 - **Global Fallback**: Scans all workspaces for keys when using default workspace ID
+- **Enhanced Error Handling**: Nested try-catch blocks prevent application crashes on decryption failures
+- **Graceful Degradation**: Returns null on decryption errors, enabling fallback to environment variables
 
 ```mermaid
 flowchart TD
@@ -521,17 +522,18 @@ Auth --> Cache["Check Cache (TTL)"]
 Cache --> Cached{"Cached & Valid?"}
 Cached --> |Yes| Return["Return Cached Value"]
 Cached --> |No| DB["Query DB for Encrypted Key"]
-DB --> Decrypt["Decrypt with encryptionService"]
-Decrypt --> CacheStore["Store in Cache"]
+DB --> Decrypt["Decrypt with encryptionService<br/>try-catch block"]
+Decrypt --> ErrorCheck{"Decryption error?"}
+ErrorCheck --> |Yes| Warn["console.warn + return null"]
+ErrorCheck --> |No| CacheStore["Store in Cache"]
 CacheStore --> Return
 ```
 
 **Diagram sources**
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
+- [lib/security/workspaceKeyService.ts:32-104](file://lib/security/workspaceKeyService.ts#L32-L104)
 
 **Section sources**
-- [lib/security/workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
-- [app/api/engine-config/route.ts:69-127](file://app/api/engine-config/route.ts#L69-L127)
+- [lib/security/workspaceKeyService.ts:32-104](file://lib/security/workspaceKeyService.ts#L32-L104)
 
 ### API Key Resolution Strategy
 The system implements a tiered approach to API key resolution:
@@ -545,11 +547,38 @@ The system implements a tiered approach to API key resolution:
 - [app/api/models/route.ts:220-229](file://app/api/models/route.ts#L220-L229)
 - [lib/security/workspaceKeyService.ts:65-87](file://lib/security/workspaceKeyService.ts#L65-L87)
 
+### Enhanced Error Handling for Corrupted Encrypted Keys
+**Updated** The workspace key service now includes comprehensive error handling for corrupted encrypted keys:
+
+- **Nested Try-Catch Blocks**: Decryption operations are wrapped in try-catch blocks to prevent application crashes
+- **Graceful Fallback**: On decryption failure, the system logs a warning and returns null instead of crashing
+- **Environment Variable Fallback**: When decryption fails, the system gracefully falls back to environment variables
+- **Global Fallback Mechanism**: When no workspace-specific key is found, the system scans all workspaces for valid keys
+- **Cache Invalidation**: Failed decryption attempts trigger cache invalidation to prevent stale key retrieval
+
+```mermaid
+flowchart TD
+Decrypt["encryptionService.decrypt()"] --> TryBlock["try { decrypt }"]
+TryBlock --> Success{"Decryption successful?"}
+Success --> |Yes| ReturnVal["Return decrypted value"]
+Success --> |No| CatchBlock["catch (e) { console.warn + return null }"]
+CatchBlock --> Fallback["Graceful fallback to environment variables"]
+Fallback --> CacheInvalidation["Invalidate cache entry"]
+CacheInvalidation --> ReturnNull["Return null for caller"]
+```
+
+**Diagram sources**
+- [lib/security/workspaceKeyService.ts:61-74](file://lib/security/workspaceKeyService.ts#L61-L74)
+
+**Section sources**
+- [lib/security/workspaceKeyService.ts:61-74](file://lib/security/workspaceKeyService.ts#L61-L74)
+- [lib/security/workspaceKeyService.ts:81-96](file://lib/security/workspaceKeyService.ts#L81-L96)
+
 ## Dependency Analysis
 - Authentication depends on environment variables for secrets and bcrypt for password verification.
 - Session provider depends on NextAuth React provider.
 - Database connectivity depends on Prisma client and environment-driven configuration.
-- Enhanced credential management depends on encryption service and workspace key service.
+- Enhanced credential management depends on encryption service and workspace key service with comprehensive error handling.
 - Security indicators depend on Lucide React icons and Tailwind CSS styling.
 - Validation and encryption rely on unit tests that assert expected behaviors.
 - Automatic LLM reset system depends on React hooks, window event listeners, and API endpoints.
@@ -569,6 +598,7 @@ SEC_INDICATORS["Security Components"] --> ICONS["Lucide React Icons"]
 SEC_INDICATORS --> TAILWIND["Tailwind CSS"]
 SEC_TEST["__tests__/security.test.ts"] --> VALID["Validation/Sanitization"]
 ENC_TEST["__tests__/encryption.test.ts"] --> ENCRYPTION
+WKSTEST["__tests__/workspaceKeyService.test.ts"] --> WORKSPACE
 INACTIVITY["app/page.tsx<br/>Inactivity Reset"] --> EVENTS["Window Event Listeners"]
 INACTIVITY --> CLEANUP["Secure Cleanup Process"]
 INACTIVITY --> API["/api/engine-config"]
@@ -585,6 +615,7 @@ INACTIVITY --> API["/api/engine-config"]
 - [components/ProviderSelector.tsx:4-15](file://components/ProviderSelector.tsx#L4-L15)
 - [__tests__/security.test.ts:1-1](file://__tests__/security.test.ts#L1-L1)
 - [__tests__/encryption.test.ts:1-1](file://__tests__/encryption.test.ts#L1-L1)
+- [__tests__/workspaceKeyService.test.ts:1-1](file://__tests__/workspaceKeyService.test.ts#L1-L1)
 - [app/page.tsx:68-96](file://app/page.tsx#L68-L96)
 - [app/page.tsx:147-180](file://app/page.tsx#L147-L180)
 
@@ -598,6 +629,7 @@ INACTIVITY --> API["/api/engine-config"]
 - [components/ProviderSelector.tsx:4-15](file://components/ProviderSelector.tsx#L4-L15)
 - [__tests__/security.test.ts:1-1](file://__tests__/security.test.ts#L1-L1)
 - [__tests__/encryption.test.ts:1-1](file://__tests__/encryption.test.ts#L1-L1)
+- [__tests__/workspaceKeyService.test.ts:1-1](file://__tests__/workspaceKeyService.test.ts#L1-L1)
 
 ## Performance Considerations
 - Authentication: Keep password hashing cost reasonable to balance security and latency; monitor bcrypt compare performance under load.
@@ -608,6 +640,7 @@ INACTIVITY --> API["/api/engine-config"]
 - Security Indicators: Lightweight React components with minimal DOM overhead; icons are SVG-based for optimal performance.
 - Inactivity Monitoring: Minimal performance impact with 1-minute interval checks and efficient event listener cleanup.
 - Event Tracking: Passive event listeners ensure optimal performance with minimal memory footprint.
+- **Enhanced Error Handling**: Nested try-catch blocks add minimal overhead while providing robust error handling for decryption operations.
 
 ## Troubleshooting Guide
 - Authentication Failures:
@@ -628,6 +661,7 @@ INACTIVITY --> API["/api/engine-config"]
   - Ensure user has proper workspace membership for key access.
   - Check cache invalidation after key updates.
   - Verify environment variable fallbacks are configured correctly.
+  - **Enhanced Error Handling**: Monitor console.warn messages for decryption failures and verify fallback mechanisms are working.
 - Security Indicator Problems:
   - Verify Lucide React icons are properly imported.
   - Check Tailwind CSS configuration for custom color classes.
@@ -650,11 +684,12 @@ INACTIVITY --> API["/api/engine-config"]
 - [components/ProviderSelector.tsx:161-178](file://components/ProviderSelector.tsx#L161-L178)
 - [__tests__/security.test.ts:4-38](file://__tests__/security.test.ts#L4-L38)
 - [__tests__/encryption.test.ts:15-47](file://__tests__/encryption.test.ts#L15-L47)
+- [__tests__/workspaceKeyService.test.ts:35-57](file://__tests__/workspaceKeyService.test.ts#L35-L57)
 - [app/page.tsx:68-96](file://app/page.tsx#L68-L96)
 - [app/page.tsx:147-180](file://app/page.tsx#L147-L180)
 
 ## Conclusion
-The system establishes a robust foundation for authentication and session management using NextAuth.js and JWT. The enhanced server-side credential management system provides comprehensive security through AES-256 encryption, workspace scoping, and intelligent key resolution. Data access is resilient through a singleton Prisma client with automatic reconnection. Validation and sanitization tests define clear expectations for generated code safety. The comprehensive security indicator system provides users with visual assurance of secure operations. The new automatic LLM configuration reset system with 15-minute inactivity monitoring significantly enhances security by automatically clearing AI configurations when users step away from their workstations. This system tracks comprehensive user events (mouse movement, keyboard input, touch interactions, scroll events) and performs secure cleanup across React state, localStorage, sessionStorage, and server-side storage. To strengthen privacy and security posture, introduce role-based access control, tenant isolation, and comprehensive consent mechanisms. Adopt encryption for secrets, enforce least privilege, and maintain audit trails for compliance. The emerald badges, shield icons, and security status banners create a cohesive security experience throughout the user interface.
+The system establishes a robust foundation for authentication and session management using NextAuth.js and JWT. The enhanced server-side credential management system provides comprehensive security through AES-256 encryption, workspace scoping, and intelligent key resolution with comprehensive error handling. Data access is resilient through a singleton Prisma client with automatic reconnection. Validation and sanitization tests define clear expectations for generated code safety. The comprehensive security indicator system provides users with visual assurance of secure operations. The new automatic LLM configuration reset system with 15-minute inactivity monitoring significantly enhances security by automatically clearing AI configurations when users step away from their workstations. This system tracks comprehensive user events (mouse movement, keyboard input, touch interactions, scroll events) and performs secure cleanup across React state, localStorage, sessionStorage, and server-side storage. To strengthen privacy and security posture, introduce role-based access control, tenant isolation, and comprehensive consent mechanisms. Adopt encryption for secrets, enforce least privilege, and maintain audit trails for compliance. The emerald badges, shield icons, and security status banners create a cohesive security experience throughout the user interface. The enhanced error handling for corrupted encrypted keys ensures system stability and graceful degradation when encountering malformed encrypted data.
 
 ## Appendices
 
@@ -664,11 +699,12 @@ The system establishes a robust foundation for authentication and session manage
 - Enforce tenant scoping in all data access paths.
 - Log minimally and avoid logging sensitive data.
 - Regularly rotate secrets and review access controls.
-- Implement proper error handling for encryption failures.
+- Implement proper error handling for encryption failures with graceful fallback mechanisms.
 - Monitor workspace key cache effectiveness and adjust TTL as needed.
 - Use secure defaults for development and testing environments.
 - Implement comprehensive inactivity monitoring for sensitive operations.
 - Ensure proper cleanup of temporary data and state.
+- **Implement comprehensive error handling**: Always wrap decryption operations in try-catch blocks and provide graceful fallback mechanisms.
 
 ### Threat Modeling Considerations
 - Credential theft: Mitigate through strong secrets, rate limiting, and MFA if feasible.
@@ -680,6 +716,7 @@ The system establishes a robust foundation for authentication and session manage
 - Cache poisoning: Validate cached key data and implement proper cache invalidation.
 - Inactivity-based attacks: Implement automatic cleanup for sensitive operations.
 - Event listener leaks: Ensure proper cleanup of event handlers on component unmount.
+- **Corrupted Data Attacks**: Implement comprehensive error handling for malformed encrypted data to prevent system crashes and unauthorized access.
 
 ### Incident Response Procedures
 - Contain: Immediately revoke compromised secrets and disable affected accounts.
@@ -690,6 +727,7 @@ The system establishes a robust foundation for authentication and session manage
 - Monitoring: Set up alerts for unusual encryption key access patterns.
 - Documentation: Maintain detailed logs of all security incidents and responses.
 - Inactivity Reset: Monitor automatic cleanup processes and ensure proper execution.
+- **Error Handling**: Monitor console.warn messages for decryption failures and implement procedures for handling corrupted encrypted data gracefully.
 
 ### Security Feature Implementation Guidelines
 - **Encryption**: Always use AES-256-GCM with proper IV handling and authentication tags.
@@ -702,3 +740,4 @@ The system establishes a robust foundation for authentication and session manage
 - **Inactivity Monitoring**: Implement robust event tracking with proper cleanup procedures.
 - **Event Listener Management**: Ensure proper registration and cleanup of event handlers.
 - **Storage Cleanup**: Implement comprehensive cleanup across all storage mechanisms.
+- **Enhanced Error Handling**: Implement comprehensive try-catch blocks around decryption operations with graceful fallback mechanisms.

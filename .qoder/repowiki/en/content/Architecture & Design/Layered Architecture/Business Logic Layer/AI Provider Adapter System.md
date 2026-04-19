@@ -20,11 +20,12 @@
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect the current state where Ollama provider remains supported in the codebase
-- Enhanced documentation to clarify the current provider support matrix
-- Updated provider detection logic to reflect the continued presence of Ollama support
-- Enhanced security measures documentation for explicit credential configuration
-- Updated troubleshooting guidance to reflect current configuration requirements
+- Updated to reflect the removal of universal LLM_KEY support and automatic provider detection
+- Enhanced documentation to clarify the current explicit provider configuration requirement
+- Updated credential resolution hierarchy to only include workspace keys and provider-specific environment variables
+- Removed references to universal fallback mechanism and automatic provider detection
+- Enhanced error messaging documentation for missing provider-specific keys
+- Updated troubleshooting guidance to reflect current explicit configuration requirements
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -39,9 +40,9 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the universal AI adapter system that powers the AI engine. The system currently supports five distinct AI providers: OpenAI, Anthropic, Google, Groq (OpenAI-compatible), and Ollama (local). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. **Current State**: The system continues to support Ollama provider alongside the other four cloud providers, with explicit provider configuration through dedicated environment variables and enhanced security measures.
+This document describes the universal AI adapter system that powers the AI engine. The system currently supports five distinct AI providers: OpenAI, Anthropic, Google, Groq (OpenAI-compatible), and Ollama (local). The adapter pattern isolates provider-specific logic behind a shared interface while maintaining robust credential resolution, standardized request/response formats, and comprehensive error handling. **Current State**: The system requires explicit provider configuration through dedicated environment variables for each provider, with enhanced security measures and improved error messaging.
 
-**Important Note**: The current codebase maintains Ollama provider support, though the documentation update reason indicates it should be removed. This document reflects the current state of the codebase.
+**Important Note**: The universal LLM_KEY fallback mechanism and automatic provider detection have been completely removed from the codebase. The system now enforces explicit provider configuration for all providers.
 
 ## Project Structure
 The AI adapter system lives under lib/ai and is composed of:
@@ -221,7 +222,6 @@ AIAdapter --> StreamChunk : "produces"
 ### Factory Pattern and Dynamic Adapter Instantiation
 - getWorkspaceAdapter resolves credentials from workspace storage or explicit environment variables, then delegates to createAdapter.
 - createAdapter detects provider from explicit configuration and validates API keys, returning a CachedAdapter-wrapped provider adapter.
-- **Current State**: Enhanced provider detection includes Ollama support for local models.
 - For unknown providers, it falls back to UnconfiguredAdapter to avoid hard failures.
 - Legacy getAdapter remains for backward compatibility but should be migrated to getWorkspaceAdapter.
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential leakage.
@@ -255,7 +255,7 @@ CacheWrap --> End(["AIAdapter"])
 ### Enhanced Credential Resolution System
 
 #### Explicit Provider Configuration Only
-**Current State** The system supports explicit provider-specific API keys for all providers including Ollama:
+**Current State** The system requires explicit provider-specific API keys for all providers:
 
 **Enhanced Credential Resolution Hierarchy:**
 1. **Database Check**: Workspace-scoped keys via workspaceKeyService
@@ -265,7 +265,6 @@ CacheWrap --> End(["AIAdapter"])
 **Explicit Provider Configuration Implementation:**
 - The system checks for provider-specific environment variables for all providers
 - Each provider has its own dedicated environment variable including Ollama
-- **Current State**: Ollama support remains active with dedicated OLLAMA_API_KEY environment variable
 - If no provider-specific key is found, the system returns UnconfiguredAdapter with clear error messaging
 - Works transparently across all cloud providers with proper validation
 - Provides simplified deployment configuration with explicit provider scoping
@@ -275,7 +274,7 @@ flowchart TD
 A["getWorkspaceAdapter(providerId, modelId, workspaceId, userId)"] --> B["DB lookup via workspaceKeyService"]
 B --> C{"Provider-specific key found?"}
 C -- Yes --> D["createAdapter({provider, model, apiKey})"]
-C -- No --> E["Check process.env[PROVIDER_API_KEY]"]
+C -- No --> E["Check process.env[PROVIDER_ID_API_KEY]"]
 E --> F{"Provider-specific key found?"}
 F -- Yes --> D
 F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
@@ -295,7 +294,6 @@ F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
 **resolveLlmProvider Function:**
 - Analyzes provider-specific environment variables for explicit provider specification
 - Supports all five providers: OpenAI, Anthropic, Google, Groq, and Ollama
-- **Current State**: Ollama detection logic remains active for local model identification
 - Returns clear error messages when provider-specific keys are missing
 
 **Enhanced Security Features:**
@@ -379,7 +377,6 @@ AA-->>App : "StreamChunk (delta/done)"
 #### OllamaAdapter
 - Uses the OpenAI-compatible API exposed by Ollama at http://localhost:11434/v1.
 - Supports local model execution with tool calling for compatible models.
-- **Current State**: Ollama support remains active with dedicated environment variable handling.
 - Works independently of other credential resolution mechanisms.
 
 **Section sources**
@@ -397,7 +394,6 @@ AA-->>App : "StreamChunk (delta/done)"
 - getWorkspaceAdapter prioritizes workspace-scoped keys, then environment variables, and finally returns UnconfiguredAdapter.
 - Environment variables are checked per provider using dedicated environment variables.
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential leakage.
-- **Current State**: All five providers support explicit configuration including Ollama.
 - ConfigurationError is thrown when a provider requires a key but none is found.
 
 ```mermaid
@@ -405,7 +401,7 @@ flowchart TD
 A["getWorkspaceAdapter(providerId, modelId, workspaceId, userId)"] --> B["DB lookup via workspaceKeyService"]
 B --> C{"Provider-specific key found?"}
 C -- Yes --> D["createAdapter({provider, model, apiKey})"]
-C -- No --> E["Check process.env[PROVIDER_API_KEY]"]
+C -- No --> E["Check process.env[PROVIDER_ID_API_KEY]"]
 E --> F{"Provider-specific key found?"}
 F -- Yes --> D
 F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
@@ -432,7 +428,6 @@ F -- No --> G["Return UnconfiguredAdapter with clear error messaging"]
 - Upstash Redis initialization failure is handled gracefully; cache writes are best-effort.
 - Provider adapters handle HTTP errors and malformed responses.
 - **Enhanced Security**: Cross-provider credential leakage prevention through explicit provider configuration.
-- **Current State**: All providers including Ollama support explicit configuration requirements.
 - **New**: Clear error messages for missing provider-specific environment variables.
 
 **Section sources**
@@ -476,7 +471,6 @@ Metrics --> End(["return"])
 ### Environment-Based Defaults and Backward Compatibility
 - config.ts re-exports factory and resolver for backward compatibility.
 - resolveDefaultAdapter chooses the first available provider key based on explicit configuration.
-- **Current State**: All five providers supported including Ollama.
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential leakage.
 
 **Section sources**
@@ -486,8 +480,6 @@ Metrics --> End(["return"])
 The adapter system exhibits low coupling and high cohesion with enhanced credential resolution and security measures:
 - Adapters depend on shared types and tools.
 - The factory depends on workspace key service, environment variables, adapters.
-- **Current State**: Enhanced provider detection includes Ollama support for local models.
-- **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential leakage.
 - Caching is orthogonal and composable via decorator pattern.
 - Tools are isolated and converted at adapter boundaries.
 
@@ -539,13 +531,10 @@ GR["api/generate/route.ts"] --> IDX
 - For cloud providers, ensure network connectivity to provider endpoints; otherwise use UnconfiguredAdapter for graceful UX.
 - **Current State**: Explicit provider configuration provides consistent performance across all five providers with simplified credential management.
 - **Enhanced Security**: Provider-specific environment variables add minimal overhead while preventing costly authentication failures.
-- **Current State**: Ollama support remains active with dedicated local model execution capabilities.
 
 ## Troubleshooting Guide
 - Missing API key: Expect UnconfiguredAdapter behavior. Configure provider-specific key in workspace settings or environment variables.
-- **Current State**: Provider-specific key debugging: Check console logs for "[getWorkspaceAdapter] ✓ Using [PROVIDER]_API_KEY for [provider]" messages.
 - **Enhanced Security**: Cross-provider credential issues: Verify the correct provider-specific environment variable is set.
-- **Current State**: All five providers including Ollama support explicit configuration requirements.
 - **New**: Provider-specific environment variable configuration: Set the appropriate environment variable (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY) for each provider.
 - Provider-specific constraints: Some providers reject certain parameters (e.g., response_format, tools, temperature). The adapters normalize these differences.
 - Network connectivity: All providers require internet access for cloud-based execution except Ollama which runs locally.
@@ -571,8 +560,7 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Normalize provider-specific message and parameter formats inside the adapter.
 - Export the adapter from lib/ai/adapters/index.ts and update the factory switch to handle the new provider id.
 - Add environment variable checks and error messages for missing keys.
-- **Enhanced Security**: Ensure proper provider-specific environment variable configuration for universal key support.
-- **Current State**: All five providers including Ollama support explicit configuration.
+- **Enhanced Security**: Ensure proper provider-specific environment variable configuration.
 - Optionally integrate tool conversion helpers if the provider supports function calling.
 - Add pricing entries in types.ts if cost estimation is desired.
 
@@ -586,9 +574,7 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Wrap adapters with CachedAdapter to reduce latency and cost.
 - Validate tool schemas and handle tool execution errors.
 - Instrument metrics and logging for observability.
-- **Current State**: Leverage explicit provider-specific environment variables for simplified credential management across all five providers.
 - **Enhanced Security**: Always set the correct provider-specific environment variable for each provider.
-- **Current State**: Ollama support remains active with dedicated local model execution.
 
 ### Enhanced Provider Configuration Guide
 **Setting Up Provider-Specific Keys:**
@@ -618,8 +604,6 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - The system provides specific environment variable instructions when keys are missing
 - Console logs show detailed provider configuration results
 - Clear error messages guide users to fix configuration issues
-- **Current State**: All five providers including Ollama support explicit configuration
-- **Current State**: Ollama detection logic remains active for local model identification
 
 **Enhanced Key Format Patterns:**
 - **OpenAI**: sk-proj-... (specific) | sk-... (generic) | sk_live_...
@@ -634,9 +618,7 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 
 ### Enhanced Provider Detection Logic
 **Current State** The system now uses an improved provider detection approach:
-- **Current State**: Provider detection supports all five providers including Ollama for local models
 - Provider detection prioritizes explicit provider-specific environment variables over model-based inference
-- **Current State**: Ollama models are detected when explicitly configured or when running locally
 - **Enhanced Security**: Provider-specific environment variables prevent cross-provider credential usage
 - **Enhanced Error Messaging**: Comprehensive logging helps diagnose provider configuration issues
 - This prevents conflicts between local Ollama models and cloud provider models
@@ -660,12 +642,10 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 
 **Provider-Specific Credential Isolation:**
 - Provider-specific environment variables are validated before being accepted
-- **Current State**: All five providers including Ollama support explicit configuration
 - Prevents accidental cross-provider authentication failures and security breaches
 
 **Explicit Provider Configuration:**
 - Provider-specific environment variables are required for each provider
-- **Current State**: All five providers including Ollama support explicit configuration
 - Default fallback to unconfigured when provider-specific environment variables are missing
 - Comprehensive logging helps diagnose credential configuration issues
 
@@ -678,11 +658,6 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 - Specific environment variable instructions when credentials are missing
 - Clear guidance on how to fix configuration issues
 - Comprehensive logging for debugging adapter selection problems
-
-**Current State**: Enhanced Ollama Support:
-- Dedicated OLLAMA_API_KEY environment variable for local model execution
-- Enhanced detection logic for cloud vs local Ollama deployments
-- Improved reliability for mixed deployment environments
 
 **Section sources**
 - [lib/ai/adapters/index.ts](file://lib/ai/adapters/index.ts)
@@ -711,7 +686,6 @@ The AI adapter system cleanly separates provider logic behind a unified interfac
 
 **Explicit Provider Configuration Integration:**
 - The API checks for provider-specific environment variables
-- **Current State**: All five providers including Ollama are supported
 - All providers appear configured in the UI when provider-specific environment variables are valid
 - Backend validates provider-specific key configuration with enhanced error messaging
 
