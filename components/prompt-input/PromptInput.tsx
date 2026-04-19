@@ -164,12 +164,21 @@ export default function PromptInput({
   };
 
   // Debounced live intent classification
+  // Rate-limit aware: 3s debounce + 30s cooldown after 429 errors
+  const last429Ref = useRef<number>(0);
+  const RATE_LIMIT_COOLDOWN_MS = 30_000;
+
   const scheduleClassify = useCallback((text: string) => {
     if (classifyTimerRef.current) clearTimeout(classifyTimerRef.current);
     if (text.trim().length < 10) { 
       setLiveIntent(null); 
       setConfidenceHistory([]); 
       return; 
+    }
+    // Skip classify if we recently hit a rate limit — don't burn through the quota
+    const timeSince429 = Date.now() - last429Ref.current;
+    if (timeSince429 < RATE_LIMIT_COOLDOWN_MS) {
+      return;
     }
     classifyTimerRef.current = setTimeout(async () => {
       setIsClassifying(true);
@@ -185,16 +194,23 @@ export default function PromptInput({
         });
         const data = await res.json();
         if (data.success && data.classification) {
+          // If we got a fallback classification, mark the cooldown
+          if (data._fallback) {
+            last429Ref.current = Date.now();
+          }
           setLiveIntent(data.classification);
           if (typeof data.classification.confidence === 'number') {
             setConfidenceHistory((prev) => [...prev, data.classification.confidence].slice(-8));
           }
           onIntentDetected?.(data.classification);
+        } else if (res.status === 429) {
+          // Explicit 429 — start cooldown
+          last429Ref.current = Date.now();
         }
       } catch { /* ignore */ } finally {
         setIsClassifying(false);
       }
-    }, 1000);
+    }, 3000); // 3s debounce — reduces API calls by ~3x vs 1s
   }, [hasActiveProject, onIntentDetected, aiPayload]);
 
   const validatePrompt = (text: string): string | null => {
