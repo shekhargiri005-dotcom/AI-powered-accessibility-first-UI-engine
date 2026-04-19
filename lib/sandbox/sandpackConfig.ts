@@ -255,52 +255,26 @@ module.exports = {
   };
 
   files['/src/CaptureWrapper.tsx'] = {
-    code: `import React, { useEffect, useRef, useState } from 'react';
+    code: `import React, { useEffect, useRef, useCallback } from 'react';
 
 export default function CaptureWrapper({ children }) {
   const ref = useRef(null);
-  const [h2c, setH2c] = useState(null);
 
-  // Lazy-load html2canvas after mount to avoid blocking initial render
-  useEffect(() => {
-    let cancelled = false;
-    import('html2canvas').then(mod => {
-      if (!cancelled) setH2c(() => mod.default);
-    }).catch(() => {});
-    return () => { cancelled = true; };
+  // Snapshot support: respond to REQUEST_SNAPSHOT messages from the host frame.
+  // html2canvas is intentionally NOT imported here — it caused Vite build-time
+  // resolution errors in Sandpack's Nodebox. Screenshots are now handled
+  // externally by the host (SandpackPreview) using its own capture mechanism.
+  const handleMessage = useCallback((e) => {
+    if (e.data?.type === 'REQUEST_SNAPSHOT') {
+      // Signal that snapshot is not available inside the sandbox
+      window.top.postMessage({ type: 'SNAPSHOT_ERROR', payload: 'Capture not available in sandbox' }, '*');
+    }
   }, []);
 
   useEffect(() => {
-    if (!h2c) return;
-    let captured = false;
-    
-    const takeSnapshot = async () => {
-      if (captured || !ref.current) return;
-      try {
-        captured = true;
-        const canvas = await h2c(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
-        const base64 = canvas.toDataURL('image/jpeg', 0.5);
-        window.top.postMessage({ type: 'SNAPSHOT_RESULT', payload: base64 }, '*');
-      } catch (err) {
-        window.top.postMessage({ type: 'SNAPSHOT_ERROR', payload: err.message }, '*');
-      }
-    };
-
-    const timer = setTimeout(takeSnapshot, 3500);
-
-    const handleMessage = async (e) => {
-      if (e.data?.type === 'REQUEST_SNAPSHOT') {
-        takeSnapshot();
-      }
-    };
-    
     window.addEventListener('message', handleMessage);
-    
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      clearTimeout(timer);
-    };
-  }, [h2c]);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [handleMessage]);
 
   return <div ref={ref} className="w-full min-h-screen bg-[#0c0c0e] flex flex-col">{children}</div>;
 }`,
