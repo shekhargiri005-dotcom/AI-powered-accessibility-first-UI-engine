@@ -10,18 +10,21 @@ import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
 import WorkspaceSwitcher from '@/components/workspace/WorkspaceSwitcher';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
 import UserNav from '@/components/auth/UserNav';
+import { useProviderTheme } from '@/lib/hooks/useProviderTheme';
+
 interface SidebarProps {
   activeProjectId: string | null;
   onSelectProject: (id: string) => void;
   onNewProject: () => void;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
+  provider?: string | null;
 }
 
-const TYPE_ICONS: Record<string, React.ReactNode> = {
-  component: <Layers className="w-4 h-4 text-violet-400" />,
-  app: <Code className="w-4 h-4 text-fuchsia-400" />,
-  depth_ui: <Box className="w-4 h-4 text-indigo-400" />,
+const TYPE_ICONS: Record<string, string> = {
+  component: 'component',
+  app: 'app',
+  depth_ui: 'depth_ui',
 };
 
 export default function Sidebar({
@@ -30,7 +33,9 @@ export default function Sidebar({
   onNewProject,
   isMobileOpen,
   onCloseMobile,
+  provider,
 }: SidebarProps) {
+  const t = useProviderTheme(provider);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -79,9 +84,9 @@ export default function Sidebar({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               {/* Violet gradient logo mark */}
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-700 p-[1px] shadow-lg shadow-violet-500/25">
+              <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${t.gradient} p-[1px] shadow-lg ${t.shadow}`}>
                 <div className="w-full h-full bg-[#0B0F19]/90 rounded-[11px] flex items-center justify-center">
-                  <div className="w-2.5 h-2.5 rounded-full bg-violet-400 shadow-[0_0_8px_rgba(139,92,246,0.8)]" />
+                  <div className={`w-2.5 h-2.5 rounded-full ${t.bgSolid} shadow-[0_0_8px] ${t.shadowGlow}`} />
                 </div>
               </div>
               <span className="font-bold text-slate-200 text-sm tracking-tight">AI UI Engine</span>
@@ -101,14 +106,14 @@ export default function Sidebar({
           {/* New Project â€” violet CTA */}
           <button
             onClick={onNewProject}
-            className="
+            className={`
               w-full flex items-center gap-2 px-4 py-2.5 rounded-2xl
-              bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold
+              bg-gradient-to-r ${t.gradient} text-white text-sm font-semibold
               transition-all duration-200
-              shadow-lg shadow-violet-600/30 hover:shadow-violet-500/40
-              active:scale-[0.98] border border-violet-400/20
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19]
-            "
+              shadow-lg ${t.shadow}
+              active:scale-[0.98] border ${t.border}
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:${t.borderFocus} focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19]
+            `}
           >
             <Plus className="w-4 h-4 ml-0.5" />
             New Project
@@ -116,7 +121,7 @@ export default function Sidebar({
 
           {/* Search â€” frosted glass */}
           <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-violet-400 transition-colors" />
+            <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:${t.textPrimary} transition-colors`} />
             <input
               type="text"
               placeholder="Search projects..."
@@ -125,7 +130,7 @@ export default function Sidebar({
               className="
                 w-full pl-9 pr-4 py-2 rounded-xl text-xs text-slate-200 placeholder-slate-600
                 bg-white/[0.04] border border-white/[0.08]
-                focus:outline-none focus:ring-1 focus:ring-violet-500/50 focus:border-violet-500/40
+                focus:outline-none focus:ring-1 focus:${t.borderFocus} focus:${t.borderActive}
                 transition-all shadow-inner
               "
             />
@@ -143,7 +148,7 @@ export default function Sidebar({
 
           {loading ? (
             <div className="py-8 text-center space-y-3">
-              <div className="w-5 h-5 border-2 border-violet-800 border-t-violet-400 rounded-full animate-spin mx-auto" />
+              <div className={`w-5 h-5 border-2 border-slate-800 ${t.bgSolid} rounded-full animate-spin mx-auto`} />
               <p className="text-xs text-slate-600 animate-pulse">Loading workspaces...</p>
             </div>
           ) : filtered.length === 0 ? (
@@ -164,21 +169,21 @@ export default function Sidebar({
                   className={`
                     w-full text-left p-3 rounded-2xl border transition-all duration-300 group
                     ${isActive
-                      ? 'bg-violet-500/10 border-violet-500/30 shadow-lg shadow-violet-500/10 -translate-y-0.5'
+                      ? `${t.bgLight} ${t.borderActive} shadow-lg ${t.shadow} -translate-y-0.5`
                       : 'border-transparent hover:bg-white/[0.04] hover:border-white/[0.08] hover:-translate-y-0.5'
                     }
                   `}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`p-2 rounded-xl flex-shrink-0 mt-0.5 border transition-colors ${isActive ? 'bg-violet-500/15 border-violet-400/25' : 'bg-white/[0.04] border-white/[0.06] group-hover:bg-white/[0.07]'}`}>
-                      {TYPE_ICONS[project.componentType] || TYPE_ICONS.component}
+                    <div className={`p-2 rounded-xl flex-shrink-0 mt-0.5 border transition-colors ${isActive ? `${t.bgMedium} ${t.border}` : 'bg-white/[0.04] border-white/[0.06] group-hover:bg-white/[0.07]'}`}>
+                      <Layers className={`w-4 h-4 ${isActive ? t.textPrimary : 'text-slate-400'}`} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-0.5">
-                        <span className={`font-semibold text-sm truncate pr-2 ${isActive ? 'text-violet-100' : 'text-slate-300 group-hover:text-white'}`}>
+                        <span className={`font-semibold text-sm truncate pr-2 ${isActive ? t.textPrimary : 'text-slate-300 group-hover:text-white'}`}>
                           {project.name}
                         </span>
-                        <ChevronRight className={`w-3 h-3 flex-shrink-0 transition-transform ${isActive ? 'text-violet-400 opacity-100' : 'text-slate-600 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
+                        <ChevronRight className={`w-3 h-3 flex-shrink-0 transition-transform ${isActive ? `${t.textPrimary} opacity-100` : 'text-slate-600 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`} />
                       </div>
                       <p className="text-[11px] text-slate-600 flex items-center gap-1.5 mt-1.5">
                         <Clock className="w-3 h-3 text-slate-700" />

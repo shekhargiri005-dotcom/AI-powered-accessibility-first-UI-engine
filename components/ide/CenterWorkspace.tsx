@@ -11,6 +11,7 @@ import type {
   IntentClassification
 } from '@/lib/validation/schemas';
 import type { PipelineStep } from '@/components/PipelineStatus';
+import { useProviderTheme } from '@/lib/hooks/useProviderTheme';
 
 // ─── Chat Message Types ────────────────────────────────────────────────────────
 
@@ -41,6 +42,7 @@ interface CenterWorkspaceProps {
   originalPrompt: string;
   headerControls?: React.ReactNode;
   chatMessages: ChatMessage[];
+  provider?: string | null;
 }
 
 export default function CenterWorkspace({
@@ -61,8 +63,10 @@ export default function CenterWorkspace({
   onAskClarification,
   originalPrompt,
   headerControls,
-  chatMessages
+  chatMessages,
+  provider,
 }: CenterWorkspaceProps) {
+  const t = useProviderTheme(provider);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserScrolledUp = useRef(false);
 
@@ -72,7 +76,6 @@ export default function CenterWorkspace({
     isUserScrolledUp.current = scrollTop + clientHeight < scrollHeight - 50;
   };
 
-  // Auto-scroll when feed content changes, provided the user hasn't scrolled up to read history
   useEffect(() => {
     if (scrollRef.current && !isUserScrolledUp.current && (isThinkingLoading || thinkingPlan || stage !== 'idle')) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -92,7 +95,7 @@ export default function CenterWorkspace({
       />
       <div className="text-center mt-3">
         <p className="text-[10px] text-slate-600 flex items-center justify-center gap-1.5">
-          <Brain className="w-3 h-3 text-violet-500/50" />
+          <Brain className={`w-3 h-3 ${t.textFaint}`} />
           AI UI Engine intelligently classifies requests. Use <b>Shift + Enter</b> for new lines.
         </p>
       </div>
@@ -101,18 +104,18 @@ export default function CenterWorkspace({
 
   return (
     <main className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#0B0F19]/70 relative">
-      {/* Violet orb glow */}
+      {/* Provider-colored orb glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute top-[-8%] left-[10%] w-[600px] h-[600px] stitch-parallax-layer"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(139,92,246,0.10) 0%, rgba(139,92,246,0.03) 50%, transparent 70%)',
+            background: `radial-gradient(ellipse at center, ${t.radialOrb} 0%, ${t.radialOrbMid} 50%, transparent 70%)`,
           }}
         />
         <div
           className="absolute bottom-[10%] right-[-5%] w-[400px] h-[400px] stitch-parallax-layer"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(109,40,217,0.08) 0%, transparent 65%)',
+            background: `radial-gradient(ellipse at center, ${t.radialOrb} 0%, transparent 65%)`,
           }}
         />
       </div>
@@ -120,18 +123,18 @@ export default function CenterWorkspace({
       {/* Header */}
       <header className="flex-shrink-0 flex flex-wrap items-center justify-between px-6 py-4 border-b border-white/[0.08] bg-[#0B0F19]/80 backdrop-blur-xl z-30 gap-4 relative">
         <div className="flex items-center gap-3 shrink-0">
-          <div className="p-2 border border-violet-500/20 bg-violet-500/10 rounded-xl">
-            <Cpu className="w-5 h-5 text-violet-400" />
+          <div className={`p-2 border ${t.border} ${t.bgLight} rounded-xl`}>
+            <Cpu className={`w-5 h-5 ${t.textPrimary}`} />
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-200">AI Chat</h1>
-            <p className="text-[10px] text-slate-600">Conversation Mode</p>
+            <p className={`text-[10px] ${t.textMuted}`}>{t.name} Engine</p>
           </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap justify-end flex-1">
           {headerControls}
           {stage === 'generating' && (
-            <span className="flex items-center gap-2 text-xs text-violet-400 bg-violet-500/10 px-3 py-1.5 rounded-full border border-violet-500/20 animate-pulse shrink-0">
+            <span className={`flex items-center gap-2 text-xs ${t.textPrimary} ${t.bgLight} px-3 py-1.5 rounded-full border ${t.border} animate-pulse shrink-0`}>
               <Sparkles className="w-3.5 h-3.5" />
               Synthesizing UI...
             </span>
@@ -143,7 +146,7 @@ export default function CenterWorkspace({
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto min-h-0 p-6 flex flex-col relative z-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-violet-500/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-violet-500/30 transition-all"
+        className={`flex-1 overflow-y-auto min-h-0 p-6 flex flex-col relative z-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:${t.scrollbar} [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:${t.scrollbarHover} transition-all`}
       >
         {!showFeed ? (
           /* ── Idle / Empty State ── */
@@ -152,12 +155,14 @@ export default function CenterWorkspace({
               <div className="flex items-center justify-center gap-2.5 mb-5">
                 <span className="stitch-status-dot" aria-label="Online" />
                 <h2 className="text-xl font-bold text-white tracking-tight">
-                  Welcome Home, <span className="text-violet-400">Buddy</span>
+                  Welcome Home, <span className={t.textPrimary}>Buddy</span>
                 </h2>
               </div>
 
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-900/60 to-purple-900/40 border border-violet-500/20 flex items-center justify-center mb-6 shadow-2xl shadow-violet-500/10 mx-auto">
-                <Sparkles className="w-8 h-8 text-violet-400/80" />
+              <div className={`w-16 h-16 rounded-2xl bg-gradient-to-tr ${t.gradient} p-[1px] shadow-2xl ${t.shadow} mb-6 mx-auto`}>
+                <div className="w-full h-full bg-[#0B0F19]/90 rounded-[15px] flex items-center justify-center">
+                  <Sparkles className={`w-8 h-8 ${t.textPrimary}`} />
+                </div>
               </div>
 
               <p className="text-sm text-slate-500 leading-relaxed mb-6">
@@ -174,17 +179,17 @@ export default function CenterWorkspace({
                   <button
                     key={sug}
                     onClick={() => onPromptSubmit(sug, 'component')}
-                    className="
+                    className={`
                       p-3 text-left rounded-2xl border border-white/[0.08]
                       bg-white/[0.03] backdrop-blur-sm
-                      hover:bg-violet-500/10 hover:border-violet-500/25
-                      hover:-translate-y-1 hover:shadow-lg hover:shadow-violet-500/10
+                      hover:${t.bgLight} hover:${t.borderActive}
+                      hover:-translate-y-1 hover:shadow-lg ${t.shadow}
                       active:scale-[0.98]
                       text-xs text-slate-500 hover:text-slate-200
                       transition-all duration-300 ease-out
-                    "
+                    `}
                   >
-                    <MessageSquare className="w-3.5 h-3.5 mb-2 text-violet-500/50" />
+                    <MessageSquare className={`w-3.5 h-3.5 mb-2 ${t.textFaint}`} />
                     {sug}
                   </button>
                 ))}
@@ -204,17 +209,17 @@ export default function CenterWorkspace({
                 <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
                     msg.role === 'user'
-                      ? 'bg-violet-500/20 border border-violet-500/30'
-                      : 'bg-emerald-500/20 border border-emerald-500/30'
+                      ? `${t.bgMedium} border ${t.border}`
+                      : 'bg-slate-500/20 border border-slate-500/30'
                   }`}>
                     {msg.role === 'user'
-                      ? <User className="w-3.5 h-3.5 text-violet-400" />
-                      : <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                      ? <User className={`w-3.5 h-3.5 ${t.textPrimary}`} />
+                      : <Bot className="w-3.5 h-3.5 text-slate-400" />
                     }
                   </div>
                   <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
                     msg.role === 'user'
-                      ? 'bg-violet-600/10 border border-violet-500/20 text-violet-100 rounded-tr-sm'
+                      ? `${t.bgLight} border ${t.border} text-slate-100 rounded-tr-sm`
                       : msg.type === 'error'
                         ? 'bg-red-500/[0.08] border border-red-500/25 text-red-300 rounded-tl-sm'
                         : 'bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-tl-sm'

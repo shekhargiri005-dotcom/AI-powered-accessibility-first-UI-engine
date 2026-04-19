@@ -227,9 +227,9 @@ export default function ModelSelectionGate({
           {step === 'provider' && (
             <div className="space-y-6">
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20">
-                  <Shield className="w-4 h-4 text-violet-400" />
-                  <span className="text-xs font-medium text-violet-300">Available Providers</span>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.05] border border-white/[0.10]">
+                  <Shield className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs font-medium text-slate-300">Available Providers</span>
                 </div>
                 <p className="text-sm text-gray-400">
                   Select an AI provider to power your generation engine
@@ -254,7 +254,7 @@ export default function ModelSelectionGate({
                             ? 'bg-violet-500/10 border-violet-500/40'
                             : 'bg-gray-900/50 border-gray-700/50'
                         }
-                        ${isReady ? 'hover:border-violet-500/50 hover:bg-violet-500/5 hover:scale-[1.02] active:scale-[0.98]' : ''}
+                        ${isReady ? `hover:${provider.bgColor.replace('500', '500/5')} hover:scale-[1.02] active:scale-[0.98]` : ''}
                       `}
                     >
                       {/* Provider Brand Color Top Border */}
@@ -281,7 +281,7 @@ export default function ModelSelectionGate({
                     </div>
 
                     {/* Content */}
-                    <h3 className={`font-semibold mb-1 ${isReady ? 'text-white group-hover:text-violet-200' : 'text-gray-500'} transition-colors`}>{provider.name}</h3>
+                    <h3 className={`font-semibold mb-1 ${isReady ? 'text-white group-hover:text-white' : 'text-gray-500'} transition-colors`}>{provider.name}</h3>
                     <p className={`text-xs mb-3 ${isReady ? 'text-gray-400' : 'text-gray-600'}`}>{provider.description}</p>
 
                     {/* Status indicator */}
@@ -289,7 +289,7 @@ export default function ModelSelectionGate({
                       {isReady ? (
                         <>
                           <span className={`w-2 h-2 rounded-full ${provider.bgColor}`} />
-                          <span className="text-[10px] text-gray-500 group-hover:text-violet-300/70 transition-colors">
+                          <span className="text-[10px] text-gray-500 group-hover:text-slate-300/70 transition-colors">
                             Default: {provider.models[0]}
                           </span>
                         </>
@@ -305,7 +305,7 @@ export default function ModelSelectionGate({
 
                     {/* Violet Hover Glow Effect */}
                     {isReady && (
-                      <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500/10 to-purple-500/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity" />
+                      <div className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${provider.gradient} opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity`} />
                     )}
                   </button>
                 );
@@ -346,7 +346,7 @@ export default function ModelSelectionGate({
                 </p>
               </div>
 
-              <div className="bg-gray-950 rounded-2xl p-6 text-left space-y-4 border border-violet-500/20">
+              <div className={`bg-gray-950 rounded-2xl p-6 text-left space-y-4 border ${selectedProvider.id === 'openai' ? 'border-emerald-500/20' : selectedProvider.id === 'anthropic' ? 'border-amber-500/20' : selectedProvider.id === 'google' ? 'border-blue-500/20' : selectedProvider.id === 'groq' ? 'border-orange-500/20' : 'border-violet-500/20'}`}>
                 {/* Provider with brand color */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Provider</span>
@@ -370,8 +370,8 @@ export default function ModelSelectionGate({
                         onClick={() => setSelectedModel(model)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                           selectedModel === model
-                            ? 'bg-violet-500 text-white shadow-lg shadow-violet-500/30'
-                            : 'bg-gray-800 text-gray-400 hover:bg-violet-500/20 hover:text-violet-300'
+                            ? `bg-gradient-to-r ${selectedProvider.gradient} text-white shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/30' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/30' : selectedProvider.id === 'google' ? 'shadow-blue-500/30' : selectedProvider.id === 'groq' ? 'shadow-orange-500/30' : 'shadow-violet-500/30'}`
+                            : `bg-gray-800 text-gray-400 hover:${selectedProvider.bgColor.replace('bg-', 'bg-').replace('-500', '-500/20')} hover:${selectedProvider.color}`
                         }`}
                       >
                         {model}
@@ -385,10 +385,10 @@ export default function ModelSelectionGate({
                   <div className="flex items-center justify-between">
                     <span className="text-gray-500">Optimized</span>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className="px-2 py-1 rounded bg-violet-500/20 text-violet-300">
+                      <span className={`px-2 py-1 rounded ${selectedProvider.bgColor.replace('500', '500/20')} ${selectedProvider.color}`}>
                         Temp: {selectedProvider.settings.temperature}
                       </span>
-                      <span className="px-2 py-1 rounded bg-violet-500/20 text-violet-300">
+                      <span className={`px-2 py-1 rounded ${selectedProvider.bgColor.replace('500', '500/20')} ${selectedProvider.color}`}>
                         Max: {selectedProvider.settings.maxTokens.toLocaleString()} tokens
                       </span>
                     </div>
@@ -398,8 +398,8 @@ export default function ModelSelectionGate({
                 {/* Security */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Security</span>
-                  <span className="flex items-center gap-1.5 text-violet-400 text-sm">
-                    <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                  <span className={`flex items-center gap-1.5 ${selectedProvider.color} text-sm`}>
+                    <div className={`w-2 h-2 rounded-full ${selectedProvider.bgColor} animate-pulse`} />
                     Server-side
                   </span>
                 </div>
@@ -422,14 +422,14 @@ export default function ModelSelectionGate({
               <div className="flex gap-3">
                 <button
                   onClick={handleBack}
-                  className="flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:bg-violet-500/10 hover:border-violet-500/30 hover:text-violet-300 transition-colors"
+                  className={`flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:${selectedProvider.bgColor.replace('500', '500/10')} hover:border-gray-600 hover:${selectedProvider.color} transition-colors`}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleComplete}
                   disabled={isSaving}
-                  className="flex-1 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-violet-500/25"
+                  className={`flex-1 px-4 py-3 rounded-xl bg-gradient-to-r ${selectedProvider.gradient} text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/25' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/25' : selectedProvider.id === 'google' ? 'shadow-blue-500/25' : selectedProvider.id === 'groq' ? 'shadow-orange-500/25' : 'shadow-violet-500/25'}`}
                 >
                   {isSaving ? (
                     <>

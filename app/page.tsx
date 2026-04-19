@@ -9,6 +9,7 @@ import type { FeedbackMeta } from '@/components/FeedbackBar';
 import { Menu, Shield, Lock } from 'lucide-react';
 import Sidebar from '@/components/ide/Sidebar';
 import CenterWorkspace from '@/components/ide/CenterWorkspace';
+import { useProviderTheme } from '@/lib/hooks/useProviderTheme';
 import type { ChatMessage } from '@/components/ide/CenterWorkspace';
 import RightPanel from '@/components/ide/RightPanel';
 import ParallaxBackground from '@/components/ParallaxBackground';
@@ -80,6 +81,8 @@ export default function HomePage() {
       timestamp: Date.now(),
     }]);
   }, []);
+
+  const pt = useProviderTheme(aiConfig?.provider);
 
   // ─── Auto-Reset on Inactivity ─────────────────────────────────────────────
   // Reset LLM config after 15 minutes of inactivity (user must re-auth and re-select model)
@@ -650,11 +653,11 @@ export default function HomePage() {
         </div>
         {/* Secure Mode Indicator */}
         {aiConfig && (
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-            <Shield className="w-3 h-3 text-emerald-400" />
-            <span className="text-[10px] font-medium text-emerald-400">{aiConfig.providerName}</span>
-            <div className="w-px h-3 bg-emerald-500/30" />
-            <span className="text-[10px] text-emerald-400/70">{aiConfig.model}</span>
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${pt.bgLight} border ${pt.border}`}>
+            <Shield className={`w-3 h-3 ${pt.textPrimary}`} />
+            <span className={`text-[10px] font-medium ${pt.textPrimary}`}>{aiConfig.providerName}</span>
+            <div className={`w-px h-3 ${pt.border}`} />
+            <span className={`text-[10px] ${pt.textMuted}`}>{aiConfig.model}</span>
           </div>
         )}
       </div>
@@ -674,6 +677,7 @@ export default function HomePage() {
         }}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        provider={aiConfig?.provider}
       />
       )}
 
@@ -687,14 +691,14 @@ export default function HomePage() {
         <CenterWorkspace
           headerControls={
             aiConfig ? (
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm">
-                <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-xs font-medium text-emerald-400">{aiConfig.providerName}</span>
-                <div className="w-px h-3 bg-emerald-500/30 mx-1" />
-                <span className="text-xs text-emerald-400/70">{aiConfig.model}</span>
-                <div className="w-px h-3 bg-emerald-500/30 mx-1" />
-                <Lock className="w-3 h-3 text-emerald-400/70" />
-                <span className="text-[10px] text-emerald-400/70">Server-side</span>
+              <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full ${pt.bgLight} border ${pt.border} backdrop-blur-sm`}>
+                <Shield className={`w-3.5 h-3.5 ${pt.textPrimary}`} />
+                <span className={`text-xs font-medium ${pt.textPrimary}`}>{aiConfig.providerName}</span>
+                <div className={`w-px h-3 ${pt.border} mx-1`} />
+                <span className={`text-xs ${pt.textMuted}`}>{aiConfig.model}</span>
+                <div className={`w-px h-3 ${pt.border} mx-1`} />
+                <Lock className={`w-3 h-3 ${pt.textMuted}`} />
+                <span className={`text-[10px] ${pt.textMuted}`}>Server-side</span>
               </div>
             ) : null
           }
@@ -742,6 +746,7 @@ export default function HomePage() {
             setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
           }}
           chatMessages={chatMessages}
+          provider={aiConfig?.provider}
         />
       </div>
       )}
@@ -770,6 +775,7 @@ export default function HomePage() {
             } : null}
             isPreviewFullscreen={isPreviewFullscreen}
             onTogglePreviewFullscreen={() => setIsPreviewFullscreen(prev => !prev)}
+            provider={aiConfig?.provider}
           />
         </div>
       )}

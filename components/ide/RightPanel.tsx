@@ -16,13 +16,14 @@ import TestOutput from '@/components/TestOutput';
 import IntentBadge from '@/components/IntentBadge';
 import FeedbackBar from '@/components/FeedbackBar';
 import dynamic from 'next/dynamic';
+import { useProviderTheme } from '@/lib/hooks/useProviderTheme';
 
 const SandpackPreview = dynamic(() => import('@/components/SandpackPreview'), {
   ssr: false,
   loading: () => (
     <div className="flex-1 flex items-center justify-center bg-[#0B0F19]">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-8 h-8 border-2 border-violet-500/20 border-t-violet-500 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-slate-500/20 border-t-emerald-500 rounded-full animate-spin" />
         <span className="text-slate-500 text-xs font-medium animate-pulse">Initializing Dev Environment...</span>
       </div>
     </div>
@@ -57,6 +58,7 @@ interface RightPanelProps {
   } | null;
   isPreviewFullscreen?: boolean;
   onTogglePreviewFullscreen?: () => void;
+  provider?: string | null;
 }
 
 type TabId = 'preview' | 'code' | 'versions' | 'metrics';
@@ -182,7 +184,9 @@ export default function RightPanel({
   aiConfig,
   isPreviewFullscreen = false,
   onTogglePreviewFullscreen,
+  provider,
 }: RightPanelProps) {
+  const theme = useProviderTheme(provider);
   const [activeTab,       setActiveTab]       = useState<TabId>('preview');
   const [versions,        setVersions]        = useState<ProjectVersion[]>([{
     version:           1,
@@ -406,7 +410,7 @@ export default function RightPanel({
               className={`
                 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200
                 ${activeTab === t.id
-                  ? 'bg-violet-600/20 text-violet-300 shadow-sm border border-violet-500/30'
+                  ? `${theme.bgMedium} ${theme.textPrimary} shadow-sm border ${theme.border}`
                   : 'text-slate-500 hover:text-slate-200 hover:bg-white/[0.06] border border-transparent'
                 }
               `}
@@ -592,10 +596,10 @@ export default function RightPanel({
         {/* Refining overlay */}
         {isRefining && (
           <div className="absolute inset-0 z-50 bg-[#0B0F19]/85 backdrop-blur-md flex items-center justify-center">
-            <div className="flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-white/[0.04] border border-white/[0.08] shadow-2xl shadow-violet-500/10 backdrop-blur-xl">
+            <div className={`flex flex-col items-center gap-5 text-center p-8 rounded-3xl bg-white/[0.04] border border-white/[0.08] shadow-2xl ${theme.shadow} backdrop-blur-xl`}>
               <div className="relative">
-                <div className="w-20 h-20 border-4 border-violet-500/10 border-t-violet-500 rounded-full animate-spin" />
-                <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 text-violet-400 animate-pulse" />
+                <div className={`w-20 h-20 border-4 ${theme.border} rounded-full animate-spin`} style={{ borderTopColor: 'currentColor' }} />
+                <Sparkles className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 ${theme.textPrimary} animate-pulse`} />
               </div>
               <div>
                 <h3 className="text-xl font-bold text-white tracking-tight mb-1">Evolving UI</h3>
@@ -616,10 +620,10 @@ export default function RightPanel({
               type="button"
               onClick={fetchSuggestions}
               disabled={isRefining}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
-                bg-violet-500/10 border border-violet-500/20 text-violet-400/70
-                hover:bg-violet-500/15 hover:text-violet-300 hover:border-violet-500/40
-                disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
+                ${theme.bgLight} border ${theme.border} ${theme.textMuted}
+                hover:${theme.bgMedium} hover:${theme.textPrimary} hover:${theme.borderActive}
+                disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-150`}
             >
               <Wand2 className="w-3 h-3" />
               Get AI Ideas
@@ -627,8 +631,8 @@ export default function RightPanel({
           ) : (
             <div>
               <div className="flex items-center gap-2 mb-2">
-                <Wand2 className="w-3 h-3 text-violet-400" />
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-violet-400/80">
+                <Wand2 className={`w-3 h-3 ${theme.textPrimary}`} />
+                <span className={`text-[10px] font-semibold uppercase tracking-widest ${theme.textMuted}`}>
                   AI Suggestions
                 </span>
               </div>
@@ -646,14 +650,14 @@ export default function RightPanel({
                     onClick={() => setRefinementPrompt(s)}
                     disabled={isRefining}
                     title={s}
-                    className="
+                    className={`
                       flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium
-                      bg-violet-500/10 border border-violet-500/30 text-violet-300
-                      hover:bg-violet-500/20 hover:border-violet-400/50 hover:text-violet-200
+                      ${theme.bgLight} border ${theme.borderActive} ${theme.textPrimary}
+                      hover:${theme.bgMedium} hover:${theme.borderFocus} hover:text-white
                       disabled:opacity-40 disabled:cursor-not-allowed
-                      transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-violet-500
+                      transition-all duration-150
                       max-w-[220px] truncate
-                    "
+                    `}
                   >
                     <ChevronRight className="w-3 h-3 flex-shrink-0" />
                     {s}
@@ -666,20 +670,20 @@ export default function RightPanel({
 
         {/* Refine Input */}
         <div className="flex items-center gap-3 w-full p-4">
-          <div className="flex items-center gap-3 w-full bg-white/[0.04] p-2 rounded-2xl border border-white/[0.08] focus-within:ring-2 focus-within:ring-violet-500/40 focus-within:border-violet-500/40 transition-all backdrop-blur-sm">
+          <div className={`flex items-center gap-3 w-full bg-white/[0.04] p-2 rounded-2xl border border-white/[0.08] focus-within:ring-2 focus-within:${theme.borderFocus} focus-within:${theme.borderActive} transition-all backdrop-blur-sm`}>
             <input
               type="text"
               value={refinementPrompt}
               onChange={(e) => setRefinementPrompt(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleRefineSubmit()}
-              placeholder="Targeted edit... (e.g. 'Make the hero title larger and add a violet glow')"
+              placeholder="Targeted edit... (e.g. 'Make the hero title larger')"
               disabled={isRefining}
               className="flex-1 bg-transparent px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:outline-none"
             />
             <button
               onClick={handleRefineSubmit}
               disabled={!refinementPrompt.trim() || isRefining}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg shadow-violet-500/20"
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r ${theme.gradient} text-white text-xs font-bold transition-all disabled:opacity-30 shadow-lg ${theme.shadow}`}
             >
               <Sparkles className="w-3.5 h-3.5" />
               {isRefining ? 'Applying' : 'Refine'}
