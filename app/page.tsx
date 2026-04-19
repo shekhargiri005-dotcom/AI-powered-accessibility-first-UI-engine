@@ -674,6 +674,8 @@ export default function HomePage() {
           setPipelineStep('idle');
           setThinkingPlan(null);
           setGenerationMeta(null);
+          setChatMessages([]);
+          setPendingPrompt('');
         }}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
