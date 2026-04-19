@@ -133,15 +133,75 @@ export async function parseIntent(
       ? `Respond with valid JSON only.\n\n${systemPrompt}`
       : systemPrompt;
 
-    const adapterResult = await adapter.generate({
-      model: modelId,
-      messages: [
-        { role: 'system', content: effectiveSystemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
-      temperature: 0.2,
-    });
+    const adapterResult = await (async () => {
+      // Retry loop for 429 rate limit errors
+      let lastError: unknown;
+      const maxRetries = 2;
+      const baseDelayMs = 2000;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          return await adapter.generate({
+            model: modelId,
+            messages: [
+              { role: 'system', content: effectiveSystemPrompt },
+              { role: 'user', content: userPrompt },
+            ],
+            ...(useJsonMode ? { responseFormat: 'json_object' as const } : {}),
+            temperature: 0.2,
+          });
+        } catch (error) {
+          lastError = error;
+          const msg = error instanceof Error ? error.message : String(error);
+          const isRateLimit = msg.includes('429') || msg.includes('rate_limit') || msg.includes('quota');
+          const isNetworkError = isRateLimit || msg.includes('Connection error') || msg.includes('fetch failed') || msg.includes('ECONNRESET') || msg.includes('ETIMEDOUT') || msg.includes('502') || msg.includes('503') || msg.includes('504');
+
+          if (isNetworkError && attempt < maxRetries) {
+            const delay = baseDelayMs * Math.pow(2, attempt);
+            console.warn(`[intentParser] Network/Rate limit error. Retrying (${attempt + 1}/${maxRetries}) in ${delay}ms: ${msg}`);
+            await new Promise(res => setTimeout(res, delay));
+            continue;
+          }
+
+          if (isRateLimit) {
+            // Rate limit exhausted — build a local fallback intent so generation can still proceed
+            console.warn(`[intentParser] Provider ${providerId} rate limited. Returning local fallback intent.`);
+            const fallbackIntent = {
+              componentType: mode === 'app' ? 'app' : mode === 'depth_ui' ? 'depth_ui' : 'component',
+              componentName: userInput.trim().split(' ').slice(0, 3).map(
+                (w: string) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+              ).join('').replace(/[^a-zA-Z0-9]/g, '') || 'GeneratedComponent',
+              description: userInput.trim().substring(0, 200),
+              fields: [],
+              layout: { type: 'single-column', maxWidth: 'lg', alignment: 'center' },
+              interactions: [],
+              theme: { variant: 'default', size: 'md' },
+              a11yRequired: ['keyboard navigation', 'aria-labels'],
+              semanticElements: ['main', 'section'],
+              isRefinement: !!contextId,
+              ...(mode === 'app' ? {
+                appType: 'web-app',
+                screens: [{ name: 'Home', description: 'Main screen', isDefault: true }],
+                colorScheme: { primary: '#6366f1', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' },
+                features: [],
+                navStyle: 'sidebar',
+              } : {}),
+              ...(mode === 'depth_ui' ? {
+                depthArchetype: 'soft_depth',
+                colorScheme: { primary: '#6366f1', background: '#0f172a', surface: '#1e293b', text: '#f1f5f9' },
+              } : {}),
+            };
+            const fallbackValidation = (mode === 'app' ? AppIntentSchema : mode === 'depth_ui' ? DepthUIIntentSchema : UIIntentSchema).safeParse(fallbackIntent);
+            if (fallbackValidation.success) {
+              return { content: JSON.stringify(fallbackValidation.data) };
+            }
+          }
+
+          throw error;
+        }
+      }
+      throw lastError;
+    })();
 
     const rawContent = adapterResult.content;
 
