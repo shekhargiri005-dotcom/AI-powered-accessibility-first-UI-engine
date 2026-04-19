@@ -112,7 +112,7 @@ MANDATORY RULES:
      * Use Badge instead of <span> for status badges, tags, and labels.
      * Use Button instead of <button> for all interactive buttons.
      * Use Input/Textarea instead of <input>/<textarea> for form fields.
-   - Use lucide-react for icons that are not available in @ui/icons.
+   - Use lucide-react for icons.
 3. SPACING: Use ONLY valid Tailwind scale values (p-4, m-2, gap-6). NEVER use arbitrary px values (p-[13px]).
 4. WCAG AA contrast: text-gray-700+ on light, text-white/gray-100 on dark. Use vibrant gradients. No CSS variables.
 5. Icons: \`import { ArrowRight } from 'lucide-react'\` — NEVER append 'Icon' suffix to icon names.
@@ -197,6 +197,8 @@ export function buildComponentGeneratorPrompt(
   isMultiSlide: boolean = false
 ): string {
   let prompt = "Generate a React TypeScript component for this UIIntent:\n\n" + JSON.stringify(intent, null, 2);
+
+  prompt += "\n\nTOKEN RULES: If the prompt mentions @ui/tokens (colors.*, space.*, radius.*, shadow.*, toStyle(*), transition.*) or @ui/core (Card, Badge, Button) → you MUST import and use them. Apply tokens via style prop. NEVER replace token references with raw Tailwind classes.";
 
   if (knowledge) {
     prompt += "\n\n=== COMPONENT KNOWLEDGE BASE ===\n" + knowledge + "\nYou must rigidly follow these structural and stylistic rules for this component.";
@@ -338,6 +340,8 @@ export function buildAppModeGeneratorPrompt(
   isMultiSlide: boolean = false
 ): string {
   let prompt = "Build a complete, multi-screen React application for this app concept:\n\n" + JSON.stringify(intent, null, 2) + "\n\nGenerate ALL screens, navigation, and rich mock data. Make it look and feel like the real app.";
+
+  prompt += "\n\nTOKEN RULES: If the prompt mentions @ui/tokens (colors.*, space.*, radius.*, shadow.*, toStyle(*), transition.*) or @ui/core (Card, Badge, Button) → you MUST import and use them. Apply tokens via style prop. NEVER replace token references with raw Tailwind classes.";
 
   if (knowledge) {
     prompt += "\n\n=== APP KNOWLEDGE BASE ===\n" + knowledge + "\nFollow this blueprint EXACTLY for screens, features, colors, and layout style.";
