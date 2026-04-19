@@ -242,7 +242,7 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
 - \`import { BarChart, LineChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';\`
 - \`import { ArrowRight, Check, X, ChevronDown, Search, Bell, Settings, User, Menu, Home, Star, Plus, Edit, Trash2, Eye, Filter, TrendingUp, TrendingDown, Activity } from 'lucide-react';\`
 - @ui/* COMPONENTS (available in Sandpack — use when appropriate):
-  - \`import { Button, Card, Input, Textarea, Badge, Avatar, Modal } from '@ui/core'\`
+  - \`import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Textarea, Badge, Avatar, Modal, ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter } from '@ui/core'\`
   - \`import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms'\`
   - \`import { Grid, Stack, Container, Divider, Section } from '@ui/layout'\`
   - \`import { Icon } from '@ui/icons'\` (50+ SVG icons by name)
