@@ -64,20 +64,6 @@ const PROVIDER_CHECKS: Array<{
  * @param purpose  Which pipeline step this is for (controls default model selection)
  * @returns        A ready-to-use AdapterConfig to pass to getWorkspaceAdapter()
  */
-export function detectProviderFromKey(apiKey: string): string | null {
-  if (!apiKey || typeof apiKey !== 'string') return null;
-  const key = apiKey.trim();
-
-  // Standard provider prefixes
-  if (key.startsWith('gsk_'))          return 'groq';
-  if (key.startsWith('sk-ant-'))       return 'anthropic';
-  if (key.startsWith('AIzaSy'))        return 'google';
-  if (key.startsWith('sk-proj-'))      return 'openai';
-  if (key.startsWith('sk-'))           return 'openai';
-
-  return null;
-}
-
 /**
  * Resolves an AdapterConfig from environment variables.
  *
@@ -133,30 +119,11 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
     }
   }
 
-  // ── 4. LLM_KEY (universal key) — use with DEFAULT_PROVIDER or auto-detect ─
-  // When user has set LLM_KEY, use it with DEFAULT_PROVIDER (or auto-detect from key format)
-  const universalKey = process.env.LLM_KEY;
-  if (universalKey) {
-    // Check for explicit DEFAULT_PROVIDER env var
-    const defaultProvider = process.env.DEFAULT_PROVIDER?.toLowerCase();
-    // Auto-detect from key format as fallback
-    const detectedProvider = detectProviderFromKey(universalKey);
-    // Use explicit DEFAULT_PROVIDER, or auto-detected, or fallback to 'openai'
-    const provider = defaultProvider || detectedProvider || 'openai';
-    
-    console.log(`[resolveDefaultAdapter] ✓ Using LLM_KEY with provider: ${provider}${defaultProvider ? ' (from DEFAULT_PROVIDER)' : detectedProvider ? ' (auto-detected)' : ' (fallback)'}`);
-    return {
-      model:    defaults[provider] ?? 'gpt-4o-mini',
-      provider: provider,
-      apiKey:   universalKey,
-    };
-  }
-
-  // ── 5. Fallback (Waiting Socket) ─────────────────────────
-  // A generic socket that safely informs the client to inject a configuration.
+  // ── 4. Fallback (Unconfigured) ────────────────────────────────────────
+  // No provider-specific keys found.
   console.error(`[resolveDefaultAdapter] ✗ No API keys found for purpose: ${purpose}`);
   console.error(`[resolveDefaultAdapter] Available keys:`, 
-    Object.keys(process.env).filter(k => k.includes('API_KEY') || k === 'LLM_KEY')
+    Object.keys(process.env).filter(k => k.includes('API_KEY'))
   );
   
   return { model: 'unconfigured', provider: 'unconfigured' };
@@ -164,7 +131,6 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
 
 /**
  * Looks up the canonical API key env var for a named provider.
- * Falls back to LLM_KEY (universal key) if no provider-specific key found.
  * Returns undefined if no key is found.
  */
 export function resolveApiKeyForProvider(provider: string): string | undefined {
@@ -179,6 +145,5 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     const val = process.env[v];
     if (val) return val;
   }
-  // Fall back to universal LLM_KEY if no provider-specific key
-  return process.env.LLM_KEY;
+  return undefined;
 }

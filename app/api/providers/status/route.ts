@@ -130,14 +130,9 @@ export async function GET() {
   
   try {
     // Check which providers are available:
-    // 1. Individual provider keys (OPENAI_API_KEY, etc.) mark that provider as configured
-    // 2. LLM_KEY (universal key) marks ALL providers as available — user selects which one to use
-    const universalKey = process.env.LLM_KEY;
-    const hasUniversalKey = !!universalKey;
-    
-    if (hasUniversalKey) {
-      console.log('[providers/status] ✓ LLM_KEY found — all providers available for user selection');
-    }
+    // Only individual provider keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+    // determine if a provider is configured.
+    // This ensures the UI only shows providers the user has real keys for.
 
     const providers: ProviderStatus[] = PROVIDER_CONFIG.map((provider) => {
       // Check if provider is configured via specific env var
@@ -151,10 +146,8 @@ export async function GET() {
         ? process.env[provider.envVarAlt] 
         : undefined;
       
-      // Provider is configured if:
-      // 1. Specific key exists (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-      // 2. OR LLM_KEY exists (universal key works with any provider)
-      configured = !!(primaryKey || altKey || hasUniversalKey);
+      // Provider is configured ONLY if its specific key exists
+      configured = !!(primaryKey || altKey);
       
       // Debug logging
       if (provider.envVar) {
@@ -163,7 +156,6 @@ export async function GET() {
       if ('envVarAlt' in provider && provider.envVarAlt) {
         debugInfo[provider.envVarAlt] = !!altKey;
       }
-      debugInfo['LLM_KEY'] = hasUniversalKey;
       debugInfo['configured'] = configured;
       console.log(`[providers/status] ${provider.id}:`, debugInfo);
 

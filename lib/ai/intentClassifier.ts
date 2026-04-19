@@ -138,15 +138,9 @@ export async function classifyIntent(
 
         if (isNetworkError && provider) {
           console.warn(`[intentClassifier] User's adapter ${provider} failed with connection/rate limit error.`);
-          // Don't fallback to a different provider if using LLM_KEY — 
-          // the key is tied to the user's selected provider
-          if (process.env.LLM_KEY && !process.env[`${provider?.toUpperCase()}_API_KEY`]) {
-            console.error(`[intentClassifier] Cannot fallback — LLM_KEY is configured for ${provider}, no other provider keys available.`);
-            throw error;
-          }
-          // Only fallback if we have provider-specific keys for other providers
-          console.log(`[intentClassifier] Attempting fallback to default adapter...`);
-          return classifyIntent(userInput, hasActiveProject, undefined, undefined, workspaceId, userId);
+          // No fallback — user selected this provider, and it failed.
+          // Each provider uses its own API key, so no cross-provider fallback.
+          throw error;
         }
 
         // Log detailed error information for debugging
@@ -155,7 +149,7 @@ export async function classifyIntent(
           provider: providerId,
           model: modelId,
           workspaceId: wsId,
-          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`] || !!process.env.LLM_KEY
+          hasApiKey: !!process.env[`${providerId.toUpperCase()}_API_KEY`]
         });
 
         throw error; // Rethrow if not a transient network error or out of retries

@@ -233,21 +233,13 @@ export async function getWorkspaceAdapter(
 
   // 2. Env Check: Fall back to environment variables
   // Each provider has its own API key env var:
-  //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY
-  // OR use LLM_KEY (universal key) for any provider the user selects.
+  //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY
   
-  // First check provider-specific key
+  // Check provider-specific key
   const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`];
   if (envKey) {
     console.log(`[getWorkspaceAdapter] ✓ Using ${providerId.toUpperCase()}_API_KEY for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: envKey });
-  }
-
-  // Check for universal LLM_KEY — works with any provider the user selects
-  const universalKey = process.env.LLM_KEY;
-  if (universalKey) {
-    console.log(`[getWorkspaceAdapter] ✓ Using LLM_KEY for ${providerId} (user-selected)`);
-    return createAdapter({ provider: providerId, model: modelId, apiKey: universalKey });
   }
 
   // Provider-specific env var fallbacks (with GEMINI_API_KEY for Google)
@@ -256,12 +248,11 @@ export async function getWorkspaceAdapter(
     anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
-    ollama: process.env.OLLAMA_API_KEY,
   };
   
   const fallbackKey = providerEnvMap[providerId];
   if (fallbackKey) {
-    console.log(`[getWorkspaceAdapter] ✓ Using ${providerId.toUpperCase()}_API_KEY for ${providerId}`);
+    console.log(`[getWorkspaceAdapter] ✓ Using provider-specific key for ${providerId}`);
     return createAdapter({ provider: providerId, model: modelId, apiKey: fallbackKey });
   }
 
@@ -269,7 +260,6 @@ export async function getWorkspaceAdapter(
   const envVarName = `${providerId.toUpperCase()}_API_KEY`;
   console.error(`[getWorkspaceAdapter] ✗ No valid API key for ${providerId}.`);
   console.error(`[getWorkspaceAdapter] To fix: Set ${envVarName} in Vercel environment variables.`);
-  console.error(`[getWorkspaceAdapter] Or set LLM_PROVIDER=${providerId} to use LLM_KEY for this provider.`);
   
   // Return UnconfiguredAdapter for graceful degradation
   // (it returns a helpful error message instead of crashing)
