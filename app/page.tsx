@@ -489,6 +489,12 @@ export default function HomePage() {
         console.warn('[classify] Network error. Proceeding with default.');
         setLastIntentConfidence(0.8);
       }
+    } else {
+      // Live classification already available — check if it was a fallback (rate-limited)
+      // Log it so we know the source but still proceed
+      if (classification.confidence <= 0.7) {
+        console.info('[classify] Using low-confidence live classification (likely rate-limit fallback)');
+      }
     }
     if (classification?.confidence !== undefined) {
       setLastIntentConfidence(classification.confidence);

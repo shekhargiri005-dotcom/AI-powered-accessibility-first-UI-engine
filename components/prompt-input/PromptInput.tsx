@@ -230,6 +230,11 @@ export default function PromptInput({
     }
     if (!isPromptValid || isLoading) return;
     setValidationError(null);
+    // Cancel any pending live classification — submit will do its own classify call
+    if (classifyTimerRef.current) {
+      clearTimeout(classifyTimerRef.current);
+      classifyTimerRef.current = null;
+    }
     const effectiveMode: GenerationMode = scopeMode === 'component' && depthUi ? 'depth_ui' : scopeMode;
     onSubmit(prompt.trim(), effectiveMode, { depthUi });
     setPrompt('');
