@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect } from 'react';
-import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw } from 'lucide-react';
+import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw, User, Bot } from 'lucide-react';
 import { PromptInput } from '@/components/prompt-input';
 import type { GenerationMode, SubmitOptions } from '@/components/prompt-input';
 import ThinkingPanel from '@/components/ThinkingPanel';
@@ -11,6 +11,16 @@ import type {
   IntentClassification
 } from '@/lib/validation/schemas';
 import type { PipelineStep } from '@/components/PipelineStatus';
+
+// ─── Chat Message Types ────────────────────────────────────────────────────────
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: number;
+  type: 'prompt' | 'result' | 'error' | 'refine';
+}
 
 interface CenterWorkspaceProps {
   onPromptSubmit: (prompt: string, mode: GenerationMode, options?: SubmitOptions) => void;
@@ -30,6 +40,7 @@ interface CenterWorkspaceProps {
   onAskClarification: (q: string) => void;
   originalPrompt: string;
   headerControls?: React.ReactNode;
+  chatMessages: ChatMessage[];
 }
 
 export default function CenterWorkspace({
@@ -49,7 +60,8 @@ export default function CenterWorkspace({
   onDismissThinking,
   onAskClarification,
   originalPrompt,
-  headerControls
+  headerControls,
+  chatMessages
 }: CenterWorkspaceProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const isUserScrolledUp = useRef(false);
@@ -57,7 +69,6 @@ export default function CenterWorkspace({
   const handleScroll = () => {
     if (!scrollRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-    // If the user scrolls up more than 50px from the bottom, we consider them "looking back"
     isUserScrolledUp.current = scrollTop + clientHeight < scrollHeight - 50;
   };
 
@@ -66,12 +77,9 @@ export default function CenterWorkspace({
     if (scrollRef.current && !isUserScrolledUp.current && (isThinkingLoading || thinkingPlan || stage !== 'idle')) {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
-  }, [isThinkingLoading, thinkingPlan, stage, pipelineStep]);
+  }, [isThinkingLoading, thinkingPlan, stage, pipelineStep, chatMessages]);
 
-  const showFeed = stage !== 'idle' || isThinkingLoading || thinkingPlan !== null;
-
-  // Prompt is visible inside the feed when waiting for user action (not while pipeline is running)
-  const showPromptInFeed = showFeed && ['idle', 'awaiting_confirm', 'error', 'complete'].includes(stage);
+  const showFeed = stage !== 'idle' || isThinkingLoading || thinkingPlan !== null || chatMessages.length > 0;
 
   const promptBlock = (
     <div className="w-full max-w-3xl mx-auto">
@@ -93,7 +101,7 @@ export default function CenterWorkspace({
 
   return (
     <main className="flex-1 flex flex-col min-h-0 min-w-0 bg-[#0B0F19]/70 relative">
-      {/* Violet orb glow â€” primary focal area */}
+      {/* Violet orb glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute top-[-8%] left-[10%] w-[600px] h-[600px] stitch-parallax-layer"
@@ -116,8 +124,8 @@ export default function CenterWorkspace({
             <Cpu className="w-5 h-5 text-violet-400" />
           </div>
           <div>
-            <h1 className="text-sm font-bold text-slate-200">AI Command Console</h1>
-            <p className="text-[10px] text-slate-600">Interactive Mode</p>
+            <h1 className="text-sm font-bold text-slate-200">AI Chat</h1>
+            <p className="text-[10px] text-slate-600">Conversation Mode</p>
           </div>
         </div>
         <div className="flex items-center gap-4 flex-wrap justify-end flex-1">
@@ -131,17 +139,16 @@ export default function CenterWorkspace({
         </div>
       </header>
 
-      {/* Scrollable Feed â€” contains all content including prompt input */}
+      {/* Scrollable Feed */}
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto min-h-0 p-6 flex flex-col relative z-0 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-violet-500/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-violet-500/30 transition-all"
       >
         {!showFeed ? (
-          /* â”€â”€ Idle / Empty State: "Welcome Home, Buddy" greeting â”€â”€ */
+          /* ── Idle / Empty State ── */
           <div className="flex-1 flex flex-col items-center justify-center text-center max-w-lg mx-auto gap-6">
             <div>
-              {/* Greeting with status dot */}
               <div className="flex items-center justify-center gap-2.5 mb-5">
                 <span className="stitch-status-dot" aria-label="Online" />
                 <h2 className="text-xl font-bold text-white tracking-tight">
@@ -149,7 +156,6 @@ export default function CenterWorkspace({
                 </h2>
               </div>
 
-              {/* Icon orb */}
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-violet-900/60 to-purple-900/40 border border-violet-500/20 flex items-center justify-center mb-6 shadow-2xl shadow-violet-500/10 mx-auto">
                 <Sparkles className="w-8 h-8 text-violet-400/80" />
               </div>
@@ -158,7 +164,6 @@ export default function CenterWorkspace({
                 Describe a new app idea, a complex UI component, or select a workspace to continue engineering.
               </p>
 
-              {/* Suggestion cards â€” frosted glass with hover translate */}
               <div className="grid grid-cols-2 gap-3 w-full mb-8">
                 {[
                   "Build a modern SaaS dashboard",
@@ -185,20 +190,40 @@ export default function CenterWorkspace({
                 ))}
               </div>
             </div>
-            {/* Prompt box flows under the suggestions on the idle screen */}
             {promptBlock}
           </div>
         ) : (
-          /* â”€â”€ Active Feed: prompt flows at the bottom below thinking panel â”€â”€ */
-          <div className="max-w-3xl mx-auto w-full space-y-6 pb-4">
-            {/* User Prompt Bubble */}
-            {originalPrompt && (
-              <div className="flex justify-end">
-                <div className="max-w-[85%] bg-violet-600/10 border border-violet-500/20 text-violet-100 px-5 py-3.5 rounded-2xl rounded-tr-sm text-sm leading-relaxed shadow-sm">
-                  {originalPrompt}
+          /* ── Active Chat Thread ── */
+          <div className="max-w-3xl mx-auto w-full space-y-4 pb-4">
+            {/* Chat message history */}
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}
+              >
+                <div className={`flex items-start gap-2.5 max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${
+                    msg.role === 'user'
+                      ? 'bg-violet-500/20 border border-violet-500/30'
+                      : 'bg-emerald-500/20 border border-emerald-500/30'
+                  }`}>
+                    {msg.role === 'user'
+                      ? <User className="w-3.5 h-3.5 text-violet-400" />
+                      : <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                    }
+                  </div>
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                    msg.role === 'user'
+                      ? 'bg-violet-600/10 border border-violet-500/20 text-violet-100 rounded-tr-sm'
+                      : msg.type === 'error'
+                        ? 'bg-red-500/[0.08] border border-red-500/25 text-red-300 rounded-tl-sm'
+                        : 'bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-tl-sm'
+                  }`}>
+                    {msg.content}
+                  </div>
                 </div>
               </div>
-            )}
+            ))}
 
             {/* Error Message */}
             {stage === 'error' && pipelineError && (
@@ -239,16 +264,13 @@ export default function CenterWorkspace({
               </div>
             )}
 
-            {/* Prompt input â€” visible below the thinking panel when awaiting user action */}
-            {showPromptInFeed && (
-              <div className="pt-2 animate-in fade-in duration-300">
-                {promptBlock}
-              </div>
-            )}
+            {/* Prompt input always visible at bottom of chat */}
+            <div className="pt-2 animate-in fade-in duration-300">
+              {promptBlock}
+            </div>
           </div>
         )}
       </div>
     </main>
   );
 }
-

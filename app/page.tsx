@@ -9,6 +9,7 @@ import type { FeedbackMeta } from '@/components/FeedbackBar';
 import { Menu, Shield, Lock } from 'lucide-react';
 import Sidebar from '@/components/ide/Sidebar';
 import CenterWorkspace from '@/components/ide/CenterWorkspace';
+import type { ChatMessage } from '@/components/ide/CenterWorkspace';
 import RightPanel from '@/components/ide/RightPanel';
 import ParallaxBackground from '@/components/ParallaxBackground';
 import { useWorkspace } from '@/components/workspace/WorkspaceProvider';
@@ -65,6 +66,20 @@ export default function HomePage() {
   const [isMultiSlideMode, setIsMultiSlideMode] = useState(false);
   // True while RightPanel bottom-bar refine is running; suppresses center workspace
   const [isDirectRefining, setIsDirectRefining] = useState(false);
+
+  // ─── Chat History ──────────────────────────────────────────────────────────
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+
+  // ─── Preview Fullscreen ────────────────────────────────────────────────────
+  const [isPreviewFullscreen, setIsPreviewFullscreen] = useState(false);
+
+  const addChatMessage = useCallback((msg: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    setChatMessages(prev => [...prev, {
+      ...msg,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+    }]);
+  }, []);
 
   // ─── Auto-Reset on Inactivity ─────────────────────────────────────────────
   // Reset LLM config after 15 minutes of inactivity (user must re-auth and re-select model)
@@ -368,6 +383,7 @@ export default function HomePage() {
         };
         setOutput(newOutput);
         if (!silent) setStage('complete');
+        addChatMessage({ role: 'assistant', content: `Generated ${intent.componentName} — ${intent.description || intent.componentType || 'component'}`, type: 'result' });
         outputTimestampRef.current = new Date().toISOString();
         await persistProject(intent.componentName, 'app', generatedFiles, intent, newOutput.a11yReport);
         return;
@@ -405,6 +421,7 @@ export default function HomePage() {
       };
       setOutput(newOutput);
       if (!silent) setStage('complete');
+      addChatMessage({ role: 'assistant', content: `Generated ${intent.componentName} — ${intent.description || intent.componentType || 'component'}`, type: silent ? 'refine' : 'result' });
       // Stamp a stable timestamp for this output so RightPanel version history stays coherent
       outputTimestampRef.current = new Date().toISOString();
 
@@ -426,6 +443,7 @@ export default function HomePage() {
     } catch {
       if (!silent) { setStage('error'); setPipelineStep('error'); }
       setPipelineError('Network error during generation.');
+      addChatMessage({ role: 'assistant', content: 'Network error during generation. Please try again.', type: 'error' });
     }
   }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
 
@@ -436,6 +454,9 @@ export default function HomePage() {
     setPendingDepthUi(!!options?.depthUi);
     setThinkingPlan(null);
     setPipelineError(undefined);
+
+    // Add user message to chat
+    addChatMessage({ role: 'user', content: prompt, type: 'prompt' });
 
     setStage('classifying');
     setPipelineStep('parsing');
@@ -494,27 +515,80 @@ export default function HomePage() {
     setStage('awaiting_confirm');
   }, [liveClassification, activeProjectId, output, aiPayload]);
 
-  // Direct refinement: skips classify/think/awaiting_confirm and immediately
-  // runs the generation pipeline in the context of the current active project.
-  // Uses `silent=true` so the center workspace feed stays dormant.
+  // Direct refinement: skips classify/think/parse entirely and calls /api/generate
+  // directly with the existing intent + refine instructions for fast results.
   const handleDirectRefine = useCallback(async (prompt: string) => {
-    if (!aiConfig) {
-      setPipelineError('No AI model configured. Click "AI Engine Config" in the sidebar to set up your LLM.');
+    if (!aiConfig || !output?.intent) {
+      setPipelineError('No AI model configured or no existing project to refine.');
       setStage('error');
       setPipelineStep('error');
+      addChatMessage({ role: 'assistant', content: 'No AI model configured or no existing project to refine.', type: 'error' });
       return;
     }
-    const currentMode = output?.mode ?? 'component';
-    const currentDepthUi = !!(output?.intent as UIIntent & { depthUi?: boolean } | undefined)?.depthUi;
+
+    // Add user refine message to chat
+    addChatMessage({ role: 'user', content: prompt, type: 'refine' });
 
     setPipelineError(undefined);
     setIsDirectRefining(true);
+
     try {
-      await runGenerationPipeline(prompt, currentMode, currentDepthUi, /* silent= */ true);
+      // Build a refined intent by merging the refine prompt into the existing intent description
+      const existingIntent = { ...output.intent };
+      existingIntent.description = `${existingIntent.description || ''}\n\nRefinement: ${prompt}`;
+      existingIntent.isRefinement = true;
+
+      const aiFields = aiPayload();
+      const maxTokens = 5000;
+
+      const generateRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          intent: existingIntent,
+          mode: output.mode,
+          depthUi: !!(output.intent as UIIntent & { depthUi?: boolean })?.depthUi,
+          ...aiFields,
+          maxTokens,
+          isMultiSlide: isMultiSlideMode,
+        }),
+      });
+      const generateData = await generateRes.json();
+
+      if (!generateData.success) {
+        setPipelineError(generateData.error ?? 'Refinement failed');
+        addChatMessage({ role: 'assistant', content: `Refinement failed: ${generateData.error ?? 'unknown error'}`, type: 'error' });
+        return;
+      }
+
+      const newOutput: GenerationOutput = {
+        code: generateData.code,
+        componentName: existingIntent.componentName,
+        intent: existingIntent,
+        a11yReport: generateData.a11yReport,
+        appliedFixes: generateData.appliedFixes,
+        tests: generateData.tests,
+        mode: output.mode,
+      };
+      setOutput(newOutput);
+      outputTimestampRef.current = new Date().toISOString();
+
+      addChatMessage({ role: 'assistant', content: `Refined ${existingIntent.componentName} — applied: ${prompt}`, type: 'refine' });
+
+      await persistProject(
+        existingIntent.componentName,
+        output.mode as 'component' | 'app' | 'depth_ui',
+        generateData.code,
+        existingIntent,
+        generateData.a11yReport
+      );
+    } catch {
+      setPipelineError('Network error during refinement.');
+      addChatMessage({ role: 'assistant', content: 'Network error during refinement. Please try again.', type: 'error' });
     } finally {
       setIsDirectRefining(false);
     }
-  }, [aiConfig, output?.mode, output?.intent, runGenerationPipeline]);
+  }, [aiConfig, output, aiPayload, isMultiSlideMode, persistProject, addChatMessage]);
 
   const isRunning = !isDirectRefining && ['classifying','thinking','parsing','generating','validating','testing'].includes(stage);
 
@@ -586,6 +660,7 @@ export default function HomePage() {
       </div>
 
       {/* Left Sidebar Pane */}
+      {!isPreviewFullscreen && (
       <Sidebar
         activeProjectId={activeProjectId}
         onSelectProject={loadProject}
@@ -600,8 +675,10 @@ export default function HomePage() {
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
       />
+      )}
 
       {/* Center AI Work Pane */}
+      {!isPreviewFullscreen && (
       <div className={`
         flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 relative z-20
         ${output ? 'w-full lg:w-1/3 xl:w-[40%] flex-shrink-0 border-b lg:border-b-0 lg:border-r border-white/[0.08]' : 'w-full'}
@@ -664,12 +741,14 @@ export default function HomePage() {
           onAskClarification={(q) => {
             setPendingPrompt(prev => `${prev}\n\nAdditional context: ${q}`);
           }}
+          chatMessages={chatMessages}
         />
       </div>
+      )}
 
       {/* Right Dev Panel */}
       {output && (
-        <div className="flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 w-full lg:w-2/3 xl:w-[60%] bg-[#0B0F19] relative z-10">
+        <div className={`flex-1 flex flex-col min-h-[100dvh] lg:min-h-0 min-w-0 bg-[#0B0F19] relative z-10 ${isPreviewFullscreen ? 'w-full' : 'w-full lg:w-2/3 xl:w-[60%]'}`}>
           <RightPanel
             initialProject={{
               id: activeProjectId || 'current',
@@ -689,6 +768,8 @@ export default function HomePage() {
               model:    aiConfig.model,
               provider: aiConfig.provider,
             } : null}
+            isPreviewFullscreen={isPreviewFullscreen}
+            onTogglePreviewFullscreen={() => setIsPreviewFullscreen(prev => !prev)}
           />
         </div>
       )}

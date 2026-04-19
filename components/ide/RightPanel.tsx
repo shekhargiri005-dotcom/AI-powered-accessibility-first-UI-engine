@@ -55,6 +55,8 @@ interface RightPanelProps {
     apiKey?: string;
     baseUrl?: string;
   } | null;
+  isPreviewFullscreen?: boolean;
+  onTogglePreviewFullscreen?: () => void;
 }
 
 type TabId = 'preview' | 'code' | 'versions' | 'metrics';
@@ -178,6 +180,8 @@ export default function RightPanel({
   feedbackMeta,
   intentConfidence = 0.8,
   aiConfig,
+  isPreviewFullscreen = false,
+  onTogglePreviewFullscreen,
 }: RightPanelProps) {
   const [activeTab,       setActiveTab]       = useState<TabId>('preview');
   const [versions,        setVersions]        = useState<ProjectVersion[]>([{
@@ -375,7 +379,7 @@ export default function RightPanel({
   return (
     <div className={`
       flex flex-col flex-1 min-h-0 bg-[#0B0F19] border-t lg:border-t-0 lg:border-l border-white/[0.08] z-20
-      ${isFullscreen ? 'fixed inset-0 lg:left-72 z-50' : 'relative w-full'}
+      ${isPreviewFullscreen ? 'fixed inset-0 z-50' : 'relative w-full'}
     `}>
       {/* ── Top Header ───────────────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 bg-[#0B0F19]/80 backdrop-blur-xl border-b border-white/[0.08]">
@@ -413,11 +417,14 @@ export default function RightPanel({
           ))}
           <div className="w-px h-4 bg-white/[0.10] mx-1" />
           <button
-            onClick={() => setIsFullscreen(!isFullscreen)}
+            onClick={() => {
+              setIsFullscreen(!isFullscreen);
+              onTogglePreviewFullscreen?.();
+            }}
             className="p-1.5 text-slate-500 hover:text-white rounded-lg hover:bg-white/[0.07] transition"
-            title="Toggle fullscreen"
+            title={isPreviewFullscreen ? 'Exit fullscreen' : 'Toggle fullscreen'}
           >
-            {isFullscreen ? <X className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            {isPreviewFullscreen ? <X className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
           </button>
         </div>
       </div>
@@ -427,7 +434,7 @@ export default function RightPanel({
 
         {/* Preview Tab */}
         {activeTab === 'preview' && (
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 flex flex-col min-h-[400px]">
             <div className="flex-1 relative min-h-0">
               <SandpackPreview
                 key={`preview-${activeV.timestamp}-${currentVersion}`}
