@@ -93,16 +93,15 @@ export const PROVIDER_CONFIG = [
   },
   {
     id: 'ollama',
-    name: 'Ollama (Self-Hosted)',
-    description: 'Llama 3, Qwen, DeepSeek - Self-hosted inference',
+    name: 'Ollama',
+    description: 'Llama 3, Qwen, DeepSeek - Cloud inference via ollama.com',
     color: 'text-purple-400',
     gradient: 'from-purple-500/20 to-fuchsia-500/20 border-purple-500/30',
     bgColor: 'bg-purple-500',
-    envVar: 'OLLAMA_BASE_URL',
+    envVar: 'OLLAMA_API_KEY',
     models: ['llama3.2', 'qwen2.5-coder', 'deepseek-coder', 'phi4', 'mistral'],
     settings: PROVIDER_SETTINGS.ollama,
-    // Ollama health check uses /api/tags (no auth required)
-    healthEndpoint: '', // resolved dynamically from OLLAMA_BASE_URL
+    healthEndpoint: 'https://ollama.com/api/v1/models',
   },
 ];
 
@@ -131,14 +130,13 @@ export interface ProviderStatus {
 async function checkProviderConnectivity(
   healthEndpoint: string,
   apiKey: string,
-  isOllama: boolean = false,
 ): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5000);
 
     const headers: Record<string, string> = {};
-    if (!isOllama && apiKey) {
+    if (apiKey) {
       headers['Authorization'] = `Bearer ${apiKey}`;
     }
 
@@ -170,19 +168,13 @@ export async function GET() {
         ? process.env[provider.envVarAlt] 
         : undefined;
       
-      // Ollama is configured when OLLAMA_BASE_URL is set (API key is optional)
-      const isOllama = provider.id === 'ollama';
-      const configured = isOllama ? !!primaryKey : !!(primaryKey || altKey);
+      const configured = !!(primaryKey || altKey);
       const apiKey = primaryKey || altKey;
       
       // Check connectivity if configured
       let connected: boolean | null = null;
       if (configured) {
-        if (isOllama && primaryKey) {
-          // Ollama: derive health endpoint from base URL (/api/tags instead of /v1/models)
-          const ollamaHealthUrl = primaryKey.replace(/\/v1\/?$/, '').replace(/\/$/, '') + '/api/tags';
-          connected = await checkProviderConnectivity(ollamaHealthUrl, '', true);
-        } else if (apiKey && provider.healthEndpoint) {
+        if (apiKey && provider.healthEndpoint) {
           connected = await checkProviderConnectivity(provider.healthEndpoint, apiKey);
         }
       }

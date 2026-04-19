@@ -42,7 +42,7 @@ const PROVIDER_CHECKS: Array<{
   baseUrl?: string;
 }> = [
   { id: 'groq',        envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
-  { id: 'ollama',      envKey: 'OLLAMA_BASE_URL' },   // base URL resolved at runtime from env
+  { id: 'ollama',      envKey: 'OLLAMA_API_KEY',      baseUrl: 'https://ollama.com/api/v1' },
   { id: 'google',      envKey: 'GOOGLE_API_KEY' },
   { id: 'google',      envKey: 'GEMINI_API_KEY' },
 
@@ -135,7 +135,7 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     openai:     ['OPENAI_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
-    ollama:     ['OLLAMA_API_KEY'],  // optional — many Ollama servers need no key
+    ollama:     ['OLLAMA_API_KEY'],
   };
   const vars = map[provider.toLowerCase()] ?? [];
   for (const v of vars) {
