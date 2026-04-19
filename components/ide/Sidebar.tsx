@@ -111,7 +111,8 @@ export default function Sidebar({
               bg-gradient-to-r ${t.gradient} text-white text-sm font-semibold
               transition-all duration-200
               shadow-lg ${t.shadow}
-              active:scale-[0.98] border ${t.border}
+              hover:scale-[1.02] hover:shadow-xl active:scale-[0.98]
+              border ${t.border}
               focus-visible:outline-none focus-visible:ring-2 focus-visible:${t.borderFocus} focus-visible:ring-offset-2 focus-visible:ring-offset-[#0B0F19]
             `}
           >
@@ -167,10 +168,10 @@ export default function Sidebar({
                   key={project.id}
                   onClick={() => { onSelectProject(project.id); onCloseMobile(); }}
                   className={`
-                    w-full text-left p-3 rounded-2xl border transition-all duration-300 group
+                    w-full text-left p-3 rounded-2xl border transition-all duration-200 group
                     ${isActive
-                      ? `${t.bgLight} ${t.borderActive} shadow-lg ${t.shadow} -translate-y-0.5`
-                      : 'border-transparent hover:bg-white/[0.04] hover:border-white/[0.08] hover:-translate-y-0.5'
+                      ? `${t.bgLight} ${t.borderActive} shadow-lg ${t.shadow} scale-[1.01]`
+                      : 'border-transparent hover:bg-white/[0.04] hover:border-white/[0.08] hover:scale-[1.01] hover:shadow-md'
                     }
                   `}
                 >

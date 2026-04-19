@@ -254,7 +254,7 @@ export default function ModelSelectionGate({
                             ? 'bg-violet-500/10 border-violet-500/40'
                             : 'bg-gray-900/50 border-gray-700/50'
                         }
-                        ${isReady ? `hover:${provider.bgColor.replace('500', '500/5')} hover:scale-[1.02] active:scale-[0.98]` : ''}
+                        ${isReady ? `hover:${provider.bgColor.replace('500', '500/5')} hover:scale-[1.02] hover:shadow-lg active:scale-[0.98]` : ''}
                       `}
                     >
                       {/* Provider Brand Color Top Border */}
@@ -368,10 +368,10 @@ export default function ModelSelectionGate({
                       <button
                         key={model}
                         onClick={() => setSelectedModel(model)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                           selectedModel === model
-                            ? `bg-gradient-to-r ${selectedProvider.gradient} text-white shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/30' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/30' : selectedProvider.id === 'google' ? 'shadow-blue-500/30' : selectedProvider.id === 'groq' ? 'shadow-orange-500/30' : 'shadow-violet-500/30'}`
-                            : `bg-gray-800 text-gray-400 hover:${selectedProvider.bgColor.replace('bg-', 'bg-').replace('-500', '-500/20')} hover:${selectedProvider.color}`
+                            ? `bg-gradient-to-r ${selectedProvider.gradient} text-white shadow-lg scale-105 ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/30' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/30' : selectedProvider.id === 'google' ? 'shadow-blue-500/30' : selectedProvider.id === 'groq' ? 'shadow-orange-500/30' : 'shadow-violet-500/30'}`
+                            : `bg-gray-800 text-gray-400 hover:${selectedProvider.bgColor.replace('bg-', 'bg-').replace('-500', '-500/20')} hover:${selectedProvider.color} hover:scale-105`
                         }`}
                       >
                         {model}
@@ -422,14 +422,14 @@ export default function ModelSelectionGate({
               <div className="flex gap-3">
                 <button
                   onClick={handleBack}
-                  className={`flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:${selectedProvider.bgColor.replace('500', '500/10')} hover:border-gray-600 hover:${selectedProvider.color} transition-colors`}
+                  className={`flex-1 px-4 py-3 rounded-xl border border-gray-700 text-gray-300 hover:${selectedProvider.bgColor.replace('500', '500/10')} hover:border-gray-600 hover:${selectedProvider.color} hover:scale-[1.02] transition-all duration-200`}
                 >
                   Back
                 </button>
                 <button
                   onClick={handleComplete}
                   disabled={isSaving}
-                  className={`flex-1 px-4 py-3 rounded-xl bg-gradient-to-r ${selectedProvider.gradient} text-white font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/25' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/25' : selectedProvider.id === 'google' ? 'shadow-blue-500/25' : selectedProvider.id === 'groq' ? 'shadow-orange-500/25' : 'shadow-violet-500/25'}`}
+                  className={`flex-1 px-4 py-3 rounded-xl bg-gradient-to-r ${selectedProvider.gradient} text-white font-medium hover:scale-105 hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/25' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/25' : selectedProvider.id === 'google' ? 'shadow-blue-500/25' : selectedProvider.id === 'groq' ? 'shadow-orange-500/25' : 'shadow-violet-500/25'}`}
                 >
                   {isSaving ? (
                     <>

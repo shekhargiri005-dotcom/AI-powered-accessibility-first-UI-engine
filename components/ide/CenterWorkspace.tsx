@@ -183,10 +183,10 @@ export default function CenterWorkspace({
                       p-3 text-left rounded-2xl border border-white/[0.08]
                       bg-white/[0.03] backdrop-blur-sm
                       hover:${t.bgLight} hover:${t.borderActive}
-                      hover:-translate-y-1 hover:shadow-lg ${t.shadow}
+                      hover:scale-[1.03] hover:shadow-lg ${t.shadow}
                       active:scale-[0.98]
                       text-xs text-slate-500 hover:text-slate-200
-                      transition-all duration-300 ease-out
+                      transition-all duration-200 ease-out
                     `}
                   >
                     <MessageSquare className={`w-3.5 h-3.5 mb-2 ${t.textFaint}`} />
@@ -217,7 +217,7 @@ export default function CenterWorkspace({
                       : <Bot className="w-3.5 h-3.5 text-slate-400" />
                     }
                   </div>
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm ${
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-200 hover:shadow-md ${
                     msg.role === 'user'
                       ? `${t.bgLight} border ${t.border} text-slate-100 rounded-tr-sm`
                       : msg.type === 'error'
