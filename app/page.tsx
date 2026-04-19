@@ -684,11 +684,11 @@ export default function HomePage() {
       )}
 
       {/* Main area: Chat on top + Preview below */}
-      <div className={`flex-1 flex flex-col min-h-0 min-w-0 relative z-20 ${isPreviewFullscreen ? 'w-full' : ''}`}>
+      <div className={`flex-1 flex flex-col min-h-0 min-w-0 relative z-20 overflow-hidden ${isPreviewFullscreen ? 'w-full' : ''}`}>
         {/* Chat pane */}
         {!isPreviewFullscreen && (
         <div className={`
-          flex flex-col min-w-0 relative z-20
+          flex flex-col min-h-0 min-w-0 relative z-20 overflow-hidden
           ${output ? 'h-[45%] flex-shrink-0 border-b border-white/[0.08]' : 'flex-1'}
           pt-14 lg:pt-0
         `}>
@@ -757,7 +757,7 @@ export default function HomePage() {
 
         {/* Preview pane — below chat */}
         {output && (
-          <div className={`${isPreviewFullscreen ? 'flex-1' : 'h-[55%]'} flex flex-col min-h-0 bg-[#0B0F19] relative z-10`}>
+          <div className={`${isPreviewFullscreen ? 'flex-1' : 'h-[55%]'} flex flex-col min-h-0 min-w-0 overflow-hidden bg-[#0B0F19] relative z-10`}>
             <RightPanel
               initialProject={{
                 id: activeProjectId || 'current',
