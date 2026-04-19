@@ -102,6 +102,54 @@ function SandpackScreenshotObserver({ onReadyForScreenshot }: ScreenshotObserver
   return null;
 }
 
+// ─── Crash Detection Observer ────────────────────────────────────────────────
+// Monitors Sandpack status and detects when the runtime crashes (timeout/error).
+// Fires onCrashDetected so the parent can show a retry UI.
+
+interface CrashObserverProps {
+  onCrashDetected: () => void;
+}
+
+function SandpackCrashObserver({ onCrashDetected }: CrashObserverProps) {
+  const { sandpack } = useSandpack();
+  const firedRef = useRef(false);
+  const startTimeRef = useRef(Date.now());
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+    firedRef.current = false;
+  }, [sandpack.files]); // Reset when files change
+
+  useEffect(() => {
+    if (firedRef.current) return;
+
+    // If sandpack has an error object, the runtime crashed
+    if (sandpack.error) {
+      firedRef.current = true;
+      onCrashDetected();
+      return;
+    }
+
+    // If status is 'timeout', the bundler gave up
+    if (sandpack.status === 'timeout') {
+      firedRef.current = true;
+      onCrashDetected();
+      return;
+    }
+
+    // If still 'initial' after 30s, likely crashed (Nodebox Go runtime exited)
+    if (sandpack.status === 'initial') {
+      const elapsed = Date.now() - startTimeRef.current;
+      if (elapsed > 30000) {
+        firedRef.current = true;
+        onCrashDetected();
+      }
+    }
+  }, [sandpack.status, sandpack.error, onCrashDetected]);
+
+  return null;
+}
+
 // ─── Error Boundary ───────────────────────────────────────────────────────────
 
 interface EBState { hasError: boolean; errorMsg: string }
@@ -155,6 +203,17 @@ export default function SandpackPreviewComponent({
   }, []);
   const [editMode, setEditMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [crashDetected, setCrashDetected] = useState(false);
+
+  const handleCrashDetected = useCallback(() => {
+    setCrashDetected(true);
+  }, []);
+
+  // Reset crash state on refresh
+  const handleRefresh = useCallback(() => {
+    setCrashDetected(false);
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   const files = useMemo(
     () => buildSandpackFiles(code, componentName),
@@ -190,7 +249,7 @@ export default function SandpackPreviewComponent({
 
         {/* Custom Reload Button to fix Sandpack built-in refresh issues */}
         <button
-          onClick={() => setRefreshKey((k) => k + 1)}
+          onClick={handleRefresh}
           title="Force reload preview"
           className="ml-auto sm:ml-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all text-gray-500 border-transparent hover:text-gray-300 hover:border-gray-600 hover:bg-gray-800"
         >
@@ -239,6 +298,26 @@ export default function SandpackPreviewComponent({
             {/* Screenshot observer — fires once after preview settles for Final Round */}
             {onReadyForScreenshot && (
               <SandpackScreenshotObserver onReadyForScreenshot={stableScreenshotCb} />
+            )}
+
+            {/* Crash observer — detects Nodebox runtime deaths */}
+            <SandpackCrashObserver onCrashDetected={handleCrashDetected} />
+
+            {/* Crash overlay */}
+            {crashDetected && (
+              <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-950/90 backdrop-blur-sm p-8 text-center gap-4">
+                <AlertTriangle className="w-10 h-10 text-amber-400" />
+                <h3 className="text-white font-bold text-base">Preview Runtime Crashed</h3>
+                <p className="text-sm text-gray-400 max-w-sm">
+                  The Sandpack runtime exited unexpectedly. This is usually caused by too many npm dependencies or memory limits. Click reload to retry.
+                </p>
+                <button
+                  onClick={handleRefresh}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold hover:bg-blue-500"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Reload Preview
+                </button>
+              </div>
             )}
 
             <SandpackLayout

@@ -255,21 +255,30 @@ module.exports = {
   };
 
   files['/src/CaptureWrapper.tsx'] = {
-    code: `import React, { useEffect, useRef } from 'react';
-import html2canvas from 'html2canvas';
+    code: `import React, { useEffect, useRef, useState } from 'react';
 
 export default function CaptureWrapper({ children }) {
   const ref = useRef(null);
+  const [h2c, setH2c] = useState(null);
+
+  // Lazy-load html2canvas after mount to avoid blocking initial render
+  useEffect(() => {
+    let cancelled = false;
+    import('html2canvas').then(mod => {
+      if (!cancelled) setH2c(() => mod.default);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
+    if (!h2c) return;
     let captured = false;
     
     const takeSnapshot = async () => {
-      if (captured) return;
+      if (captured || !ref.current) return;
       try {
-        if (!ref.current) return;
         captured = true;
-        const canvas = await html2canvas(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
+        const canvas = await h2c(ref.current, { useCORS: true, allowTaint: true, scale: 0.5, logging: false });
         const base64 = canvas.toDataURL('image/jpeg', 0.5);
         window.top.postMessage({ type: 'SNAPSHOT_RESULT', payload: base64 }, '*');
       } catch (err) {
@@ -277,7 +286,6 @@ export default function CaptureWrapper({ children }) {
       }
     };
 
-    // Auto-capture 3.5 seconds after mount to guarantee RightPanel catches it
     const timer = setTimeout(takeSnapshot, 3500);
 
     const handleMessage = async (e) => {
@@ -292,7 +300,7 @@ export default function CaptureWrapper({ children }) {
       window.removeEventListener('message', handleMessage);
       clearTimeout(timer);
     };
-  }, []);
+  }, [h2c]);
 
   return <div ref={ref} className="w-full min-h-screen bg-[#0c0c0e] flex flex-col">{children}</div>;
 }`,
@@ -384,15 +392,60 @@ export default defineConfig({
   // Inject @ui ecosystem only when generated code actually references it.
   // Loading the full virtual package graph on every preview can cause slow
   // cold starts and runtime TIME_OUT errors in Sandpack's node environment.
-  const needsUiEcosystem =
-    allCode.includes('@ui/') ||
-    allCode.includes('@/components/ui') ||
-    allCode.includes('@/lib/utils');
+  //
+  // OPTIMIZATION: Only inject the specific @ui/* packages that are imported,
+  // not the entire 40-file bundle. This dramatically reduces the virtual FS
+  // size and prevents Nodebox Go runtime crashes.
+  const PACKAGE_GLOBS: Record<string, string[]> = {
+    '@ui/core':            ['/packages/core/**'],
+    '@ui/forms':           ['/packages/forms/**'],
+    '@ui/layout':          ['/packages/layout/**'],
+    '@ui/icons':           ['/packages/icons/**'],
+    '@ui/a11y':            ['/packages/a11y/**'],
+    '@ui/charts':          ['/packages/charts/**'],
+    '@ui/dragdrop':        ['/packages/dragdrop/**'],
+    '@ui/editor':          ['/packages/editor/**'],
+    '@ui/motion':          ['/packages/motion/**'],
+    '@ui/theming':         ['/packages/theming/**'],
+    '@ui/command-palette': ['/packages/command-palette/**'],
+    '@ui/tokens':          ['/packages/tokens/**'],
+    '@ui/utils':           ['/packages/utils/**'],
+  };
 
-  if (needsUiEcosystem) {
-    Object.entries(uiEcosystem as Record<string, string>).forEach(([filepath, code]) => {
-      files[filepath] = { code, active: false };
+  // Always include utils (cn is used by most packages)
+  const neededPackages = new Set<string>(['@ui/utils']);
+
+  // Scan for @ui/* imports in generated code
+  const UI_IMPORT_RE = /from\s+['"](@ui\/[a-z0-9-]+)/g;
+  let importMatch: RegExpExecArray | null;
+  UI_IMPORT_RE.lastIndex = 0;
+  while ((importMatch = UI_IMPORT_RE.exec(allCode)) !== null) {
+    neededPackages.add(importMatch[1]);
+  }
+
+  // Also include @/ aliases that map to @ui packages
+  if (allCode.includes('@/components/ui')) neededPackages.add('@ui/core');
+  if (allCode.includes('@/lib/utils')) neededPackages.add('@ui/utils');
+
+  // Map package names to their file paths and inject matching ecosystem files
+  const ecosystem = uiEcosystem as Record<string, string>;
+  const neededPrefixes: string[] = [];
+  for (const pkg of neededPackages) {
+    const globs = PACKAGE_GLOBS[pkg];
+    if (globs) neededPrefixes.push(...globs);
+  }
+
+  for (const [filepath, code] of Object.entries(ecosystem)) {
+    // Check if this file belongs to any needed package
+    const isNeeded = neededPrefixes.some(prefix => {
+      if (prefix.endsWith('/**')) {
+        return filepath.startsWith(prefix.slice(0, -2));
+      }
+      return filepath.startsWith(prefix);
     });
+    if (isNeeded) {
+      files[filepath] = { code, active: false };
+    }
   }
 
   return files;
@@ -402,24 +455,12 @@ export const SANDPACK_DEPENDENCIES = {
   react: '^18.3.1',
   'react-dom': '^18.3.1',
   'lucide-react': '^0.378.0',
-  'three': '0.164.0',
-  '@types/three': '0.164.0',
-  '@react-three/fiber': '8.17.10',
-  '@react-three/drei': '9.114.3',
-  'maath': '^0.10.8',
-  '@react-spring/three': '^9.7.3',
-  '@react-spring/web': '^9.7.3',
   'framer-motion': '^11.2.10',
   'react-router-dom': '^6.22.3',
   'react-icons': '^5.0.1',
   'recharts': '^2.12.7',
-  'class-variance-authority': '^0.7.0',
   'clsx': '^2.1.1',
   'tailwind-merge': '^2.3.0',
-  '@radix-ui/react-slot': '^1.0.2',
-  '@radix-ui/react-dialog': '^1.0.5',
-  'cmdk': '^1.0.0',
-  'html2canvas': '^1.4.1',
 } as const;
 
 export function getSandpackDependencies(componentCode: string | Record<string, string>) {
@@ -433,17 +474,10 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
     tailwindcss: '^3.4.1',
     postcss: '^8.4.35',
     autoprefixer: '^10.4.18',
-    // ALWAYS include packages used by the injected ui-ecosystem files.
-    // @ui/core/index.ts re-exports Modal (needs @radix-ui/react-dialog),
-    // Button (needs @radix-ui/react-slot + class-variance-authority),
-    // and shared utilities (clsx, tailwind-merge). These packages must be
-    // present in EVERY Sandpack session regardless of user-generated imports.
-    '@radix-ui/react-dialog': '^1.0.5',
-    '@radix-ui/react-slot':   '^1.0.2',
-    'class-variance-authority': '^0.7.0',
+    // Minimal always-needed packages — @radix-ui and cva are NO LONGER needed
+    // because @ui/core components now inline their implementations.
     'clsx': '^2.1.1',
     'tailwind-merge': '^2.3.0',
-    'html2canvas': '^1.4.1', // Always for CaptureWrapper
   };
 
   if (codeString.includes('lucide-react'))      deps['lucide-react']       = '^0.378.0';
@@ -452,6 +486,12 @@ export function getSandpackDependencies(componentCode: string | Record<string, s
   if (codeString.includes('react-icons'))        deps['react-icons']         = '^5.0.1';
   if (codeString.includes('recharts'))           deps['recharts']            = '^2.12.7';
   if (codeString.includes('cmdk'))               deps['cmdk']                = '^1.0.0';
+  if (codeString.includes('html2canvas'))         deps['html2canvas']         = '^1.4.1';
+  if (codeString.includes('@radix-ui/')) {
+    if (codeString.includes('@radix-ui/react-dialog')) deps['@radix-ui/react-dialog'] = '^1.0.5';
+    if (codeString.includes('@radix-ui/react-slot'))   deps['@radix-ui/react-slot']   = '^1.0.2';
+  }
+  if (codeString.includes('class-variance-authority')) deps['class-variance-authority'] = '^0.7.0';
 
   if (codeString.includes('three') || codeString.includes('@react-three')) {
     deps['three']               = '0.164.0';

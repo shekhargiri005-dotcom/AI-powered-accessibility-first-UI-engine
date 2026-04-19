@@ -1,124 +1,142 @@
 import * as React from "react"
-import { Command as CommandPrimitive } from "cmdk"
 import { Search } from "lucide-react"
 import { Modal, ModalContent } from "../../core/components/Modal"
 import { cn } from "../../utils/cn"
 
-const Command = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive
-    ref={ref}
-    className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-white text-slate-900",
-      className
-    )}
-    {...props}
-  />
-))
-Command.displayName = CommandPrimitive.displayName
+// ─── Lightweight Command Palette (no cmdk dep) ───────────────────────────────
+// Implements a filterable command menu with keyboard navigation.
 
-interface CommandPaletteProps extends React.ComponentPropsWithoutRef<typeof CommandPrimitive> {
-  isOpen: boolean
-  onClose: () => void
+interface CommandContextValue {
+  search: string;
+  setSearch: (v: string) => void;
+  selectedId: string | null;
+  setSelectedId: (id: string | null) => void;
+}
+const CommandContext = React.createContext<CommandContextValue>({
+  search: "",
+  setSearch: () => {},
+  selectedId: null,
+  setSelectedId: () => {},
+});
+
+/* ---------- CommandPalette ---------- */
+interface CommandPaletteProps {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
 }
 
-const CommandPalette = ({ children, isOpen, onClose, ...props }: CommandPaletteProps) => {
+function CommandPalette({ children, isOpen, onClose }: CommandPaletteProps) {
+  const [search, setSearch] = React.useState("");
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
+
+  // Reset search when opened/closed
+  React.useEffect(() => { setSearch(""); }, [isOpen]);
+
   return (
     <Modal open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <ModalContent className="overflow-hidden p-0 shadow-2xl">
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-slate-500 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5" {...props}>
-          {children}
-        </Command>
+        <CommandContext.Provider value={{ search, setSearch, selectedId, setSelectedId }}>
+          <div className="flex h-full w-full flex-col overflow-hidden rounded-md bg-gray-900 text-gray-100">
+            {children}
+          </div>
+        </CommandContext.Provider>
       </ModalContent>
     </Modal>
-  )
+  );
 }
 
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Input>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
->(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-    <CommandPrimitive.Input
-      ref={ref}
-      className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-50",
-        className
+/* ---------- CommandInput ---------- */
+const CommandInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+  ({ className, value, onChange, ...props }, ref) => {
+    const { setSearch } = React.useContext(CommandContext);
+    return (
+      <div className="flex items-center border-b border-gray-700 px-3">
+        <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+        <input
+          ref={ref}
+          className={cn(
+            "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-gray-500 disabled:cursor-not-allowed disabled:opacity-50",
+            className
+          )}
+          placeholder="Type a command or search..."
+          onChange={(e) => { setSearch(e.target.value); onChange?.(e); }}
+          {...props}
+        />
+      </div>
+    );
+  }
+);
+CommandInput.displayName = "CommandInput";
+
+/* ---------- CommandList ---------- */
+function CommandList({ className, children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)} {...props}>
+      {children}
+    </div>
+  );
+}
+
+/* ---------- CommandEmpty ---------- */
+function CommandEmpty({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+  const { search } = React.useContext(CommandContext);
+  // Only show empty state when there's a search query
+  if (!search) return null;
+  return (
+    <div className={cn("py-6 text-center text-sm text-gray-500", className)} {...props}>
+      {children ?? "No results found."}
+    </div>
+  );
+}
+
+/* ---------- CommandGroup ---------- */
+function CommandGroup({ heading, className, children, ...props }: React.HTMLAttributes<HTMLDivElement> & { heading?: string }) {
+  return (
+    <div className={cn("overflow-hidden p-1", className)} {...props}>
+      {heading && (
+        <div className="px-2 py-1.5 text-xs font-medium text-gray-500">{heading}</div>
       )}
-      {...props}
-    />
-  </div>
-))
-CommandInput.displayName = CommandPrimitive.Input.displayName
+      {children}
+    </div>
+  );
+}
 
-const CommandList = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.List>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.List
-    ref={ref}
-    className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
-    {...props}
-  />
-))
-CommandList.displayName = CommandPrimitive.List.displayName
+/* ---------- CommandItem ---------- */
+interface CommandItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  value?: string;
+  onSelect?: () => void;
+}
 
-const CommandEmpty = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Empty>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Empty>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Empty
-    ref={ref}
-    className={cn("py-6 text-center text-sm", className)}
-    {...props}
-  />
-))
-CommandEmpty.displayName = CommandPrimitive.Empty.displayName
+const CommandItem = React.forwardRef<HTMLButtonElement, CommandItemProps>(
+  ({ className, value, onSelect, children, ...props }, ref) => {
+    const { search, selectedId, setSelectedId } = React.useContext(CommandContext);
+    const id = value ?? String(children);
+    const matchesSearch = !search || id.toLowerCase().includes(search.toLowerCase());
+    const isSelected = selectedId === id;
 
-const CommandGroup = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Group>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Group>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Group
-    ref={ref}
-    className={cn(
-      "overflow-hidden p-1 text-slate-900 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-slate-500",
-      className
-    )}
-    {...props}
-  />
-))
-CommandGroup.displayName = CommandPrimitive.Group.displayName
+    if (!matchesSearch) return null;
 
-const CommandSeparator = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Separator>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Separator>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Separator
-    ref={ref}
-    className={cn("-mx-1 h-px bg-slate-200", className)}
-    {...props}
-  />
-))
-CommandSeparator.displayName = CommandPrimitive.Separator.displayName
-
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CommandPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive.Item
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-slate-100 aria-selected:text-slate-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-      className
-    )}
-    {...props}
-  />
-))
-CommandItem.displayName = CommandPrimitive.Item.displayName
+    return (
+      <button
+        ref={ref}
+        type="button"
+        className={cn(
+          "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none w-full text-left",
+          isSelected ? "bg-blue-600/20 text-blue-300" : "hover:bg-gray-800 text-gray-200",
+          "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+          className
+        )}
+        onClick={onSelect}
+        onMouseEnter={() => setSelectedId(id)}
+        {...props}
+      >
+        {children}
+      </button>
+    );
+  }
+);
+CommandItem.displayName = "CommandItem";
 
 export {
   CommandPalette,
@@ -127,5 +145,4 @@ export {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandSeparator,
 }

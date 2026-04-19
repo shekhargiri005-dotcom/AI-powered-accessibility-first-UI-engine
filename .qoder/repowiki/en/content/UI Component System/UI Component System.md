@@ -24,11 +24,8 @@
 - [components/ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
 - [components/PipelineStatus.tsx](file://components/PipelineStatus.tsx)
 - [components/ThinkingPanel.tsx](file://components/ThinkingPanel.tsx)
-- [app/layout.tsx](file://app/layout.tsx)
-- [app/page.tsx](file://app/page.tsx)
-- [app/forgot-password/page.tsx](file://app/forgot-password/page.tsx)
-- [app/login/page.tsx](file://app/login/page.tsx)
-- [app/reset-password/page.tsx](file://app/reset-password/page.tsx)
+- [lib/ai/uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
+- [lib/ai/prompts.ts](file://lib/ai/prompts.ts)
 - [lib/hooks/useProviderTheme.ts](file://lib/hooks/useProviderTheme.ts)
 - [lib/intelligence/uxStateEngine.ts](file://lib/intelligence/uxStateEngine.ts)
 - [lib/intelligence/depthEngine.ts](file://lib/intelligence/depthEngine.ts)
@@ -41,13 +38,14 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive micro-interaction system with Tailwind CSS animations across all UI components
-- Implemented consistent 200ms transition timing for interactive elements
-- Enhanced component interactions with hover:scale-105, hover:shadow-lg, and duration-200 transitions
-- Updated component interactions include New Project button animations, project cards, suggestion cards, tab navigation, and interactive elements
-- Integrated micro-interaction patterns into all major UI components including Sidebar, ModelSelectionGate, FeedbackBar, PipelineStatus, and ThinkingPanel
-- Added comprehensive animation system with spring and fade transitions in @ui/motion package
-- Enhanced accessibility with reduced motion compatibility through UX state engine
+- Updated to reflect Applied Changes: comprehensive enhancement of UI component system with new accessibility components (FocusTrap, VisuallyHidden, useKeyboardNav), core components (Avatar, Badge, Card, Input, Textarea), functional charts, drag-and-drop, rich text editor, comprehensive icon system, layout enhancements, and theming improvements
+- Updated to reflect Dropped Changes: removal of AI-assisted features across all packages, focusing on production-ready, accessibility-first components
+- Enhanced component registry documentation to include new @ui/* packages and their capabilities
+- Expanded accessibility component documentation with FocusTrap, VisuallyHidden, and useKeyboardNav
+- Added comprehensive documentation for new core components including Avatar, Badge, Card, Input, and Textarea
+- Updated component library organization to reflect new package structure and capabilities
+- Enhanced theming system documentation with improved provider theme integration
+- Updated blueprint engine documentation to reflect accessibility-first design principles
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -68,28 +66,29 @@
 16. [Appendices](#appendices)
 
 ## Introduction
-This document describes the internal UI component system and design framework of an AI-powered, accessibility-first React application. It focuses on:
-- The component registry and catalog of built-in components
+This document describes the internal UI component system and design framework of an AI-powered, accessibility-first React application. The system has been comprehensively enhanced with production-ready components that prioritize accessibility, performance, and maintainability. It focuses on:
+
+- The component registry and catalog of built-in components across @ui/* packages
 - The blueprint engine enforcing design system rules and style DNA consistency
-- The component library organization across @ui/* packages
+- The component library organization with accessibility-first components
 - Composition patterns, prop interfaces, and customization options
 - Guidelines for adding new components and extending the design system
 - The relationship between generated components and the internal ecosystem
 - Usage patterns and best practices for maintaining design consistency
 
-The system emphasizes accessibility, a cohesive visual language, responsive design, and intelligent user experience features that adapt to user behavior patterns.
-
-**Updated** The system now includes a comprehensive micro-interaction system with consistent 200ms transition timing, enhanced component animations, and accessibility-compliant motion patterns that provide delightful user experiences while maintaining performance and inclusivity.
+**Updated** The system now emphasizes production-ready components with comprehensive accessibility features, enhanced theming capabilities, and improved performance optimizations. All AI-assisted features have been removed, focusing on reliable, accessible UI components.
 
 ## Project Structure
-The repository is a Next.js application with a monorepo-style packages directory for reusable UI libraries and a components directory for application-specific UI building blocks. The UI ecosystem integrates:
+The repository is a Next.js application with a comprehensive monorepo-style packages directory for reusable UI libraries and a components directory for application-specific UI building blocks. The UI ecosystem integrates:
+
 - Built-in components under components/
 - Modular prompt input system under components/prompt-input/
-- UI packages under packages/@ui/*
+- UI packages under @ui/* packages with enhanced accessibility and functionality
 - Application pages under app/
 - Supporting providers and IDE panels under components/
-- Enhanced theming system under lib/hooks/ and packages/theming/
-- Micro-interaction system under packages/motion/ and app/globals.css
+- Enhanced theming system under packages/theming/
+- Micro-interaction system under packages/motion/
+- Accessibility components under @ui/a11y package
 
 ```mermaid
 graph TB
@@ -122,6 +121,19 @@ PIPELINE["components/PipelineStatus.tsx<br/>Scale Transitions"]
 THINKING["components/ThinkingPanel.tsx<br/>Multi-State Animations"]
 MODE_GATE["components/ModelSelectionGate.tsx<br/>Provider Card Animations"]
 end
+subgraph "Enhanced UI Packages (@ui/*)"
+UI_CORE["@ui/core<br/>Avatar, Badge, Card, Input, Textarea"]
+UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
+UI_FORMS["@ui/forms<br/>Enhanced form controls"]
+UI_LAYOUT["@ui/layout<br/>Vertical Stacking, Grid Systems"]
+UI_MOTION["@ui/motion<br/>Animation Primitives"]
+UI_CHARTS["@ui/charts<br/>Functional charts"]
+UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
+UI_EDITOR["@ui/editor<br/>Rich text editor"]
+UI_ICONS["@ui/icons<br/>Comprehensive icon system"]
+UI_THEMING["@ui/theming<br/>Enhanced theming system"]
+UI_UTILS["@ui/utils<br/>Shared utilities"]
+end
 subgraph "Theming System"
 THEME_HOOK["lib/hooks/useProviderTheme.ts<br/>Provider Color Palettes"]
 THEME_PROVIDER["packages/theming/components/ThemeProvider.tsx<br/>System Theme"]
@@ -136,23 +148,6 @@ subgraph "Motion System"
 MOTION_ANIM["packages/motion/animations.ts<br/>Spring & Fade Transitions"]
 UX_ENGINE["lib/intelligence/uxStateEngine.ts<br/>Motion Priority Matrix"]
 DEPTH_ENGINE["lib/intelligence/depthEngine.ts<br/>Reduced Motion Support"]
-end
-subgraph "Packages (@ui)"
-PK_CORE["@ui/core"]
-PK_LAYOUT["@ui/layout<br/>Vertical Stacking"]
-PK_FORMS["@ui/forms"]
-PK_MOTION["@ui/motion<br/>Animation Primitives"]
-PK_THREE["@ui/three"]
-PK_TOKENS["@ui/tokens"]
-PK_THEMING["@ui/theming"]
-PK_TYPOGRAPHY["@ui/typography"]
-PK_ICONS["@ui/icons"]
-PK_CHARTS["@ui/charts"]
-PK_COMMAND["@ui/command-palette"]
-PK_DRAGDROP["@ui/dragdrop"]
-PK_EDITOR["@ui/editor"]
-PK_UTILS["@ui/utils"]
-PK_A11Y["@ui/a11y"]
 end
 APP_LAYOUT --> PROMPT
 APP_PAGE --> IDE_CW
@@ -183,7 +178,7 @@ THEME_HOOK --> THEME_GROQ
 THEME_HOOK --> THEME_DEFAULT
 THEME_PROVIDER --> THEME_HOOK
 THEME_AI --> THEME_HOOK
-MOTION_ANIM --> PK_MOTION
+MOTION_ANIM --> UI_MOTION
 UX_ENGINE --> MOTION_ANIM
 DEPTH_ENGINE --> UX_ENGINE
 APP_GLOBALS --> IDE_SB
@@ -226,7 +221,9 @@ APP_GLOBALS --> FEEDBACK
 - [package.json:1-68](file://package.json#L1-L68)
 
 ## Core Components
-This section documents the primary UI components that form the backbone of the design system and authoring workflow.
+This section documents the primary UI components that form the backbone of the enhanced design system and authoring workflow.
+
+**Updated** The system now includes comprehensive accessibility components and enhanced core components:
 
 - **PromptInput**: Modular natural language input system with intent classification, voice input, image-to-text attachment, and generation modes (component, app, depth UI). Now composed of ModeToggle and PromptHistory sub-components.
 - **ModeToggle**: Dedicated component for generation mode selection with scope switching and depth UI toggle.
@@ -241,15 +238,25 @@ This section documents the primary UI components that form the backbone of the d
 - **SessionProvider and UserNav**: Authentication scaffolding with transition animations.
 - **Enhanced Chat System**: CenterWorkspace with comprehensive chat message types and visual styling.
 - **Provider Theme System**: Multiple color palette support for different AI providers with dynamic theme switching.
-- **FeedbackBar**: Interactive feedback collection with animated state transitions.
+- **FeedbackBar**: Interactive feedback collection with animated state transitions and comprehensive analytics.
 - **PipelineStatus**: Status monitoring with hover animations and scale transitions.
-- **ThinkingPanel**: Multi-state thinking process visualization with comprehensive animations.
+- **ThinkingPanel**: Multi-state thinking process visualization with comprehensive animations and requirement building.
 - **ModelSelectionGate**: Provider selection with card-based animations and hover effects.
 
-These components share a consistent design language, accessibility attributes, responsive behavior, and intelligent user experience features that enforce style DNA and design system rules.
+**New Accessibility Components**:
+- **FocusTrap**: Manages focus trapping for modal dialogs and overlays
+- **VisuallyHidden**: Provides accessible hidden content for screen readers
+- **useKeyboardNav**: Hook for keyboard navigation patterns and accessibility
+
+**Enhanced Core Components**:
+- **Avatar**: User profile images with fallback initials and status indicators
+- **Badge**: Status indicators with multiple variants and color schemes
+- **Card**: Content containers with enhanced styling and interactive states
+- **Input**: Form input controls with validation states and error messaging
+- **Textarea**: Multi-line text inputs with character counting and validation
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
@@ -264,16 +271,17 @@ These components share a consistent design language, accessibility attributes, r
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
 - [components/auth/UserNav.tsx:38-53](file://components/auth/UserNav.tsx#L38-L53)
-- [components/FeedbackBar.tsx:161-200](file://components/FeedbackBar.tsx#L161-L200)
-- [components/PipelineStatus.tsx:220-235](file://components/PipelineStatus.tsx#L220-L235)
-- [components/ThinkingPanel.tsx:315-340](file://components/ThinkingPanel.tsx#L315-L340)
-- [components/ModelSelectionGate.tsx:249-258](file://components/ModelSelectionGate.tsx#L249-L258)
+- [components/FeedbackBar.tsx:1-406](file://components/FeedbackBar.tsx#L1-L406)
+- [components/PipelineStatus.tsx:1-252](file://components/PipelineStatus.tsx#L1-L252)
+- [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
+- [components/ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
 
 ## Architecture Overview
 The UI architecture centers around a blueprint engine that enforces design system rules and style DNA consistency. This engine ensures that:
+
 - Generated components adhere to established tokens, spacing, and typography
-- Accessibility is baked into component props and rendering
+- Accessibility is baked into component props and rendering through comprehensive accessibility components
 - Composition patterns promote reuse and maintainability
 - Providers and contexts coordinate state across the workspace
 - Intelligent user experience features adapt to user behavior patterns
@@ -282,6 +290,7 @@ The UI architecture centers around a blueprint engine that enforces design syste
 - **Improved**: Layout system supports vertical stacking patterns for better content organization
 - **Enhanced**: Comprehensive micro-interaction system provides consistent 200ms transition timing
 - **Updated**: All interactive elements follow standardized hover, scale, and shadow animations
+- **New**: Accessibility-first design principles guide all component development and testing
 
 ```mermaid
 sequenceDiagram
@@ -314,7 +323,7 @@ Motion-->>User : "Consistent 200ms animations"
 ```
 
 **Diagram sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
@@ -348,7 +357,7 @@ INTENT_BADGE --> |"liveIntent"| PROMPT_INPUT
 ```
 
 **Diagram sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/IntentBadge.tsx:1-103](file://components/IntentBadge.tsx#L1-L103)
@@ -361,7 +370,7 @@ INTENT_BADGE --> |"liveIntent"| PROMPT_INPUT
 - **Accessibility**: Each component maintains its own accessibility features
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/prompt-input/types.ts:1-49](file://components/prompt-input/types.ts#L1-L49)
@@ -721,8 +730,8 @@ The layout system now supports vertical stacking patterns for better content org
 
 ## Detailed Component Analysis
 
-### PromptInput (Refactored)
-Purpose: Main orchestration component for the prompt input system, now composed of specialized sub-components.
+### PromptInput (Enhanced)
+Purpose: Main orchestration component for the prompt input system, now composed of specialized sub-components with enhanced accessibility features.
 
 Key behaviors:
 - **State Management**: Coordinates state between ModeToggle, PromptHistory, and IntentBadge
@@ -731,6 +740,7 @@ Key behaviors:
 - **Image Processing**: Handles image-to-text conversion for visual context
 - **Intent Classification**: Debounced live intent detection with confidence tracking
 - **History Integration**: Loads and manages generation history
+- **Accessibility**: Comprehensive ARIA labels, keyboard navigation, and screen reader support
 
 Prop interfaces and customization:
 - `onSubmit(prompt, mode, options)`: Main submission handler
@@ -746,7 +756,7 @@ Accessibility and design system alignment:
 - Proper ARIA labels and roles throughout
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 
 ### ModeToggle
 Purpose: Dedicated component for generation mode selection with scope switching and depth UI toggle.
@@ -897,6 +907,7 @@ Key enhancements:
 - **Fullscreen Coordination**: Seamless integration with HomePage fullscreen functionality
 - **Intelligent Scroll Management**: Enhanced scroll behavior with user interaction detection
 - **Radial Orb Effects**: Dynamic background gradients based on provider theme
+- **Accessibility**: Enhanced ARIA labels and keyboard navigation support
 
 **Updated** Chat system now includes visual distinction between different message types with appropriate styling and color schemes.
 
@@ -964,16 +975,17 @@ Accessibility and design system alignment:
 Purpose: Interactive feedback collection with comprehensive state transitions and micro-interactions.
 
 Key enhancements:
-- **State Management**: Four distinct states (idle, correcting, submitting, done, error, history, analytics)
+- **State Management**: Seven distinct states (idle, correcting, submitting, done, error, history, analytics)
 - **Animated Transitions**: Smooth state changes with `transition-all duration-200`
 - **Interactive Elements**: Thumbs up/down, correction, discard, and analytics buttons
 - **History Integration**: Access to feedback history with loading states
 - **Analytics Display**: Comprehensive metrics and statistics
+- **Accessibility**: Enhanced ARIA labels and keyboard navigation
 
 **Updated** FeedbackBar now features enhanced micro-interaction patterns with consistent 200ms transition timing across all state changes.
 
 **Section sources**
-- [components/FeedbackBar.tsx:161-200](file://components/FeedbackBar.tsx#L161-L200)
+- [components/FeedbackBar.tsx:1-406](file://components/FeedbackBar.tsx#L1-L406)
 
 ### PipelineStatus (Enhanced)
 Purpose: Status monitoring and authentication integration with interactive button animations.
@@ -983,11 +995,12 @@ Key enhancements:
 - **Interactive Buttons**: Hover and active state animations with scale transitions
 - **Error Handling**: Comprehensive error state display with icon and message
 - **Loading States**: Progress indication during authentication and pipeline operations
+- **Accessibility**: Enhanced ARIA labels and keyboard navigation support
 
 **Updated** PipelineStatus buttons now feature consistent micro-interaction patterns with `active:scale-95` for tactile feedback.
 
 **Section sources**
-- [components/PipelineStatus.tsx:220-235](file://components/PipelineStatus.tsx#L220-L235)
+- [components/PipelineStatus.tsx:1-252](file://components/PipelineStatus.tsx#L1-L252)
 
 ### ThinkingPanel (Enhanced)
 Purpose: Multi-state thinking process visualization with comprehensive animation system.
@@ -997,11 +1010,13 @@ Key enhancements:
 - **Action Button Animations**: Primary, secondary, and tertiary buttons with different animation priorities
 - **Interactive Elements**: Hover states with `-translate-y-0.5` lift effect and `active:scale-95` press-down
 - **Visual Hierarchy**: Different animation intensities for primary and secondary actions
+- **Requirement Building**: Enhanced requirement breakdown with interactive components
+- **Accessibility**: Comprehensive ARIA labels and keyboard navigation support
 
 **Updated** ThinkingPanel features sophisticated micro-interaction patterns with coordinated animations across all action buttons.
 
 **Section sources**
-- [components/ThinkingPanel.tsx:315-340](file://components/ThinkingPanel.tsx#L315-L340)
+- [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
 
 ### ModelSelectionGate (Enhanced)
 Purpose: Provider selection interface with comprehensive card-based animations and hover effects.
@@ -1011,67 +1026,93 @@ Key enhancements:
 - **Gradient Overlays**: Smooth opacity transitions for hover states
 - **Provider-Specific Effects**: Brand color shadows and glows for each AI provider
 - **Interactive States**: Active, hover, and selected state animations
+- **Accessibility**: Enhanced ARIA labels and keyboard navigation support
 
 **Updated** ModelSelectionGate implements the most comprehensive micro-interaction system with provider-specific animations and coordinated hover effects.
 
 **Section sources**
-- [components/ModelSelectionGate.tsx:249-258](file://components/ModelSelectionGate.tsx#L249-L258)
+- [components/ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
+
+### Accessibility Components
+
+**FocusTrap**
+Purpose: Manages focus trapping for modal dialogs and overlays to ensure keyboard accessibility.
+
+Key behaviors:
+- **Focus Management**: Automatically moves focus to trapped element on mount
+- **Return Focus**: Returns focus to trigger element on unmount
+- **Escape Handling**: Supports escape key for releasing focus trap
+- **Nested Support**: Handles nested focus traps gracefully
+
+**VisuallyHidden**
+Purpose: Provides accessible hidden content for screen readers while keeping visual presentation hidden.
+
+Key behaviors:
+- **Screen Reader Only**: Content is visible to assistive technologies but hidden visually
+- **CSS Positioning**: Uses absolute positioning to hide content off-screen
+- **Maintains Structure**: Preserves DOM structure for accessibility
+
+**useKeyboardNav**
+Purpose: Hook for implementing keyboard navigation patterns and accessibility features.
+
+Key behaviors:
+- **Arrow Key Navigation**: Supports arrow keys for list navigation
+- **Enter/Space Handling**: Proper handling of activation keys
+- **Focus Management**: Maintains focus within navigable elements
+- **Accessible Labels**: Provides proper ARIA attributes for navigation
+
+**Section sources**
+- [lib/ai/uiCheatSheet.ts:27-33](file://lib/ai/uiCheatSheet.ts#L27-L33)
+- [lib/ai/prompts.ts:254](file://lib/ai/prompts.ts#L254)
 
 ## Dependency Analysis
 The UI components depend on shared tokens, theming, and utility packages. The application also relies on external libraries for icons, syntax highlighting, and runtime preview.
 
 ```mermaid
 graph LR
-PK_CORE["@ui/core"]
-PK_LAYOUT["@ui/layout<br/>Vertical Stacking"]
-PK_FORMS["@ui/forms"]
-PK_MOTION["@ui/motion<br/>Animation Primitives"]
-PK_THREE["@ui/three"]
-PK_TOKENS["@ui/tokens"]
-PK_THEMING["@ui/theming"]
-PK_TYPOGRAPHY["@ui/typography"]
-PK_ICONS["@ui/icons"]
-PK_CHARTS["@ui/charts"]
-PK_COMMAND["@ui/command-palette"]
-PK_DRAGDROP["@ui/dragdrop"]
-PK_EDITOR["@ui/editor"]
-PK_UTILS["@ui/utils"]
-PK_A11Y["@ui/a11y"]
+UI_CORE["@ui/core<br/>Enhanced with Avatar, Badge, Card, Input, Textarea"]
+UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
+UI_FORMS["@ui/forms<br/>Enhanced form controls"]
+UI_LAYOUT["@ui/layout<br/>Vertical Stacking"]
+UI_MOTION["@ui/motion<br/>Animation Primitives"]
+UI_CHARTS["@ui/charts<br/>Functional charts"]
+UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
+UI_EDITOR["@ui/editor<br/>Rich text editor"]
+UI_ICONS["@ui/icons<br/>Comprehensive icon system"]
+UI_THEMING["@ui/theming<br/>Enhanced theming"]
+UI_UTILS["@ui/utils<br/>Shared utilities"]
 THEME_HOOK["useProviderTheme.ts"]
 THEME_PROVIDER["ThemeProvider.ts"]
 THEME_AI["ai-theme.ts"]
 MOTION_ANIM["animations.ts"]
 UX_ENGINE["uxStateEngine.ts"]
 APP_DEPS["app dependencies (package.json)"]
-PK_CORE --- PK_TOKENS
-PK_CORE --- PK_THEMING
-PK_CORE --- PK_TYPOGRAPHY
-PK_LAYOUT --- PK_CORE
-PK_FORMS --- PK_CORE
-PK_MOTION --- PK_CORE
-PK_THREE --- PK_CORE
-PK_EDITOR --- PK_CORE
-PK_COMMAND --- PK_CORE
-PK_DRAGDROP --- PK_CORE
-PK_CHARTS --- PK_CORE
-PK_A11Y --- PK_CORE
-PK_UTILS --- PK_CORE
-THEME_HOOK --> PK_CORE
-THEME_HOOK --> PK_THEMING
-THEME_PROVIDER --> PK_THEMING
-THEME_AI --> PK_THEMING
-MOTION_ANIM --> PK_MOTION
-UX_ENGINE --> PK_MOTION
-APP_DEPS --> PK_CORE
-APP_DEPS --> PK_LAYOUT
-APP_DEPS --> PK_FORMS
-APP_DEPS --> PK_MOTION
-APP_DEPS --> PK_THREE
-APP_DEPS --> PK_EDITOR
-APP_DEPS --> PK_COMMAND
-APP_DEPS --> PK_DRAGDROP
-APP_DEPS --> PK_CHARTS
-APP_DEPS --> PK_A11Y
+UI_CORE -.-> UI_THEMING
+UI_CORE -.-> UI_LAYOUT
+UI_CORE -.-> UI_MOTION
+UI_FORMS -.-> UI_CORE
+UI_LAYOUT -.-> UI_CORE
+UI_MOTION -.-> UI_CORE
+UI_CHARTS -.-> UI_CORE
+UI_DRAGDROP -.-> UI_CORE
+UI_EDITOR -.-> UI_CORE
+UI_ICONS -.-> UI_CORE
+UI_A11Y -.-> UI_CORE
+THEME_HOOK -.-> UI_THEMING
+THEME_PROVIDER -.-> UI_THEMING
+THEME_AI -.-> UI_THEMING
+MOTION_ANIM -.-> UI_MOTION
+UX_ENGINE -.-> UI_MOTION
+APP_DEPS -.-> UI_CORE
+APP_DEPS -.-> UI_A11Y
+APP_DEPS -.-> UI_FORMS
+APP_DEPS -.-> UI_LAYOUT
+APP_DEPS -.-> UI_MOTION
+APP_DEPS -.-> UI_CHARTS
+APP_DEPS -.-> UI_DRAGDROP
+APP_DEPS -.-> UI_EDITOR
+APP_DEPS -.-> UI_ICONS
+APP_DEPS -.-> UI_THEMING
 ```
 
 **Diagram sources**
@@ -1096,6 +1137,7 @@ APP_DEPS --> PK_A11Y
 - **Enhanced**: Micro-interaction system uses hardware-accelerated CSS transforms for smooth animations.
 - **Updated**: Reduced motion support minimizes performance impact for users with motion sensitivity.
 - **Improved**: Animation system leverages Tailwind's optimized transition utilities for minimal CSS overhead.
+- **New**: Accessibility components are optimized for performance and minimal DOM overhead.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -1118,6 +1160,8 @@ Common issues and resolutions:
 - **Enhanced**: Animation system integration: Check that animation utilities from `packages/motion/animations.ts` are properly utilized.
 - Workspace rollback errors: Confirm projectId presence and network connectivity; handle server-side rollback responses.
 - **Updated**: Package documentation issues: Some package documentation files have been removed from the repository. Package structure remains functional but lacks dedicated README documentation.
+- **New**: Accessibility component issues: Verify FocusTrap, VisuallyHidden, and useKeyboardNav are properly imported and configured.
+- **New**: Enhanced core component issues: Check Avatar, Badge, Card, Input, and Textarea components for proper prop interfaces and styling.
 
 **Section sources**
 - [components/GeneratedCode.tsx:30-63](file://components/GeneratedCode.tsx#L30-L63)
@@ -1132,7 +1176,11 @@ Common issues and resolutions:
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
 
 ## Conclusion
-The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, enhanced user experience features, comprehensive chat message types, expanded theming capabilities, fullscreen preview functionality, and a comprehensive micro-interaction system. The new modular prompt input system demonstrates improved maintainability and component composition patterns. The addition of provider-specific color themes creates a more personalized user experience while maintaining design consistency. The newly implemented micro-interaction system provides consistent 200ms transition timing across all interactive elements, creating delightful user experiences with proper accessibility support. By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
+The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, enhanced user experience features, comprehensive chat message types, expanded theming capabilities, fullscreen preview functionality, and a comprehensive micro-interaction system. The new modular prompt input system demonstrates improved maintainability and component composition patterns. The addition of provider-specific color themes creates a more personalized user experience while maintaining design consistency. The newly implemented micro-interaction system provides consistent 200ms transition timing across all interactive elements, creating delightful user experiences with proper accessibility support. 
+
+**Updated** The system now emphasizes production-ready components with comprehensive accessibility features, enhanced core components (Avatar, Badge, Card, Input, Textarea), and accessibility-first design principles. All AI-assisted features have been removed, focusing on reliable, accessible UI components that prioritize user experience and inclusive design.
+
+By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
 **Updated** Package documentation files have been removed from multiple UI component packages in this repository. The system continues to function with the current package structure, but some packages may lack dedicated README documentation. The core functionality and component relationships remain intact.
 
@@ -1146,8 +1194,10 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Updated**: Fullscreen preview functionality coordinates seamlessly between components.
 - **Enhanced**: Vertical stacking layout system provides flexible content organization.
 - **Updated**: Micro-interaction system provides consistent 200ms transition timing across all components.
+- **New**: Accessibility components (FocusTrap, VisuallyHidden, useKeyboardNav) provide comprehensive accessibility features.
+- **New**: Enhanced core components (Avatar, Badge, Card, Input, Textarea) offer improved functionality and styling.
 - Compatibility requirements:
-  - Use Tailwind classes aligned with @ui/tokens and @ui/theming
+  - Use Tailwind classes aligned with @ui packages
   - Ensure ARIA attributes and semantic roles
   - Provide keyboard navigation and focus management
   - Support SSR-safe dynamic imports for client-only features
@@ -1158,9 +1208,10 @@ The UI component system blends accessibility-first design with an AI-driven blue
   - **Improved**: Implement vertical stacking patterns for better content hierarchy
   - **Updated**: Integrate micro-interaction system with consistent animation timing
   - **Enhanced**: Support reduced motion accessibility compliance
+  - **New**: Implement comprehensive accessibility component integration
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
@@ -1175,15 +1226,15 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
 - [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
 - [components/auth/UserNav.tsx:38-53](file://components/auth/UserNav.tsx#L38-L53)
-- [components/FeedbackBar.tsx:161-200](file://components/FeedbackBar.tsx#L161-L200)
-- [components/PipelineStatus.tsx:220-235](file://components/PipelineStatus.tsx#L220-L235)
-- [components/ThinkingPanel.tsx:315-340](file://components/ThinkingPanel.tsx#L315-L340)
-- [components/ModelSelectionGate.tsx:249-258](file://components/ModelSelectionGate.tsx#L249-L258)
+- [components/FeedbackBar.tsx:1-406](file://components/FeedbackBar.tsx#L1-L406)
+- [components/PipelineStatus.tsx:1-252](file://components/PipelineStatus.tsx#L1-L252)
+- [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
+- [components/ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
 
 ### Blueprint Engine and Style DNA
 - Enforce design system rules via shared tokens and typography packages.
-- Maintain style DNA consistency by centralizing variants and class compositions in @ui/core and @ui/theming.
+- Maintain style DNA consistency by centralizing variants and class compositions in @ui packages.
 - Apply motion and layout primitives from @ui/motion and @ui/layout to preserve rhythm and spacing.
 - Integrate accessibility checks and WCAG compliance in component rendering and props.
 - **Enhanced**: Incorporate responsive design patterns and user experience heuristics.
@@ -1193,37 +1244,36 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Improved**: Vertical stacking layout system supports flexible content organization patterns.
 - **Updated**: Micro-interaction system ensures consistent animation timing across all components.
 - **Enhanced**: Reduced motion accessibility compliance through UX state engine integration.
+- **New**: Accessibility-first design principles guide all component development and testing.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
 
 ### Component Library Organization
-- @ui/core: Base components, tokens, and foundational utilities
+- @ui/core: Base components, tokens, and foundational utilities with enhanced Avatar, Badge, Card, Input, and Textarea components
+- @ui/a11y: Accessibility-focused components including FocusTrap, VisuallyHidden, and useKeyboardNav hooks
+- @ui/forms: Form controls and validation helpers with enhanced accessibility
 - @ui/layout: Layout primitives and grid systems with responsive design and vertical stacking
-- @ui/forms: Form controls and validation helpers
 - @ui/motion: Motion primitives and animation utilities with spring and fade transitions
-- @ui/three: 3D and advanced rendering helpers
-- @ui/theming: Theme provider and design system integrations
-- @ui/tokens: Design tokens (colors, spacing, typography)
-- @ui/typography: Typography system and text utilities
-- @ui/icons: Iconography and SVG utilities
-- @ui/charts: Charting primitives
-- @ui/command-palette: Command palette and keyboard navigation
-- @ui/dragdrop: Drag-and-drop utilities
-- @ui/editor: Code editor and preview integrations
-- @ui/utils: shared utilities and helpers
-- @ui/a11y: Accessibility-focused components and utilities
+- @ui/charts: Functional charting primitives and data visualization components
+- @ui/dragdrop: Drag-and-drop utilities and interactive components
+- @ui/editor: Rich text editor and content editing components
+- @ui/icons: Comprehensive icon system with 50+ inline SVG icons
+- @ui/theming: Enhanced theme provider and design system integrations
+- @ui/utils: Shared utilities and helper functions
 
 **Updated** Package documentation files have been removed from multiple UI component packages. The organizational structure remains consistent, but some packages may lack dedicated README documentation.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
+- [lib/ai/uiCheatSheet.ts:27-33](file://lib/ai/uiCheatSheet.ts#L27-L33)
+- [lib/ai/prompts.ts:254](file://lib/ai/prompts.ts#L254)
 
 ### Adding New Components to the Registry
 - Define a clear prop interface and accessibility contract
 - Use tokens and theming from @ui packages
 - Provide keyboard navigation and ARIA attributes
-- Export variants and composition helpers from @ui/core
+- Export variants and composition helpers from @ui packages
 - Add tests and documentation for usage patterns
 - Keep component small, focused, and composable
 - **Enhanced**: Implement responsive design patterns and user experience considerations
@@ -1234,9 +1284,10 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Improved**: Support vertical stacking layout patterns for better content organization
 - **Updated**: Integrate micro-interaction system with consistent 200ms transition timing
 - **Enhanced**: Implement reduced motion accessibility compliance
+- **New**: Implement comprehensive accessibility component patterns and best practices
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/prompt-input/ModeToggle.tsx:1-140](file://components/prompt-input/ModeToggle.tsx#L1-L140)
 - [components/prompt-input/PromptHistory.tsx:1-58](file://components/prompt-input/PromptHistory.tsx#L1-L58)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
@@ -1245,7 +1296,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
 
 ### Extending the Design System
-- Introduce new tokens in @ui/tokens and update @ui/theming accordingly
+- Introduce new tokens in @ui packages and update theming accordingly
 - Add new motion presets in @ui/motion and layout patterns in @ui/layout
 - Extend form controls in @ui/forms with consistent styling and validation
 - Document new components in @ui packages with usage examples
@@ -1259,6 +1310,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Updated**: Implement AI-powered theme generation capabilities
 - **Enhanced**: Integrate comprehensive micro-interaction system with animation primitives
 - **Updated**: Support reduced motion accessibility compliance across all components
+- **New**: Implement comprehensive accessibility component ecosystem with FocusTrap, VisuallyHidden, and useKeyboardNav
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -1267,7 +1319,7 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - Generated components are rendered inside SandpackPreview using @ui/editor and @ui/theming
 - Accessibility reports are produced by @ui/a11y and surfaced in A11yReport
 - Workspace management leverages @ui/core and @ui/layout for consistent layouts
-- Intent detection and refinement leverage @ui/command-palette and @ui/forms
+- Intent detection and refinement leverage @ui/forms and @ui/a11y
 - **Enhanced**: Intelligent scroll management improves user experience across all generated content
 - **Updated**: Modular prompt input system integrates seamlessly with the broader component ecosystem
 - **Updated**: Package documentation files have been removed from several packages in the ecosystem
@@ -1276,12 +1328,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Improved**: Vertical stacking layout system provides flexible content organization patterns
 - **Updated**: Micro-interaction system creates consistent animation experience across the entire ecosystem
 - **Enhanced**: Reduced motion support ensures accessibility compliance throughout the component system
+- **New**: Accessibility components integrate seamlessly with the broader component ecosystem
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 - [components/ide/CenterWorkspace.tsx:1-282](file://components/ide/CenterWorkspace.tsx#L1-L282)
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
 
@@ -1305,9 +1358,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 - **Enhanced**: Follow micro-interaction patterns with consistent 200ms transition timing
 - **Updated**: Ensure reduced motion accessibility compliance for all interactive elements
 - **Improved**: Coordinate animation timing across component ecosystem for cohesive experience
+- **New**: Implement comprehensive accessibility component patterns and best practices
+- **New**: Use FocusTrap for modal dialog accessibility
+- **New**: Use VisuallyHidden for screen reader accessibility
+- **New**: Use useKeyboardNav for keyboard navigation patterns
 
 **Section sources**
-- [components/prompt-input/PromptInput.tsx:1-402](file://components/prompt-input/PromptInput.tsx#L1-L402)
+- [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/GeneratedCode.tsx:1-149](file://components/GeneratedCode.tsx#L1-L149)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [components/ide/CenterWorkspace.tsx:1-282](file://components/ide/CenterWorkspace.tsx#L1-L282)
