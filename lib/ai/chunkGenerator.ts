@@ -3,7 +3,7 @@
  * Generates the file manifest and per-file code chunks for Full App Mode.
  *
  * Now uses the unified adapter layer — works with any provider the user
- * has configured (OpenAI, Anthropic, Groq, Ollama, etc.).
+ * has configured (OpenAI, Google, Groq).
  * No hardcoded model names. No silent fallbacks.
  * 
  * SECURITY: Credentials are resolved server-side via workspaceKeyService.

@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger';
  * ⚠️ PROVIDER NOTE: This endpoint requires a vision-capable model.
  * It defaults to OpenAI gpt-4o (the de-facto multimodal standard) unless the
  * workspace has configured a different OpenAI-compatible vision model via
- * VISION_MODEL env var. Anthropic/Google vision would require separate adapters.
+ * VISION_MODEL env var. Google vision would require separate adapter config.
  */
 const VISION_MODEL = process.env.VISION_MODEL ?? 'gpt-4o';
 

@@ -1,7 +1,7 @@
 /**
  * @file base.ts
  * Defines the universal AIAdapter interface.
- * Every provider (OpenAI, Ollama, Anthropic, DeepSeek) implements this
+ * Every provider (OpenAI, Google, Groq) implements this
  * contract, making the rest of the application provider-agnostic.
  * 
  * NOTE: Types are re-exported from lib/ai/types.ts for backward compatibility.
@@ -48,7 +48,7 @@ export interface GenerateOptions {
 // ─── Adapter Interface ────────────────────────────────────────────────────────
 
 export interface AIAdapter {
-  /** The canonical name of the provider: "openai" | "ollama" | "anthropic" | "deepseek" */
+  /** The canonical name of the provider: "openai" | "google" | "groq" */
   readonly provider: string;
 
   /**

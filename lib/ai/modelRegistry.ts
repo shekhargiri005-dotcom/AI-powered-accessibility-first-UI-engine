@@ -3,9 +3,10 @@
  *
  * The single source of truth for all model capability metadata.
  *
- * Every model that can be plugged into the engine has a profile here.
+ * Supported providers: OpenAI, Google Gemini, Groq (3 cloud providers).
+ *
  * The profile drives:
- *  - Which pipeline tier to use (tiny → cloud)
+ *  - Which pipeline tier to use
  *  - How much blueprint/context to inject (token budget)
  *  - What temperature to apply (per-model optimum)
  *  - Which code extraction strategy to use on the raw output
@@ -17,7 +18,7 @@
  *
  * Design principles:
  *  - No network calls. Pure static data.
- *  - Partial matching: "phi3:mini" matches "phi3" profile.
+ *  - Partial matching: "gpt-4o-2024-05-13" matches "gpt-4o" profile.
  *  - Never silently fail — getModelProfile() returns null for unknown models.
  *    Callers must fall back to a sensible default tier (cloud).
  */
@@ -37,37 +38,20 @@ export type ModelTier = 'tiny' | 'small' | 'medium' | 'large' | 'cloud';
 
 // ─── Prompt Strategy ──────────────────────────────────────────────────────────
 
-/**
- * fill-in-blank     — model fills slots in a near-complete template. For tiny models.
- * structured-template — numbered steps + structured blueprint. For small models.
- * guided-freeform   — style guidelines + design rules, some freedom. Medium/large.
- * freeform          — existing full system prompt. Cloud models only.
- */
 export type PromptStrategy = 'fill-in-blank' | 'structured-template' | 'guided-freeform' | 'freeform';
 
 // ─── Extraction Strategy ──────────────────────────────────────────────────────
 
-/**
- * fence      — extract clean ```tsx ... ``` fences. Most reliable.
- * heuristic  — find first line resembling React, strip prose. For verbose models.
- * aggressive — strip model preamble, cut trailing explanations. For tiny models.
- */
 export type ExtractionStrategy = 'fence' | 'heuristic' | 'aggressive';
 
 // ─── Repair Priority ──────────────────────────────────────────────────────────
 
-/**
- * never      — skip all repair (should not normally be used)
- * rules-only — apply rule-based patches only (deterministic)
- * ai-cheap   — rules first, then a cheap cloud model (haiku/gpt-4o-mini)
- * ai-strong  — rules first, then a strong cloud model (reserved for future use)
- */
 export type RepairPriority = 'never' | 'rules-only' | 'ai-cheap' | 'ai-strong';
 
 // ─── Capability Profile ───────────────────────────────────────────────────────
 
 export interface ModelCapabilityProfile {
-  /** Canonical registry key, e.g. "phi" or "gpt-4o" */
+  /** Canonical registry key, e.g. "gpt-4o" */
   id: string;
   /** Human-readable name for UI display */
   displayName: string;
@@ -132,506 +116,7 @@ export interface ModelCapabilityProfile {
 export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
 
   // ══════════════════════════════════════════════════════════════════════════
-  // TINY  (< 3B parameters)
-  // Strategy: fill-in-blank template, temperature 0.0, no tool calls
-  // Blueprint: hard-capped at ~300 tokens
-  // ══════════════════════════════════════════════════════════════════════════
-
-  'tinyllama': {
-    id: 'tinyllama',
-    displayName: 'TinyLlama 1.1B',
-    provider: 'ollama',
-    tier: 'tiny',
-    contextWindow: 2048,
-    maxOutputTokens: 512,
-    idealTemperature: 0.0,
-    supportsSystemPrompt: false,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: ['extremely fast locally', 'no API cost'],
-    weaknesses: [
-      'virtually no React knowledge',
-      'ignores long instructions',
-      'forgets structure mid-generation',
-      'hallucinates imports completely',
-    ],
-    promptStrategy: 'fill-in-blank',
-    maxBlueprintTokens: 250,
-    needsExplicitImports: true,
-    needsOutputWrapper: true,
-    extractionStrategy: 'aggressive',
-    repairPriority: 'ai-cheap',
-    timeoutMs: 30000,
-    notes: 'System prompt is not honoured — merge into user turn as prefix.',
-  },
-
-  'phi': {
-    id: 'phi',
-    displayName: 'Phi-2 (2.7B)',
-    provider: 'ollama',
-    tier: 'tiny',
-    contextWindow: 2048,
-    maxOutputTokens: 600,
-    idealTemperature: 0.0,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: [
-      'surprisingly strong reasoning for its size',
-      'follows simple fill-in-blank templates reliably',
-    ],
-    weaknesses: [
-      'tiny context window',
-      'drops JSX closing tags',
-      'invents non-existent import paths',
-      'generation often cuts off before closing brace',
-    ],
-    promptStrategy: 'fill-in-blank',
-    maxBlueprintTokens: 350,
-    needsExplicitImports: true,
-    needsOutputWrapper: true,
-    extractionStrategy: 'aggressive',
-    repairPriority: 'ai-cheap',
-    timeoutMs: 45000,
-  },
-
-  'gemma:2b': {
-    id: 'gemma:2b',
-    displayName: 'Gemma 2B',
-    provider: 'ollama',
-    tier: 'tiny',
-    contextWindow: 2048,
-    maxOutputTokens: 512,
-    idealTemperature: 0.0,
-    supportsSystemPrompt: false,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: ['decent English generation', 'Google-trained'],
-    weaknesses: [
-      'no React-specific training',
-      'context drops fast',
-      'ignores system prompt',
-    ],
-    promptStrategy: 'fill-in-blank',
-    maxBlueprintTokens: 250,
-    needsExplicitImports: true,
-    needsOutputWrapper: true,
-    extractionStrategy: 'aggressive',
-    repairPriority: 'ai-cheap',
-    timeoutMs: 30000,
-    notes: 'System prompt not honoured — merge into user turn.',
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // SMALL  (3B – 9B parameters)
-  // Strategy: structured template with numbered steps
-  // Blueprint: 500–1200 tokens
-  // ══════════════════════════════════════════════════════════════════════════
-
-  'phi3': {
-    id: 'phi3',
-    displayName: 'Phi-3 Mini (3.8B)',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 4096,
-    maxOutputTokens: 1000,
-    idealTemperature: 0.1,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['strong instruction following for its size', 'decent Tailwind knowledge'],
-    weaknesses: ['limited context window', 'occasional import hallucination'],
-    promptStrategy: 'structured-template',
-    maxBlueprintTokens: 600,
-    needsExplicitImports: true,
-    needsOutputWrapper: true,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 60000,
-  },
-
-  'phi4': {
-    id: 'phi4',
-    displayName: 'Phi-4 (14B)',
-    provider: 'ollama',
-    tier: 'medium',
-    contextWindow: 16384,
-    maxOutputTokens: 3000,
-    idealTemperature: 0.2,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['strong reasoning', 'good code output', 'follows detailed blueprints'],
-    weaknesses: ['design aesthetic knowledge limited vs cloud'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 1500,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 120000,
-  },
-
-  'gemma:7b': {
-    id: 'gemma:7b',
-    displayName: 'Gemma 7B',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 8192,
-    maxOutputTokens: 1500,
-    idealTemperature: 0.15,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['good reasoning', 'follows structured prompts'],
-    weaknesses: ['not accessibility-aware', 'occasional hallucinated libraries'],
-    promptStrategy: 'structured-template',
-    maxBlueprintTokens: 800,
-    needsExplicitImports: true,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  'llama3.2': {
-    id: 'llama3.2',
-    displayName: 'Llama 3.2 (3B)',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 4096,
-    maxOutputTokens: 1200,
-    idealTemperature: 0.1,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['Meta instruction tuning', 'decent Tailwind knowledge'],
-    weaknesses: ['small context window', 'forgets long blueprints'],
-    promptStrategy: 'structured-template',
-    maxBlueprintTokens: 500,
-    needsExplicitImports: true,
-    needsOutputWrapper: true,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 60000,
-  },
-
-  'mistral:7b': {
-    id: 'mistral:7b',
-    displayName: 'Mistral 7B Instruct',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 8192,
-    maxOutputTokens: 2000,
-    idealTemperature: 0.2,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: true,
-    streamingReliable: true,
-    strengths: [
-      'strong coder for its size',
-      'excellent instruction following',
-      'consistent output format',
-    ],
-    weaknesses: ['may skip a11y annotations unless explicitly told'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 1000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  'deepseek-coder:6.7b': {
-    id: 'deepseek-coder:6.7b',
-    displayName: 'DeepSeek Coder 6.7B',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 8192,
-    maxOutputTokens: 3000,
-    idealTemperature: 0.1,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: [
-      'specialised code model',
-      'excellent TSX output quality',
-      'follows exact templates reliably',
-    ],
-    weaknesses: ['weak on design/aesthetics', 'no accessibility awareness'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 1200,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  'codegemma:7b': {
-    id: 'codegemma:7b',
-    displayName: 'CodeGemma 7B',
-    provider: 'ollama',
-    tier: 'small',
-    contextWindow: 8192,
-    maxOutputTokens: 2500,
-    idealTemperature: 0.1,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['Google code model', 'strong TSX output', 'accurate import resolution'],
-    weaknesses: ['design aesthetic knowledge limited'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 1000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // HuggingFace Inference API — Meta Llama 3 (8K context window, TOTAL limit)
-  // maxOutputTokens is conservative: generation prompts consume 4000-5000
-  // input tokens, leaving only ~2048-3000 for output.
-  // Requesting more triggers HTTP 400 from HuggingFace (context overflow).
-  // ──────────────────────────────────────────────────────────────────────────
-
-  'meta-llama/Meta-Llama-3-8B-Instruct': {
-    id: 'meta-llama/Meta-Llama-3-8B-Instruct',
-    displayName: 'Llama 3 8B Instruct (HuggingFace)',
-    provider: 'huggingface',
-    tier: 'small',
-    contextWindow: 8192,
-    maxOutputTokens: 2048, // 8K total − ~5K input = ~3K available; use 2K conservatively
-    idealTemperature: 0.25,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: ['strong instruction following', 'solid React knowledge', 'free via HuggingFace'],
-    weaknesses: [
-      '8K context fills quickly with full generation prompts',
-      'no tool call support',
-      'rate limited on free tier',
-    ],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 800, // keep prompts SHORT — context is the binding constraint
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 45000,
-    notes: 'Total context 8192. Input prompt must stay < 5K to leave room for output.',
-  },
-
-  'meta-llama/Llama-3.1-8B-Instruct': {
-    id: 'meta-llama/Llama-3.1-8B-Instruct',
-    displayName: 'Llama 3.1 8B Instruct (HuggingFace)',
-    provider: 'huggingface',
-    tier: 'small',
-    contextWindow: 131072, // Llama 3.1 extended context
-    maxOutputTokens: 3000,
-    idealTemperature: 0.25,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: ['128K context', 'strong instruction following', 'solid React knowledge'],
-    weaknesses: ['HuggingFace free tier may enforce lower limits', 'rate limited'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 2000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 60000,
-  },
-
-  'meta-llama/Meta-Llama-3-70B-Instruct': {
-    id: 'meta-llama/Meta-Llama-3-70B-Instruct',
-    displayName: 'Llama 3 70B Instruct (HuggingFace)',
-    provider: 'huggingface',
-    tier: 'large',
-    contextWindow: 8192,
-    maxOutputTokens: 2048, // same 8K total context constraint
-    idealTemperature: 0.4,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: false,
-    strengths: ['near-cloud quality', 'strong React/design knowledge'],
-    weaknesses: ['8K total context — generation prompts eat most of the budget', 'slow via HuggingFace'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 1000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-    notes: 'Same 8K context as 8B — keep prompts short.',
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // MEDIUM  (10B – 34B parameters)
-  // Strategy: guided freeform — style guidelines + design rules, some freedom
-  // Blueprint: 1500–2500 tokens
-  // ══════════════════════════════════════════════════════════════════════════
-
-  'llama3.1': {
-    id: 'llama3.1',
-    displayName: 'Llama 3.1 (8B/13B)',
-    provider: 'ollama',
-    tier: 'medium',
-    contextWindow: 16384,
-    maxOutputTokens: 4000,
-    idealTemperature: 0.3,
-    supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['large context', 'tool call support', 'solid React knowledge'],
-    weaknesses: ['slow on local hardware at 13B+', 'can be verbose'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 2000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 180000,
-  },
-
-  'deepseek-coder:33b': {
-    id: 'deepseek-coder:33b',
-    displayName: 'DeepSeek Coder 33B',
-    provider: 'ollama',
-    tier: 'medium',
-    contextWindow: 16384,
-    maxOutputTokens: 5000,
-    idealTemperature: 0.2,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: [
-      'best local code model at this size',
-      'excellent TSX output',
-      'accurate Tailwind class usage',
-    ],
-    weaknesses: ['slow on consumer hardware', 'no accessibility opinions'],
-    promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 2500,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 240000,
-  },
-
-  'mistral:22b': {
-    id: 'mistral:22b',
-    displayName: 'Mistral 22B',
-    provider: 'ollama',
-    tier: 'medium',
-    contextWindow: 32768,
-    maxOutputTokens: 5000,
-    idealTemperature: 0.3,
-    supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: true,
-    streamingReliable: true,
-    strengths: ['excellent instruction following', 'tool calls', 'design awareness'],
-    weaknesses: ['very slow on local hardware'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 3000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 300000,
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // LARGE  (35B – 70B parameters, local)
-  // Strategy: light guidance — design rules only, full creative freedom
-  // Blueprint: 3000–5000 tokens
-  // ══════════════════════════════════════════════════════════════════════════
-
-  'llama3:70b': {
-    id: 'llama3:70b',
-    displayName: 'Llama 3 70B',
-    provider: 'ollama',
-    tier: 'large',
-    contextWindow: 32768,
-    maxOutputTokens: 6000,
-    idealTemperature: 0.4,
-    supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: [
-      'near-cloud quality output',
-      'strong React and design knowledge',
-      'tool call support',
-    ],
-    weaknesses: [
-      'extremely slow on local hardware (60–120s)',
-      'high VRAM requirements',
-    ],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 4000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 300000,
-  },
-
-  'deepseek-r1:70b': {
-    id: 'deepseek-r1:70b',
-    displayName: 'DeepSeek-R1 70B',
-    provider: 'ollama',
-    tier: 'large',
-    contextWindow: 65536,
-    maxOutputTokens: 8000,
-    idealTemperature: 0.3,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: [
-      'reasoning model — exceptional code planning',
-      'enormous context window',
-      'top-tier code quality locally',
-    ],
-    weaknesses: [
-      'very slow',
-      'emits <think>...</think> blocks that must be stripped before extraction',
-    ],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 5000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 360000,
-    notes: 'Strip <think>...</think> blocks before code extraction.',
-  },
-
-  // ══════════════════════════════════════════════════════════════════════════
-  // CLOUD  (API-served, all tiers of capability)
-  // Strategy: full freeform — existing system prompts, all tools
-  // Blueprint: full enrichment (6000–12000+ tokens)
+  // OPENAI  (GPT-4o, GPT-4o-mini, o1, o3-mini)
   // ══════════════════════════════════════════════════════════════════════════
 
   'gpt-4o-mini': {
@@ -640,8 +125,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'openai',
     tier: 'cloud',
     contextWindow: 128000,
-    maxOutputTokens: 4096,  // Optimized: 4k sufficient for most components, very fast
-    idealTemperature: 0.8,  // High creativity for colorful UI designs
+    maxOutputTokens: 4096,
+    idealTemperature: 0.8,
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -649,12 +134,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['fast', 'cheap', 'strong React knowledge', 'excellent for repair tasks'],
     weaknesses: ['less creative than gpt-4o for visual design tasks'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 4000,  // Reduced for faster processing
+    maxBlueprintTokens: 4000,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 45000,  // Fast timeout for quick responses
+    timeoutMs: 45000,
   },
 
   'gpt-4o': {
@@ -663,8 +148,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'openai',
     tier: 'cloud',
     contextWindow: 128000,
-    maxOutputTokens: 8192,  // Optimized: 8k is sufficient for full apps, reduces cost/latency
-    idealTemperature: 0.85,  // High creativity for colorful, aesthetic UI designs
+    maxOutputTokens: 8192,
+    idealTemperature: 0.85,
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -677,12 +162,12 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     ],
     weaknesses: ['higher cost per token'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,  // Reduced for faster processing
+    maxBlueprintTokens: 6000,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 60000,  // Reduced from 90s for faster response
+    timeoutMs: 60000,
   },
 
   // ── OpenAI Reasoning Models (o1 / o3 series) ─────────────────────────────
@@ -698,8 +183,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     maxOutputTokens: 65536,
     idealTemperature: 1.0,  // reasoning models default; adapter omits this param
     supportsSystemPrompt: true,
-    supportsToolCalls: false,  // tool calls work differently — disable to avoid 400s
-    supportsJsonMode: false,   // response_format not supported — adapter strips it
+    supportsToolCalls: false,
+    supportsJsonMode: false,
     streamingReliable: true,
     strengths: ['strongest reasoning', 'excellent code planning', 'very large context'],
     weaknesses: ['no temperature control', 'no response_format', 'higher cost'],
@@ -761,153 +246,31 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     notes: 'No system prompt — merge into user. Uses max_completion_tokens.',
   },
 
-  // ─── Modern Claude model aliases (3.7 / 4.x naming) ─────────────────────
-  // These are the models shown in the UI picker. Must be registered here so the
-  // pipeline picks up supportsToolCalls:false instead of falling back to
-  // getCloudFallbackProfile() → gpt-4o-mini → supportsToolCalls:true.
+  // ══════════════════════════════════════════════════════════════════════════
+  // GOOGLE GEMINI  (Gemini 2.0 Flash, Gemini 1.5 Pro)
+  // ══════════════════════════════════════════════════════════════════════════
 
-  'claude-sonnet-4-5': {
-    id: 'claude-sonnet-4-5',
-    displayName: 'Claude Sonnet 4.5',
-    provider: 'anthropic',
+  'gemini-2.0-flash': {
+    id: 'gemini-2.0-flash',
+    displayName: 'Gemini 2.0 Flash',
+    provider: 'google',
     tier: 'cloud',
-    contextWindow: 200000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.6,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['latest Claude model', 'best design instincts', 'accessibility-aware'],
-    weaknesses: ['no JSON mode'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 10000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  'claude-3-7-sonnet-20250219': {
-    id: 'claude-3-7-sonnet-20250219',
-    displayName: 'Claude 3.7 Sonnet',
-    provider: 'anthropic',
-    tier: 'cloud',
-    contextWindow: 200000,
-    maxOutputTokens: 8192,
-    idealTemperature: 0.6,
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['excellent code generation', 'strong design aesthetics'],
-    weaknesses: ['no JSON mode'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 10000,
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 90000,
-  },
-
-  'claude-3-5-sonnet-20241022': {
-    id: 'claude-3-5-sonnet-20241022',
-    displayName: 'Claude 3.5 Sonnet',
-    provider: 'anthropic',
-    tier: 'cloud',
-    contextWindow: 200000,
-    maxOutputTokens: 8192,  // 8k optimal for complex full apps
-    idealTemperature: 0.8,  // High creativity for aesthetic UI designs
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: [
-      'best design instincts of all cloud models',
-      'best accessibility awareness',
-      'nuanced understanding of visual hierarchy',
-      'largest context window in this registry',
-    ],
-    weaknesses: ['no JSON mode', 'slightly slower than GPT-4o-mini'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,  // Reduced for faster processing
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 75000,  // Optimized timeout
-  },
-
-  'claude-3-haiku-20240307': {
-    id: 'claude-3-haiku-20240307',
-    displayName: 'Claude 3 Haiku',
-    provider: 'anthropic',
-    tier: 'cloud',
-    contextWindow: 200000,
-    maxOutputTokens: 4096,  // 4k optimal for quick components
-    idealTemperature: 0.75,  // Good creativity for UI designs
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,   // Anthropic tool-calling uses a different schema — disabled until implemented
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['fastest Anthropic model', 'very cheap', 'great for repair and review tasks'],
-    weaknesses: ['less design creativity than Sonnet'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 4000,  // Reduced for faster processing
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 30000,  // Fast timeout
-  },
-
-  // claude-3-5-haiku and claude-3-opus aliases
-  'claude-3-5-haiku-20241022': {
-    id: 'claude-3-5-haiku-20241022',
-    displayName: 'Claude 3.5 Haiku',
-    provider: 'anthropic',
-    tier: 'cloud',
-    contextWindow: 200000,
-    maxOutputTokens: 4096,  // 4k optimal for quick components
-    idealTemperature: 0.75,  // Good creativity for UI designs
-    supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
-    streamingReliable: true,
-    strengths: ['fast', 'cheap', 'great code quality for cost'],
-    weaknesses: ['less creative than Sonnet'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 4000,  // Reduced for faster processing
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 35000,  // Fast timeout
-  },
-
-  'claude-3-opus-20240229': {
-    id: 'claude-3-opus-20240229',
-    displayName: 'Claude 3 Opus',
-    provider: 'anthropic',
-    tier: 'cloud',
-    contextWindow: 200000,
+    contextWindow: 128000,
     maxOutputTokens: 4096,
-    idealTemperature: 0.6,
+    idealTemperature: 0.85,
     supportsSystemPrompt: true,
-    supportsToolCalls: false,
-    supportsJsonMode: false,
+    supportsToolCalls: true,
+    supportsJsonMode: true,
     streamingReliable: true,
-    strengths: ['strongest reasoning', 'best long-form output'],
-    weaknesses: ['expensive', 'slower than Sonnet'],
+    strengths: ['fastest cloud model in the stack', 'cheap', 'ideal for thinking/intent phases'],
+    weaknesses: ['less design nuance than GPT-4o'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 10000,
+    maxBlueprintTokens: 4000,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 120000,
+    timeoutMs: 25000,
   },
 
   'gemini-1.5-pro': {
@@ -916,8 +279,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'google',
     tier: 'cloud',
     contextWindow: 1000000,
-    maxOutputTokens: 8192,  // 8k for complex full apps
-    idealTemperature: 0.85,  // High creativity for colorful UI designs
+    maxOutputTokens: 8192,
+    idealTemperature: 0.85,
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: true,
@@ -925,59 +288,40 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     strengths: ['enormous context window (1M tokens)', 'vision/multimodal', 'strong code'],
     weaknesses: ['slower than GPT-4o on straight code generation tasks'],
     promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,  // Reduced for faster processing
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 75000,  // Optimized timeout
-  },
-
-  'gemini-2.0-flash': {
-    id: 'gemini-2.0-flash',
-    displayName: 'Gemini 2.0 Flash',
-    provider: 'google',
-    tier: 'cloud',
-    contextWindow: 128000,
-    maxOutputTokens: 4096,  // 4k for fast component generation
-    idealTemperature: 0.85,  // High creativity for colorful UI designs
-    supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: true,
-    streamingReliable: true,
-    strengths: ['fastest cloud model in the stack', 'cheap', 'ideal for thinking/intent phases'],
-    weaknesses: ['less design nuance than GPT-4o or Claude Sonnet'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 4000,  // Reduced for faster processing
-    needsExplicitImports: false,
-    needsOutputWrapper: false,
-    extractionStrategy: 'fence',
-    repairPriority: 'rules-only',
-    timeoutMs: 25000,  // Fast timeout for quick responses
-  },
-
-  'deepseek-chat': {
-    id: 'deepseek-chat',
-    displayName: 'DeepSeek Chat',
-    provider: 'deepseek',
-    tier: 'cloud',
-    contextWindow: 64000,
-    maxOutputTokens: 8000,
-    idealTemperature: 0.4,
-    supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: true,
-    streamingReliable: true,
-    strengths: ['very cheap', 'excellent code quality', 'near-GPT4 performance on code tasks'],
-    weaknesses: ['design aesthetics weaker than GPT-4o', 'API can be slower than OpenAI'],
-    promptStrategy: 'freeform',
     maxBlueprintTokens: 6000,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 90000,
+    timeoutMs: 75000,
   },
+
+  'gemini-1.5-flash': {
+    id: 'gemini-1.5-flash',
+    displayName: 'Gemini 1.5 Flash',
+    provider: 'google',
+    tier: 'cloud',
+    contextWindow: 1000000,
+    maxOutputTokens: 4096,
+    idealTemperature: 0.85,
+    supportsSystemPrompt: true,
+    supportsToolCalls: true,
+    supportsJsonMode: true,
+    streamingReliable: true,
+    strengths: ['fast and cheap', '1M context window', 'good for classification/thinking'],
+    weaknesses: ['less creative than GPT-4o for complex UI'],
+    promptStrategy: 'freeform',
+    maxBlueprintTokens: 4000,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 30000,
+  },
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // GROQ  (Llama 3.3 70B, Mixtral, Gemma2 — via OpenAI-compatible API)
+  // ══════════════════════════════════════════════════════════════════════════
 
   'llama-3.3-70b-versatile': {
     id: 'llama-3.3-70b-versatile',
@@ -985,8 +329,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     provider: 'groq',
     tier: 'cloud',
     contextWindow: 32768,
-    maxOutputTokens: 4096,  // 4k optimal for fast inference
-    idealTemperature: 0.75,  // Good creativity for UI designs
+    maxOutputTokens: 4096,
+    idealTemperature: 0.75,
     supportsSystemPrompt: true,
     supportsToolCalls: true,
     supportsJsonMode: false,
@@ -998,35 +342,58 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     ],
     weaknesses: ['smaller context than paid cloud providers', 'design instincts weaker than GPT-4o'],
     promptStrategy: 'guided-freeform',
-    maxBlueprintTokens: 3000,  // Reduced for faster processing
+    maxBlueprintTokens: 3000,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 25000,  // Fast timeout for Groq speed
+    timeoutMs: 25000,
   },
 
-  'mistral-large-latest': {
-    id: 'mistral-large-latest',
-    displayName: 'Mistral Large',
-    provider: 'mistral',
+  'mixtral-8x7b-32768': {
+    id: 'mixtral-8x7b-32768',
+    displayName: 'Mixtral 8x7B (Groq)',
+    provider: 'groq',
     tier: 'cloud',
     contextWindow: 32768,
     maxOutputTokens: 4096,
-    idealTemperature: 0.5,
+    idealTemperature: 0.7,
     supportsSystemPrompt: true,
-    supportsToolCalls: true,
-    supportsJsonMode: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
     streamingReliable: true,
-    strengths: ['strong code', 'European data residency option', 'reliable structure'],
-    weaknesses: ['design instincts slightly below GPT-4o'],
-    promptStrategy: 'freeform',
-    maxBlueprintTokens: 6000,
+    strengths: ['fast MoE inference via Groq', 'large 32K context', 'free tier'],
+    weaknesses: ['weaker code quality than Llama 3.3 70B', 'no JSON mode'],
+    promptStrategy: 'guided-freeform',
+    maxBlueprintTokens: 2500,
     needsExplicitImports: false,
     needsOutputWrapper: false,
     extractionStrategy: 'fence',
     repairPriority: 'rules-only',
-    timeoutMs: 60000,
+    timeoutMs: 25000,
+  },
+
+  'gemma2-9b-it': {
+    id: 'gemma2-9b-it',
+    displayName: 'Gemma 2 9B (Groq)',
+    provider: 'groq',
+    tier: 'cloud',
+    contextWindow: 8192,
+    maxOutputTokens: 2048,
+    idealTemperature: 0.7,
+    supportsSystemPrompt: true,
+    supportsToolCalls: false,
+    supportsJsonMode: false,
+    streamingReliable: true,
+    strengths: ['fast 9B model via Groq', 'free tier', 'good instruction following'],
+    weaknesses: ['small context window', 'weaker on complex UI generation'],
+    promptStrategy: 'guided-freeform',
+    maxBlueprintTokens: 1500,
+    needsExplicitImports: false,
+    needsOutputWrapper: false,
+    extractionStrategy: 'fence',
+    repairPriority: 'rules-only',
+    timeoutMs: 20000,
   },
 };
 
@@ -1038,10 +405,10 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
  * Resolution order:
  * 1. Exact match (e.g. "gpt-4o-mini")
  * 2. Partial match — registry key contained in the provided modelId
- *    (e.g. "phi3:mini" → "phi3", "deepseek-coder:6.7b-instruct" → "deepseek-coder:6.7b")
+ *    (e.g. "gpt-4o-2024-05-13" → "gpt-4o")
  * 3. null — caller must fall back to cloud defaults
  *
- * @param modelId  Any model identifier string (adapter-style, Ollama tag, etc.)
+ * @param modelId  Any model identifier string
  */
 export function getModelProfile(modelId: string): ModelCapabilityProfile | null {
   if (!modelId) return null;
@@ -1057,29 +424,6 @@ export function getModelProfile(modelId: string): ModelCapabilityProfile | null 
 
   const partial = Object.keys(MODEL_REGISTRY).find(k => lower.includes(k.toLowerCase()));
   if (partial) return MODEL_REGISTRY[partial];
-
-  // Provider-aware fallback for unregistered models:
-  // Claude models must NOT inherit GPT-4o's supportsToolCalls:true since the
-  // AnthropicAdapter uses the native /v1/messages API which has a different tool schema.
-  if (lower.includes('claude')) {
-    return {
-      ...MODEL_REGISTRY['claude-3-5-sonnet-20241022'],
-      id: modelId,
-      displayName: modelId,
-    };
-  }
-
-  // HuggingFace Meta Llama fallback: any unregistered meta-llama/* model is treated
-  // as small-tier with a conservative 2048-token output cap to avoid context overflow.
-  // HuggingFace models have strict total context limits; requesting 5000+ output tokens
-  // when the prompt already uses 3000-5000 tokens causes HTTP 400.
-  if (lower.includes('meta-llama/') || lower.includes('llama-3')) {
-    return {
-      ...MODEL_REGISTRY['meta-llama/Meta-Llama-3-8B-Instruct'],
-      id: modelId,
-      displayName: modelId,
-    };
-  }
 
   return null;
 }
@@ -1107,28 +451,13 @@ export function getCloudFallbackProfile(): ModelCapabilityProfile {
 export function getFastModelForProvider(provider: string | undefined): string | undefined {
   if (!provider) return undefined;
 
-  // BUG-07 FIX: Local providers have no registry entries — callers must use
-  // whatever model the user explicitly configured, so return undefined here.
-  if (provider === 'ollama' || provider === 'lmstudio') return undefined;
-
   const models = Object.values(MODEL_REGISTRY).filter(m => m.provider === provider);
   if (models.length === 0) return undefined;
 
-  // 1. Try to find a local 'tiny' model
-  const tiny = models.find(m => m.tier === 'tiny');
-  if (tiny) return tiny.id;
-
-  // 2. Try to find a local 'small' model
-  const smallModels = models.filter(m => m.tier === 'small');
-  if (smallModels.length > 0) {
-    const preferred = smallModels.find(m => m.id.includes('8b') || m.id.includes('mini') || m.id.includes('mistral'));
-    return preferred ? preferred.id : smallModels[0].id;
-  }
-
-  // 3. For cloud providers, look for explicitly cheap keywords
-  const fastCloud = models.find(m => 
-    m.tier === 'cloud' && 
-    (m.id.includes('mini') || m.id.includes('haiku') || m.id.includes('flash') || m.id.includes('instant') || m.id.includes('8b'))
+  // For cloud providers, look for explicitly cheap/fast keywords
+  const fastCloud = models.find(m =>
+    m.tier === 'cloud' &&
+    (m.id.includes('mini') || m.id.includes('flash') || m.id.includes('9b'))
   );
   if (fastCloud) return fastCloud.id;
 

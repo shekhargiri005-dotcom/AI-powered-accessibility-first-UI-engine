@@ -12,7 +12,7 @@ import { z } from 'zod';
  * This interface only accepts provider and model identifiers.
  */
 export interface ReviewerAdapterOverride {
-  /** Provider id (e.g. 'groq', 'anthropic', 'google') */
+  /** Provider id (e.g. 'groq', 'google') */
   provider?: string;
   /** The explicit model ID supplied by the user */
   model?: string;

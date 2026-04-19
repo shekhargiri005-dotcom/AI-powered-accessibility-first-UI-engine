@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const msg = error instanceof Error ? error.message : String(error);
     reqLogger.error('Chunk generation failed', error, {
       errorMessage: msg,
-      isOpenAIError: msg.includes('status code') && !msg.includes('AnthropicAdapter'),
+      isOpenAIError: msg.includes('status code'),
     });
     
     // Check for configuration errors and return appropriate status

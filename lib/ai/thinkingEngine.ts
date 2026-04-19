@@ -116,44 +116,210 @@ function repairTruncatedJson(raw: string): string {
 // ─── Fallback Plan Builder ───────────────────────────────────────────────────
 
 /**
- * Build a deterministic fallback ThinkingPlan from the raw prompt and intent.
- * Used when the AI model fails to produce valid JSON (local models, timeouts).
- * Never calls an LLM — instant and always succeeds.
+ * Build an intelligent fallback ThinkingPlan from the raw prompt and intent.
+ * Uses the blueprint engine + layout registry to extract real structural insights
+ * even without an LLM call. Produces prompt-specific analysis, not generic boilerplate.
  */
 export function buildFallbackPlan(prompt: string, intentType: IntentType): ThinkingPlan {
-  const blueprint = selectBlueprint(prompt.substring(0, 500));
+  const sanitized = prompt.substring(0, 500);
+  const lower = sanitized.toLowerCase();
   const shouldGenerate = ['ui_generation', 'ui_refinement', 'debug_fix'].includes(intentType);
-  const executionMode = intentType === 'ui_refinement' ? 'Edit Existing UI' : 'Generate New UI';
+  const isRefinement = intentType === 'ui_refinement';
+  const isDebug = intentType === 'debug_fix';
+  const isProductReq = intentType === 'product_requirement';
+  const isIdeation = intentType === 'ideation';
+
+  // ─── Blueprint + Layout intelligence ─────────────────────────────────────
+  const blueprint = selectBlueprint(sanitized);
+  const matchedLayouts = findMatchingLayouts(sanitized, 2);
+  const primaryLayout = matchedLayouts[0];
+
+  // ─── Derive prompt-specific summary ─────────────────────────────────────
+  const layoutLabel = primaryLayout ? primaryLayout.name : 'Custom UI';
+  const styleLabel = blueprint.visualStyle;
+  let summary: string;
+  if (isRefinement) {
+    summary = `Refining the existing ${layoutLabel} — ${sanitized.substring(0, 150)}`;
+  } else if (isDebug) {
+    summary = `Debugging UI issue: ${sanitized.substring(0, 150)}`;
+  } else if (isProductReq) {
+    summary = `Structuring product requirements for a ${layoutLabel} — ${sanitized.substring(0, 120)}`;
+  } else {
+    summary = `Building a ${styleLabel} ${layoutLabel} — ${sanitized.substring(0, 120)}`;
+  }
+
+  // ─── Derive prompt-specific planned approach ────────────────────────────
+  const plannedApproach: string[] = [];
+
+  if (isDebug) {
+    plannedApproach.push(
+      'Identify the reported UI issue from the prompt and existing code',
+      'Analyse the component structure for layout, state, or styling bugs',
+      'Apply targeted fix while preserving existing functionality',
+      'Validate the fix renders correctly and meets WCAG AA standards',
+    );
+  } else if (isRefinement) {
+    plannedApproach.push(
+      `Analyse the existing ${layoutLabel} and identify what needs to change`,
+      'Map the refinement request to specific component modifications',
+      'Update styles, layout, and interactions while maintaining structure',
+      'Validate the refined UI meets accessibility and visual standards',
+    );
+  } else {
+    // ui_generation / product_requirement / ideation
+    if (primaryLayout) {
+      plannedApproach.push(
+        `Set up ${layoutLabel} structure with ${blueprint.structuralSections.slice(0, 4).join(', ')}`,
+      );
+    } else {
+      plannedApproach.push('Analyse the request and identify required UI components');
+    }
+
+    if (blueprint.requiredComponents.length > 0) {
+      plannedApproach.push(
+        `Implement required components: ${blueprint.requiredComponents.slice(0, 4).join(', ')}`,
+      );
+    } else {
+      plannedApproach.push('Select appropriate layout and visual components');
+    }
+
+    plannedApproach.push(
+      `Apply ${styleLabel} visual style with ${blueprint.animationDensity} animations`,
+      'Generate accessible, production-ready React + Tailwind code',
+    );
+
+    if (shouldGenerate) {
+      plannedApproach.push('Run WCAG 2.1 AA validation and auto-repair if needed');
+    }
+  }
+
+  // ─── Derive affected scope ──────────────────────────────────────────────
+  const componentName = extractComponentName(sanitized);
+  const affectedScope = isRefinement
+    ? [`${componentName}.tsx`, 'styles']
+    : [`${componentName}.tsx`];
+
+  // ─── Derive clarification opportunities ─────────────────────────────────
+  const clarifications: string[] = [];
+  if (!lower.includes('color') && !lower.includes('theme') && !lower.includes('dark') && !lower.includes('light')) {
+    clarifications.push('Should this use a dark or light theme, or support both?');
+  }
+  if (lower.includes('dashboard') && !lower.includes('data') && !lower.includes('chart') && !lower.includes('metric')) {
+    clarifications.push('What kind of data or metrics should the dashboard display?');
+  }
+  if (lower.includes('form') && !lower.includes('field') && !lower.includes('input') && !lower.includes('validation')) {
+    clarifications.push('What fields should the form include, and what validation rules apply?');
+  }
+  if (lower.includes('page') && !lower.includes('section') && !lower.includes('layout') && !lower.includes('responsive')) {
+    clarifications.push('Should this be a single-page or multi-page layout?');
+  }
+  if (lower.includes('app') && !lower.includes('navigation') && !lower.includes('sidebar') && !lower.includes('router')) {
+    clarifications.push('How should navigation work — sidebar, tabs, or top nav?');
+  }
+  // Max 3 clarifications
+  const clarificationOpportunities = clarifications.slice(0, 3);
+
+  // ─── Derive execution mode ──────────────────────────────────────────────
+  const executionModeMap: Record<string, ThinkingPlan['executionMode']> = {
+    ui_generation: 'Generate New UI',
+    ui_refinement: 'Edit Existing UI',
+    product_requirement: 'Structure Requirements',
+    ideation: 'Ideation Response',
+    debug_fix: 'Debug UI',
+    context_clarification: 'Improve Design',
+  };
+
+  // ─── Derive expert reasoning ────────────────────────────────────────────
+  const purposeMap: Record<string, string> = {
+    dashboard: 'Data monitoring and decision-making',
+    saas: 'Productivity and workflow management',
+    ecommerce: 'Product discovery and purchase',
+    auth: 'User authentication and onboarding',
+    fintech: 'Financial tracking and transactions',
+    social: 'Communication and content sharing',
+  };
+  const purpose = primaryLayout ? (purposeMap[primaryLayout.category] || `${primaryLayout.name} interface`) : 'General UI Generation';
+
+  const infoDensityMap: Record<string, string> = {
+    dashboard: 'Data-heavy',
+    analytics: 'Data-heavy',
+    admin: 'Data-heavy',
+    auth: 'Simple & focused',
+    landing: 'Visual & sparse',
+    portfolio: 'Visual & sparse',
+  };
+  const informationDensity = primaryLayout ? (infoDensityMap[primaryLayout.category] || 'Medium') : 'Medium';
+
+  const interactionMap: Record<string, string> = {
+    dashboard: 'Click, filter, inspect',
+    saas: 'Click, drag, type',
+    ecommerce: 'Browse, click, checkout',
+    social: 'Scroll, interact, compose',
+    auth: 'Type, submit',
+  };
+  const interactionModel = primaryLayout ? (interactionMap[primaryLayout.category] || 'Standard Web') : 'Standard Web';
+
+  // ─── Build requirement breakdown (only for product_requirement / ideation) ──
+  const requirementBreakdown = (isProductReq || isIdeation) ? {
+    productSummary: summary,
+    coreFeatures: blueprint.structuralSections.slice(0, 5),
+    userFlow: [`Open ${componentName}`, ...blueprint.structuralSections.slice(1, 4).map(s => `Interact with ${s}`), 'Complete task'],
+    uiSections: blueprint.structuralSections,
+    designStyle: styleLabel,
+    targetAudience: primaryLayout?.bestFitScenarios[0] || 'General users',
+    uxPriorities: ['Accessibility (WCAG 2.1 AA)', 'Responsive design', 'Fast load time'],
+    componentSuggestions: [...blueprint.requiredComponents, ...blueprint.suggestedComponents.slice(0, 3)],
+  } : undefined;
 
   return {
     detectedIntent: intentType,
-    summary: prompt.substring(0, 200),
-    plannedApproach: [
-      'Analyse the request and identify required UI components',
-      'Select an appropriate layout and visual style',
-      'Generate accessible, production-ready React + Tailwind code',
-      'Run validation and auto-repair if needed',
-    ],
-    affectedScope: ['GeneratedComponent.tsx'],
-    clarificationOpportunities: [],
-    executionMode: executionMode as ThinkingPlan['executionMode'],
-    suggestedMode: 'component',
+    summary,
+    plannedApproach,
+    affectedScope,
+    clarificationOpportunities,
+    executionMode: executionModeMap[intentType] || 'Generate New UI',
+    suggestedMode: primaryLayout?.category === 'dashboard' || primaryLayout?.category === 'saas' ? 'app' : 'component',
     shouldGenerateCode: shouldGenerate,
     expertReasoning: {
-      purpose: 'General UI Generation',
-      userType: 'Developer',
-      informationDensity: 'Medium',
-      interactionModel: 'Standard Web',
-      visualTone: 'Clean & Modern',
-      motionStrategy: 'Subtle',
-      renderingStrategy: 'React + Tailwind CSS',
-      componentArchitecture: 'Modular functional components',
-      usabilityCheck: 'Maintain visual hierarchy and spacing rhythm',
+      purpose,
+      userType: 'Developer / End User',
+      informationDensity,
+      interactionModel,
+      visualTone: styleLabel.charAt(0).toUpperCase() + styleLabel.slice(1).replace(/-/g, ' '),
+      motionStrategy: blueprint.animationDensity.charAt(0).toUpperCase() + blueprint.animationDensity.slice(1),
+      renderingStrategy: blueprint.motionLibrary ? `React + Tailwind + ${blueprint.motionLibrary}` : 'React + Tailwind CSS',
+      componentArchitecture: blueprint.requiredComponents.length > 0
+        ? `Modular: ${blueprint.requiredComponents.slice(0, 3).join(', ')}`
+        : 'Modular functional components',
+      usabilityCheck: 'Maintain visual hierarchy, spacing rhythm, and 4.5:1 contrast',
     },
     likelySections: blueprint.structuralSections.length > 0
       ? blueprint.structuralSections
       : ['Header', 'Main Content', 'Footer'],
+    requirementBreakdown,
   };
+}
+
+/**
+ * Extract a PascalCase component name from the user prompt.
+ * Looks for quoted names, capitalized words, or falls back to "GeneratedComponent".
+ */
+function extractComponentName(prompt: string): string {
+  // Check for quoted name: 'PulseBoard', "MyApp"
+  const quotedMatch = prompt.match(/['"]([A-Z][A-Za-z0-9]+)['"]/);
+  if (quotedMatch) return quotedMatch[1];
+
+  // Check for "called X" or "named X" pattern
+  const calledMatch = prompt.match(/(?:called|named)\s+([A-Z][A-Za-z0-9]+)/i);
+  if (calledMatch) return calledMatch[1];
+
+  // Check for first capitalized word that looks like a name
+  const capMatch = prompt.match(/\b([A-Z][a-z]+(?:[A-Z][a-z]+)*)\b/);
+  if (capMatch && !['Build', 'Create', 'Design', 'Generate', 'Make', 'Develop', 'Implement'].includes(capMatch[1])) {
+    return capMatch[1];
+  }
+
+  return 'GeneratedComponent';
 }
 
 // ─── Thinking Engine Function ─────────────────────────────────────────────────

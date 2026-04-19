@@ -3,15 +3,13 @@
  * Provider-agnostic env-based adapter config resolver.
  *
  * Checks supported provider API keys in priority order and returns
- * the first available AdapterConfig. Works with OpenAI, Anthropic,
- * Google, or Groq.
+ * the first available AdapterConfig. Works with OpenAI, Google, or Groq.
  *
  * Priority order (by capability tier and cost efficiency):
  *  1. Purpose-specific env override (e.g. INTENT_MODEL / INTENT_PROVIDER / INTENT_API_KEY)
  *  2. Groq        (fast, generous free-tier — ideal for CLASSIFIER/REVIEW/REPAIR)
  *  3. Google Gemini
- *  4. Anthropic
- *  5. OpenAI      (deprioritized — quota exhausts easily on free/trial keys)
+ *  4. OpenAI      (deprioritized — quota exhausts easily on free/trial keys)
  */
 
 import type { AdapterConfig } from './adapters/index';
@@ -28,14 +26,13 @@ export type AdapterPurpose =
   | 'REVIEW'       // UI critique     (uiReviewer)
   | 'REPAIR';      // UI repair       (uiReviewer)
 
-/** Default model names per provider for each purpose tier */
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  GENERATION: { openai: 'gpt-4o',      anthropic: 'claude-3-5-sonnet-20241022', google: 'gemini-1.5-pro', groq: 'llama-3.3-70b-versatile' },
-  THINKING:   { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  REVIEW:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  REPAIR:     { openai: 'gpt-4o-mini', anthropic: 'claude-3-haiku-20240307', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  INTENT:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  GENERATION: { openai: 'gpt-4o',      google: 'gemini-1.5-pro',   groq: 'llama-3.3-70b-versatile' },
+  THINKING:   { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  REVIEW:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  REPAIR:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
 };
 
 /** Ordered provider detection list — first one with an env key wins. */
@@ -47,7 +44,6 @@ const PROVIDER_CHECKS: Array<{
   { id: 'groq',        envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
   { id: 'google',      envKey: 'GOOGLE_API_KEY' },
   { id: 'google',      envKey: 'GEMINI_API_KEY' },
-  { id: 'anthropic',   envKey: 'ANTHROPIC_API_KEY' },
 
   // OpenAI last — free/trial keys exhaust quota quickly
   { id: 'openai',      envKey: 'OPENAI_API_KEY' },
@@ -136,7 +132,6 @@ export function resolveDefaultAdapter(purpose: AdapterPurpose): AdapterConfig {
 export function resolveApiKeyForProvider(provider: string): string | undefined {
   const map: Record<string, string[]> = {
     openai:     ['OPENAI_API_KEY'],
-    anthropic:  ['ANTHROPIC_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
   };

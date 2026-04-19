@@ -49,7 +49,7 @@ const FEATURES = [
     icon: <Cpu className="w-4 h-4" />,
     color: 'from-violet-500/20 to-purple-500/20 border-violet-500/30 text-violet-400',
     label: 'Any LLM Provider',
-    desc: 'OpenAI, Anthropic, Google, Groq, Ollama — all provider-agnostic.',
+    desc: 'OpenAI, Google, Groq — all provider-agnostic.',
   },
 ];
 

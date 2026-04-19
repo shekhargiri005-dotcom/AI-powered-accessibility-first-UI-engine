@@ -9,10 +9,8 @@ import {
 
 const PROVIDER_INFO = [
   { id: 'openai', name: 'OpenAI', color: 'text-emerald-400', bgColor: 'bg-emerald-500/20', models: 'GPT-4o, GPT-4o-mini' },
-  { id: 'anthropic', name: 'Anthropic', color: 'text-amber-400', bgColor: 'bg-amber-500/20', models: 'Claude 3.5 Sonnet' },
-  { id: 'google', name: 'Google Gemini', color: 'text-blue-400', bgColor: 'bg-blue-500/20', models: 'Gemini 2.0 Flash' },
-  { id: 'groq', name: 'Groq', color: 'text-orange-400', bgColor: 'bg-orange-500/20', models: 'Llama 3.3 70B' },
-  { id: 'ollama', name: 'Ollama', color: 'text-gray-400', bgColor: 'bg-gray-500/20', models: 'Local models' },
+  { id: 'google', name: 'Google Gemini', color: 'text-blue-400', bgColor: 'bg-blue-500/20', models: 'Gemini 2.0 Flash, 1.5 Pro' },
+  { id: 'groq', name: 'Groq', color: 'text-orange-400', bgColor: 'bg-orange-500/20', models: 'Llama 3.3 70B, Mixtral' },
 ];
 
 interface WorkspaceSettingsPanelProps {

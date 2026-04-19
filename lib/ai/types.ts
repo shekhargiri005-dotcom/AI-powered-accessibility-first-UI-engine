@@ -15,7 +15,7 @@ export interface Message {
 // ─── AI Engine Config ─────────────────────────────────────────────────────────
 
 export interface AIEngineConfig {
-  provider: string;       // provider id ('openai' | 'anthropic' | 'groq' | 'ollama' etc.)
+  provider: string;       // provider id ('openai' | 'google' | 'groq')
   providerName: string;   // Display name
   model: string;          // Exact model name
   apiKey: string;         // Masked key indicator ('••••') - NEVER the real key
@@ -78,11 +78,8 @@ export interface StreamChunk {
 
 export type ProviderName =
   | 'openai'
-  | 'ollama'
-  | 'anthropic'
   | 'google'
   | 'groq'
-  | 'mock'
   | 'unconfigured';
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
@@ -96,15 +93,9 @@ export const PROVIDER_PRICING: Record<string, ModelPricingEntry> = {
   'gpt-4o':           { inputPer1kUsd: 0.005,    outputPer1kUsd: 0.015   },
   'gpt-4o-mini':      { inputPer1kUsd: 0.00015,  outputPer1kUsd: 0.0006  },
   'gpt-4-turbo':      { inputPer1kUsd: 0.01,     outputPer1kUsd: 0.03    },
-  'gpt-3.5-turbo':    { inputPer1kUsd: 0.0005,   outputPer1kUsd: 0.0015  },
-  'claude-3-opus':    { inputPer1kUsd: 0.015,    outputPer1kUsd: 0.075   },
-  'claude-3-sonnet':  { inputPer1kUsd: 0.003,    outputPer1kUsd: 0.015   },
-  'claude-3-haiku':   { inputPer1kUsd: 0.00025,  outputPer1kUsd: 0.00125 },
-  'claude-3-5-sonnet':{ inputPer1kUsd: 0.003,    outputPer1kUsd: 0.015   },
   'gemini-2.0-flash': { inputPer1kUsd: 0.0001,   outputPer1kUsd: 0.0004  },
   'gemini-1.5-pro':   { inputPer1kUsd: 0.0035,   outputPer1kUsd: 0.0105  },
-  'gemini-1.5-flash': { inputPer1kUsd: 0.00035,  outputPer1kUsd: 0.00105 },
-  'ollama':           { inputPer1kUsd: 0,         outputPer1kUsd: 0       },
+  'gemini-1.5-flash': { inputPer1kUsd: 0.00035,  outputPer1kUsd: 0.00105  },
 };
 
 export function costEstimateUsd(

@@ -2,7 +2,7 @@
  * @file tools.ts
  * Unified tool / function-calling types for the AI adapter layer.
  *
- * All providers (OpenAI, Ollama, Anthropic, DeepSeek) have their own
+ * All providers (OpenAI, Google, Groq) have their own
  * proprietary JSON shapes for tools. This module defines a single,
  * canonical schema that the rest of the application uses. Each adapter
  * is responsible for converting to/from the provider-specific format.

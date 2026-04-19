@@ -7,8 +7,8 @@
  * The engine uses EXACTLY what the user configured. On error → surface it clearly.
  * No silent fallbacks. No mock adapters. No hidden defaults.
  *
- * Supported adapters (4 providers):
- *   Cloud: OpenAIAdapter, AnthropicAdapter, GoogleAdapter, Groq (OpenAI-compatible)
+ * Supported adapters (3 providers):
+ *   Cloud: OpenAIAdapter, GoogleAdapter, Groq (OpenAI-compatible)
  */
 
 import 'server-only';
@@ -16,7 +16,6 @@ import 'server-only';
 import type { AIAdapter } from './base';
 import type { ProviderName } from '../types';
 import { OpenAIAdapter }    from './openai';
-import { AnthropicAdapter } from './anthropic';
 import { GoogleAdapter }    from './google';
 import { UnconfiguredAdapter } from './unconfigured';
 import { getCache, generateCacheKey } from '../cache';
@@ -52,13 +51,10 @@ const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
  */
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
-  if (m.includes('claude'))                        return 'anthropic';
   if (m.includes('gemini'))                        return 'google';
   if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
   // Groq hosted models — serve via OpenAI-compat adapter
   if (m.includes('llama') || m.includes('mixtral') || m.includes('gemma2')) return 'groq';
-  // Ollama local models
-  if (m.includes('ollama') || m.includes('local')) return 'ollama';
   return 'openai'; // default to openai for unknown models
 }
 
@@ -148,7 +144,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
   const apiKey = cfg.apiKey;
 
   // 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
-  const namedProviders = ['openai', 'anthropic', 'google', 'ollama'];
+  const namedProviders = ['openai', 'google'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
   const isCompat  = !!compatUrl && !namedProviders.includes(provId);
   if (isCompat) {
@@ -169,12 +165,6 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
       const key = apiKey || process.env.OPENAI_API_KEY;
       if (!key) throw new ConfigurationError('openai', 'OpenAI API key required. Add it in the AI Engine Config panel.');
       adapter = new OpenAIAdapter(key, baseUrl);
-      break;
-    }
-    case 'anthropic': {
-      const key = apiKey || process.env.ANTHROPIC_API_KEY;
-      if (!key) throw new ConfigurationError('anthropic', 'Anthropic API key required. Add it in the AI Engine Config panel.');
-      adapter = new AnthropicAdapter(key);
       break;
     }
     case 'google': {
@@ -205,7 +195,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
  *   2. Env Check: If DB has no key, look up process.env[PROVIDER_ID_API_KEY]
  *   3. Failure: If both missing, throw ConfigurationError or return UnconfiguredAdapter
  *
- * @param providerId - The provider identifier (e.g., 'openai', 'anthropic')
+ * @param providerId - The provider identifier (e.g., 'openai', 'google', 'groq')
  * @param modelId - The model identifier (e.g., 'gpt-4o')
  * @param workspaceId - The workspace ID for credential lookup
  * @param userId - Optional user ID for authorization
@@ -233,7 +223,7 @@ export async function getWorkspaceAdapter(
 
   // 2. Env Check: Fall back to environment variables
   // Each provider has its own API key env var:
-  //   OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY
+  //   OPENAI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY
   
   // Check provider-specific key
   const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`];
@@ -245,7 +235,6 @@ export async function getWorkspaceAdapter(
   // Provider-specific env var fallbacks (with GEMINI_API_KEY for Google)
   const providerEnvMap: Record<string, string | undefined> = {
     openai: process.env.OPENAI_API_KEY,
-    anthropic: process.env.ANTHROPIC_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
   };
@@ -285,9 +274,7 @@ export function getAdapter(cfg: AdapterConfig | string, legacyKey?: string): AIA
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
 export { OpenAIAdapter }    from './openai';
-export { AnthropicAdapter } from './anthropic';
 export { GoogleAdapter }    from './google';
-export { OllamaAdapter }    from './ollama';
 export { UnconfiguredAdapter } from './unconfigured';
 
 export type { AIAdapter } from './base';

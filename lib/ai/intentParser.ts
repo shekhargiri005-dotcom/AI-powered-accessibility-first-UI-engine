@@ -123,11 +123,11 @@ export async function parseIntent(
 
     // Look up model capacity — governs whether JSON mode is safe to enable.
     // Models like deepseek-coder report supportsJsonMode: false; we skip it for them.
-    // Additionally, Ollama requires the word "json" in the system prompt when JSON mode is enabled.
+    // Ensure the system prompt contains the word "json" when JSON mode is enabled.
     const modelProfile = getModelProfile(modelId);
     const useJsonMode = modelProfile?.supportsJsonMode !== false;
 
-    // Ensure the system prompt contains the word "json" — required by Ollama when using JSON mode.
+    // Ensure the system prompt contains the word "json" when using JSON mode.
     // This is a no-op for cloud models that ignore it.
     const effectiveSystemPrompt = useJsonMode && !systemPrompt.toLowerCase().includes('json')
       ? `Respond with valid JSON only.\n\n${systemPrompt}`

@@ -45,20 +45,15 @@ export class OpenAIAdapter implements AIAdapter {
 
   constructor(apiKey?: string, baseURL?: string) {
     let finalBaseUrl = baseURL ?? '';
-    // Auto-migrate away from deprecated Hugging Face endpoints
-    if (finalBaseUrl.includes('api-inference.huggingface.co')) {
-      finalBaseUrl = 'https://router.huggingface.co/hf-inference/v1';
-    }
 
     this.client = new OpenAI({
       apiKey: apiKey ?? process.env.OPENAI_API_KEY,
       ...(finalBaseUrl ? { baseURL: finalBaseUrl } : {}),
     });
 
-    // Cache flags once — never read this.client.baseURL at call time
     this.effectiveBaseURL = finalBaseUrl;
     this.isAggregator     = finalBaseUrl.includes('openrouter.ai') || finalBaseUrl.includes('together.xyz');
-    this.isHuggingFace    = finalBaseUrl.includes('huggingface.co');
+    this.isHuggingFace    = false;
   }
 
   async generate(options: GenerateOptions): Promise<GenerateResult> {

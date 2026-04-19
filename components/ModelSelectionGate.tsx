@@ -56,10 +56,8 @@ type GateStep = 'loading' | 'provider' | 'confirm' | 'error';
 // Icon mapping for providers
 const PROVIDER_ICONS: Record<string, React.ReactNode> = {
   openai: <Sparkles className="w-8 h-8" />,
-  anthropic: <Cpu className="w-8 h-8" />,
   google: <Globe className="w-8 h-8" />,
   groq: <Zap className="w-8 h-8" />,
-  ollama: <Server className="w-8 h-8" />,
 };
 
 // ─── Main Component ──────────────────────────────────────────────────────────
@@ -207,8 +205,8 @@ export default function ModelSelectionGate({
                   </ul>
                   <p className="text-xs text-gray-500 mt-2">Or use specific keys:</p>
                   <ul className="space-y-1 font-mono text-xs text-gray-500">
-                    <li>• OPENAI_API_KEY, ANTHROPIC_API_KEY</li>
-                    <li>• GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY</li>
+                    <li>• OPENAI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY</li>
+                    <li>• GEMINI_API_KEY (alias for Google)</li>
                   </ul>
                 </div>
               </div>
@@ -346,7 +344,7 @@ export default function ModelSelectionGate({
                 </p>
               </div>
 
-              <div className={`bg-gray-950 rounded-2xl p-6 text-left space-y-4 border ${selectedProvider.id === 'openai' ? 'border-emerald-500/20' : selectedProvider.id === 'anthropic' ? 'border-amber-500/20' : selectedProvider.id === 'google' ? 'border-blue-500/20' : selectedProvider.id === 'groq' ? 'border-orange-500/20' : 'border-violet-500/20'}`}>
+              <div className={`bg-gray-950 rounded-2xl p-6 text-left space-y-4 border ${selectedProvider.id === 'openai' ? 'border-emerald-500/20' : selectedProvider.id === 'google' ? 'border-blue-500/20' : selectedProvider.id === 'groq' ? 'border-orange-500/20' : 'border-gray-500/20'}`}>
                 {/* Provider with brand color */}
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Provider</span>
@@ -370,7 +368,7 @@ export default function ModelSelectionGate({
                         onClick={() => setSelectedModel(model)}
                         className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${
                           selectedModel === model
-                            ? `bg-gradient-to-r ${selectedProvider.gradient} text-white shadow-lg scale-105 ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/30' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/30' : selectedProvider.id === 'google' ? 'shadow-blue-500/30' : selectedProvider.id === 'groq' ? 'shadow-orange-500/30' : 'shadow-violet-500/30'}`
+                            ? `bg-gradient-to-r ${selectedProvider.gradient} text-white shadow-lg scale-105 ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/30' : selectedProvider.id === 'google' ? 'shadow-blue-500/30' : selectedProvider.id === 'groq' ? 'shadow-orange-500/30' : 'shadow-gray-500/30'}`
                             : `bg-gray-800 text-gray-400 hover:${selectedProvider.bgColor.replace('bg-', 'bg-').replace('-500', '-500/20')} hover:${selectedProvider.color} hover:scale-105`
                         }`}
                       >
@@ -429,7 +427,7 @@ export default function ModelSelectionGate({
                 <button
                   onClick={handleComplete}
                   disabled={isSaving}
-                  className={`flex-1 px-4 py-3 rounded-xl bg-gradient-to-r ${selectedProvider.gradient} text-white font-medium hover:scale-105 hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/25' : selectedProvider.id === 'anthropic' ? 'shadow-amber-500/25' : selectedProvider.id === 'google' ? 'shadow-blue-500/25' : selectedProvider.id === 'groq' ? 'shadow-orange-500/25' : 'shadow-violet-500/25'}`}
+                  className={`flex-1 px-4 py-3 rounded-xl bg-gradient-to-r ${selectedProvider.gradient} text-white font-medium hover:scale-105 hover:shadow-xl active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg ${selectedProvider.id === 'openai' ? 'shadow-emerald-500/25' : selectedProvider.id === 'google' ? 'shadow-blue-500/25' : selectedProvider.id === 'groq' ? 'shadow-orange-500/25' : 'shadow-gray-500/25'}`}
                 >
                   {isSaving ? (
                     <>

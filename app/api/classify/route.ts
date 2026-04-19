@@ -39,15 +39,9 @@ export async function POST(request: NextRequest) {
     const providerId = provider ? (provider as ProviderName) : undefined;
     const modelId = model || undefined;
 
-    // FREE-TIER FAST PATH: Skip LLM classify for free-tier providers.
-    // Google/Groq free tiers have ~15-30 RPM — classify is a "nice to have"
-    // that can be done locally, saving the API call for the actual generation.
-    const isFreeTierProvider = provider === 'google' || provider === 'groq';
-    if (isFreeTierProvider) {
-      const localResult = buildLocalClassification(prompt, hasActiveProject ?? false);
-      reqLogger.info('Free-tier provider detected — using local classification (no API call)', { provider });
-      return NextResponse.json({ success: true, classification: localResult, _fallback: true });
-    }
+    // NOTE: We no longer skip LLM classification for free-tier providers.
+    // Groq has generous rate limits for small payloads. We try the real LLM first,
+    // and fall back to local classification if the API call fails.
 
     reqLogger.info('Classifying prompt intent', { 
       hasActiveProject, 
@@ -68,11 +62,10 @@ export async function POST(request: NextRequest) {
     );
 
     if (!result.success) {
-      reqLogger.warn('Classification failed', { error: result.error });
-      return NextResponse.json(
-        { success: false, error: result.error },
-        { status: 400 }
-      );
+      reqLogger.warn('Classification failed — returning local fallback', { error: result.error });
+      // Never fail the pipeline — local classification is always available as fallback
+      const localResult = buildLocalClassification(prompt, hasActiveProject ?? false);
+      return NextResponse.json({ success: true, classification: localResult, _fallback: true });
     }
 
     reqLogger.info('Classification successful', { classificationItem: result.classification });

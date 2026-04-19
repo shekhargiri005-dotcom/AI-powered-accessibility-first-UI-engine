@@ -17,9 +17,8 @@ const DEFAULT_WORKSPACE = 'default';
 // Default test model per provider (lightweight / cheap)
 const PROVIDER_TEST_MODELS: Record<string, string> = {
   openai: 'gpt-4o-mini',
-  anthropic: 'claude-3-haiku-20240307',
-  deepseek: 'deepseek-chat',
   google: 'gemini-2.0-flash',
+  groq: 'llama-3.3-70b-versatile',
 };
 
 const postSchema = z.object({

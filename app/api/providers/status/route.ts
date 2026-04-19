@@ -31,13 +31,6 @@ export const PROVIDER_SETTINGS: Record<string, ProviderSettings> = {
     frequencyPenalty: 0.2,
     presencePenalty: 0.2,
   },
-  anthropic: {
-    // Claude 3.5 Sonnet: High temp for aesthetic components
-    // 8k tokens for complex full apps with animations
-    temperature: 0.8,
-    maxTokens: 8192,
-    topP: 0.95,
-  },
   google: {
     // Gemini 2.0 Flash: High creativity, 16k output capacity
     temperature: 0.85,
@@ -49,12 +42,6 @@ export const PROVIDER_SETTINGS: Record<string, ProviderSettings> = {
     temperature: 0.75,
     maxTokens: 8192,
     topP: 0.92,
-  },
-  ollama: {
-    // Ollama: Maximum creativity for local models
-    temperature: 0.9,
-    maxTokens: 4096,
-    topP: 0.95,
   },
 };
 
@@ -68,20 +55,10 @@ export const PROVIDER_CONFIG = [
     gradient: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30',
     bgColor: 'bg-emerald-500',
     envVar: 'OPENAI_API_KEY',
-    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'o3-mini'],
+    models: ['gpt-4o', 'gpt-4o-mini', 'o3-mini', 'o1-mini'],
     recommended: true,
     settings: PROVIDER_SETTINGS.openai,
-  },
-  {
-    id: 'anthropic',
-    name: 'Anthropic',
-    description: 'Claude 3.5 Sonnet, Claude 3 Opus',
-    color: 'text-amber-400',
-    gradient: 'from-amber-500/20 to-orange-500/20 border-amber-500/30',
-    bgColor: 'bg-amber-500',
-    envVar: 'ANTHROPIC_API_KEY',
-    models: ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229', 'claude-3-5-haiku-20241022'],
-    settings: PROVIDER_SETTINGS.anthropic,
+    healthEndpoint: 'https://api.openai.com/v1/models',
   },
   {
     id: 'google',
@@ -94,6 +71,7 @@ export const PROVIDER_CONFIG = [
     envVarAlt: 'GEMINI_API_KEY',
     models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
     settings: PROVIDER_SETTINGS.google,
+    healthEndpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/models',
   },
   {
     id: 'groq',
@@ -105,6 +83,7 @@ export const PROVIDER_CONFIG = [
     envVar: 'GROQ_API_KEY',
     models: ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768', 'gemma2-9b-it'],
     settings: PROVIDER_SETTINGS.groq,
+    healthEndpoint: 'https://api.groq.com/openai/v1/models',
   },
 ];
 
@@ -116,10 +95,39 @@ export interface ProviderStatus {
   gradient: string;
   bgColor: string;
   configured: boolean;
+  connected: boolean | null;  // null = not checked yet
   models: string[];
   recommended?: boolean;
   settings?: ProviderSettings;
   envVar?: string;
+}
+
+// ─── Connectivity Check ───────────────────────────────────────────────────────
+
+/**
+ * Pings a provider's /models endpoint with the API key to verify connectivity.
+ * Returns true if the provider responds with 200, false otherwise.
+ * Timeout: 5 seconds per provider.
+ */
+async function checkProviderConnectivity(
+  healthEndpoint: string,
+  apiKey: string,
+): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    const res = await fetch(healthEndpoint, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeout);
+    return res.ok;
+  } catch {
+    return false;
+  }
 }
 
 // ─── GET — return provider status (which ones have env vars configured) ───────
@@ -129,35 +137,24 @@ export async function GET() {
   unstable_noStore();
   
   try {
-    // Check which providers are available:
-    // Only individual provider keys (OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
-    // determine if a provider is configured.
-    // This ensures the UI only shows providers the user has real keys for.
-
-    const providers: ProviderStatus[] = PROVIDER_CONFIG.map((provider) => {
+    // Check which providers are available and their connectivity
+    const providerChecks = PROVIDER_CONFIG.map(async (provider) => {
       // Check if provider is configured via specific env var
-      let configured = false;
-      let debugInfo: Record<string, boolean> = {};
-      
-      // Check primary env var
       const primaryKey = provider.envVar ? process.env[provider.envVar] : undefined;
-      // Check alternate env var (for Google which has GEMINI_API_KEY as fallback)
       const altKey = 'envVarAlt' in provider && provider.envVarAlt 
         ? process.env[provider.envVarAlt] 
         : undefined;
       
-      // Provider is configured ONLY if its specific key exists
-      configured = !!(primaryKey || altKey);
+      const configured = !!(primaryKey || altKey);
+      const apiKey = primaryKey || altKey;
       
-      // Debug logging
-      if (provider.envVar) {
-        debugInfo[provider.envVar] = !!primaryKey;
+      // Check connectivity if configured
+      let connected: boolean | null = null;
+      if (configured && apiKey && provider.healthEndpoint) {
+        connected = await checkProviderConnectivity(provider.healthEndpoint, apiKey);
       }
-      if ('envVarAlt' in provider && provider.envVarAlt) {
-        debugInfo[provider.envVarAlt] = !!altKey;
-      }
-      debugInfo['configured'] = configured;
-      console.log(`[providers/status] ${provider.id}:`, debugInfo);
+
+      console.log(`[providers/status] ${provider.id}: configured=${configured}, connected=${connected}`);
 
       return {
         id: provider.id,
@@ -167,6 +164,7 @@ export async function GET() {
         gradient: provider.gradient,
         bgColor: provider.bgColor,
         configured,
+        connected,
         models: provider.models,
         recommended: provider.recommended,
         settings: provider.settings,
@@ -174,13 +172,16 @@ export async function GET() {
       };
     });
 
+    const providers = await Promise.all(providerChecks);
     const configuredCount = providers.filter(p => p.configured).length;
-    console.log(`[providers/status] Total configured: ${configuredCount}/${providers.length}`);
+    const connectedCount = providers.filter(p => p.connected === true).length;
+    console.log(`[providers/status] Configured: ${configuredCount}/${providers.length}, Connected: ${connectedCount}/${configuredCount}`);
 
     return NextResponse.json({
       success: true,
       providers,
       configuredCount,
+      connectedCount,
       // Debug info (only in development)
       ...(process.env.NODE_ENV === 'development' && {
         debug: {

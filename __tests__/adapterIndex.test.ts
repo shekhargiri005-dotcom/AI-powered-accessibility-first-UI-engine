@@ -3,11 +3,11 @@ describe('Adapter Index', () => {
   let indexModule: any;
 
   beforeEach(() => {
-    process.env.OPENAI_API_KEY    = 'sk-test';
-    process.env.ANTHROPIC_API_KEY = 'sk-ant-test';
-    process.env.DEEPSEEK_API_KEY  = 'sk-ds-test';
+    process.env.OPENAI_API_KEY = 'sk-test';
+    process.env.GOOGLE_API_KEY = 'ai-test';
+    process.env.GROQ_API_KEY  = 'gsk-test';
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    // eslint-disable-next-line @typescript-eslint/no-require-import
     indexModule = require('@/lib/ai/adapters/index');
     jest.clearAllMocks();
   });
@@ -15,9 +15,8 @@ describe('Adapter Index', () => {
   describe('resolveModelName', () => {
     it('should pass model names through verbatim', () => {
       expect(indexModule.resolveModelName('gpt-4o')).toBe('gpt-4o');
-      expect(indexModule.resolveModelName('claude-3-5-sonnet-20241022')).toBe('claude-3-5-sonnet-20241022');
-      expect(indexModule.resolveModelName('llama3')).toBe('llama3');
-      expect(indexModule.resolveModelName('some-future-model-v9')).toBe('some-future-model-v9');
+      expect(indexModule.resolveModelName('gemini-2.0-flash')).toBe('gemini-2.0-flash');
+      expect(indexModule.resolveModelName('llama-3.3-70b-versatile')).toBe('llama-3.3-70b-versatile');
     });
   });
 
@@ -27,21 +26,24 @@ describe('Adapter Index', () => {
       expect(indexModule.detectProvider('gpt-4-turbo')).toBe('openai');
     });
 
-    it('should detect anthropic for claude models', () => {
-      expect(indexModule.detectProvider('claude-3-5-sonnet')).toBe('anthropic');
+    it('should detect openai for o1/o3 reasoning models', () => {
+      expect(indexModule.detectProvider('o1-preview')).toBe('openai');
+      expect(indexModule.detectProvider('o3-mini')).toBe('openai');
     });
 
     it('should detect google for gemini models', () => {
+      expect(indexModule.detectProvider('gemini-2.0-flash')).toBe('google');
       expect(indexModule.detectProvider('gemini-1.5-pro')).toBe('google');
     });
 
-    it('should detect deepseek for deepseek models', () => {
-      expect(indexModule.detectProvider('deepseek-chat')).toBe('deepseek');
+    it('should detect groq for llama/mixtral/gemma2 models', () => {
+      expect(indexModule.detectProvider('llama-3.3-70b-versatile')).toBe('groq');
+      expect(indexModule.detectProvider('mixtral-8x7b-32768')).toBe('groq');
+      expect(indexModule.detectProvider('gemma2-9b-it')).toBe('groq');
     });
 
-    it('should default to ollama for unknown/local models', () => {
-      expect(indexModule.detectProvider('llama3')).toBe('ollama');
-      expect(indexModule.detectProvider('custom-local-model')).toBe('ollama');
+    it('should default to openai for unknown models', () => {
+      expect(indexModule.detectProvider('unknown-model')).toBe('openai');
     });
   });
 
@@ -49,16 +51,6 @@ describe('Adapter Index', () => {
     it('should return an OpenAI adapter for gpt models with env key', () => {
       const adapter = indexModule.getAdapter({ model: 'gpt-4o', provider: 'openai' });
       expect(adapter.provider).toBe('openai');
-    });
-
-    it('should return an Ollama adapter for local models (no key needed)', () => {
-      const adapter = indexModule.getAdapter({ model: 'llama3', provider: 'ollama' });
-      expect(adapter.provider).toBe('ollama');
-    });
-
-    it('should return a DeepSeek adapter for deepseek models with env key', () => {
-      const adapter = indexModule.getAdapter({ model: 'deepseek-chat', provider: 'deepseek' });
-      expect(adapter.provider).toBe('deepseek');
     });
 
     it('should throw when no API key is configured for a cloud provider', () => {
