@@ -80,6 +80,7 @@ export type ProviderName =
   | 'openai'
   | 'google'
   | 'groq'
+  | 'ollama'
   | 'unconfigured';
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────

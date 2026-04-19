@@ -27,12 +27,12 @@ export type AdapterPurpose =
   | 'REPAIR';      // UI repair       (uiReviewer)
 
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  GENERATION: { openai: 'gpt-4o',      google: 'gemini-1.5-pro',   groq: 'llama-3.3-70b-versatile' },
-  THINKING:   { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  REVIEW:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
-  REPAIR:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile' },
+  INTENT:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
+  GENERATION: { openai: 'gpt-4o',      google: 'gemini-1.5-pro',   groq: 'llama-3.3-70b-versatile', ollama: 'qwen2.5-coder' },
+  THINKING:   { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
+  REVIEW:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
+  REPAIR:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
 };
 
 /** Ordered provider detection list — first one with an env key wins. */
@@ -42,6 +42,7 @@ const PROVIDER_CHECKS: Array<{
   baseUrl?: string;
 }> = [
   { id: 'groq',        envKey: 'GROQ_API_KEY',        baseUrl: 'https://api.groq.com/openai/v1' },
+  { id: 'ollama',      envKey: 'OLLAMA_BASE_URL' },   // base URL resolved at runtime from env
   { id: 'google',      envKey: 'GOOGLE_API_KEY' },
   { id: 'google',      envKey: 'GEMINI_API_KEY' },
 
@@ -134,6 +135,7 @@ export function resolveApiKeyForProvider(provider: string): string | undefined {
     openai:     ['OPENAI_API_KEY'],
     google:     ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
     groq:       ['GROQ_API_KEY'],
+    ollama:     ['OLLAMA_API_KEY'],  // optional — many Ollama servers need no key
   };
   const vars = map[provider.toLowerCase()] ?? [];
   for (const v of vars) {

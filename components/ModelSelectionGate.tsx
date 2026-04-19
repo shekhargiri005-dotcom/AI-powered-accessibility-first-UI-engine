@@ -58,6 +58,7 @@ const PROVIDER_ICONS: Record<string, React.ReactNode> = {
   openai: <Sparkles className="w-8 h-8" />,
   google: <Globe className="w-8 h-8" />,
   groq: <Zap className="w-8 h-8" />,
+  ollama: <Server className="w-8 h-8" />,
 };
 
 // ─── Main Component ──────────────────────────────────────────────────────────

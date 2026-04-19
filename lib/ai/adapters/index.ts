@@ -41,6 +41,7 @@ export class ConfigurationError extends Error {
 
 const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
   groq: 'https://api.groq.com/openai/v1',
+  // ollama is resolved at runtime from process.env.OLLAMA_BASE_URL (see createAdapter)
 };
 
 // ─── Provider Detection (fallback only — prefer explicit provider from config) ─
@@ -51,6 +52,10 @@ const OPENAI_COMPAT_BASE_URLS: Record<string, string> = {
  */
 export function detectProvider(model: string): ProviderName {
   const m = model.toLowerCase();
+  // Ollama-hosted models (must check before generic llama detection)
+  if (m.includes('llama3') || m.includes('llama3.2') || m.includes('llama3.1')) return 'ollama';
+  if (m.includes('codellama') || m.includes('qwen2.5') || m.includes('phi4') || m.includes('deepseek-coder')) return 'ollama';
+  if (m.startsWith('ollama:') || m.includes('mistral:') || m.includes('gemma2:')) return 'ollama';
   if (m.includes('gemini'))                        return 'google';
   if (m.includes('gpt-') || m.startsWith('o'))    return 'openai';  // gpt-*, o1, o3-mini
   // Groq hosted models — serve via OpenAI-compat adapter
@@ -143,7 +148,14 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
   const provId = cfg.provider ?? detectProvider(model);
   const apiKey = cfg.apiKey;
 
-  // 1. OpenAI-compatible 3rd-party providers ─────────────────────────────
+  // 1. Ollama (OpenAI-compatible self-hosted) ─────────────────────────────
+  if (provId === 'ollama') {
+    const ollamaBaseUrl = baseUrl || process.env.OLLAMA_BASE_URL || 'http://localhost:11434/v1';
+    const ollamaKey = apiKey || process.env.OLLAMA_API_KEY || 'ollama'; // Ollama often needs no key
+    return new CachedAdapter(new OpenAIAdapter(ollamaKey, ollamaBaseUrl));
+  }
+
+  // 2. OpenAI-compatible 3rd-party providers ─────────────────────────────
   const namedProviders = ['openai', 'google'];
   const compatUrl = baseUrl ?? OPENAI_COMPAT_BASE_URLS[provId];
   const isCompat  = !!compatUrl && !namedProviders.includes(provId);
@@ -157,7 +169,7 @@ function createAdapter(cfg: AdapterConfig): AIAdapter {
     return new CachedAdapter(new OpenAIAdapter(key, compatUrl));
   }
 
-  // ── 2. Named adapters ────────────────────────────────────────────────────
+  // ── 3. Named adapters ────────────────────────────────────────────────────
   let adapter: AIAdapter;
 
   switch (provId) {
@@ -237,6 +249,7 @@ export async function getWorkspaceAdapter(
     openai: process.env.OPENAI_API_KEY,
     google: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY,
     groq: process.env.GROQ_API_KEY,
+    ollama: process.env.OLLAMA_API_KEY,
   };
   
   const fallbackKey = providerEnvMap[providerId];
