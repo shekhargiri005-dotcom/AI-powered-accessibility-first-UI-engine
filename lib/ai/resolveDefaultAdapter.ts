@@ -27,12 +27,12 @@ export type AdapterPurpose =
   | 'REPAIR';      // UI repair       (uiReviewer)
 
 const PURPOSE_DEFAULTS: Record<AdapterPurpose, Record<string, string>> = {
-  INTENT:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
-  CLASSIFIER: { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
-  GENERATION: { openai: 'gpt-4o',      google: 'gemini-1.5-pro',   groq: 'llama-3.3-70b-versatile', ollama: 'qwen2.5-coder' },
-  THINKING:   { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
-  REVIEW:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
-  REPAIR:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'llama3.2' },
+  INTENT:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'gemma4:e2b' },
+  CLASSIFIER: { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'gemma4:e2b' },
+  GENERATION: { openai: 'gpt-4o',      google: 'gemini-1.5-pro',   groq: 'llama-3.3-70b-versatile', ollama: 'qwen3-coder-next' },
+  THINKING:   { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'gemma4:e2b' },
+  REVIEW:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'gemma4:e2b' },
+  REPAIR:     { openai: 'gpt-4o-mini', google: 'gemini-2.0-flash', groq: 'llama-3.3-70b-versatile', ollama: 'gemma4:e2b' },
 };
 
 /** Ordered provider detection list — first one with an env key wins. */

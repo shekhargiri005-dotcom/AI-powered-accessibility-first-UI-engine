@@ -99,7 +99,7 @@ export const PROVIDER_CONFIG = [
     gradient: 'from-purple-500/20 to-fuchsia-500/20 border-purple-500/30',
     bgColor: 'bg-purple-500',
     envVar: 'OLLAMA_API_KEY',
-    models: ['llama3.2', 'qwen2.5-coder', 'deepseek-coder', 'phi4', 'mistral'],
+    models: ['qwen3-coder-next', 'gemma4:e2b', 'devstral-small-2', 'deepseek-v3.2', 'qwen3.5:9b'],
     settings: PROVIDER_SETTINGS.ollama,
     healthEndpoint: 'https://ollama.com/v1/models',
   },
