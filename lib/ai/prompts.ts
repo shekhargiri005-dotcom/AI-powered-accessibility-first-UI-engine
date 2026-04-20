@@ -106,6 +106,7 @@ MANDATORY RULES:
      * Example: user says "colors.primary.bg" → use \`colors.primary.bg\` as the background style, NOT \`bg-violet-500\` or \`bg-blue-600\`.
      * Example: user says "radius.xl" → use \`borderRadius: radius.xl\`, NOT \`rounded-2xl\`.
      * Example: user says "toStyle(text.h3)" → use \`style={toStyle(text.h3)}\`, NOT \`className="text-2xl font-bold"\`.
+     * CRITICAL: toStyle() is ONLY for typography presets (text.h1, text.body, etc.). NEVER use toStyle() with colors, space, or other non-typography tokens.
      * Example: user says "shadow.md" → use \`boxShadow: shadow.md\`, NOT \`shadow-lg\`.
      * Example: user says "transition.normal" → use \`transition: transition.normal\`, NOT \`transition-all\`.
      * Apply tokens via the \`style\` prop when tokens return CSS values: \`<Card style={{ background: colors.primary.bg, borderRadius: radius.xl, boxShadow: shadow.md }}>\`
