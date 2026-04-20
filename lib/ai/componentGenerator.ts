@@ -30,6 +30,9 @@ import { validateGeneratedCode } from '../intelligence/codeValidator';
 import { runRepairPipeline } from '../intelligence/repairPipeline';
 import { repairGeneratedCode } from './uiReviewer';
 
+// ── Performance: Caching layer ────────────────────────────────────────────────
+import { blueprintCache, semanticContextCache } from '../utils/simpleCache';
+
 // ── New: model-agnostic layer ─────────────────────────────────────────────────
 import { getModelProfile, getCloudFallbackProfile } from './modelRegistry';
 import { getPipelineConfig } from './tieredPipeline';
@@ -76,7 +79,13 @@ export async function generateComponent(
     const searchText = intent.description + ' ' + intent.componentName;
 
     // ─── Step 0: UI Intelligence — Blueprint + Design Rules ─────────────────
-    const blueprint = blueprintOverride || selectBlueprint(searchText);
+    // Cache blueprint selection for 2 minutes to avoid recomputation
+    const blueprintCacheKey = `bp:${searchText}`;
+    const blueprint = blueprintOverride || blueprintCache.getOrSet(
+      blueprintCacheKey,
+      () => selectBlueprint(searchText),
+      2 * 60 * 1000
+    );
     const designRules = applyDesignRules(searchText, blueprint.pageType);
     const blueprintContext = formatBlueprintForPrompt(blueprint);
     const designContext = formatDesignRulesForPrompt(designRules);
@@ -99,11 +108,18 @@ export async function generateComponent(
     // ─── Step 3: Knowledge + memory lookup (parallel) ────────────────────
     // Runs both queries concurrently — they have zero dependency on each other.
     // RAG is skipped entirely on refinements (code already in context).
+    // Cache semantic context for 5 minutes to reduce embedding API calls.
+    const semanticCacheKey = `ctx:${searchText}:${mode}`;
     const [memory, rawSemanticContext] = await Promise.all([
       getRelevantExamples(intent),
       intent.isRefinement
         ? Promise.resolve('')
-        : buildSemanticContext(searchText, mode),
+        : Promise.resolve(semanticContextCache.get(semanticCacheKey) ?? '').then(async (cached) => {
+            if (cached) return cached;
+            const result = await buildSemanticContext(searchText, mode);
+            if (result) semanticContextCache.set(semanticCacheKey, result, 5 * 60 * 1000);
+            return result;
+          }),
     ]);
 
     let knowledge: string | null = rawSemanticContext || null;
