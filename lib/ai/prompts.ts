@@ -99,7 +99,7 @@ MANDATORY RULES:
      - \`import { DragDrop, DropZone } from '@ui/dragdrop'\`
      - \`import { Motion, MotionGroup } from '@ui/motion'\`
      - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-     - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens'\`
+     - \`import { colors, brand, statusColors, space, spacing, radius, shadow, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, text, toStyle, transition, easing, duration, keyframes, chartPalette, getChartColor } from '@ui/tokens'\`
    - YOU MUST use @ui/tokens and @ui/core when available. These are NOT optional — they are the project's design system.
    - @ui/tokens RULES (CRITICAL — VIOLATION = REJECT):
      * If the user mentions colors.primary, colors.surface, space.stackMd, radius.xl, shadow.md, toStyle(), transition.normal, or ANY token name → you MUST import and use those exact tokens. Do NOT substitute with raw Tailwind values.
@@ -282,7 +282,7 @@ ARCHITECTURE:
      - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
      - \`import { Motion, MotionGroup } from '@ui/motion'\`
      - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-     - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens'\`
+     - \`import { colors, brand, statusColors, space, spacing, radius, shadow, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, text, toStyle, transition, easing, duration, keyframes, chartPalette, getChartColor } from '@ui/tokens'\`
    - YOU MUST use @ui/tokens and @ui/core when available. These are NOT optional — they are the project's design system.
    - @ui/tokens RULES: If the user mentions ANY token name (colors.primary, radius.xl, shadow.md, toStyle(), transition.normal, etc.) → you MUST import and use those exact tokens via the style prop. Do NOT substitute with raw Tailwind values.
    - @ui/core RULES: Use Card/CardHeader/CardContent/CardFooter for card layouts, Badge for labels, Button for actions, Input/Textarea for form fields. Do NOT use raw <div>/<span>/<button> when @ui/core components exist.

@@ -256,7 +256,7 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
   - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
   - \`import { Motion, MotionGroup } from '@ui/motion'\`
   - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
-  - \`import { colors, brand, space, radius, shadow, text, toStyle, transition, easing, duration, chartPalette, getChartColor } from '@ui/tokens'\`
+  - \`import { colors, brand, statusColors, space, spacing, radius, shadow, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, text, toStyle, transition, easing, duration, keyframes, chartPalette, getChartColor } from '@ui/tokens'\`
 You MUST use @ui/tokens and @ui/core when available. These are NOT optional — they are the project's design system.
 - @ui/tokens RULES (CRITICAL — VIOLATION = REJECT):
   * If the user mentions colors.primary, colors.surface, space.stackMd, radius.xl, shadow.md, toStyle(), transition.normal, or ANY token name → you MUST import and use those exact tokens. Do NOT substitute with raw Tailwind values.
