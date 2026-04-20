@@ -57,6 +57,7 @@ export function DragDrop({ items, onReorder, className, orientation = 'vertical'
             item.disabled && 'opacity-50 cursor-not-allowed',
           )}
           aria-grabbed={dragIndex === index}
+          // eslint-disable-next-line jsx-a11y/role-supports-aria-props
           aria-disabled={item.disabled}
         >
           {item.content}

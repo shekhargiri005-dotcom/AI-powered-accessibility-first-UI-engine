@@ -32,6 +32,7 @@ export function Avatar({ src, alt = '', fallback, size = 'md', shape = 'circle',
   return (
     <div className={cn('relative inline-flex shrink-0', className)} {...props}>
       {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={alt}

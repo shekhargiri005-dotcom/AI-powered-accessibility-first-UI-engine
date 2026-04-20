@@ -11,13 +11,12 @@
  * Or to reset and re-seed:
  *   node scripts/seed-workspace-db.mjs --reset
  */
-import { readFileSync, writeFileSync } from 'fs';
+import { writeFileSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 
 const __dir  = dirname(fileURLToPath(import.meta.url));
-const dbPath = resolve(__dir, '../data/projects/workspace.db');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Minimal SQLite INSERT writer (no npm deps needed)

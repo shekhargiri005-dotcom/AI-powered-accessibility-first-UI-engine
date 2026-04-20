@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench, Download, FileJson, FileText, Check, X } from 'lucide-react';
+import { ShieldCheck, ShieldAlert, AlertTriangle, Info, CheckCircle2, Wrench, FileJson, FileText, Check, X } from 'lucide-react';
 import type { A11yReport, A11yViolation } from '@/lib/validation/schemas';
 
 export interface A11yReportProps {

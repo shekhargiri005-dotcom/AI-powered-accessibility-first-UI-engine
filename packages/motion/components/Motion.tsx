@@ -186,6 +186,7 @@ export function Motion({
  
 (Motion as unknown as Record<string, (props: Record<string, unknown>) => React.ReactElement>).div = function MotionDivFallback(props) {
   // We strip framer-motion specific props to prevent DOM warnings, but pass the rest
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { initial, animate, transition, variants, whileHover, whileTap, ...rest } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return <div {...(rest as any)} />;
