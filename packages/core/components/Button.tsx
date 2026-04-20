@@ -29,10 +29,10 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant = "default", size = "default", isLoading, children, asChild, ...props }, ref) => {
     // asChild: if used, render children directly with button props spread via React.cloneElement
+    // Note: ref is not passed in asChild mode to avoid React 19 ref-in-render issues
     if (asChild && React.isValidElement(children)) {
       return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
         className: cn(buttonVariants[variant], sizeClasses[size], className),
-        ref,
         ...props,
       });
     }
