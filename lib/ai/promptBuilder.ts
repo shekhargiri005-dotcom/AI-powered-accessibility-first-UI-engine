@@ -264,6 +264,7 @@ You MUST use @ui/tokens and @ui/core when available. These are NOT optional — 
   * Example: user says "radius.xl" → use \`borderRadius: radius.xl\`, NOT \`rounded-2xl\`.
   * Example: user says "toStyle(text.h3)" → use \`style={toStyle(text.h3)}\`, NOT \`className="text-2xl font-bold"\`.
   * CRITICAL: toStyle() is ONLY for typography presets (text.h1, text.body, etc.). NEVER use toStyle() with colors, space, or other non-typography tokens.
+  * CRITICAL: All imports MUST be at the TOP of the file, before any component code. NEVER place imports at the bottom of the file.
   * Apply tokens via the style prop when tokens return CSS values: \`<Card style={{ background: colors.primary.bg, borderRadius: radius.xl, boxShadow: shadow.md }}>\`
   * You can still use Tailwind className for layout (flex, grid, gap, p-4) BUT color, radius, shadow, typography, and transitions MUST come from @ui/tokens when the user references them.
 - @ui/core RULES (CRITICAL):
