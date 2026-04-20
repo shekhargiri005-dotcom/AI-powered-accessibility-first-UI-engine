@@ -278,7 +278,8 @@ You MUST use @ui/tokens and @ui/core when available. These are NOT optional — 
 
 ${blueprintText}
 
-OUTPUT: Return ONLY raw TSX code. No markdown. No explanation. Export default the main component.
+OUTPUT: Return ONLY raw TSX code. No markdown. No explanation.
+CRITICAL: You MUST include 'export default ComponentName' at the end of your code. This is REQUIRED.
 Generate 100-350 lines of FOCUSED code — a single component, NOT a full application with sidebar and routing.
 Include 1-3 sub-components max and 5-8 mock data items.`;
 

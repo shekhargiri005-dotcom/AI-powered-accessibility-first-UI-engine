@@ -146,7 +146,8 @@ CRITICAL OUTPUT RULES:
 - Generate 100-350 lines of FOCUSED code. A single component should be concise, not a full application.
 - Include 1-3 sub-components max (e.g. a card with a header + content section), NOT 5+ unrelated widgets.
 - Use 5-8 mock data items — enough to demonstrate, not a full dataset.
-- Return ONLY raw TSX. No markdown fences. No explanation. Export default the main component.
+- Return ONLY raw TSX. No markdown fences. No explanation.
+- CRITICAL: You MUST include 'export default ComponentName' at the end of your code. This is REQUIRED for the code to work.
 - Every JSX tag MUST be closed. No partial code. No truncation.
 - NEVER use: block comments as handler bodies (onClick={() => /* ... */}), stray semicolons between JSX attributes, or undefined variables.
 - NEVER generate sidebar navigation, multi-screen routing, or full-page layouts in COMPONENT mode.
