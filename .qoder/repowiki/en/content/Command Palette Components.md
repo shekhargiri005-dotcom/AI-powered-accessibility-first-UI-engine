@@ -12,6 +12,13 @@
 - [sandpackConfig.ts](file://lib/sandbox/sandpackConfig.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated State Management Architecture section to reflect improved input value prop handling
+- Enhanced Component Lifecycle Management section with new controlled input synchronization
+- Added new Controlled Input Handling subsection under State Management
+- Updated Troubleshooting Guide to address input value prop synchronization issues
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -69,11 +76,11 @@ CommandPalette --> Registry
 ```
 
 **Diagram sources**
-- [CommandPalette.tsx:1-149](file://packages/command-palette/components/CommandPalette.tsx#L1-L149)
+- [CommandPalette.tsx:1-150](file://packages/command-palette/components/CommandPalette.tsx#L1-L150)
 - [index.ts:1-2](file://packages/command-palette/index.ts#L1-L2)
 
 **Section sources**
-- [CommandPalette.tsx:1-149](file://packages/command-palette/components/CommandPalette.tsx#L1-L149)
+- [CommandPalette.tsx:1-150](file://packages/command-palette/components/CommandPalette.tsx#L1-L150)
 - [index.ts:1-2](file://packages/command-palette/index.ts#L1-L2)
 
 ## Core Components
@@ -84,7 +91,7 @@ The command palette system consists of six primary components, each serving a sp
 The main container component that manages state and provides context to child components. It integrates with the Modal system to create a seamless overlay experience.
 
 ### CommandInput Field
-A specialized input component that captures user queries and updates the global search state through the command context.
+A specialized input component that captures user queries and updates the global search state through the command context. **Updated** Now properly handles controlled input value props for bidirectional synchronization.
 
 ### CommandList Container
 Provides scrolling capabilities and visual separation for command groups within the palette interface.
@@ -136,7 +143,7 @@ Context->>Item : Apply selection styling
 
 ### State Management Architecture
 
-The command palette implements a sophisticated state management system using React Context to maintain search state, selection state, and provide these values to descendant components.
+The command palette implements a sophisticated state management system using React Context to maintain search state, selection state, and provide these values to descendant components. **Updated** Enhanced with improved controlled input value prop synchronization.
 
 ```mermaid
 classDiagram
@@ -159,6 +166,7 @@ class CommandInput {
 +HTMLInputAttributes props
 +forwardRef() HTMLInputElement
 +setSearch() void
++value prop handling
 }
 class CommandItem {
 +string className
@@ -183,6 +191,26 @@ CommandItem --> CommandContextValue : "reads"
 - [CommandPalette.tsx:29-47](file://packages/command-palette/components/CommandPalette.tsx#L29-L47)
 - [CommandPalette.tsx:50-70](file://packages/command-palette/components/CommandPalette.tsx#L50-L70)
 - [CommandPalette.tsx:111-138](file://packages/command-palette/components/CommandPalette.tsx#L111-L138)
+
+### Controlled Input Handling
+
+**New** The CommandInput component now properly handles controlled input value props, ensuring bidirectional synchronization between parent-controlled values and internal state management.
+
+```mermaid
+flowchart TD
+Start([Parent Controlled Value]) --> CheckValue{"Has value prop?"}
+CheckValue --> |Yes| SyncValue["Sync with internal state"]
+CheckValue --> |No| Uncontrolled["Uncontrolled input"]
+SyncValue --> SetState["Update setSearch state"]
+SetState --> RenderInput["Render input with synchronized value"]
+Uncontrolled --> HandleUserInput["Handle user input changes"]
+HandleUserInput --> UpdateContext["Update CommandContext.search"]
+RenderInput --> End([Synchronized State])
+UpdateContext --> End
+```
+
+**Diagram sources**
+- [CommandPalette.tsx:50-70](file://packages/command-palette/components/CommandPalette.tsx#L50-L70)
 
 ### Filtering and Search Algorithm
 
@@ -214,10 +242,11 @@ RenderResults --> End([Display Results])
 
 ### Component Lifecycle Management
 
-The command palette manages its lifecycle through React's useEffect hooks, ensuring proper cleanup and state synchronization.
+The command palette manages its lifecycle through React's useEffect hooks, ensuring proper cleanup and state synchronization. **Updated** Enhanced with improved controlled input value prop handling during component updates.
 
 **Section sources**
 - [CommandPalette.tsx:29-47](file://packages/command-palette/components/CommandPalette.tsx#L29-L47)
+- [CommandPalette.tsx:50-70](file://packages/command-palette/components/CommandPalette.tsx#L50-L70)
 - [CommandPalette.tsx:111-138](file://packages/command-palette/components/CommandPalette.tsx#L111-L138)
 
 ## Dependency Analysis
@@ -320,6 +349,12 @@ The command palette is optimized for performance through several key strategies:
 - Consider implementing virtualization for large datasets
 - Optimize expensive operations in command handlers
 
+**Controlled Input Value Prop Issues**
+- **Updated** Ensure that the value prop is properly synchronized with internal state
+- Verify that parent components pass the correct value prop to CommandInput
+- Check that onChange handlers properly update the controlled value
+- Confirm that the component handles both controlled and uncontrolled scenarios correctly
+
 **Section sources**
 - [CommandPalette.tsx:50-70](file://packages/command-palette/components/CommandPalette.tsx#L50-L70)
 - [CommandPalette.tsx:111-138](file://packages/command-palette/components/CommandPalette.tsx#L111-L138)
@@ -330,4 +365,4 @@ The Command Palette Components provide a robust, accessible, and highly customiz
 
 The modular design ensures easy maintenance and extension, while the performance optimizations guarantee smooth operation even with large command sets. The component's integration with the broader UI ecosystem demonstrates its role as a cornerstone element in building comprehensive, accessibility-first user interfaces.
 
-Future enhancements could include advanced filtering capabilities, plugin support for extending functionality, and additional accessibility features to further improve the user experience for diverse user needs.
+**Updated** Recent improvements to input value prop handling enhance the component's state management capabilities, providing better synchronization between controlled inputs and internal state. Future enhancements could include advanced filtering capabilities, plugin support for extending functionality, and additional accessibility features to further improve the user experience for diverse user needs.

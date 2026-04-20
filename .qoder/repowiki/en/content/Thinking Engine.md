@@ -24,6 +24,7 @@
 
 ## Update Summary
 **Changes Made**
+- Removed 30-second timeout parameter from generateThinkingPlan function, improving performance and streamlining the thinking process execution flow
 - Enhanced JSON extraction algorithm with balanced brace matching and new Stage 5 preamble stripping functionality
 - Increased maximum token limit from 800 to 1200 for improved expert-level reasoning capabilities
 - Enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests
@@ -57,7 +58,7 @@ The Thinking Engine consists of:
 - **Enhanced** Sophisticated depth_ui mode detection with keyword matching for immersive UI requests
 - **Enhanced** Advanced JSON extraction algorithm with balanced brace matching and stage-based parsing
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 ## Project Structure
 The Thinking Engine spans frontend UI components, backend API routes, validation schemas, AI adapters, and infrastructure utilities. The following diagram shows the high-level structure and key interactions.
@@ -135,7 +136,7 @@ ADAPTERS --> METRICS
 - **Enhanced** Depth UI Detection: Sophisticated keyword matching system that intelligently detects immersive UI requests and suggests depth_ui mode alongside component and app modes.
 - **Enhanced** Advanced JSON Extraction: Five-stage parsing algorithm with balanced brace matching, truncated JSON repair, and preamble stripping for robust parsing of AI responses.
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 **Section sources**
 - [app/api/think/route.ts:8-86](file://app/api/think/route.ts#L8-L86)
@@ -180,13 +181,13 @@ PLAN-->>API : "ThinkingPlan or fallback"
 alt "Success"
 API-->>UI : "{success : true, plan}"
 else "Network/Rate Limit Error"
-PLAN->>PLAN : "Exponential backoff retry (up to 3 attempts)<br/>30 second timeout"
+PLAN->>PLAN : "Exponential backoff retry (up to 3 attempts)"
 PLAN-->>API : "Retry or fallback"
 API-->>UI : "{success : true, plan, _fallback : true}"
 end
 ```
 
-**Updated** The Thinking Engine now implements enhanced depth_ui mode detection with sophisticated keyword matching and streamlined retry logic with exponential backoff for better reliability and performance.
+**Updated** The Thinking Engine now implements enhanced depth_ui mode detection with sophisticated keyword matching and streamlined retry logic with exponential backoff for better reliability and performance. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 **Diagram sources**
 - [app/api/think/route.ts:8-86](file://app/api/think/route.ts#L8-L86)
@@ -392,7 +393,7 @@ The core planning logic that generates structured thinking plans:
 - Blueprint integration for UI structure enrichment
 - Streamlined retry logic for network and rate limit errors with exponential backoff
 - Model capability detection for JSON mode support
-- 30-second timeout for request processing to prevent resource exhaustion
+- **Removed** 30-second timeout for request processing to prevent resource exhaustion
 - **Enhanced** Intelligent depth_ui mode detection using sophisticated keyword matching
 - **Enhanced** Advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping
 
@@ -412,7 +413,7 @@ Key features:
 - **Enhanced** Keyword-based depth_ui detection with patterns like parallax, depth, cinematic, floating, layered, immersive, 3d, landing page, hero section
 - **Enhanced** Increased maxTokens from 800 to 1200 for expert-level reasoning capabilities
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. The maximum token limit has been increased from 800 to 1200 to support expert-level reasoning capabilities.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. The maximum token limit has been increased from 800 to 1200 to support expert-level reasoning capabilities. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 **Section sources**
 - [lib/ai/thinkingEngine.ts:11-64](file://lib/ai/thinkingEngine.ts#L11-L64)
@@ -524,7 +525,7 @@ MT["ModeToggle.tsx"] --> TYPES["types.ts"]
 CLASS["lib/ai/intentClassifier.ts"] --> PROMPTS["lib/ai/prompts.ts"]
 ```
 
-**Updated** The Thinking Engine now features enhanced dependency management with sophisticated depth_ui detection and comprehensive schema validation for immersive UI generation.
+**Updated** The Thinking Engine now features enhanced dependency management with sophisticated depth_ui detection and comprehensive schema validation for immersive UI generation. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 **Diagram sources**
 - [app/api/think/route.ts:1-86](file://app/api/think/route.ts#L1-L86)
@@ -551,8 +552,8 @@ CLASS["lib/ai/intentClassifier.ts"] --> PROMPTS["lib/ai/prompts.ts"]
 - Cost estimation: Use the pricing utilities to estimate costs based on prompt and completion tokens
 - Caching: Intelligent caching layer reduces latency and improves response times for repeated requests
 - Concurrency: Ensure adapters are instantiated once per provider to reuse connections and minimize overhead
-- Retry logic: Streamlined exponential backoff for network errors and rate limits (up to 3 attempts with 1s, 2s, and 4s delays)
-- Timeout handling: 30-second timeout for thinking requests prevents resource exhaustion
+- Retry logic: Streamlined exponential backoff for network errors and rate limits (up to 3 attempts) with 30-second timeout removed
+- **Removed** Timeout handling: 30-second timeout for thinking requests has been removed to prevent resource exhaustion
 - **Enhanced** JSON parsing: Five-stage extraction with balanced brace matching reduces parsing failures and improves reliability
 - Error handling: Enhanced patterns for graceful degradation and fallback mechanisms
 - Metrics collection: Centralized metrics tracking for performance monitoring and optimization
@@ -560,7 +561,7 @@ CLASS["lib/ai/intentClassifier.ts"] --> PROMPTS["lib/ai/prompts.ts"]
 - **Enhanced** Schema validation caching: Reused depth_ui schema validation reduces parsing overhead for immersive UI requests
 - **Enhanced** Token budget optimization: Increased maxTokens from 800 to 1200 supports expert-level reasoning while maintaining performance
 
-**Updated** Enhanced performance considerations now include depth_ui keyword matching optimization, schema validation caching, comprehensive metrics collection for immersive UI generation, and five-stage JSON extraction with balanced brace matching for improved reliability.
+**Updated** Enhanced performance considerations now include depth_ui keyword matching optimization, schema validation caching, comprehensive metrics collection for immersive UI generation, and five-stage JSON extraction with balanced brace matching for improved reliability. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -572,7 +573,7 @@ Common issues and resolutions:
 - Planning failures: The system automatically falls back to deterministic plans when AI generation fails
 - Network connectivity: Streamlined retry logic handles transient network errors and rate limits with exponential backoff (up to 3 attempts)
 - Rate limiting: Automatic retry mechanism with exponential backoff reduces impact of provider rate limits
-- Timeout issues: 30-second timeout for thinking requests prevents resource exhaustion
+- **Removed** Timeout issues: 30-second timeout for thinking requests has been removed to prevent resource exhaustion
 - Caching issues: Verify cache configuration and check for cache hit/miss ratios
 - Metrics collection: Monitor usage logs and cost estimates for optimization opportunities
 - **Enhanced** Depth UI detection failures: Verify keyword matching patterns and ensure depth_ui mode is properly configured
@@ -590,8 +591,9 @@ Operational checks:
 - **Enhanced** Monitor depth_ui keyword detection accuracy and mode suggestion effectiveness
 - **Enhanced** Validate depth_ui schema parsing and parallax coefficient validation
 - **Enhanced** Verify five-stage JSON extraction algorithm is functioning correctly with balanced brace matching
+- **Enhanced** Verify that the 30-second timeout parameter has been successfully removed and replaced with streamlined retry logic
 
-**Updated** Enhanced troubleshooting guidance now includes depth_ui detection monitoring, schema validation troubleshooting, comprehensive metrics analysis for immersive UI generation, and five-stage JSON extraction algorithm validation with balanced brace matching.
+**Updated** Enhanced troubleshooting guidance now includes depth_ui detection monitoring, schema validation troubleshooting, comprehensive metrics analysis for immersive UI generation, and five-stage JSON extraction algorithm validation with balanced brace matching. The 30-second timeout parameter has been removed, so troubleshooting should focus on streamlined retry logic and improved error handling patterns.
 
 **Section sources**
 - [app/api/think/route.ts:19-21](file://app/api/think/route.ts#L19-L21)
@@ -605,4 +607,4 @@ Operational checks:
 ## Conclusion
 The Thinking Engine provides a robust, secure, and user-friendly planning layer for AI-driven UI generation. By enforcing strict security boundaries, offering deterministic fallbacks with streamlined retry logic, and presenting a clear, iteratively refineable plan, it enables reliable workflows from initial intent to executable code. Its modular architecture with provider adapters and structured validation supports extensibility and maintainability across diverse AI backends. The enhanced retry mechanisms with exponential backoff and improved error handling patterns ensure resilience against network failures and rate limits, while caching optimizations and comprehensive metrics collection enhance performance and reduce cold-start latency. The streamlined architecture with over 150 lines of code removed demonstrates significant improvements in decision-making process efficiency and overall system reliability.
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive schema validation, integrated depth_ui support throughout the architecture, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. These enhancements make it more reliable, efficient, and capable of handling visually rich interfaces with intelligent detection and generation capabilities. The increased maximum token limit from 800 to 1200 supports expert-level reasoning capabilities while maintaining the system's robustness and performance.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive schema validation, integrated depth_ui support throughout the architecture, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. These enhancements make it more reliable, efficient, and capable of handling visually rich interfaces with intelligent detection and generation capabilities. The increased maximum token limit from 800 to 1200 supports expert-level reasoning capabilities while maintaining the system's robustness and performance. The 30-second timeout parameter has been removed, improving performance and streamlining the thinking process execution flow.

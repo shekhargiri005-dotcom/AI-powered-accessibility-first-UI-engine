@@ -5,10 +5,9 @@
 - [route.ts](file://app/api/generate/route.ts)
 - [route.ts](file://app/api/classify/route.ts)
 - [index.ts](file://lib/ai/adapters/index.ts)
-- [base.ts](file://lib/ai/adapters/base.ts)
 - [openai.ts](file://lib/ai/adapters/openai.ts)
-- [anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [google.ts](file://lib/ai/adapters/google.ts)
+- [chunkGenerator.ts](file://lib/ai/chunkGenerator.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 - [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 - [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
@@ -28,11 +27,10 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced accessibility hook documentation with comprehensive usage examples for useAnnouncer(), useKeyboardNav(), and useRoveFocus() hooks
-- Added design token import examples including missing easing and duration token imports
-- Updated system prompts to include detailed accessibility hook documentation and design token usage patterns
-- Enhanced UI cheat sheet with complete accessibility utility examples
-- Improved prompt engineering strategies for accessibility-first component generation
+- Removed ThinkingPlan type import from API route handler to streamline error handling approaches
+- Cleaned up unused imports in AI adapters and chunk generator
+- Enhanced error handling consistency across the generation pipeline
+- Improved code hygiene by removing unnecessary type imports
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -49,7 +47,7 @@
 12. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the AI generation engine that powers UI component creation with enhanced accessibility-first design principles. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with comprehensive accessibility hook integration, enhanced design token usage patterns, and detailed accessibility utility documentation.
+This document explains the AI generation engine that powers UI component creation with enhanced accessibility-first design principles. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with comprehensive accessibility hook integration, enhanced design token usage patterns, and streamlined error handling approaches.
 
 ## Project Structure
 The generation engine spans API routes, adapters, and orchestration logic with enhanced accessibility intelligence and comprehensive design system integration:
@@ -114,13 +112,12 @@ CG --> DT
 ```
 
 **Diagram sources**
-- [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
-- [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
+- [chunkGenerator.ts:1-220](file://lib/ai/chunkGenerator.ts#L1-L220)
 - [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 - [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
@@ -136,19 +133,12 @@ CG --> DT
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 **Section sources**
-- [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
-- [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
-- [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
-- [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
-- [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
-- [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
-- [prompts.ts:1-556](file://lib/ai/prompts.ts#L1-L556)
-- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
+- [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
+- [chunkGenerator.ts:1-220](file://lib/ai/chunkGenerator.ts#L1-L220)
 
 ## Core Components
 - Universal Adapter Interface: A single AIAdapter contract defines generate() and stream(), enabling provider-agnostic code with enhanced accessibility hook support.
@@ -163,11 +153,13 @@ CG --> DT
 - Design Token Integration: Enhanced design token import examples including missing easing and duration token imports for consistent animation and transition patterns.
 
 **Section sources**
-- [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
+- [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
+- [chunkGenerator.ts:1-220](file://lib/ai/chunkGenerator.ts#L1-L220)
 - [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
-- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
+- [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
@@ -179,7 +171,7 @@ CG --> DT
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Architecture Overview
-The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced accessibility intelligence, comprehensive design token usage, and detailed accessibility hook documentation.
+The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced accessibility intelligence, comprehensive design token usage, and streamlined error handling approaches.
 
 ```mermaid
 sequenceDiagram
@@ -210,11 +202,11 @@ GenRoute-->>Client : {success, code, a11yReport, tests, ...}
 ```
 
 **Diagram sources**
-- [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
 - [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
 - [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 
 ## Detailed Component Analysis
@@ -262,17 +254,13 @@ AIAdapter <|.. UnconfiguredAdapter
 - Accessibility hook support: Enhanced adapter configurations support accessibility hook integration and design token usage patterns.
 
 **Diagram sources**
-- [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
-- [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 
 **Section sources**
-- [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
-- [openai.ts:1-223](file://lib/ai/adapters/openai.ts#L1-L223)
-- [anthropic.ts:1-210](file://lib/ai/adapters/anthropic.ts#L1-L210)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
+- [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
 - [google.ts:1-90](file://lib/ai/adapters/google.ts#L1-L90)
 
 ### Adapter Factory Pattern and Credential Resolution
@@ -282,7 +270,7 @@ AIAdapter <|.. UnconfiguredAdapter
 - Enhanced accessibility support: Adapter configurations now include accessibility hook and design token integration capabilities.
 
 **Section sources**
-- [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+- [index.ts:218-270](file://lib/ai/adapters/index.ts#L218-L270)
 
 ### Enhanced Intent Parsing and Multi-Component Detection
 The intent parser now includes comprehensive multi-component detection capabilities that identify when users request multiple separate UI components and automatically sets up structured layout requirements.
@@ -385,13 +373,13 @@ end
 - Accessibility compliance: Enhanced review process includes accessibility hook usage validation.
 
 **Diagram sources**
-- [route.ts:241-323](file://app/api/generate/route.ts#L241-L323)
+- [route.ts:226-259](file://app/api/generate/route.ts#L226-L259)
 - [uiReviewer.ts:55-184](file://lib/ai/uiReviewer.ts#L55-L184)
-- [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+- [index.ts:218-270](file://lib/ai/adapters/index.ts#L218-L270)
 
 **Section sources**
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
-- [route.ts:241-323](file://app/api/generate/route.ts#L241-L323)
+- [route.ts:226-259](file://app/api/generate/route.ts#L226-L259)
 
 ### Enhanced Intent Classification Pipeline
 The intent classifier determines intent type, suggested mode, and whether code generation should proceed immediately or require clarification, now with enhanced multi-component detection capabilities and accessibility requirement identification.
@@ -415,7 +403,7 @@ Validate --> Result(["Return classification with accessibility requirements"])
 **Diagram sources**
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
 - [intentClassifier.ts:63-208](file://lib/ai/intentClassifier.ts#L63-L208)
-- [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
+- [index.ts:218-270](file://lib/ai/adapters/index.ts#L218-L270)
 
 **Section sources**
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
@@ -436,6 +424,20 @@ Validate --> Result(["Return classification with accessibility requirements"])
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [prompts.ts:80-120](file://lib/ai/prompts.ts#L80-L120)
 - [prompts.ts:231-267](file://lib/ai/prompts.ts#L231-L267)
+
+### Streamlined Error Handling and Code Cleanup
+Recent improvements have focused on removing unnecessary type imports and cleaning up unused imports to streamline error handling approaches:
+
+- **ThinkingPlan Removal**: Removed ThinkingPlan type import from API route handler to simplify error handling logic.
+- **Unused Import Cleanup**: Removed unused imports in AI adapters and chunk generator to improve code maintainability.
+- **Consistent Error Handling**: Enhanced error handling consistency across the generation pipeline with streamlined approach.
+- **Code Hygiene**: Improved code cleanliness by eliminating unnecessary type dependencies.
+
+**Section sources**
+- [route.ts:48-52](file://app/api/generate/route.ts#L48-L52)
+- [openai.ts:13-22](file://lib/ai/adapters/openai.ts#L13-L22)
+- [google.ts:14-22](file://lib/ai/adapters/google.ts#L14-L22)
+- [chunkGenerator.ts:13-18](file://lib/ai/chunkGenerator.ts#L13-L18)
 
 ## Enhanced Design System
 
@@ -607,7 +609,7 @@ Accessibility --> Output["Structured Output"]
 - [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
 
 ## Dependency Analysis
-The generation engine exhibits clear separation of concerns with enhanced accessibility intelligence, comprehensive design token usage, and detailed accessibility hook integration:
+The generation engine exhibits clear separation of concerns with enhanced accessibility intelligence, comprehensive design token usage, and streamlined error handling:
 - API routes depend on orchestrators and validators with enhanced accessibility support.
 - Orchestrators depend on adapters, model registry, and intelligence modules with accessibility hook integration.
 - Intelligence modules handle design rules, blueprint selection, visual style detection, and accessibility requirements.
@@ -616,6 +618,7 @@ The generation engine exhibits clear separation of concerns with enhanced access
 - Enhanced intent parsing system provides multi-component detection capabilities with accessibility requirements.
 - Accessibility hook system provides comprehensive documentation and integration patterns.
 - Design token system ensures consistent animation and transition patterns across components.
+- **Updated**: Streamlined error handling reduces dependency on unnecessary type imports.
 
 ```mermaid
 graph LR
@@ -646,12 +649,12 @@ DT --> TRANS["transition"]
 ```
 
 **Diagram sources**
-- [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
 - [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 - [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
@@ -664,12 +667,12 @@ DT --> TRANS["transition"]
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 **Section sources**
-- [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
 - [componentGenerator.ts:1-402](file://lib/ai/componentGenerator.ts#L1-L402)
 - [uiReviewer.ts:1-184](file://lib/ai/uiReviewer.ts#L1-L184)
 - [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
-- [index.ts:1-306](file://lib/ai/adapters/index.ts#L1-L306)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
@@ -688,6 +691,7 @@ DT --> TRANS["transition"]
 - **Updated**: Multi-component layout enforcement adds computational overhead but ensures structured, professional output.
 - **Updated**: Accessibility hook integration adds minimal overhead while significantly improving accessibility compliance.
 - **Updated**: Design token usage patterns ensure consistent animation performance across components.
+- **Updated**: Streamlined error handling reduces unnecessary type imports and improves code maintainability.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -703,11 +707,12 @@ Common issues and resolutions:
 - **Updated**: Accessibility hook integration issues: If accessibility hooks aren't working properly, verify that the hooks are imported correctly and that the usage examples match the implementation patterns.
 - **Updated**: Design token import problems: If design tokens aren't recognized, ensure that the complete token import pattern is used including easing and duration tokens for consistent animation behavior.
 - **Updated**: Missing easing/duration tokens: Verify that the design token import includes both easing and duration presets for consistent animation timing across components.
+- **Updated**: Type import issues: Recent cleanup removed unnecessary ThinkingPlan imports, resolving potential type conflicts in error handling.
 
 **Section sources**
 - [componentGenerator.ts:330-397](file://lib/ai/componentGenerator.ts#L330-L397)
 - [uiReviewer.ts:106-116](file://lib/ai/uiReviewer.ts#L106-L116)
-- [route.ts:254-323](file://app/api/generate/route.ts#L254-L323)
+- [route.ts:226-259](file://app/api/generate/route.ts#L226-L259)
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
 - [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
 - [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
@@ -716,4 +721,4 @@ Common issues and resolutions:
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Conclusion
-The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components with WCAG 2.1 AA accessibility compliance. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, structured layout enforcement, and comprehensive accessibility hook integration. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. The comprehensive accessibility hook documentation and design token integration provide developers with detailed usage examples and consistent implementation patterns. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive, accessible, and professionally structured user interfaces that properly handle both single components and complex multi-component scenarios with full accessibility support.
+The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components with WCAG 2.1 AA accessibility compliance. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, structured layout enforcement, and comprehensive accessibility hook integration. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. The comprehensive accessibility hook documentation and design token integration provide developers with detailed usage examples and consistent implementation patterns. Recent improvements have streamlined error handling approaches by removing unnecessary type imports and cleaning up unused dependencies, resulting in more maintainable and efficient code. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive, accessible, and professionally structured user interfaces that properly handle both single components and complex multi-component scenarios with full accessibility support.

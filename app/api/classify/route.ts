@@ -4,6 +4,8 @@ import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import type { ProviderName } from '@/lib/ai/types';
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/classify');
   reqLogger.info('Received intent classification request');
