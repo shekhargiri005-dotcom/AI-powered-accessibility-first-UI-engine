@@ -6,18 +6,20 @@
 - [schemas.ts](file://lib/validation/schemas.ts)
 - [A11yReport.tsx](file://components/A11yReport.tsx)
 - [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)
+- [useAnnouncer.ts](file://packages/a11y/hooks/useAnnouncer.ts)
 - [index.ts](file://packages/a11y/index.ts)
+- [uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
+- [eslint.config.mjs](file://eslint.config.mjs)
 - [repairPipeline.ts](file://lib/intelligence/repairPipeline.ts)
 - [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced A11yReport component with interactive fix application functionality
-- Added PDF export capabilities alongside existing JSON export
-- Improved violation card UI with applied fix tracking and interactive controls
-- Updated report schema to support appliedFixes metadata
-- Enhanced user interaction capabilities for marking violations as fixed or dismissed
+- Enhanced useAnnouncer hook with proper ESLint handling for DOM mutations
+- Updated accessibility utilities documentation to reflect improved screen reader behavior
+- Added comprehensive ESLint configuration for accessibility hooks
+- Enhanced DOM mutation safety in accessibility utilities
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -34,10 +36,13 @@
 ## Introduction
 This document describes the WCAG 2.1 AA–compliant accessibility validation system implemented as a rule-based static analyzer for generated TSX code. It documents all 12 accessibility rules, the scoring mechanism, the A11yReport schema, auto-repair capabilities, and the enhanced interactive report interface with fix application functionality. The system now provides users with the ability to directly mark violations as fixed or dismissed from the report interface, along with comprehensive export capabilities for compliance documentation.
 
+**Updated** Enhanced accessibility utilities with improved DOM mutation handling and ESLint configuration for consistent screen reader behavior across the application.
+
 ## Project Structure
 The accessibility validation system spans three main areas:
 - Validation engine: rule definitions and scoring logic
 - Report renderer: enhanced UI component with interactive fix application and export capabilities
+- Accessibility utilities: hooks and components for screen reader announcements and focus management
 - Tests and integration: unit tests and optional AI-based repair pipeline
 
 ```mermaid
@@ -49,19 +54,27 @@ end
 subgraph "Enhanced Presentation"
 R["A11yReport.tsx<br/>Interactive Report UI + Fix Application + Exports"]
 end
+subgraph "Accessibility Utilities"
+UA["useAnnouncer.ts<br/>Screen Reader Announcements + ESLint Handling"]
+UI["uiCheatSheet.ts<br/>Package Reference + Usage Examples"]
+IDX["packages/a11y/index.ts<br/>Public Exports"]
+end
 subgraph "Tests"
 T["a11yValidator.test.ts<br/>Unit tests"]
 end
 subgraph "Integration"
 RP["repairPipeline.ts<br/>Rule-based repairs"]
 UR["uiReviewer.ts<br/>AI repair fallback"]
-P["packages/a11y/index.ts<br/>Public exports"]
+ESL["eslint.config.mjs<br/>ESLint Configuration"]
 end
 V --> S
 R --> S
+UA --> IDX
+UI --> UA
 T --> V
 RP --> V
 UR --> V
+ESL --> UA
 P --> R
 ```
 
@@ -69,19 +82,25 @@ P --> R
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
 - [A11yReport.tsx:1-334](file://components/A11yReport.tsx#L1-L334)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 - [a11yValidator.test.ts:1-110](file://__tests__/a11yValidator.test.ts#L1-L110)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
-- [index.ts:1-4](file://packages/a11y/index.ts#L1-L4)
 
 **Section sources**
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
 - [A11yReport.tsx:1-334](file://components/A11yReport.tsx#L1-L334)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 - [a11yValidator.test.ts:1-110](file://__tests__/a11yValidator.test.ts#L1-L110)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
-- [index.ts:1-4](file://packages/a11y/index.ts#L1-L4)
 
 ## Core Components
 - Rule engine: Defines 12 WCAG 2.1 AA–aligned rules and executes them against TSX code.
@@ -89,6 +108,9 @@ P --> R
 - Auto-repair: Applies targeted, safe transformations to fix common issues.
 - Report schema: Structured data model for violations and suggestions with export metadata.
 - Enhanced Report UI: Renders the accessibility report with interactive fix application, severity badges, suggestions, fixes, and comprehensive export functionality.
+- Accessibility utilities: Screen reader announcements with DOM mutation safety and ESLint handling.
+
+**Updated** Enhanced accessibility utilities with improved DOM mutation handling for consistent screen reader behavior.
 
 **Section sources**
 - [a11yValidator.ts:10-260](file://lib/validation/a11yValidator.ts#L10-L260)
@@ -96,9 +118,12 @@ P --> R
 - [a11yValidator.ts:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
 - [schemas.ts:301-318](file://lib/validation/schemas.ts#L301-L318)
 - [A11yReport.tsx:11-95](file://components/A11yReport.tsx#L11-L95)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
 
 ## Architecture Overview
 The validator runs a static analysis pass over TSX code, collecting violations and computing a score. The enhanced report schema ensures consistent serialization with applied fix tracking, while the interactive UI renders severity, suggestions, applied fixes, and provides users with direct control over violation states. The system now supports both JSON and PDF export capabilities for comprehensive accessibility reporting and compliance documentation.
+
+**Updated** Enhanced accessibility utilities provide reliable screen reader announcements with proper DOM mutation handling and ESLint configuration for consistent behavior.
 
 ```mermaid
 sequenceDiagram
@@ -108,6 +133,7 @@ participant Rules as "A11Y_RULES[]"
 participant Report as "A11yReport"
 participant UI as "A11yReportComponent"
 participant Export as "Export Functions"
+participant Announcer as "useAnnouncer Hook"
 Caller->>Validator : "validateAccessibility(code)"
 Validator->>Rules : "Iterate rules.check(code)"
 Rules-->>Validator : "per-rule {passed, element?, detail?}"
@@ -117,6 +143,8 @@ Validator-->>UI : "A11yReport with appliedFixes"
 UI->>UI : "Render interactive violation cards"
 UI->>UI : "User clicks Apply Fix / Dismiss"
 UI-->>Caller : "onFixApplied/onFixDismissed callbacks"
+UI->>Announcer : "announce('Fix applied')"
+Announcer-->>UI : "Screen reader announcement"
 Caller->>Export : "Click Export button (JSON/PDF)"
 Export->>Export : "Add metadata (exportedAt, standard)"
 Export->>Export : "Create Blob with JSON.stringify or HTML"
@@ -127,6 +155,7 @@ Export->>Export : "Download file with timestamp"
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 - [a11yValidator.ts:19-260](file://lib/validation/a11yValidator.ts#L19-L260)
 - [A11yReport.tsx:143-334](file://components/A11yReport.tsx#L143-L334)
+- [useAnnouncer.ts:25-36](file://packages/a11y/hooks/useAnnouncer.ts#L25-L36)
 
 ## Detailed Component Analysis
 
@@ -382,6 +411,64 @@ The export functionality includes:
 - [A11yReport.tsx:11-95](file://components/A11yReport.tsx#L11-L95)
 - [A11yReport.tsx:143-334](file://components/A11yReport.tsx#L143-L334)
 
+### Accessibility Utilities Enhancement
+**New Section**
+
+The useAnnouncer hook provides reliable screen reader announcements with enhanced DOM mutation handling:
+
+**Enhanced DOM Mutation Safety:**
+- Uses `// eslint-disable-next-line react-hooks/immutability` comment to handle DOM textContent mutations safely
+- Implements requestAnimationFrame for smooth DOM updates
+- Clears and re-sets textContent to ensure screen reader re-announcement of identical messages
+- Automatically cleans up announcements after 5 seconds
+
+**Screen Reader Configuration:**
+- Creates a dedicated announcer element with `aria-live="polite"`
+- Sets `aria-atomic="true"` for complete message announcements
+- Uses `role="status"` for proper screen reader semantics
+- Applies `sr-only` class for visual hiding while maintaining accessibility
+
+**Hook Implementation:**
+- Maintains a stable announcer element reference across component lifecycle
+- Prevents multiple announcer elements from being created
+- Returns a memoized announce function for optimal performance
+
+**Usage Example:**
+```typescript
+const announce = useAnnouncer();
+announce('Operation completed successfully', 'polite');
+```
+
+**Section sources**
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:48-55](file://lib/ai/uiCheatSheet.ts#L48-L55)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
+
+### ESLint Configuration for Accessibility Hooks
+**New Section**
+
+The project includes comprehensive ESLint configuration that supports accessibility hooks:
+
+**ESLint Setup:**
+- Extends `eslint-config-next/core-web-vitals` for modern React best practices
+- Extends `eslint-config-next/typescript` for TypeScript-specific linting
+- Overrides default Next.js ignores to include accessibility utilities
+- Configures global ignores for build artifacts and Next.js cache directories
+
+**Accessibility Hook Support:**
+- The `useAnnouncer` hook includes proper ESLint comments for DOM mutations
+- Ensures DOM manipulation follows React best practices
+- Maintains code quality standards while enabling accessibility features
+
+**Configuration Benefits:**
+- Prevents ESLint errors for legitimate DOM mutations in accessibility contexts
+- Maintains consistent code quality across the accessibility utilities
+- Supports future expansion of accessibility features without linting conflicts
+
+**Section sources**
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
+- [useAnnouncer.ts:30](file://packages/a11y/hooks/useAnnouncer.ts#L30)
+
 ### Integration with Repair Pipeline
 The system integrates with a broader repair pipeline:
 - Rule-based repairs run first to fix common issues
@@ -422,6 +509,9 @@ AI-->>Gen : "AI-repaired code (optional)"
 ## Dependency Analysis
 - a11yValidator.ts depends on schemas.ts for A11yReport and A11yViolation types.
 - A11yReport.tsx consumes schemas.ts and renders the enhanced report UI with interactive fix application and export functionality.
+- useAnnouncer.ts provides accessibility utilities with proper DOM mutation handling.
+- uiCheatSheet.ts documents accessibility utilities usage for AI integration.
+- eslint.config.mjs configures ESLint for accessibility hook development.
 - Tests validate both the validator and auto-repair behavior.
 - Public exports include accessibility-related packages.
 
@@ -429,29 +519,37 @@ AI-->>Gen : "AI-repaired code (optional)"
 graph LR
 AV["a11yValidator.ts"] --> SCH["schemas.ts"]
 AR["A11yReport.tsx"] --> SCH
+UA["useAnnouncer.ts"] --> IDX["packages/a11y/index.ts"]
+UI["uiCheatSheet.ts"] --> UA
 TEST["a11yValidator.test.ts"] --> AV
+ESL["eslint.config.mjs"] --> UA
 RP["repairPipeline.ts"] --> AV
 UR["uiReviewer.ts"] --> AV
-IDX["packages/a11y/index.ts"] --> AR
 ```
 
 **Diagram sources**
 - [a11yValidator.ts:1-2](file://lib/validation/a11yValidator.ts#L1-L2)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
 - [A11yReport.tsx:1-6](file://components/A11yReport.tsx#L1-L6)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 - [a11yValidator.test.ts:1](file://__tests__/a11yValidator.test.ts#L1)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
-- [index.ts:1-4](file://packages/a11y/index.ts#L1-L4)
 
 **Section sources**
 - [a11yValidator.ts:1-2](file://lib/validation/a11yValidator.ts#L1-L2)
 - [schemas.ts:300-340](file://lib/validation/schemas.ts#L300-L340)
 - [A11yReport.tsx:1-6](file://components/A11yReport.tsx#L1-L6)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 - [a11yValidator.test.ts:1](file://__tests__/a11yValidator.test.ts#L1)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 - [repairPipeline.ts:1-286](file://lib/intelligence/repairPipeline.ts#L1-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
-- [index.ts:1-4](file://packages/a11y/index.ts#L1-L4)
 
 ## Performance Considerations
 - Regex-based scanning scales linearly with code length; keep patterns efficient.
@@ -459,6 +557,7 @@ IDX["packages/a11y/index.ts"] --> AR
 - Consider caching or incremental analysis for repeated validations on large codebases.
 - **New**: Interactive fix application state management is optimized with local component state.
 - **New**: Export operations are lightweight and triggered by user interaction only.
+- **New**: useAnnouncer hook uses requestAnimationFrame for smooth DOM updates and optimal performance.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -470,21 +569,27 @@ Common issues and resolutions:
 - **New**: Interactive fix application issues: Ensure callback handlers are properly implemented in parent components.
 - **New**: Export functionality issues: Ensure browser allows downloads and check console for any security restrictions.
 - **New**: PDF export limitations: HTML export creates printable versions suitable for PDF conversion.
+- **New**: useAnnouncer hook DOM mutation errors: The hook includes proper ESLint comments for DOM textContent mutations.
+- **New**: Screen reader announcement timing: The hook uses requestAnimationFrame for smooth DOM updates.
 
 Validation and repair verification:
 - Unit tests assert rule detection and auto-repair outcomes.
 - Repair pipeline applies rule-based repairs and optionally AI-based repairs.
 - **New**: Interactive fix application tested through user interaction scenarios.
 - **New**: Export functionality tested through user interaction scenarios.
+- **New**: useAnnouncer hook tested for DOM mutation safety and screen reader compatibility.
 
 **Section sources**
 - [a11yValidator.test.ts:3-108](file://__tests__/a11yValidator.test.ts#L3-L108)
 - [a11yValidator.ts:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
 - [repairPipeline.ts:238-286](file://lib/intelligence/repairPipeline.ts#L238-L286)
 - [uiReviewer.ts:165-198](file://lib/ai/uiReviewer.ts#L165-L198)
+- [useAnnouncer.ts:25-36](file://packages/a11y/hooks/useAnnouncer.ts#L25-L36)
 
 ## Conclusion
 The system provides a robust, rule-based validator for WCAG 2.1 AA–compliant accessibility checks on generated TSX code. It offers actionable reporting, a scoring mechanism, practical auto-repair capabilities, and comprehensive export functionality for compliance documentation. The enhanced interactive report interface enables users to directly manage accessibility violations, improving the development workflow and ensuring higher compliance rates.
+
+**Updated** The enhanced accessibility utilities with improved DOM mutation handling and ESLint configuration ensure consistent screen reader behavior across the application, providing reliable announcements and maintaining code quality standards.
 
 ## Appendices
 
@@ -566,3 +671,45 @@ The enhanced A11yReport component provides comprehensive export capabilities:
 **Section sources**
 - [A11yReport.tsx:148-163](file://components/A11yReport.tsx#L148-L163)
 - [A11yReport.tsx:165-218](file://components/A11yReport.tsx#L165-L218)
+
+### Accessibility Utilities Usage
+**New Section**
+
+The useAnnouncer hook provides reliable screen reader announcements:
+
+**Installation and Import:**
+```typescript
+import { useAnnouncer } from '@ui/a11y';
+```
+
+**Basic Usage:**
+```typescript
+const announce = useAnnouncer();
+announce('Operation completed successfully');
+```
+
+**Advanced Usage:**
+```typescript
+const announce = useAnnouncer();
+announce('Error: Invalid input', 'assertive'); // Immediate announcement
+announce('Loading...', 'polite'); // Standard announcement
+```
+
+**Integration with Components:**
+```typescript
+function MyComponent() {
+  const announce = useAnnouncer();
+  
+  const handleClick = () => {
+    // Perform action
+    announce('Action completed successfully');
+  };
+  
+  return <button onClick={handleClick}>Click me</button>;
+}
+```
+
+**Section sources**
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [uiCheatSheet.ts:48-55](file://lib/ai/uiCheatSheet.ts#L48-L55)
+- [index.ts:1-6](file://packages/a11y/index.ts#L1-L6)

@@ -44,18 +44,20 @@
 - [packages/tokens/colors.ts](file://packages/tokens/colors.ts)
 - [packages/charts/components/Charts.tsx](file://packages/charts/components/Charts.tsx)
 - [packages/charts/index.ts](file://packages/charts/index.ts)
+- [packages/a11y/hooks/useAnnouncer.ts](file://packages/a11y/hooks/useAnnouncer.ts)
+- [packages/a11y/components/FocusTrap.tsx](file://packages/a11y/components/FocusTrap.tsx)
+- [packages/a11y/components/VisuallyHidden.tsx](file://packages/a11y/components/VisuallyHidden.tsx)
+- [packages/a11y/index.ts](file://packages/a11y/index.ts)
 - [app/globals.css](file://app/globals.css)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect Applied Changes: Expanded @ui/core component library integration with new Card component variants (CardHeader, CardTitle, CardDescription, CardContent, CardFooter) and Modal components (ModalContent, ModalTrigger, ModalHeader, ModalTitle, ModalDescription, ModalFooter)
-- Added new tokens including easing, duration, and getChartColor utilities
-- Enhanced component registry documentation to include new internal implementations and their benefits
-- Updated dependency analysis to reflect reduced external dependency footprint
-- Added comprehensive documentation for internal command palette, button, and modal implementations
-- Updated component library organization to reflect internal implementation strategy
-- Enhanced performance and bundle size considerations for internal implementations
+- Updated FeedbackBar component documentation to reflect improved React component lifecycle management with proper useCallback wrappers and dependency arrays
+- Enhanced accessibility documentation to include useAnnouncer hook improvements and screen reader announcements
+- Added comprehensive lifecycle management analysis for state transitions and data fetching
+- Updated component architecture to emphasize proper React patterns and performance optimization
+- Enhanced accessibility component integration with screen reader support improvements
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -137,7 +139,7 @@ MODE_GATE["components/ModelSelectionGate.tsx<br/>Provider Card Animations"]
 end
 subgraph "Enhanced UI Packages (@ui/*)"
 UI_CORE["@ui/core<br/>Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants<br/>Card Variants: Header, Title, Description, Content, Footer"]
-UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
+UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav, useAnnouncer"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking, Grid Systems"]
 UI_MOTION["@ui/motion<br/>Animation Primitives"]
@@ -254,7 +256,7 @@ This section documents the primary UI components that form the backbone of the e
 - **SessionProvider and UserNav**: Authentication scaffolding with transition animations.
 - **Enhanced Chat System**: CenterWorkspace with comprehensive chat message types and visual styling.
 - **Provider Theme System**: Multiple color palette support for different AI providers with dynamic theme switching.
-- **FeedbackBar**: Interactive feedback collection with animated state transitions and comprehensive analytics.
+- **FeedbackBar**: Interactive feedback collection with animated state transitions, comprehensive analytics, and enhanced accessibility with useAnnouncer hook integration.
 - **PipelineStatus**: Status monitoring with hover animations and scale transitions.
 - **ThinkingPanel**: Multi-state thinking process visualization with comprehensive animations and requirement building.
 - **ModelSelectionGate**: Provider selection with card-based animations and hover effects.
@@ -267,6 +269,7 @@ This section documents the primary UI components that form the backbone of the e
 - **FocusTrap**: Manages focus trapping for modal dialogs and overlays
 - **VisuallyHidden**: Provides accessible hidden content for screen readers
 - **useKeyboardNav**: Hook for keyboard navigation patterns and accessibility
+- **useAnnouncer**: Screen reader announcement system with politeness levels
 
 **Enhanced Core Components**:
 - **Avatar**: User profile images with fallback initials and status indicators
@@ -306,13 +309,13 @@ The UI architecture centers around a blueprint engine that enforces design syste
 - Providers and contexts coordinate state across the workspace
 - Intelligent user experience features adapt to user behavior patterns
 - **Enhanced**: Chat system coordinates with fullscreen preview functionality
-- **Updated**: Provider themes dynamically adapt to selected AI models
-- **Improved**: Layout system supports vertical stacking patterns for better content organization
-- **Enhanced**: Comprehensive micro-interaction system provides consistent 200ms transition timing
-- **Updated**: All interactive elements follow standardized hover, scale, and shadow animations
-- **New**: Accessibility-first design principles guide all component development and testing
-- **Updated**: Internal implementation strategy reduces external dependencies and improves performance
-- **New**: Design token system provides centralized easing, duration, and chart color management
+- **Updated** Provider themes dynamically adapt to selected AI models
+- **Improved** Layout system supports vertical stacking patterns for better content organization
+- **Enhanced** Comprehensive micro-interaction system provides consistent 200ms transition timing
+- **Updated** All interactive elements follow standardized hover, scale, and shadow animations
+- **New** Accessibility-first design principles guide all component development and testing
+- **Updated** Internal implementation strategy reduces external dependencies and improves performance
+- **New** Design token system provides centralized easing, duration, and chart color management
 
 ```mermaid
 sequenceDiagram
@@ -494,7 +497,7 @@ THEME_HOOK --> GROQ_THEME
 Each theme provides the following properties:
 - **Text Colors**: Primary, muted, and faint variants
 - **Background Colors**: Light, medium, solid, and card variants
-- - **Border Colors**: Standard, active, and focus variants
+- **Border Colors**: Standard, active, and focus variants
 - **Shadow Effects**: Standard and glow variants
 - **Gradients**: Primary and subtle gradient variants
 - **Radial Orbs**: Inline CSS gradient values
@@ -994,17 +997,55 @@ Accessibility and design system alignment:
 - [components/auth/UserNav.tsx:38-53](file://components/auth/UserNav.tsx#L38-L53)
 
 ### FeedbackBar (Enhanced)
-Purpose: Interactive feedback collection with comprehensive state transitions and micro-interactions.
+Purpose: Interactive feedback collection with comprehensive state transitions, analytics, and enhanced accessibility.
 
-Key enhancements:
-- **State Management**: Seven distinct states (idle, correcting, submitting, done, error, history, analytics)
-- **Animated Transitions**: Smooth state changes with `transition-all duration-200`
-- **Interactive Elements**: Thumbs up/down, correction, discard, and analytics buttons
-- **History Integration**: Access to feedback history with loading states
-- **Analytics Display**: Comprehensive metrics and statistics
-- **Accessibility**: Enhanced ARIA labels and keyboard navigation support
+**Updated** The FeedbackBar component has been significantly enhanced with improved React component lifecycle management and accessibility features:
 
-**Updated** FeedbackBar now features enhanced micro-interaction patterns with consistent 200ms transition timing across all state changes.
+#### Lifecycle Management Improvements
+- **Proper useCallback Wrappers**: All async operations (fetchFeedbackHistory, fetchAnalytics, submit) are wrapped with useCallback for stable references
+- **Optimized Dependency Arrays**: Each callback includes only necessary dependencies, preventing unnecessary re-renders
+- **Efficient State Transitions**: State management with proper cleanup and resource management
+- **Memory Leak Prevention**: Proper useEffect cleanup and reference management
+
+#### Enhanced Accessibility Features
+- **useAnnouncer Integration**: Screen reader announcements for state changes and feedback submissions
+- **Politeness Levels**: Distinct politeness levels (polite vs assertive) for different types of announcements
+- **ARIA Labels**: Comprehensive ARIA attributes for screen reader compatibility
+- **Keyboard Navigation**: Full keyboard accessibility with proper focus management
+
+#### State Management Architecture
+The component now features seven distinct states with proper lifecycle management:
+
+```mermaid
+stateDiagram-v2
+[*] --> idle
+idle --> correcting : I corrected it
+idle --> history : View history
+idle --> analytics : View analytics
+idle --> submitting : Thumbs up/down
+correcting --> submitting : Submit correction
+history --> idle : Close
+analytics --> idle : Close
+submitting --> done : Success
+submitting --> error : Failure
+done --> [*]
+error --> idle : Retry
+```
+
+**Diagram sources**
+- [components/FeedbackBar.tsx:32](file://components/FeedbackBar.tsx#L32)
+- [components/FeedbackBar.tsx:68-107](file://components/FeedbackBar.tsx#L68-L107)
+
+#### Data Fetching Optimization
+- **History Loading**: Efficient loading with proper error handling and loading states
+- **Analytics Fetching**: Real-time analytics with caching and error recovery
+- **Workspace Context**: Proper workspace ID handling for multi-user environments
+
+#### Accessibility Improvements
+- **Screen Reader Support**: useAnnouncer hook provides real-time announcements
+- **Focus Management**: Proper focus restoration and navigation
+- **Error Communication**: Clear error messages with retry functionality
+- **State Announcements**: Automatic announcements for state changes
 
 **Section sources**
 - [components/FeedbackBar.tsx:1-406](file://components/FeedbackBar.tsx#L1-L406)
@@ -1144,9 +1185,21 @@ Key behaviors:
 - **Focus Management**: Maintains focus within navigable elements
 - **Accessible Labels**: Provides proper ARIA attributes for navigation
 
+**useAnnouncer**
+Purpose: Screen reader announcement system with politeness levels and message queuing.
+
+Key behaviors:
+- **Politeness Control**: Supports both 'polite' and 'assertive' announcement levels
+- **Message Queueing**: Prevents announcement conflicts with proper queuing
+- **DOM Management**: Creates and manages single announcer element
+- **Auto-Clearing**: Automatic clearing of announcements after timeout
+- **Cross-Component Support**: Shared announcer instance across multiple components
+
 **Section sources**
-- [lib/ai/uiCheatSheet.ts:27-33](file://lib/ai/uiCheatSheet.ts#L27-L33)
-- [lib/ai/prompts.ts:254](file://lib/ai/prompts.ts#L254)
+- [packages/a11y/hooks/useAnnouncer.ts:1-40](file://packages/a11y/hooks/useAnnouncer.ts#L1-L40)
+- [packages/a11y/components/FocusTrap.tsx:1-39](file://packages/a11y/components/FocusTrap.tsx#L1-L39)
+- [packages/a11y/components/VisuallyHidden.tsx:1-26](file://packages/a11y/components/VisuallyHidden.tsx#L1-L26)
+- [packages/a11y/index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 
 ## Internal Implementation Strategy
 
@@ -1248,7 +1301,7 @@ The transitions category provides comprehensive animation utilities:
 **Duration Tokens**:
 - `instant`: 0ms (for immediate feedback)
 - `fast`: 100ms (for quick transitions)
-- `normal`: 200ms (standard interaction timing)
+- `normal`: 200ms (for standard interaction timing)
 - `slow`: 300ms (for noticeable animations)
 - `slower`: 500ms (for major state changes)
 - `slowest`: 700ms (for dramatic transitions)
@@ -1316,7 +1369,7 @@ The UI components depend on shared tokens, theming, and utility packages. The ap
 ```mermaid
 graph LR
 UI_CORE["@ui/core<br/>Enhanced with Avatar, Badge, Card, Input, Textarea<br/>Internal Button Variants<br/>Card Variants: Header, Title, Description, Content, Footer<br/>Modal Variants: Content, Trigger, Header, Footer, Title, Description"]
-UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav"]
+UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav, useAnnouncer"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking"]
 UI_MOTION["@ui/motion<br/>Animation Primitives"]
@@ -1394,6 +1447,8 @@ APP_DEPS -.-> UI_TOKENS
 - **New**: Lightweight command palette eliminates cmdk dependency and associated bundle size.
 - **New**: Design token system provides centralized animation utilities for consistent performance.
 - **New**: getChartColor utility eliminates chart color calculation overhead with cached palette access.
+- **New**: useCallback optimization reduces unnecessary re-renders in FeedbackBar component.
+- **New**: useAnnouncer hook provides efficient screen reader announcements without external dependencies.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -1422,6 +1477,9 @@ Common issues and resolutions:
 - **New**: Chart color utilities: Check that getChartColor function returns expected color values from chart palette.
 - **New**: Accessibility compliance: Verify internal implementations meet WCAG guidelines.
 - **New**: Performance regression: Monitor bundle size and load times after internal implementation changes.
+- **New**: useCallback optimization: Verify proper dependency arrays in FeedbackBar component callbacks.
+- **New**: useAnnouncer hook: Check for proper announcer element creation and message queuing.
+- **New**: Screen reader announcements: Verify politeness levels and message clarity for different states.
 
 **Section sources**
 - [components/GeneratedCode.tsx:30-63](file://components/GeneratedCode.tsx#L30-L63)
@@ -1440,6 +1498,7 @@ Common issues and resolutions:
 - [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
 - [packages/tokens/transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
 - [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
+- [packages/a11y/hooks/useAnnouncer.ts:1-40](file://packages/a11y/hooks/useAnnouncer.ts#L1-L40)
 
 ## Conclusion
 The UI component system blends accessibility-first design with an AI-driven blueprint engine to produce consistent, compliant, and visually coherent components. Recent enhancements include intelligent scroll management, responsive design improvements, enhanced user experience features, comprehensive chat message types, expanded theming capabilities, fullscreen preview functionality, and a comprehensive micro-interaction system. The new modular prompt input system demonstrates improved maintainability and component composition patterns. The addition of provider-specific color themes creates a more personalized user experience while maintaining design consistency. The newly implemented micro-interaction system provides consistent 200ms transition timing across all interactive elements, creating delightful user experiences with proper accessibility support.
@@ -1449,6 +1508,8 @@ The UI component system blends accessibility-first design with an AI-driven blue
 **Updated** The system has adopted an internal implementation strategy that replaces external dependencies (cmdk, class-variance-authority, radix-ui) with lightweight, custom implementations. This approach reduces bundle size, improves performance, and provides complete control over component behavior while maintaining full functionality and accessibility compliance.
 
 **New** The addition of the design token system provides centralized management of animation utilities, easing curves, duration values, and chart color palettes, ensuring consistency across all components and reducing code duplication.
+
+**New** The enhanced FeedbackBar component demonstrates improved React component lifecycle management with proper useCallback wrappers, optimized dependency arrays, and comprehensive accessibility features including useAnnouncer hook integration for screen reader announcements.
 
 By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
@@ -1470,6 +1531,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Enhanced Card component system with five variants and composition pattern.
 - **New**: Comprehensive design token system with easing, duration, and chart utilities.
 - **New**: getChartColor utility for consistent chart color management.
+- **New**: Enhanced accessibility component integration with useAnnouncer hook for screen reader support.
 - Compatibility requirements:
   - Use Tailwind classes aligned with @ui packages
   - Ensure ARIA attributes and semantic roles
@@ -1486,6 +1548,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
   - **New**: Support internal implementation strategy with custom components
   - **New**: Utilize design token system for consistent animation and color management
   - **New**: Leverage getChartColor utility for data visualization consistency
+  - **New**: Implement useCallback optimization for improved component lifecycle management
+  - **New**: Integrate useAnnouncer hook for screen reader accessibility
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1524,13 +1588,15 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Internal implementation strategy ensures consistent component behavior and performance.
 - **New**: Accessibility-first design principles guide all component development and testing.
 - **New**: Design token system provides centralized animation and color management utilities.
+- **New**: useCallback optimization ensures efficient component lifecycle management.
+- **New**: useAnnouncer hook provides comprehensive screen reader accessibility support.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
 
 ### Component Library Organization
 - @ui/core: Base components, tokens, and foundational utilities with enhanced Avatar, Badge, Card, Input, and Textarea components, plus internal Button implementation, and comprehensive Card and Modal variant systems
-- @ui/a11y: Accessibility-focused components including FocusTrap, VisuallyHidden, and useKeyboardNav hooks
+- @ui/a11y: Accessibility-focused components including FocusTrap, VisuallyHidden, useKeyboardNav, and useAnnouncer hooks
 - @ui/forms: Form controls and validation helpers with enhanced accessibility
 - @ui/layout: Layout primitives and grid systems with responsive design and vertical stacking
 - @ui/motion: Motion primitives and animation utilities with spring and fade transitions
@@ -1569,6 +1635,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Consider internal implementation strategy for external dependency replacement
 - **New**: Leverage design token system for consistent animation and color management
 - **New**: Utilize getChartColor utility for chart color consistency
+- **New**: Implement useCallback optimization for improved component lifecycle management
+- **New**: Integrate useAnnouncer hook for screen reader accessibility
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1582,7 +1650,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 ### Extending the Design System
 - Introduce new tokens in @ui packages and update theming accordingly
 - Add new motion presets in @ui/motion and layout patterns in @ui/layout
-- Extend form controls in @ui/forms with consistent styling and validation
+- extend form controls in @ui/forms with consistent styling and validation
 - Document new components in @ui packages with usage examples
 - Maintain backward compatibility and deprecation policies
 - **Enhanced**: Incorporate user experience patterns and accessibility best practices
@@ -1594,10 +1662,12 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **Updated**: Implement AI-powered theme generation capabilities
 - **Enhanced**: Integrate comprehensive micro-interaction system with animation primitives
 - **Updated**: Support reduced motion accessibility compliance across all components
-- **New**: Implement comprehensive accessibility component ecosystem with FocusTrap, VisuallyHidden, and useKeyboardNav
+- **New**: Implement comprehensive accessibility component ecosystem with FocusTrap, VisuallyHidden, useKeyboardNav, and useAnnouncer
 - **New**: Adopt internal implementation strategy for external dependency replacement
 - **New**: Extend design token system with new easing curves and transition presets
 - **New**: Add chart color utilities for consistent data visualization across components
+- **New**: Implement useCallback optimization patterns for component lifecycle management
+- **New**: Integrate useAnnouncer hook for comprehensive screen reader accessibility
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -1619,6 +1689,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Card and Modal variant systems provide consistent composition patterns across the ecosystem
 - **New**: Design token system ensures animation and color consistency across all components
 - **New**: getChartColor utility maintains chart color consistency in generated components
+- **New**: useCallback optimization ensures efficient component lifecycle management across the ecosystem
+- **New**: useAnnouncer hook provides comprehensive screen reader accessibility throughout the ecosystem
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
@@ -1652,12 +1724,15 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Use FocusTrap for modal dialog accessibility
 - **New**: Use VisuallyHidden for screen reader accessibility
 - **New**: Use useKeyboardNav for keyboard navigation patterns
+- **New**: Use useAnnouncer for screen reader announcements
 - **New**: Consider internal implementation strategy for external dependency replacement
 - **New**: Evaluate bundle size impact when adopting internal implementations
 - **New**: Leverage design token system for consistent animation and color management
 - **New**: Utilize getChartColor utility for consistent chart color application
 - **New**: Compose Card components using CardHeader, CardTitle, CardDescription, CardContent, and CardFooter
 - **New**: Implement Modal components using ModalTrigger, ModalClose, ModalHeader, ModalFooter, ModalTitle, and ModalDescription
+- **New**: Implement useCallback optimization for efficient component lifecycle management
+- **New**: Integrate useAnnouncer hook for comprehensive screen reader accessibility
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1674,3 +1749,4 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
 - [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
 - [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
+- [packages/a11y/hooks/useAnnouncer.ts:1-40](file://packages/a11y/hooks/useAnnouncer.ts#L1-L40)

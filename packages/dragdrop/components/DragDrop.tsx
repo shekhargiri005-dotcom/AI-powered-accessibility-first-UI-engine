@@ -41,6 +41,7 @@ export function DragDrop({ items, onReorder, className, orientation = 'vertical'
   return (
     <div className={cn('flex', orientation === 'vertical' ? 'flex-col' : 'flex-row', className)} role="list" aria-label="Reorderable list">
       {items.map((item, index) => (
+        // eslint-disable-next-line jsx-a11y/role-supports-aria-props
         <div
           key={item.id}
           role="listitem"
@@ -57,7 +58,6 @@ export function DragDrop({ items, onReorder, className, orientation = 'vertical'
             item.disabled && 'opacity-50 cursor-not-allowed',
           )}
           aria-grabbed={dragIndex === index}
-          // eslint-disable-next-line jsx-a11y/role-supports-aria-props
           aria-disabled={item.disabled}
         >
           {item.content}
