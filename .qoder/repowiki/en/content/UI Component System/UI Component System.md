@@ -4,28 +4,11 @@
 **Referenced Files in This Document**
 - [README.md](file://README.md)
 - [package.json](file://package.json)
-- [components/A11yReport.tsx](file://components/A11yReport.tsx)
-- [components/GeneratedCode.tsx](file://components/GeneratedCode.tsx)
-- [components/prompt-input/ModeToggle.tsx](file://components/prompt-input/ModeToggle.tsx)
-- [components/prompt-input/PromptHistory.tsx](file://components/prompt-input/PromptHistory.tsx)
-- [components/prompt-input/PromptInput.tsx](file://components/prompt-input/PromptInput.tsx)
-- [components/prompt-input/types.ts](file://components/prompt-input/types.ts)
-- [components/VersionTimeline.tsx](file://components/VersionTimeline.tsx)
-- [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
-- [components/IntentBadge.tsx](file://components/IntentBadge.tsx)
-- [components/ide/CenterWorkspace.tsx](file://components/ide/CenterWorkspace.tsx)
-- [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
-- [components/ide/Sidebar.tsx](file://components/ide/Sidebar.tsx)
-- [components/workspace/WorkspaceProvider.tsx](file://components/workspace/WorkspaceProvider.tsx)
-- [components/workspace/WorkspaceSwitcher.tsx](file://components/workspace/WorkspaceSwitcher.tsx)
-- [components/auth/SessionProvider.tsx](file://components/auth/SessionProvider.tsx)
-- [components/auth/UserNav.tsx](file://components/auth/UserNav.tsx)
-- [components/FeedbackBar.tsx](file://components/FeedbackBar.tsx)
-- [components/ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
-- [components/PipelineStatus.tsx](file://components/PipelineStatus.tsx)
-- [components/ThinkingPanel.tsx](file://components/ThinkingPanel.tsx)
 - [lib/ai/uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
 - [lib/ai/prompts.ts](file://lib/ai/prompts.ts)
+- [lib/ai/memory.ts](file://lib/ai/memory.ts)
+- [lib/ai/componentGenerator.ts](file://lib/ai/componentGenerator.ts)
+- [lib/ai/promptBudget.ts](file://lib/ai/promptBudget.ts)
 - [lib/hooks/useProviderTheme.ts](file://lib/hooks/useProviderTheme.ts)
 - [lib/intelligence/uxStateEngine.ts](file://lib/intelligence/uxStateEngine.ts)
 - [lib/intelligence/depthEngine.ts](file://lib/intelligence/depthEngine.ts)
@@ -56,11 +39,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated Motion.tsx component documentation to reflect enhanced ESLint disable comments for @typescript-eslint/no-unused-vars and explicit any type warnings
-- Documented intentional TypeScript patterns for motion props handling and fallback implementations
-- Added comprehensive coverage of the MotionDivFallback implementation and its safety mechanisms
-- Enhanced documentation of the dual-mode architecture supporting both host builds and Sandpack previews
-- Updated micro-interaction system documentation to include the new Motion component patterns
+- Updated UI ecosystem cheat sheet documentation to reflect 60% token reduction while preserving essential information and practical examples
+- Enhanced documentation of AI prompt optimization strategies and token budget enforcement
+- Added comprehensive coverage of the component generation pipeline and memory management system
+- Updated micro-interaction system documentation to include enhanced TypeScript safety patterns
+- Documented the internal implementation strategy for reduced external dependencies
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -94,6 +77,8 @@ This document describes the internal UI component system and design framework of
 - Usage patterns and best practices for maintaining design consistency
 
 **Updated** The system now emphasizes production-ready components with comprehensive accessibility features, enhanced theming capabilities, and improved performance optimizations. All AI-assisted features have been removed, focusing on reliable, accessible UI components. The system has adopted an internal implementation strategy to reduce external dependencies and improve bundle size optimization.
+
+**Updated** The UI ecosystem cheat sheet has been optimized with a 60% token reduction while preserving essential information and practical examples, demonstrating efficient prompt engineering practices.
 
 ## Project Structure
 The repository is a Next.js application with a comprehensive monorepo-style packages directory for reusable UI libraries and a components directory for application-specific UI building blocks. The UI ecosystem integrates:
@@ -1640,6 +1625,8 @@ The UI component system blends accessibility-first design with an AI-driven blue
 
 **New** The enhanced Motion component system showcases sophisticated TypeScript safety patterns with intentional ESLint disable comments for fallback implementations, demonstrating best practices for handling edge cases while maintaining type safety.
 
+**Updated** The UI ecosystem cheat sheet has been optimized with a 60% token reduction while preserving essential information and practical examples, demonstrating efficient prompt engineering practices that maintain system functionality and developer productivity.
+
 By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
 **Updated** Package documentation files have been removed from multiple UI component packages in this repository. The system continues to function with the current package structure, but some packages may lack dedicated README documentation. The core functionality and component relationships remain intact.
@@ -1727,6 +1714,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
+- [lib/ai/uiCheatSheet.ts:8](file://lib/ai/uiCheatSheet.ts#L8)
+- [lib/ai/prompts.ts:102-112](file://lib/ai/prompts.ts#L102-L112)
 
 ### Component Library Organization
 - @ui/core: Base components, tokens, and foundational utilities with enhanced Avatar, Badge, Card, Input, and Textarea components, plus internal Button implementation, and comprehensive Card and Modal variant systems
@@ -1747,8 +1736,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
-- [lib/ai/uiCheatSheet.ts:27-33](file://lib/ai/uiCheatSheet.ts#L27-L33)
-- [lib/ai/prompts.ts:254](file://lib/ai/prompts.ts#L254)
+- [lib/ai/uiCheatSheet.ts:11-34](file://lib/ai/uiCheatSheet.ts#L11-L34)
+- [lib/ai/prompts.ts:88-101](file://lib/ai/prompts.ts#L88-L101)
 
 ### Adding New Components to the Registry
 - Define a clear prop interface and accessibility contract
@@ -1810,6 +1799,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
+- [lib/ai/uiCheatSheet.ts:8](file://lib/ai/uiCheatSheet.ts#L8)
+- [lib/ai/prompts.ts:102-112](file://lib/ai/prompts.ts#L102-L112)
 
 ### Relationship Between Generated Components and the Internal Ecosystem
 - Generated components are rendered inside SandpackPreview using @ui/editor and @ui/theming
@@ -1894,3 +1885,55 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [packages/core/components/Card.tsx:1-78](file://packages/core/components/Card.tsx#L1-L78)
 - [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
 - [packages/a11y/hooks/useAnnouncer.ts:1-40](file://packages/a11y/hooks/useAnnouncer.ts#L1-L40)
+
+### UI Ecosystem Cheat Sheet Optimization
+**Updated** The UI ecosystem cheat sheet has been optimized with a 60% token reduction while preserving essential information and practical examples:
+
+#### Optimized Structure
+The cheat sheet now provides concise, essential information:
+- **SANDBOX API**: Streamlined list of available @ui/* packages and their key exports
+- **Third-party Libraries**: Minimal imports section with essential external dependencies
+- **Token Usage**: Concise examples of design token application
+
+#### Token Reduction Strategies
+- **Concise Package Lists**: Removed verbose descriptions, keeping only essential component names
+- **Essential Examples Only**: Limited token usage examples to critical patterns
+- **Streamlined Third-party Imports**: Reduced to minimum viable imports
+- **Preserved Practical Value**: Maintained all essential information for developers
+
+#### Impact on Development Workflow
+- **Faster Onboarding**: New developers can quickly understand available components
+- **Reduced Cognitive Load**: Concise information reduces decision fatigue
+- **Maintained Functionality**: All essential information preserved for effective development
+- **Efficient Prompt Engineering**: Demonstrates best practices for token-efficient prompt design
+
+**Section sources**
+- [lib/ai/uiCheatSheet.ts:8](file://lib/ai/uiCheatSheet.ts#L8)
+- [lib/ai/uiCheatSheet.ts:11-34](file://lib/ai/uiCheatSheet.ts#L11-L34)
+
+### Component Generation Pipeline and Memory Management
+**Updated** The component generation pipeline now includes comprehensive memory management and token optimization:
+
+#### Memory Management System
+- **Prisma Integration**: Persistent storage via Project and ProjectVersion tables
+- **Asynchronous Operations**: Fire-and-forget saves with background processing
+- **Type Safety**: Strict typing for memory entries and project data
+- **Accessibility Tracking**: A11y scores stored with generation history
+
+#### Token Budget Enforcement
+- **Estimation Functions**: Character-based token estimation for prompt sizing
+- **Context Trimming**: Progressive truncation of optional context blocks
+- **Tier-Based Budgeting**: Model-specific token limits with reserved output capacity
+- **Safe Input Limits**: Protection against exceeding model context windows
+
+#### AI Prompt Optimization
+- **Cheatsheet Integration**: Streamlined UI ecosystem information injection
+- **Memory Retrieval**: Relevant examples fetched based on component type
+- **Semantic Knowledge**: Context building with component-specific knowledge bases
+- **Design Rule Application**: Consistent design system enforcement
+
+**Section sources**
+- [lib/ai/memory.ts:1-211](file://lib/ai/memory.ts#L1-L211)
+- [lib/ai/promptBudget.ts:27-64](file://lib/ai/promptBudget.ts#L27-L64)
+- [lib/ai/componentGenerator.ts:21-251](file://lib/ai/componentGenerator.ts#L21-L251)
+- [lib/ai/prompts.ts:102-112](file://lib/ai/prompts.ts#L102-L112)

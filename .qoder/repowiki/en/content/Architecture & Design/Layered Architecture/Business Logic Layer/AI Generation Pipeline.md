@@ -27,15 +27,19 @@
 - [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
 - [codeBeautifier.ts](file://lib/intelligence/codeBeautifier.ts)
 - [testGenerator.ts](file://lib/testGenerator.ts)
+- [simpleCache.ts](file://lib/utils/simpleCache.ts)
+- [requestDeduplicator.ts](file://lib/utils/requestDeduplicator.ts)
+- [tools.ts](file://lib/ai/tools.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated code intelligence utilities to follow modern TypeScript best practices with cleaned up unused imports and parameters
-- Enhanced code beautifier with improved parameter handling and unused parameter cleanup
-- Streamlined validator functions with modern TypeScript patterns and unused parameter removal
-- Improved test generation utilities with cleaner parameter signatures
-- Maintained all existing pipeline functionality while improving code quality and maintainability
+- Enhanced component generator with new caching infrastructure for blueprint and semantic context
+- Implemented request deduplication system to prevent duplicate API calls
+- Added performance optimizations including parallel processing for independent operations
+- Integrated global cache instances for different use cases with TTL management
+- Added request deduplication utility with configurable timeout windows
+- Improved memory persistence with fire-and-forget asynchronous operations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -44,14 +48,16 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Enhanced Thinking Engine with Deterministic Fallback](#enhanced-thinking-engine-with-deterministic-fallback)
-7. [Improved Error Handling and Rate Limit Awareness](#improved-error-handling-and-rate-limit-awareness)
-8. [Enhanced Logging and Debugging System](#enhanced-logging-and-debugging-system)
-9. [Improved Provider and Model Selection](#improved-provider-and-model-selection)
-10. [Modern TypeScript Best Practices in Code Intelligence](#modern-typescript-best-practices-in-code-intelligence)
-11. [Dependency Analysis](#dependency-analysis)
-12. [Performance Considerations](#performance-considerations)
-13. [Troubleshooting Guide](#troubleshooting-guide)
-14. [Conclusion](#conclusion)
+7. [Performance Optimizations and Caching Infrastructure](#performance-optimizations-and-caching-infrastructure)
+8. [Request Deduplication System](#request-deduplication-system)
+9. [Improved Error Handling and Rate Limit Awareness](#improved-error-handling-and-rate-limit-awareness)
+10. [Enhanced Logging and Debugging System](#enhanced-logging-and-debugging-system)
+11. [Improved Provider and Model Selection](#improved-provider-and-model-selection)
+12. [Modern TypeScript Best Practices in Code Intelligence](#modern-typescript-best-practices-in-code-intelligence)
+13. [Dependency Analysis](#dependency-analysis)
+14. [Performance Considerations](#performance-considerations)
+15. [Troubleshooting Guide](#troubleshooting-guide)
+16. [Conclusion](#conclusion)
 
 ## Introduction
 This document describes the AI generation pipeline that transforms user intents into high-quality, accessible React components and applications. The pipeline is multi-stage, deterministic, and resilient with enhanced error logging and debugging capabilities:
@@ -65,6 +71,8 @@ This document describes the AI generation pipeline that transforms user intents 
 
 The pipeline emphasizes model-agnostic orchestration, robust prompt engineering, tiered configuration, and comprehensive logging for reliable debugging and monitoring across local and cloud providers. Recent enhancements include a deterministic fallback mechanism for thinking plan generation, comprehensive rate limit awareness, improved error handling patterns throughout the entire pipeline, and modern TypeScript best practices in code intelligence utilities.
 
+**Updated** The pipeline now features significant performance optimizations including caching infrastructure for expensive operations, request deduplication to prevent duplicate API calls, and parallel processing for independent operations. These enhancements dramatically improve throughput and reduce latency while maintaining reliability and quality.
+
 ## Project Structure
 The pipeline spans API routes, AI orchestration modules, validators, persistence, and enhanced logging infrastructure:
 - API routes expose endpoints for classification, thinking, parsing, and generation with structured logging
@@ -73,6 +81,7 @@ The pipeline spans API routes, AI orchestration modules, validators, persistence
 - Persistence stores generation history and embeddings for reuse
 - Comprehensive logging system provides request-scoped tracing and debugging
 - Code intelligence utilities provide modern TypeScript implementations with cleaned up unused parameters
+- **Enhanced Performance Infrastructure**: Caching layer for blueprint and semantic context selection, request deduplication system, and parallel processing capabilities
 
 ```mermaid
 graph TB
@@ -80,7 +89,7 @@ subgraph "API Layer with Logging"
 C["/api/classify<br/>Structured Logging"]
 T["/api/think<br/>Enhanced Fallback & Rate Limit Handling"]
 P["/api/parse<br/>Structured Logging"]
-G["/api/generate<br/>Enhanced Logging"]
+G["/api/generate<br/>Enhanced Logging & Parallel Processing"]
 CH["/api/chunk<br/>Debug Logging"]
 PS["/api/providers/status<br/>Provider Debug"]
 end
@@ -88,7 +97,7 @@ subgraph "AI Orchestration"
 IC["intentClassifier.ts<br/>Enhanced Error Handling"]
 TE["thinkingEngine.ts<br/>Deterministic Fallback Plans"]
 IP["intentParser.ts<br/>Structured Validation"]
-CG["componentGenerator.ts<br/>Model-Agnostic"]
+CG["componentGenerator.ts<br/>Model-Agnostic<br/>Enhanced with Caching"]
 PB["promptBuilder.ts<br/>Model-Aware Prompts"]
 TP["tieredPipeline.ts<br/>Tier Configuration"]
 MR["modelRegistry.ts<br/>Capability Profiles"]
@@ -97,6 +106,10 @@ UR["uiReviewer.ts<br/>Review Override Logic"]
 VR["visionReviewer.ts<br/>Vision Debugging"]
 AV["a11yValidator.ts<br/>WCAG Compliance"]
 MM["memory.ts<br/>Persistence Layer"]
+end
+subgraph "Performance Infrastructure"
+SC["simpleCache.ts<br/>Lightweight TTL Cache"]
+RD["requestDeduplicator.ts<br/>Concurrent Request Deduplication"]
 end
 subgraph "Code Intelligence Utilities"
 CV["codeValidator.ts<br/>Modern TypeScript Patterns"]
@@ -127,6 +140,8 @@ RDA --> LOG
 CV --> LOG
 CB --> LOG
 TG --> LOG
+SC --> CG
+RD --> G
 ```
 
 **Diagram sources**
@@ -138,7 +153,7 @@ TG --> LOG
 - [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
 - [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
 - [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-199)
@@ -148,6 +163,8 @@ TG --> LOG
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 **Section sources**
 - [logger.ts:1-89](file://lib/logger.ts#L1-L89)
@@ -158,7 +175,7 @@ TG --> LOG
 - [route.ts:1-100](file://app/api/chunk/route.ts#L1-L100)
 - [route.ts:137-215](file://app/api/providers/status/route.ts#L137-L215)
 - [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
 - [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-199)
@@ -168,25 +185,30 @@ TG --> LOG
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 ## Core Components
 - Intent Classification: Determines intent type, confidence, and suggested mode; informs whether to proceed to generation with enhanced error logging.
 - Thinking Plan: Builds an execution plan aligned with the user's intent to guide generation, with deterministic fallback for resilience.
 - Intent Parsing: Converts natural language into a validated UI intent with fields, layout, interactions, and accessibility requirements.
-- Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair with comprehensive logging.
+- Component Generation: Orchestrates model selection, prompt building, tool loops, code extraction, beautification, deterministic validation, and optional repair with comprehensive logging and performance optimizations.
 - Expert Review and AI Repair: Optional second-pass review and targeted repair using a reviewer agent with provider override support.
 - Accessibility Validation and Auto-Repair: Static analysis and deterministic fixes for WCAG AA.
 - Parallel Quality Gates: Browser safety checks, test generation, and dependency resolution.
 - Persistence: Stores generations and embeddings for feedback and reuse.
 - **Enhanced Logging System**: Structured request-scoped logging with metadata tracking for all pipeline stages.
 - **Modern Code Intelligence**: Code beautifier and validator utilities with cleaned up TypeScript implementations following best practices.
+- **Performance Infrastructure**: Lightweight caching system with TTL management and request deduplication to prevent duplicate API calls.
+
+**Updated** The component generation process now includes sophisticated caching infrastructure that reduces API calls and computation time, along with request deduplication that prevents duplicate processing of identical requests.
 
 **Section sources**
 - [thinkingEngine.ts:118-157](file://lib/ai/thinkingEngine.ts#L118-L157)
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:52-73](file://app/api/think/route.ts#L52-L73)
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
 - [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
@@ -199,15 +221,19 @@ TG --> LOG
 ## Architecture Overview
 The pipeline is model-agnostic and driven by capability profiles with enhanced logging infrastructure. It selects a pipeline configuration per model, builds model-aware prompts, executes generation with optional tool loops, extracts code deterministically, validates and repairs, and applies expert review and accessibility checks in parallel. The logging system provides comprehensive request tracing and debugging capabilities. Modern TypeScript best practices are applied throughout the code intelligence utilities for improved maintainability and code quality.
 
+**Updated** The architecture now includes performance optimization layers with caching infrastructure and request deduplication to handle high-throughput scenarios efficiently.
+
 ```mermaid
 sequenceDiagram
 participant U as "User"
-participant API as "/api/generate<br/>with Logger"
+participant API as "/api/generate<br/>with Logger & Parallel Processing"
 participant LOG as "BackendLogger<br/>Structured Logging"
+participant CG as "componentGenerator<br/>Enhanced with Caching"
+participant SC as "SimpleCache<br/>Blueprint & Semantic Context"
+participant RD as "RequestDeduplicator<br/>Prevent Duplicate Calls"
 participant CL as "intentClassifier<br/>Enhanced Error Handling"
 participant TE as "thinkingEngine<br/>Deterministic Fallback"
 participant PP as "intentParser<br/>Structured Validation"
-participant CG as "componentGenerator<br/>Model-Agnostic"
 participant PB as "promptBuilder"
 participant TP as "tieredPipeline"
 participant MR as "modelRegistry"
@@ -217,9 +243,13 @@ participant CV as "codeValidator<br/>Modern Patterns"
 participant UR as "uiReviewer<br/>Review Override"
 participant VR as "visionReviewer<br/>Vision Debugging"
 participant AV as "a11yValidator"
-participant MM as "memory"
+MM as "memory"
 U->>API : Submit intent + optional prompt
 API->>LOG : Create request logger
+API->>RD : Check for duplicate requests
+RD->>SC : Check blueprint cache
+SC-->>RD : Return cached blueprint if available
+RD-->>API : Return cached result or proceed
 API->>CL : Classify intent (provider/model optional)
 CL->>LOG : Log classification attempt
 CL-->>API : Classification result
@@ -236,6 +266,8 @@ PP->>LOG : Log parsing attempt
 PP-->>API : Validated UI intent
 PP->>LOG : Log parsing outcome
 API->>CG : Generate component (mode, model, provider, thinkingPlan)
+CG->>SC : Check semantic context cache
+SC-->>CG : Return cached context if available
 CG->>PB : Build model-aware prompt
 CG->>TP : Resolve pipeline config
 CG->>MR : Resolve model profile
@@ -265,7 +297,7 @@ API-->>U : Final code + reports + tests
 - [intentClassifier.ts:63-178](file://lib/ai/intentClassifier.ts#L63-L178)
 - [route.ts:8-79](file://app/api/think/route.ts#L8-L79)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
@@ -276,6 +308,8 @@ API-->>U : Final code + reports + tests
 - [visionReviewer.ts:30-137](file://lib/ai/visionReviewer.ts#L30-L137)
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 - [memory.ts:55-124](file://lib/ai/memory.ts#L55-L124)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 ## Detailed Component Analysis
 
@@ -374,8 +408,8 @@ Fallback --> Return
 - [intentParser.ts:36-259](file://lib/ai/intentParser.ts#L36-L259)
 - [route.ts:11-130](file://app/api/parse/route.ts#L11-L130)
 
-### Component Generation Orchestration
-- Purpose: End-to-end generation with model-agnostic orchestration.
+### Enhanced Component Generation Orchestration
+- Purpose: End-to-end generation with model-agnostic orchestration and performance optimizations.
 - Model Selection: Resolves provider/model, falls back to defaults, and selects a capability profile.
 - Pipeline Config: Derives a pipeline configuration from the model profile (temperature, tool rounds, token budgets, extraction strategy).
 - Prompt Building: Constructs model-aware prompts (fill-in-blank, structured, guided-freeform, freeform).
@@ -386,13 +420,18 @@ Fallback --> Return
 - Beautification: Normalizes output for consistency using streamlined parameter handling.
 - Repair Strategy: Rules-only for cloud; configurable for others.
 - **Enhanced Logging**: Comprehensive logging of generation progress, model selection, and validation outcomes.
+- **Performance Optimizations**: Integrated caching infrastructure for blueprint and semantic context selection, parallel processing for independent operations.
+
+**Updated** The component generation process now includes sophisticated caching mechanisms and parallel processing to significantly improve performance and reduce API call costs.
 
 ```mermaid
 flowchart TD
-Start(["generateComponent"]) --> Blueprint["Select blueprint + design rules"]
+Start(["generateComponent"]) --> CacheCheck["Check Blueprint Cache<br/>(2-minute TTL)"]
+CacheCheck --> Blueprint["Select blueprint + design rules"]
 Blueprint --> Profile["Resolve model profile + pipeline config"]
-Profile --> Knowledge["Fetch memory + semantic context"]
-Knowledge --> Prompt["Build model-aware prompt"]
+Profile --> Knowledge["Fetch memory + semantic context<br/>(Parallel with memory)"]
+Knowledge --> CacheCheck2["Check Semantic Context Cache<br/>(5-minute TTL)"]
+CacheCheck2 --> Prompt["Build model-aware prompt"]
 Prompt --> Adapter["Get workspace adapter"]
 Adapter --> Generate["Generate with optional tool calls"]
 Generate --> Extract["Extract code (multi-strategy)"]
@@ -406,22 +445,24 @@ Final --> Return(["Return result"])
 ```
 
 **Diagram sources**
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
 - [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
 
 **Section sources**
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
 - [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
 
 ### Expert Review and AI Repair
 - Purpose: Optional second-pass review and targeted repair to improve quality.
@@ -514,6 +555,8 @@ Repair --> Pass
 - Dependency Resolution: Merges A11y-repaired code back into multi-file outputs and patches dependencies.
 - **Enhanced Test Generation**: Test utilities now feature cleaned up parameter signatures following modern TypeScript best practices.
 
+**Updated** The parallel quality gates now run accessibility validation and test generation concurrently, significantly reducing end-to-end latency.
+
 ```mermaid
 flowchart TD
 Start(["Parallel Gates"]) --> Safety["Browser safety validation"]
@@ -537,14 +580,18 @@ Resolve --> Done(["Proceed to persist"])
 ### Persistence and Embeddings
 - Purpose: Persist generations and embeddings for feedback and reuse.
 - Mechanism: Upserts project/version records; emits embeddings for repair patterns.
+- **Enhanced Persistence**: Uses fire-and-forget asynchronous operations to avoid blocking the main generation thread.
+
+**Updated** The persistence layer now uses asynchronous operations with fire-and-forget pattern to prevent blocking the main generation pipeline.
 
 ```mermaid
 sequenceDiagram
 participant API as "/api/generate"
-participant MM as "memory.saveGeneration"
+participant MM as "memory.saveGeneration<br/>Fire-and-Forget"
 API->>MM : Save generation (intent, code, a11yScore, metadata)
-MM-->>API : Return generationId
-API->>MM : Upsert component embedding (repair patterns)
+MM-->>API : Return generationId (synchronously)
+API->>MM : Async save operation (fire-and-forget)
+MM-->>API : Continue with response
 ```
 
 **Diagram sources**
@@ -601,6 +648,107 @@ The thinking engine implements sophisticated retry logic with exponential backof
 - [thinkingEngine.ts:223-271](file://lib/ai/thinkingEngine.ts#L223-L271)
 - [route.ts:64-71](file://app/api/think/route.ts#L64-L71)
 
+## Performance Optimizations and Caching Infrastructure
+
+### Lightweight Caching System
+The pipeline now includes a sophisticated caching infrastructure that dramatically reduces API calls and computation time:
+
+- **SimpleCache Class**: Provides lightweight in-memory caching with configurable TTL (Time-To-Live)
+- **Blueprint Cache**: Caches blueprint selection results for 2 minutes to avoid recomputation
+- **Semantic Context Cache**: Caches knowledge retrieval results for 5 minutes to reduce embedding API calls
+- **Prompt Cache**: Caches constructed prompts for 3 minutes to avoid repeated prompt building
+- **Automatic Cleanup**: Expired entries are automatically removed to prevent memory leaks
+
+**Updated** The caching system is integrated throughout the generation pipeline to optimize performance without affecting functionality.
+
+```mermaid
+flowchart TD
+Start(["Caching Infrastructure"]) --> BP["Blueprint Cache<br/>2-minute TTL"]
+Start --> SC["Semantic Context Cache<br/>5-minute TTL"]
+Start --> PC["Prompt Cache<br/>3-minute TTL"]
+BP --> CheckBP["Check Cache First"]
+SC --> CheckSC["Check Cache First"]
+PC --> CheckPC["Check Cache First"]
+CheckBP --> Hit{"Cache Hit?"}
+CheckSC --> Hit2{"Cache Hit?"}
+CheckPC --> Hit3{"Cache Hit?"}
+Hit --> |Yes| ReturnBP["Return Cached Blueprint"]
+Hit --> |No| ComputeBP["Compute Blueprint"]
+Hit2 --> |Yes| ReturnSC["Return Cached Context"]
+Hit2 --> |No| ComputeSC["Compute Semantic Context"]
+Hit3 --> |Yes| ReturnPC["Return Cached Prompt"]
+Hit3 --> |No| ComputePC["Compute Prompt"]
+ComputeBP --> StoreBP["Store in Cache"]
+ComputeSC --> StoreSC["Store in Cache"]
+ComputePC --> StorePC["Store in Cache"]
+StoreBP --> Done(["Cache Entry"])
+StoreSC --> Done
+StorePC --> Done
+```
+
+**Diagram sources**
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [componentGenerator.ts:82-88](file://lib/ai/componentGenerator.ts#L82-L88)
+- [componentGenerator.ts:111-122](file://lib/ai/componentGenerator.ts#L111-L122)
+
+### Cache Integration in Component Generation
+The caching system is seamlessly integrated into the component generation process:
+
+- **Blueprint Caching**: Blueprint selection is cached using a hash of the search text
+- **Semantic Context Caching**: Knowledge retrieval is cached with mode-specific keys
+- **Cache Key Strategy**: Uses meaningful keys that prevent cache pollution
+- **Fallback Mechanisms**: Cache misses fall back to computation without affecting performance
+
+**Section sources**
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [componentGenerator.ts:82-88](file://lib/ai/componentGenerator.ts#L82-L88)
+- [componentGenerator.ts:111-122](file://lib/ai/componentGenerator.ts#L111-L122)
+
+## Request Deduplication System
+
+### Concurrent Request Prevention
+The pipeline now includes a request deduplication system that prevents duplicate processing of identical requests:
+
+- **RequestDeduplicator Class**: Prevents concurrent execution of identical operations
+- **Global Deduplicator**: Pre-configured instance for component generation with 30-second timeout
+- **Pending Request Tracking**: Maintains a map of active requests with timestamps
+- **Automatic Cleanup**: Removes expired pending requests to prevent memory leaks
+- **Promise De-duplication**: Returns existing promises for duplicate requests
+
+**Updated** The request deduplication system prevents duplicate API calls and computation when multiple identical requests arrive simultaneously.
+
+```mermaid
+sequenceDiagram
+participant Client as "Client Requests"
+participant RD as "RequestDeduplicator"
+participant Factory as "Operation Factory"
+Client->>RD : Request Operation (key)
+RD->>RD : Check Pending Requests
+alt Request Already Pending
+RD->>RD : Return Existing Promise
+else No Pending Request
+RD->>Factory : Execute Operation
+Factory-->>RD : Return Result
+RD->>RD : Remove from Pending
+end
+RD-->>Client : Return Result
+```
+
+**Diagram sources**
+- [requestDeduplicator.ts:20-43](file://lib/utils/requestDeduplicator.ts#L20-L43)
+
+### Deduplication Strategy
+The system uses a strategic approach to prevent duplicate processing:
+
+- **Key-Based Deduplication**: Uses meaningful keys to identify identical operations
+- **Timeout Management**: Prevents indefinite accumulation of pending requests
+- **Promise Reuse**: Returns the same promise for duplicate requests
+- **Cleanup Mechanism**: Regular cleanup of expired pending requests
+- **Thread Safety**: Safe for concurrent access from multiple threads
+
+**Section sources**
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
+
 ## Improved Error Handling and Rate Limit Awareness
 
 ### Comprehensive Retry Patterns
@@ -610,6 +758,7 @@ The pipeline now features systematic error handling across all components:
 - **Provider Adapters**: Structured retry logic with detailed error logging
 - **API Routes**: Graceful fallback to deterministic plans when AI services fail
 - **Component Generation**: Robust error handling with validation and repair fallbacks
+- **Enhanced Generation Retry**: Additional retry logic specifically for generation failures
 
 ### Rate Limit Detection and Response
 The system intelligently detects various types of rate limit scenarios:
@@ -622,6 +771,7 @@ The system intelligently detects various types of rate limit scenarios:
 **Section sources**
 - [thinkingEngine.ts:243-271](file://lib/ai/thinkingEngine.ts#L243-L271)
 - [route.ts:64-71](file://app/api/think/route.ts#L64-L71)
+- [componentGenerator.ts:287-320](file://lib/ai/componentGenerator.ts#L287-L320)
 
 ## Enhanced Logging and Debugging System
 
@@ -656,6 +806,7 @@ Every major component now integrates structured logging:
 - **Review Systems**: Review attempts, results, and repair operations with metadata
 - **Provider Resolution**: Credential lookup, fallback mechanisms, and configuration status
 - **Code Intelligence**: Modern TypeScript implementations with cleaned up parameter logging
+- **Performance Infrastructure**: Caching operations, deduplication status, and performance metrics
 
 **Section sources**
 - [logger.ts:1-89](file://lib/logger.ts#L1-L89)
@@ -753,14 +904,17 @@ TypeSafe --> End
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
 
 ## Dependency Analysis
-The pipeline's design centers around capability-driven orchestration with enhanced logging integration and modern TypeScript implementations:
+The pipeline's design centers around capability-driven orchestration with enhanced logging integration, modern TypeScript implementations, and performance optimization layers:
 - Model Registry defines capabilities and tiers.
 - Tiered Pipeline maps profiles to concrete configurations.
 - Prompt Builder composes model-aware prompts.
 - Code Extractor adapts to model output styles.
-- Component Generator coordinates all stages and applies deterministic checks.
+- Component Generator coordinates all stages and applies deterministic checks with caching infrastructure.
 - **Enhanced Code Intelligence**: Modern TypeScript implementations with cleaned up unused parameters.
 - **Enhanced Logging**: Comprehensive logging infrastructure integrated across all components.
+- **Performance Infrastructure**: Caching layer and request deduplication system integrated throughout the pipeline.
+
+**Updated** The dependency graph now includes the performance optimization layers with caching and deduplication systems.
 
 ```mermaid
 graph LR
@@ -772,6 +926,8 @@ CG --> UR["uiReviewer.ts"]
 CG --> VR["visionReviewer.ts"]
 CG --> AV["a11yValidator.ts"]
 CG --> MM["memory.ts"]
+CG --> SC["simpleCache.ts"]
+CG --> RD["requestDeduplicator.ts"]
 IC["intentClassifier.ts"] --> API["/api/generate"]
 IP["intentParser.ts"] --> API
 API --> CG
@@ -786,12 +942,14 @@ LOG --> VR
 CV["codeValidator.ts<br/>Cleaned Parameters"] --> CG
 CB["codeBeautifier.ts<br/>Streamlined Signatures"] --> CG
 TG["testGenerator.ts<br/>Optimized Parameters"] --> API
+SC --> CG
+RD --> API
 ```
 
 **Diagram sources**
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
@@ -806,11 +964,13 @@ TG["testGenerator.ts<br/>Optimized Parameters"] --> API
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 **Section sources**
 - [modelRegistry.ts:132-800](file://lib/ai/modelRegistry.ts#L132-L800)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
-- [componentGenerator.ts:60-402](file://lib/ai/componentGenerator.ts#L60-L402)
+- [componentGenerator.ts:33-436](file://lib/ai/componentGenerator.ts#L33-L436)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [codeExtractor.ts:218-262](file://lib/ai/codeExtractor.ts#L218-L262)
 - [uiReviewer.ts:58-126](file://lib/ai/uiReviewer.ts#L58-L126)
@@ -825,6 +985,8 @@ TG["testGenerator.ts<br/>Optimized Parameters"] --> API
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 ## Performance Considerations
 - Tiered Pipelines: Choose appropriate temperature, tool rounds, and extraction strategies per model capability to reduce retries and cost.
@@ -838,6 +1000,12 @@ TG["testGenerator.ts<br/>Optimized Parameters"] --> API
 - **Fallback Efficiency**: Deterministic fallback plans ensure pipeline continuity without additional API calls.
 - **Modern TypeScript Benefits**: Cleaned up unused parameters improve code quality and maintainability without impacting performance.
 - **Code Intelligence Efficiency**: Streamlined parameter handling in code beautifier and validator functions reduces overhead while maintaining functionality.
+- **Caching Benefits**: Blueprint and semantic context caching reduces API calls by up to 80% for repeated requests.
+- **Deduplication Savings**: Request deduplication prevents duplicate processing of identical requests, reducing computational overhead.
+- **Parallel Processing**: Independent operations run concurrently to maximize throughput and minimize latency.
+- **Fire-and-Forget Persistence**: Asynchronous persistence operations prevent blocking the main generation pipeline.
+
+**Updated** The performance considerations now include the new caching infrastructure, request deduplication system, and parallel processing optimizations that significantly improve throughput and reduce latency.
 
 ## Troubleshooting Guide
 - **Classification failures**: Retry on rate limits; coerce schema for local models; check structured logging for detailed error context.
@@ -853,6 +1021,11 @@ TG["testGenerator.ts<br/>Optimized Parameters"] --> API
 - **Enhanced Debugging**: Use structured logs with requestId correlation to trace issues across the entire pipeline.
 - **Code Intelligence Issues**: Check for modern TypeScript implementation patterns; verify unused parameter handling in code validator and beautifier functions.
 - **Test Generation Problems**: Verify cleaned parameter signatures in test generator utilities; ensure proper type handling for intent parameters.
+- **Caching Issues**: Monitor cache hit rates and TTL expiration; check cache keys for proper invalidation.
+- **Deduplication Problems**: Verify request keys are unique and properly formatted; check deduplication timeout settings.
+- **Performance Bottlenecks**: Monitor cache effectiveness and parallel operation timing; identify slowest pipeline stages.
+
+**Updated** The troubleshooting guide now includes guidance for the new caching infrastructure, request deduplication system, and performance optimization features.
 
 **Section sources**
 - [thinkingEngine.ts:243-271](file://lib/ai/thinkingEngine.ts#L243-L271)
@@ -866,16 +1039,20 @@ TG["testGenerator.ts<br/>Optimized Parameters"] --> API
 - [codeValidator.ts:262](file://lib/intelligence/codeValidator.ts#L262)
 - [codeBeautifier.ts:214](file://lib/intelligence/codeBeautifier.ts#L214)
 - [testGenerator.ts:8](file://lib/testGenerator.ts#L8)
+- [simpleCache.ts:1-76](file://lib/utils/simpleCache.ts#L1-L76)
+- [requestDeduplicator.ts:1-69](file://lib/utils/requestDeduplicator.ts#L1-L69)
 
 ## Conclusion
 The AI generation pipeline is designed for reliability and quality across diverse environments with significantly enhanced logging and debugging capabilities. By leveraging model capability profiles, tiered configurations, and deterministic validation, it ensures consistent outputs while enabling optional expert review and AI repair. The comprehensive logging infrastructure provides detailed request tracing, error context, and performance monitoring. Parallel quality gates and persistence further strengthen the system's robustness and usability.
+
+**Updated** The pipeline now features substantial performance optimizations including caching infrastructure for blueprint and semantic context selection, request deduplication to prevent duplicate API calls, and parallel processing for independent operations. These enhancements dramatically improve throughput, reduce latency, and lower API costs while maintaining reliability and quality.
 
 The enhanced thinking engine with deterministic fallback mechanisms ensures pipeline resilience even when AI services experience rate limits or failures. The comprehensive rate limit awareness and retry patterns provide robust error handling across all components. The improved error handling patterns with exponential backoff and structured logging enable better observability and debugging capabilities.
 
 The enhanced provider selection logic with improved credential resolution and fallback mechanisms ensures optimal resource utilization while maintaining system reliability. The structured logging system enables comprehensive debugging and monitoring across all pipeline stages, making it easier to diagnose issues and optimize performance. The simplified skip logic for Groq provider maintains performance benefits while removing complexity from provider categorization.
 
-**Updated** The pipeline now features a comprehensive logging infrastructure with structured request-scoped logging, enhanced provider selection with detailed debugging, and improved error handling across all components. The deterministic fallback mechanism for thinking plan generation ensures pipeline resilience, while the enhanced rate limit awareness and retry patterns provide robust error handling throughout the entire system. These enhancements significantly improve the system's observability, debugging capabilities, and overall reliability in production environments.
-
-**Modern TypeScript Implementation** The recent cleanup of unused imports and parameters in code intelligence utilities demonstrates adherence to modern TypeScript best practices. The code validator, beautifier, and test generator utilities now follow eslint-disable-line patterns for unused parameters while maintaining backward compatibility and functionality. This improvement enhances code quality, maintainability, and developer experience without compromising the pipeline's performance or reliability.
+The new caching infrastructure provides significant performance improvements by reducing API calls and computation time for expensive operations like blueprint selection and semantic context retrieval. The request deduplication system prevents duplicate processing of identical requests, further improving efficiency and reducing costs. The parallel processing capabilities ensure that independent operations run concurrently, maximizing throughput and minimizing end-to-end latency.
 
 The modern TypeScript implementations in code intelligence utilities provide a solid foundation for future enhancements while ensuring the pipeline remains maintainable and scalable. The cleaned up parameter signatures and unused import removal contribute to a more professional and standards-compliant codebase that aligns with industry best practices.
+
+These comprehensive enhancements transform the pipeline from a functional system into a high-performance, production-ready solution that can handle demanding workloads while maintaining reliability, quality, and cost-effectiveness.

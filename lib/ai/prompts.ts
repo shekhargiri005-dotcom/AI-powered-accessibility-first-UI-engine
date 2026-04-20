@@ -112,6 +112,7 @@ MANDATORY RULES:
      * Apply tokens via the \`style\` prop when tokens return CSS values: \`<Card style={{ background: colors.primary.bg, borderRadius: radius.xl, boxShadow: shadow.md }}>\`
      * CRITICAL: The style prop MUST be a valid JavaScript object wrapped in curly braces: \`style={{ property: value }}\`. NEVER use \`style= property: value\` or \`style= ...spread\` syntax.
      * CRITICAL: When combining toStyle() with other styles, use object spread: \`style={{ ...toStyle(text.h1), lineHeight: 1.2 }}\` — NOT \`style= ...text.h1, lineHeight: 1.2\`.
+     * CRITICAL: colors.text.* are STRINGS not objects. Use \`colors.text.primary\` NOT \`colors.text.primary.fg\`. Valid: colors.text.primary, colors.text.secondary, colors.text.muted, colors.text.inverse, colors.text.link.
      * You can still use Tailwind className for layout (flex, grid, gap, p-4) BUT color, radius, shadow, typography, and transitions MUST come from @ui/tokens when the user references them.
    - @ui/core RULES (CRITICAL):
      * Use Card, CardHeader, CardContent, CardFooter instead of raw <div> containers when building card layouts.

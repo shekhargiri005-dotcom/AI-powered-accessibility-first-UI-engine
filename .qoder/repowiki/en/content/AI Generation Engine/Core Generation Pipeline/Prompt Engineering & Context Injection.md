@@ -12,6 +12,8 @@
 - [memory.ts](file://lib/ai/memory.ts)
 - [designRules.ts](file://lib/intelligence/designRules.ts)
 - [layoutRegistry.ts](file://lib/intelligence/layoutRegistry.ts)
+- [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
+- [codeBeautifier.ts](file://lib/intelligence/codeBeautifier.ts)
 - [Layout.tsx](file://packages/layout/components/Layout.tsx)
 - [tokens/index.ts](file://packages/tokens/index.ts)
 - [tokens/colors.ts](file://packages/tokens/colors.ts)
@@ -20,11 +22,11 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced documentation to clarify the restriction of `toStyle()` utility function to typography presets only
-- Updated design system enforcement documentation with explicit guidelines for `toStyle()` usage
-- Added comprehensive examples of correct and incorrect `toStyle()` usage patterns
-- Expanded troubleshooting guidance to address `toStyle()` type errors
-- Updated critical design system enforcement with specific `toStyle()` restrictions
+- Enhanced documentation to reflect stricter React style property syntax enforcement requiring valid JSX style object syntax
+- Updated design system enforcement documentation with explicit guidelines for object spread syntax requirements
+- Added comprehensive examples of correct and incorrect React style property usage patterns
+- Expanded troubleshooting guidance to address React style syntax validation failures
+- Updated critical design system enforcement with specific React style property syntax requirements
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -45,9 +47,10 @@ This document explains the prompt engineering and context injection phase of the
 - Memory retrieval for relevant examples of similar component generations
 - Implementation specifics for prompt template construction, context prioritization, and token budget enforcement
 - **Critical Design System Enforcement**: Mandatory @ui/tokens and @ui/core usage with explicit penalties for violations
-- **Enhanced `toStyle()` Utility Restrictions**: Explicit guidelines restricting `toStyle()` usage to typography presets only (text.h1, text.body, etc.)
+- **Enhanced React Style Property Syntax Enforcement**: Strict validation requiring valid JSX style object syntax with double curly braces and proper object spread patterns
+- **Advanced `toStyle()` Utility Restrictions**: Explicit guidelines restricting `toStyle()` usage to typography presets only with specific object spread syntax requirements
 
-**Updated** Enhanced with critical design system enforcement requiring @ui/tokens and @ui/core usage with "VIOLATION = REJECT" penalties, and explicit restrictions on `toStyle()` utility function usage.
+**Updated** Enhanced with critical design system enforcement requiring @ui/tokens and @ui/core usage with "VIOLATION = REJECT" penalties, strict React style property syntax enforcement, and explicit restrictions on `toStyle()` utility function usage with object spread requirements.
 
 ## Project Structure
 The prompt engineering and context injection logic is centered around several modules:
@@ -59,6 +62,7 @@ The prompt engineering and context injection logic is centered around several mo
 - UI ecosystem cheat sheet for sandbox constraints
 - **Design System Enforcement**: Critical enforcement of @ui/tokens and @ui/core requirements with `toStyle()` restrictions
 - **Typography Utility**: Specialized handling of `toStyle()` function for typography presets only
+- **React Style Property Validation**: Advanced validation ensuring proper JSX style object syntax
 
 ```mermaid
 graph TB
@@ -94,16 +98,24 @@ end
 subgraph "Design System Enforcement"
 DS["@ui/tokens & @ui/core"]
 TS["Typography System"]
+RV["React Style Validation"]
 PB --> DS
 PT --> DS
 DS --> TS
 TS --> TOSTYLE["toStyle() Utility"]
+TOSTYLE --> RV
+end
+subgraph "Code Quality Assurance"
+CV["codeValidator.ts"]
+CB["codeBeautifier.ts"]
+PB --> CV
+CV --> CB
 end
 ```
 
 **Diagram sources**
-- [promptBuilder.ts:1-367](file://lib/ai/promptBuilder.ts#L1-L367)
-- [prompts.ts:1-553](file://lib/ai/prompts.ts#L1-L553)
+- [promptBuilder.ts:1-376](file://lib/ai/promptBuilder.ts#L1-L376)
+- [prompts.ts:1-560](file://lib/ai/prompts.ts#L1-L560)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [knowledgeBase.ts:1-293](file://lib/ai/knowledgeBase.ts#L1-L293)
 - [knowledgeAggregator.ts:1-312](file://lib/ai/knowledgeAggregator.ts#L1-L312)
@@ -112,11 +124,13 @@ end
 - [promptBudget.ts:1-79](file://lib/ai/promptBudget.ts#L1-L79)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [layoutRegistry.ts:1-79](file://lib/intelligence/layoutRegistry.ts#L1-L79)
+- [codeValidator.ts:1-386](file://lib/intelligence/codeValidator.ts#L1-L386)
+- [codeBeautifier.ts:1-235](file://lib/intelligence/codeBeautifier.ts#L1-L235)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
 
 **Section sources**
-- [promptBuilder.ts:1-367](file://lib/ai/promptBuilder.ts#L1-L367)
-- [prompts.ts:1-553](file://lib/ai/prompts.ts#L1-L553)
+- [promptBuilder.ts:1-376](file://lib/ai/promptBuilder.ts#L1-L376)
+- [prompts.ts:1-560](file://lib/ai/prompts.ts#L1-L560)
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [knowledgeBase.ts:1-293](file://lib/ai/knowledgeBase.ts#L1-L293)
 - [knowledgeAggregator.ts:1-312](file://lib/ai/knowledgeAggregator.ts#L1-L312)
@@ -137,8 +151,9 @@ end
 - Intelligence layer: Design rules and layout registry for structured layout recommendations.
 - **Design System Enforcement**: Critical enforcement of @ui/tokens and @ui/core usage with explicit rejection penalties for violations.
 - **Typography Utility**: Specialized `toStyle()` function restricted to typography presets only, preventing type errors with non-typography tokens.
+- **React Style Property Validation**: Advanced validation ensuring proper JSX style object syntax with strict enforcement of double curly braces and object spread requirements.
 
-**Updated** Enhanced with critical design system enforcement requiring mandatory @ui/tokens and @ui/core usage patterns, and explicit `toStyle()` utility restrictions.
+**Updated** Enhanced with critical design system enforcement requiring mandatory @ui/tokens and @ui/core usage patterns, explicit `toStyle()` utility restrictions, and strict React style property syntax validation.
 
 **Section sources**
 - [promptBuilder.ts:244-311](file://lib/ai/promptBuilder.ts#L244-L311)
@@ -153,7 +168,7 @@ end
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
 
 ## Architecture Overview
-The prompt engineering pipeline orchestrates intent parsing, blueprint formatting, knowledge and memory injection, and tier-aware prompt construction. It enforces token budgets and merges system prompts when needed. **Critical design system enforcement** ensures all generated code uses @ui/tokens and @ui/core components exclusively when available, with explicit restrictions on `toStyle()` utility function usage.
+The prompt engineering pipeline orchestrates intent parsing, blueprint formatting, knowledge and memory injection, and tier-aware prompt construction. It enforces token budgets and merges system prompts when needed. **Critical design system enforcement** ensures all generated code uses @ui/tokens and @ui/core components exclusively when available, with explicit restrictions on `toStyle()` utility function usage and strict React style property syntax validation.
 
 ```mermaid
 sequenceDiagram
@@ -165,6 +180,7 @@ participant KB as "knowledgeBase.ts"
 participant MEM as "memory.ts"
 participant DR as "designRules.ts"
 participant LR as "layoutRegistry.ts"
+participant CV as "codeValidator.ts"
 Client->>TP : "Resolve model profile to pipeline config"
 TP-->>PB : "PipelineConfig (strategy, budgets, flags)"
 Client->>KB : "Find relevant knowledge by keywords"
@@ -181,7 +197,9 @@ PB-->>Client : "System + User for refinement"
 else "Component/App/Depth UI"
 PB->>PT : "Select mode-specific prompt builder"
 PT-->>PB : "System + User prompt parts with design system enforcement"
-PB-->>Client : "Final BuiltPrompt"
+PB->>CV : "validateGeneratedCode() for style property syntax"
+CV-->>PB : "Validation results with style property errors"
+PB-->>Client : "Final BuiltPrompt with style validation"
 end
 ```
 
@@ -193,6 +211,7 @@ end
 - [memory.ts:175-210](file://lib/ai/memory.ts#L175-L210)
 - [designRules.ts:100-200](file://lib/intelligence/designRules.ts#L100-L200)
 - [layoutRegistry.ts:56-79](file://lib/intelligence/layoutRegistry.ts#L56-L79)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 ## Detailed Component Analysis
 
@@ -206,8 +225,9 @@ end
 - System merging: When a provider ignores system roles, merges system into user with a separator
 - **Design System Enforcement**: Critical enforcement of @ui/tokens and @ui/core usage with explicit rejection penalties
 - **Typography Restrictions**: Explicit `toStyle()` usage restrictions for typography presets only
+- **React Style Property Validation**: Strict enforcement requiring valid JSX style object syntax with double curly braces
 
-**Updated** Enhanced with critical design system enforcement requiring mandatory @ui/tokens and @ui/core usage patterns, and explicit `toStyle()` utility restrictions.
+**Updated** Enhanced with critical design system enforcement requiring mandatory @ui/tokens and @ui/core usage patterns, explicit `toStyle()` utility restrictions, and strict React style property syntax validation.
 
 ```mermaid
 flowchart TD
@@ -226,8 +246,10 @@ Merge --> |true| MergeSys["mergeSystemIntoUser()"]
 Merge --> |false| AddDesignEnforcement["Add design system enforcement rules"]
 AddDesignEnforcement --> CheckToStyle{"toStyle() usage?"}
 CheckToStyle --> |Restricted| ApplyRestrictions["Apply typography-only restrictions"]
-CheckToStyle --> |Valid| Continue["Continue with design enforcement"]
-ApplyRestrictions --> Continue
+CheckToStyle --> |Valid| CheckStyleSyntax{"React style syntax?"}
+ApplyRestrictions --> CheckStyleSyntax
+CheckStyleSyntax --> |Valid| Continue["Continue with design enforcement"]
+CheckStyleSyntax --> |Invalid| Reject["Reject with style syntax error"]
 Continue --> Done(["BuiltPrompt"])
 MergeSys --> Done
 ```
@@ -247,8 +269,9 @@ MergeSys --> Done
   - Multi-slide/architecture requirements when applicable
 - **Design System Enforcement**: Critical @ui/tokens and @ui/core usage requirements with explicit violation penalties
 - **Typography Utility**: Explicit `toStyle()` usage restrictions for typography presets only
+- **React Style Property Validation**: Strict syntax requirements for JSX style object creation
 
-**Updated** Enhanced with critical design system enforcement requiring @ui/tokens and @ui/core usage patterns, and explicit `toStyle()` utility restrictions.
+**Updated** Enhanced with critical design system enforcement requiring @ui/tokens and @ui/core usage patterns, explicit `toStyle()` utility restrictions, and strict React style property syntax validation.
 
 ```mermaid
 classDiagram
@@ -269,19 +292,25 @@ class TypographySystem {
 +text.h1..h4, .body, .bodySm, .caption, .label, .overline, .code
 +toStyle(preset : typeof text[keyof typeof text]) : React.CSSProperties
 }
-PromptBuilder --> PromptsModule : "uses templates with design system enforcement"
+class ReactStyleValidator {
++validateStyleObjectSyntax(styleProp : string) : boolean
++enforceObjectSpreadRequirements(styleExpression : string) : boolean
+}
 PromptsModule --> TypographySystem : "restricts toStyle() usage"
+ReactStyleValidator --> PromptsModule : "validates JSX style syntax"
 ```
 
 **Diagram sources**
 - [prompts.ts:74-170](file://lib/ai/prompts.ts#L74-L170)
 - [promptBuilder.ts:244-298](file://lib/ai/promptBuilder.ts#L244-L298)
 - [tokens/typography.ts:59-148](file://packages/tokens/typography.ts#L59-L148)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
 - [prompts.ts:74-170](file://lib/ai/prompts.ts#L74-L170)
 - [promptBuilder.ts:228-298](file://lib/ai/promptBuilder.ts#L228-L298)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 ### Token Budget Enforcement and Progressive Truncation
 - Heuristic: ~1 token ≈ 4 characters for English prose/code
@@ -293,8 +322,9 @@ PromptsModule --> TypographySystem : "restricts toStyle() usage"
   - Memory snippets capped to preserve token headroom
 - **Design System Compliance**: Design system enforcement checks integrated into truncation process
 - **Typography Compliance**: `toStyle()` usage restrictions maintained during truncation
+- **React Style Property Compliance**: Style syntax validation integrated into truncation process
 
-**Updated** Enhanced with design system compliance checks during truncation, including `toStyle()` usage restrictions.
+**Updated** Enhanced with design system compliance checks during truncation, including `toStyle()` usage restrictions and React style property syntax validation.
 
 ```mermaid
 flowchart TD
@@ -313,13 +343,15 @@ M --> N{"context.length <= maxChars ?"}
 N --> |Yes| O["Return context"]
 N --> |No| P["Slice to maxChars, backtrack to last newline, append budget suffix"]
 Q["Apply toStyle() Restrictions"] --> R["Validate typography-only usage"]
-R --> S["Proceed with design system compliance"]
+R --> S["Validate React Style Syntax"]
+S --> T["Proceed with design system compliance"]
 ```
 
 **Diagram sources**
 - [promptBudget.ts:41-79](file://lib/ai/promptBudget.ts#L41-L79)
 - [tieredPipeline.ts:277-284](file://lib/ai/tieredPipeline.ts#L277-L284)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
 - [promptBudget.ts:27-79](file://lib/ai/promptBudget.ts#L27-L79)
@@ -336,8 +368,9 @@ R --> S["Proceed with design system compliance"]
   - Lists allowed packages and APIs to prevent hallucinations
 - **Design System Integration**: Knowledge base includes design system compliance patterns
 - **Typography Integration**: Knowledge base includes `toStyle()` usage guidelines for typography
+- **React Style Integration**: Knowledge base includes JSX style property syntax validation patterns
 
-**Updated** Enhanced with design system integration patterns and `toStyle()` usage guidelines.
+**Updated** Enhanced with design system integration patterns, `toStyle()` usage guidelines, and React style property syntax validation.
 
 ```mermaid
 graph LR
@@ -351,6 +384,7 @@ Templates --> PB
 Embed --> PB
 TS["Typography System"] --> PB
 TOSTYLE["toStyle() Restrictions"] --> PB
+RSV["React Style Validation"] --> PB
 ```
 
 **Diagram sources**
@@ -359,6 +393,7 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - [uiCheatSheet.ts:9-53](file://lib/ai/uiCheatSheet.ts#L9-L53)
 - [promptBuilder.ts:181-183](file://lib/ai/promptBuilder.ts#L181-L183)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
 - [knowledgeAggregator.ts:1-312](file://lib/ai/knowledgeAggregator.ts#L1-L312)
@@ -372,8 +407,9 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - Provides concise code snippets for inclusion in user prompts
 - **Design System Compliance**: Memory retrieval prioritizes examples that correctly use @ui/tokens and @ui/core
 - **Typography Compliance**: Memory examples validated for proper `toStyle()` usage patterns
+- **React Style Compliance**: Memory examples validated for proper JSX style property syntax
 
-**Updated** Enhanced with design system compliance filtering for memory retrieval and `toStyle()` usage validation.
+**Updated** Enhanced with design system compliance filtering for memory retrieval, `toStyle()` usage validation, and React style property syntax validation.
 
 ```mermaid
 sequenceDiagram
@@ -384,6 +420,7 @@ MEM-->>Gen : "id"
 Gen->>MEM : "getRelevantExamples(intent)"
 MEM-->>Gen : "MemoryEntry[] (top examples with design system compliance)"
 Note over MEM : "Validate toStyle() usage patterns"
+Note over MEM : "Validate React style syntax"
 ```
 
 **Diagram sources**
@@ -398,6 +435,7 @@ Note over MEM : "Validate toStyle() usage patterns"
 - Integration: Automatically suggests appropriate layout structures based on component requirements
 - **Design System Alignment**: Intelligence layer ensures layout recommendations align with design system constraints
 - **Typography Alignment**: Intelligence layer validates typography usage with `toStyle()` restrictions
+- **React Style Alignment**: Intelligence layer validates JSX style property syntax compliance
 
 **New** Added intelligence layer for structured layout recommendations and compatibility checking.
 
@@ -410,6 +448,7 @@ LR --> |findMatchingLayouts| PB
 PB --> |structured layout rules| PT["prompts.ts"]
 TS["Typography System"] --> PB
 TOSTYLE["toStyle() Restrictions"] --> PB
+RSV["React Style Validation"] --> PB
 ```
 
 **Diagram sources**
@@ -417,6 +456,7 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - [layoutRegistry.ts:56-79](file://lib/intelligence/layoutRegistry.ts#L56-L79)
 - [promptBuilder.ts:244-311](file://lib/ai/promptBuilder.ts#L244-L311)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
@@ -428,10 +468,12 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - **Explicit Penalties**: "VIOLATION = REJECT" for any non-compliant usage
 - **Comprehensive Coverage**: All color, spacing, typography, and component usage must follow design system patterns
 - **Typography Restrictions**: `toStyle()` utility function is restricted to typography presets only (text.h1, text.body, etc.)
+- **React Style Property Requirements**: JSX style properties must use valid object syntax with double curly braces
+- **Object Spread Syntax**: When combining `toStyle()` with other styles, use object spread syntax
 - **Enforcement Mechanisms**: Systematic checks during prompt construction and validation
 - **Type Safety**: Prevents type errors when attempting to use `toStyle()` with non-typography tokens like colors, spacing, or other design tokens
 
-**New** Added comprehensive design system enforcement documentation with explicit `toStyle()` usage restrictions.
+**New** Added comprehensive design system enforcement documentation with explicit `toStyle()` usage restrictions and strict React style property syntax requirements.
 
 ```mermaid
 flowchart TD
@@ -449,22 +491,28 @@ K --> L["toStyle() only for typography presets"]
 K --> M["text.h1, text.body, text.h2, text.h3, text.h4"]
 K --> N["text.caption, text.label, text.overline"]
 K --> O["text.bodySm, text.bodyLg, text.code, text.codeLg"]
-K --> P["CRITICAL: Never use toStyle() with colors, space, or other non-typography tokens"]
-A --> Q["Enforcement Checks"]
-Q --> R["Pre-generation validation"]
-Q --> S["Post-generation rejection"]
-Q --> T["Violation = REJECT"]
+A --> P["React Style Property Requirements"]
+P --> Q["style={{ property: value }} - Double curly braces required"]
+P --> R["Object spread syntax for combining styles"]
+P --> S["CRITICAL: Never use style= property: value syntax"]
+P --> T["CRITICAL: Never use style= ...spread syntax"]
+A --> U["Enforcement Checks"]
+U --> V["Pre-generation validation"]
+U --> W["Post-generation rejection"]
+U --> X["Violation = REJECT"]
 ```
 
 **Diagram sources**
-- [promptBuilder.ts:257-269](file://lib/ai/promptBuilder.ts#L257-L269)
+- [promptBuilder.ts:257-271](file://lib/ai/promptBuilder.ts#L257-L271)
 - [prompts.ts:100-115](file://lib/ai/prompts.ts#L100-L115)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
-- [promptBuilder.ts:257-269](file://lib/ai/promptBuilder.ts#L257-L269)
+- [promptBuilder.ts:257-271](file://lib/ai/promptBuilder.ts#L257-L271)
 - [prompts.ts:100-115](file://lib/ai/prompts.ts#L100-L115)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 ### Typography Utility System
 - **Restricted Usage**: The `toStyle()` function is designed specifically for typography presets
@@ -473,8 +521,9 @@ Q --> T["Violation = REJECT"]
 - **Prohibited Usage**: Never use `toStyle()` with colors, spacing, radius, shadow, or other non-typography tokens
 - **Type Safety**: The function signature prevents compilation when used with non-typography tokens
 - **Correct Usage Pattern**: `style={toStyle(text.h3)}` instead of `className="text-2xl font-bold"`
+- **React Style Property Requirements**: Must use double curly braces for JSX style object syntax
 
-**New** Added dedicated typography utility documentation with explicit usage restrictions.
+**New** Added dedicated typography utility documentation with explicit usage restrictions and React style property syntax requirements.
 
 ```mermaid
 flowchart TD
@@ -488,6 +537,9 @@ A --> H["Usage Pattern"]
 H --> I["CORRECT: style={toStyle(text.h3)}"]
 H --> J["INCORRECT: toStyle(colors.primary.bg)"]
 H --> K["INCORRECT: toStyle(radius.xl)"]
+H --> L["INCORRECT: style= property: value syntax"]
+H --> M["INCORRECT: style= ...spread syntax"]
+H --> N["CORRECT: style={{ ...toStyle(text.h1), lineHeight: 1.2 }}"]
 ```
 
 **Diagram sources**
@@ -495,6 +547,36 @@ H --> K["INCORRECT: toStyle(radius.xl)"]
 
 **Section sources**
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+
+### React Style Property Validation
+- **Strict Object Syntax**: JSX style properties must use valid JavaScript object syntax with double curly braces
+- **Object Spread Requirements**: When combining `toStyle()` with other styles, use object spread syntax
+- **Validation Logic**: Code validator performs fast structural heuristic checks for balanced brackets/braces
+- **Error Detection**: Detects unbalanced brackets/braces indicating syntax truncation or malformed code
+- **Integration Points**: Validation occurs during code generation and beautification processes
+
+**New** Added comprehensive React style property validation documentation with specific syntax requirements and validation mechanisms.
+
+```mermaid
+flowchart TD
+A["React Style Property Validation"] --> B["Object Syntax Validation"]
+B --> C["style={{ property: value }} - VALID"]
+B --> D["style= property: value - INVALID"]
+B --> E["style= ...spread - INVALID"]
+A --> F["Object Spread Validation"]
+F --> G["style={{ ...toStyle(text.h1), lineHeight: 1.2 }} - VALID"]
+F --> H["style= ...text.h1, lineHeight: 1.2 - INVALID"]
+A --> I["Validation Process"]
+I --> J["Fast Structural Heuristic"]
+I --> K["Balanced Brackets Check"]
+I --> L["Error Reporting"]
+```
+
+**Diagram sources**
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
+
+**Section sources**
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 ## Dependency Analysis
 - promptBuilder depends on:
@@ -507,10 +589,11 @@ H --> K["INCORRECT: toStyle(radius.xl)"]
   - layoutRegistry for structured patterns
   - **designSystem for @ui/tokens and @ui/core enforcement**
   - **typography for `toStyle()` utility restrictions**
+  - **codeValidator for React style property syntax validation**
 - promptBudget provides shared budget utilities used by tieredPipeline
 - knowledgeAggregator feeds embeddings used for retrieval (conceptual dependency)
 
-**Updated** Enhanced with design system dependency integration and typography utility restrictions.
+**Updated** Enhanced with design system dependency integration, typography utility restrictions, and React style property validation dependencies.
 
 ```mermaid
 graph TB
@@ -523,12 +606,15 @@ PB --> DR["designRules.ts"]
 PB --> LR["layoutRegistry.ts"]
 PB --> DS["@ui/tokens & @ui/core"]
 PB --> TS["Typography System"]
+PB --> CV["codeValidator.ts"]
 TP --> BUDG["promptBudget.ts"]
 DR --> LR
 DS --> PT
 DS --> PB
 TS --> PB
+CV --> PB
 TOSTYLE["toStyle() Restrictions"] --> PB
+RSV["React Style Validation"] --> PB
 ```
 
 **Diagram sources**
@@ -542,6 +628,7 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [layoutRegistry.ts:1-79](file://lib/intelligence/layoutRegistry.ts#L1-L79)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 **Section sources**
 - [promptBuilder.ts:33-44](file://lib/ai/promptBuilder.ts#L33-L44)
@@ -563,6 +650,7 @@ TOSTYLE["toStyle() Restrictions"] --> PB
 - **Design System Compliance**: Ensure design system rules don't exceed token budgets, especially for comprehensive enforcement checks
 - **Critical Enforcement**: Design system validation adds computational overhead but ensures compliance
 - **Typography Efficiency**: `toStyle()` restrictions prevent unnecessary token usage for non-typography tokens
+- **React Style Validation**: Additional validation overhead for JSX style property syntax checking
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -593,12 +681,20 @@ Common issues and resolutions:
   - **Incorrect Usage**: Never use `toStyle()` with colors, spacing, radius, or other non-typography tokens
   - **Type Errors**: Using `toStyle()` with non-typography tokens will cause compilation errors due to type restrictions
   - **Alternative Patterns**: Use direct token access for non-typography tokens: `colors.primary.bg`, `radius.xl`, `spacing[4]`
+- **React Style Property Issues**:
+  - **CRITICAL**: JSX style properties must use valid object syntax with double curly braces
+  - **Correct Usage**: `style={{ property: value }}` for single styles, `style={{ ...toStyle(text.h1), lineHeight: 1.2 }}` for combined styles
+  - **Incorrect Usage**: `style= property: value` or `style= ...spread` syntax
+  - **Object Spread Requirements**: When combining `toStyle()` with other styles, use object spread syntax with proper brace placement
+  - **Validation Failures**: Code validator detects unbalanced brackets/braces indicating syntax errors or truncation
 - **Enforcement Failures**:
   - Implement systematic design system validation before code generation
   - Use style prop for tokens that return CSS values
   - Apply tokens consistently across all design elements
   - Test with comprehensive examples of correct vs incorrect usage patterns
   - Validate `toStyle()` usage against typography presets only
+  - Ensure proper React style property syntax with double curly braces
+  - Apply object spread syntax requirements when combining styles
 
 **Section sources**
 - [promptBuilder.ts:306-311](file://lib/ai/promptBuilder.ts#L306-L311)
@@ -611,8 +707,9 @@ Common issues and resolutions:
 - [memory.ts:175-210](file://lib/ai/memory.ts#L175-L210)
 - [prompts.ts:153-163](file://lib/ai/prompts.ts#L153-L163)
 - [knowledgeBase.ts:264-292](file://lib/ai/knowledgeBase.ts#L264-L292)
-- [promptBuilder.ts:257-269](file://lib/ai/promptBuilder.ts#L257-L269)
+- [promptBuilder.ts:257-271](file://lib/ai/promptBuilder.ts#L257-L271)
 - [tokens/typography.ts:150-160](file://packages/tokens/typography.ts#L150-L160)
+- [codeValidator.ts:259-362](file://lib/intelligence/codeValidator.ts#L259-362)
 
 ## Conclusion
-The prompt engineering and context injection system adapts to model capabilities while enforcing strict token budgets. It integrates structured knowledge, curated examples, and sandbox constraints to produce high-quality, accessible UI components across tiers and modes. **Critical design system enforcement** ensures all generated code adheres to @ui/tokens and @ui/core requirements with explicit "VIOLATION = REJECT" penalties for non-compliance. **Enhanced** with mandatory design system usage patterns that replace advisory guidance with strict enforcement mechanisms, ensuring consistent visual identity and design language adherence across all generated components. **Typography Restrictions** add an additional layer of type safety by restricting `toStyle()` utility function usage to typography presets only, preventing type errors and ensuring proper token usage patterns. Progressive truncation, careful few-shot curation, and model-aware strategies ensure reliable generation outcomes with consistent design system compliance and typography safety.
+The prompt engineering and context injection system adapts to model capabilities while enforcing strict token budgets. It integrates structured knowledge, curated examples, and sandbox constraints to produce high-quality, accessible UI components across tiers and modes. **Critical design system enforcement** ensures all generated code adheres to @ui/tokens and @ui/core requirements with explicit "VIOLATION = REJECT" penalties for non-compliance. **Enhanced** with mandatory design system usage patterns that replace advisory guidance with strict enforcement mechanisms, ensuring consistent visual identity and design language adherence across all generated components. **Typography Restrictions** add an additional layer of type safety by restricting `toStyle()` utility function usage to typography presets only, preventing type errors and ensuring proper token usage patterns. **React Style Property Validation** adds a critical layer of syntax enforcement, ensuring all JSX style properties use valid object syntax with double curly braces and proper object spread patterns. Progressive truncation, careful few-shot curation, and model-aware strategies ensure reliable generation outcomes with consistent design system compliance, typography safety, and React style property correctness.

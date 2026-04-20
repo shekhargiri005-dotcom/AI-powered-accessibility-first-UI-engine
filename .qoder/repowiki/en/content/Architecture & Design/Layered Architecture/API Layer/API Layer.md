@@ -4,6 +4,8 @@
 **Referenced Files in This Document**
 - [route.ts](file://app/api/auth/[...nextauth]/route.ts)
 - [route.ts](file://app/api/generate/route.ts)
+- [route.ts](file://app/api/think/route.ts)
+- [route.ts](file://app/api/classify/route.ts)
 - [route.ts](file://app/api/models/route.ts)
 - [route.ts](file://app/api/projects/route.ts)
 - [route.ts](file://app/api/projects/[id]/route.ts)
@@ -17,7 +19,16 @@
 - [route.ts](file://app/api/usage/route.ts)
 - [route.ts](file://app/api/final-round/route.ts)
 - [auth.ts](file://lib/auth.ts)
+- [thinkingEngine.ts](file://lib/ai/thinkingEngine.ts)
+- [intentClassifier.ts](file://lib/ai/intentClassifier.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added new `/api/think` and `/api/classify` routes to the API architecture documentation
+- Updated Performance Considerations section to include maxDuration = 60 for Vercel deployment compatibility
+- Enhanced Architecture Overview and Detailed Component Analysis sections with new thinking and classification capabilities
+- Updated dependency analysis to include new AI processing routes
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -41,6 +52,8 @@ graph TB
 subgraph "API Routes"
 AUTH["app/api/auth/[...nextauth]/route.ts"]
 GEN["app/api/generate/route.ts"]
+THINK["app/api/think/route.ts"]
+CLASSIFY["app/api/classify/route.ts"]
 MODELS["app/api/models/route.ts"]
 FEEDBACK["app/api/feedback/route.ts"]
 CHUNK["app/api/chunk/route.ts"]
@@ -56,9 +69,15 @@ PROJ_ROLL["app/api/projects/[id]/rollback/route.ts"]
 end
 subgraph "Libraries"
 AUTHLIB["lib/auth.ts"]
+THINKENG["lib/ai/thinkingEngine.ts"]
+INTCLAS["lib/ai/intentClassifier.ts"]
 end
 AUTH --> AUTHLIB
 GEN --> AUTHLIB
+THINK --> AUTHLIB
+THINK --> THINKENG
+CLASSIFY --> AUTHLIB
+CLASSIFY --> INTCLAS
 CHUNK --> AUTHLIB
 SUGGEST --> AUTHLIB
 FINAL --> AUTHLIB
@@ -71,7 +90,9 @@ WS_SETTINGS --> AUTHLIB
 
 **Diagram sources**
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
 - [route.ts:1-457](file://app/api/models/route.ts#L1-L457)
 - [route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [route.ts:1-81](file://app/api/chunk/route.ts#L1-L81)
@@ -85,6 +106,8 @@ WS_SETTINGS --> AUTHLIB
 - [route.ts:1-12](file://app/api/projects/[id]/route.ts#L1-L12)
 - [route.ts:1-23](file://app/api/projects/[id]/rollback/route.ts#L1-L23)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
 
 **Section sources**
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
@@ -95,10 +118,13 @@ WS_SETTINGS --> AUTHLIB
 - Request handling follows a consistent pattern: parse JSON body, validate inputs, enforce security constraints (only accept provider/model from client), and return structured JSON responses with appropriate HTTP status codes.
 - Logging is centralized through a logger utility that creates per-request loggers for tracing endpoint execution.
 - Many endpoints rely on shared libraries for validation, security checks, and integrations with AI adapters and persistence layers.
+- **New**: Thinking and classification endpoints provide AI-driven intent analysis and planning capabilities with intelligent fallback mechanisms.
 
 **Section sources**
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
 - [route.ts:1-81](file://app/api/chunk/route.ts#L1-L81)
 - [route.ts:1-115](file://app/api/suggestions/route.ts#L1-L115)
 - [route.ts:1-71](file://app/api/final-round/route.ts#L1-L71)
@@ -107,6 +133,7 @@ WS_SETTINGS --> AUTHLIB
 The API layer is composed of:
 - Authentication endpoints routed via NextAuth
 - Generation pipeline endpoints for UI generation, chunk generation, and final round critique
+- **New**: Thinking and classification endpoints for AI-driven intent analysis and planning
 - Workspace and settings endpoints for managing workspaces and provider keys
 - Project lifecycle endpoints for listing, creating/upserting, retrieving, and rolling back versions
 - Analytics and feedback endpoints for usage metrics and user feedback
@@ -117,6 +144,8 @@ graph TB
 CLIENT["Client"]
 AUTH["Auth<br/>NextAuth"]
 GEN["Generate<br/>/api/generate"]
+THINK["Think<br/>/api/think"]
+CLASSIFY["Classify<br/>/api/classify"]
 CHUNK["Chunk<br/>/api/chunk"]
 FINAL["Final Round<br/>/api/final-round"]
 MODELS["Models<br/>/api/models"]
@@ -130,6 +159,8 @@ USAGE["Usage<br/>/api/usage"]
 HISTORY["History<br/>/api/history"]
 CLIENT --> AUTH
 CLIENT --> GEN
+CLIENT --> THINK
+CLIENT --> CLASSIFY
 CLIENT --> CHUNK
 CLIENT --> FINAL
 CLIENT --> MODELS
@@ -142,6 +173,10 @@ CLIENT --> FEED
 CLIENT --> USAGE
 CLIENT --> HISTORY
 GEN --> AUTH
+THINK --> AUTH
+THINK --> THINKENG["Thinking Engine"]
+CLASSIFY --> AUTH
+CLASSIFY --> INTCLAS["Intent Classifier"]
 CHUNK --> AUTH
 FINAL --> AUTH
 PROJ --> AUTH
@@ -153,7 +188,9 @@ WSSET --> AUTH
 
 **Diagram sources**
 - [route.ts:1-4](file://app/api/auth/[...nextauth]/route.ts#L1-L4)
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
 - [route.ts:1-81](file://app/api/chunk/route.ts#L1-L81)
 - [route.ts:1-71](file://app/api/final-round/route.ts#L1-L71)
 - [route.ts:1-457](file://app/api/models/route.ts#L1-L457)
@@ -165,11 +202,13 @@ WSSET --> AUTH
 - [route.ts:1-85](file://app/api/feedback/route.ts#L1-L85)
 - [route.ts:1-111](file://app/api/usage/route.ts#L1-L111)
 - [route.ts:1-60](file://app/api/history/route.ts#L1-L60)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
 
 ## Detailed Component Analysis
 
 ### Authentication Layer
-- The authentication route delegates to NextAuth handlers and exposes GET/POST for NextAuth’s internal routing.
+- The authentication route delegates to NextAuth handlers and exposes GET/POST for NextAuth's internal routing.
 - The library configures a JWT-based session strategy, a credentials provider with bcrypt verification, and callback hooks to attach user info to the session token.
 
 ```mermaid
@@ -235,10 +274,90 @@ end
 ```
 
 **Diagram sources**
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
 
 **Section sources**
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+
+### Thinking Engine (/api/think)
+- Purpose: Generate AI-driven thinking plans for user intents with intelligent fallback capabilities.
+- Security: Resolves workspace/user context from session and headers; accepts only provider/model from client.
+- Key features:
+  - Generates structured thinking plans with expert reasoning framework
+  - Provides clarification opportunities for missing requirements
+  - Supports fallback plan generation when LLM calls fail
+  - Returns deterministic fallback plans for guaranteed user experience
+- Timeout prevention: maxDuration = 60 for Vercel deployment compatibility
+
+```mermaid
+sequenceDiagram
+participant Client as "Client"
+participant Think as "/api/think"
+participant Auth as "auth()"
+participant Engine as "Thinking Engine"
+participant Fallback as "Fallback Plan"
+Client->>Think : "POST {prompt, intentType, projectContext, model?, provider?}"
+Think->>Auth : "auth()"
+Auth-->>Think : "Session"
+Think->>Engine : "generateThinkingPlan(prompt, intentType, ...)"
+alt "LLM succeeds"
+Engine-->>Think : "ThinkingPlan"
+Think-->>Client : "{success : true, plan, _fallback : false}"
+else "LLM fails"
+Engine-->>Think : "failure result"
+Think->>Fallback : "buildFallbackPlan(prompt, intentType)"
+Fallback-->>Think : "Intelligent fallback plan"
+Think-->>Client : "{success : true, plan : fallback, _fallback : true}"
+end
+```
+
+**Diagram sources**
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+
+**Section sources**
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+
+### Intent Classification (/api/classify)
+- Purpose: Classify user prompts into intent categories with confidence scores and fallback capabilities.
+- Security: Resolves workspace/user context from session and headers; accepts only provider/model from client.
+- Key features:
+  - Classifies into six intent types: ui_generation, ui_refinement, product_requirement, ideation, debug_fix, context_clarification
+  - Provides confidence scores and suggested execution modes
+  - Implements retry logic for rate limit handling
+  - Returns local fallback classification when LLM calls fail
+- Timeout prevention: maxDuration = 60 for Vercel deployment compatibility
+
+```mermaid
+sequenceDiagram
+participant Client as "Client"
+participant Classify as "/api/classify"
+participant Auth as "auth()"
+participant Classifier as "Intent Classifier"
+participant Local as "Local Classification"
+Client->>Classify : "POST {prompt, hasActiveProject, model?, provider?}"
+Classify->>Auth : "auth()"
+Auth-->>Classify : "Session"
+Classify->>Classifier : "classifyIntent(prompt, hasActiveProject, ...)"
+alt "LLM succeeds"
+Classifier-->>Classify : "ClassificationResult"
+Classify-->>Client : "{success : true, classification, _fallback : false}"
+else "Rate limited or network error"
+Classifier-->>Classify : "Network/Rate limit error"
+Classify->>Local : "buildLocalClassification(prompt, hasActiveProject)"
+Local-->>Classify : "Local classification"
+Classify-->>Client : "{success : true, classification : local, _fallback : true}"
+end
+```
+
+**Diagram sources**
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
+
+**Section sources**
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
 
 ### Chunk Generation (/api/chunk)
 - Purpose: Generate a single file chunk for a multi-file project.
@@ -499,10 +618,11 @@ Summ --> OkList["Return {history}"]
 - [route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 
 ## Dependency Analysis
-- Cohesion: Each route file encapsulates a single responsibility (e.g., generation, chunking, feedback).
+- Cohesion: Each route file encapsulates a single responsibility (e.g., generation, chunking, feedback, thinking, classification).
 - Coupling: Routes depend on shared libraries for auth, validation, security, adapters, and persistence.
 - External integrations: Providers (OpenAI, Anthropic, Google, Groq, OpenRouter, Together, Mistral, DeepSeek, Ollama), database via Prisma, and encryption service.
 - Security: Centralized enforcement of accepting only provider/model from clients; sensitive keys are resolved server-side or stored encrypted.
+- **New**: AI processing dependencies for thinking and classification engines with fallback mechanisms.
 
 ```mermaid
 graph LR
@@ -512,6 +632,12 @@ Gen --> Sec["validation/security"]
 Gen --> Rev["ai/uiReviewer"]
 Gen --> Mem["ai/memory"]
 Gen --> Log["lib/logger"]
+Think["/api/think"] --> Auth
+Think --> Eng["lib/ai/thinkingEngine.ts"]
+Think --> Log
+Classify["/api/classify"] --> Auth
+Classify --> IntClas["lib/ai/intentClassifier.ts"]
+Classify --> Log
 Chunk["/api/chunk"] --> Auth
 Chunk --> Sec
 Chunk --> Log
@@ -539,7 +665,9 @@ Hist --> Mem
 ```
 
 **Diagram sources**
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
 - [route.ts:1-81](file://app/api/chunk/route.ts#L1-L81)
 - [route.ts:1-115](file://app/api/suggestions/route.ts#L1-L115)
 - [route.ts:1-71](file://app/api/final-round/route.ts#L1-L71)
@@ -553,9 +681,13 @@ Hist --> Mem
 - [route.ts:1-111](file://app/api/usage/route.ts#L1-L111)
 - [route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
 
 **Section sources**
-- [route.ts:1-440](file://app/api/generate/route.ts#L1-L440)
+- [route.ts:1-387](file://app/api/generate/route.ts#L1-L387)
+- [route.ts:1-88](file://app/api/think/route.ts#L1-L88)
+- [route.ts:1-81](file://app/api/classify/route.ts#L1-L81)
 - [route.ts:1-81](file://app/api/chunk/route.ts#L1-L81)
 - [route.ts:1-115](file://app/api/suggestions/route.ts#L1-L115)
 - [route.ts:1-71](file://app/api/final-round/route.ts#L1-L71)
@@ -569,8 +701,11 @@ Hist --> Mem
 - [route.ts:1-111](file://app/api/usage/route.ts#L1-L111)
 - [route.ts:1-60](file://app/api/history/route.ts#L1-L60)
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
+- [thinkingEngine.ts:1-566](file://lib/ai/thinkingEngine.ts#L1-L566)
+- [intentClassifier.ts:1-261](file://lib/ai/intentClassifier.ts#L1-L261)
 
 ## Performance Considerations
+- **New**: Thinking and classification endpoints: Both `/api/think` and `/api/classify` declare `maxDuration = 60` to ensure Vercel deployment compatibility and prevent timeout errors during AI processing.
 - Streaming: Generation supports streaming with a maxDuration set to accommodate long-running adapters.
 - Timeouts and budgets: Review phase is bounded by a 60-second aggregate timeout to prevent exceeding platform limits.
 - Concurrency: Parallel execution of accessibility checks and test generation reduces total latency.
@@ -578,8 +713,12 @@ Hist --> Mem
 - Cold starts: Dedicated timeouts for external services (e.g., vision runtime) mitigate cold-start penalties.
 - Duration limits: Several endpoints declare maxDuration to align with platform constraints.
 
+**Updated** Added timeout prevention mechanisms for thinking and classification endpoints
+
 **Section sources**
-- [route.ts:23-439](file://app/api/generate/route.ts#L23-L439)
+- [route.ts:8-8](file://app/api/think/route.ts#L8-L8)
+- [route.ts:7-7](file://app/api/classify/route.ts#L7-L7)
+- [route.ts:22-22](file://app/api/generate/route.ts#L22-L22)
 - [route.ts:72-110](file://app/api/usage/route.ts#L72-L110)
 - [route.ts:8-114](file://app/api/suggestions/route.ts#L8-L114)
 - [route.ts:4-456](file://app/api/models/route.ts#L4-L456)
@@ -591,10 +730,15 @@ Hist --> Mem
 - Provider configuration errors: Model listing and other endpoints surface 401 for authentication failures and 403 for missing keys.
 - Validation errors: Strict schema validation returns 400 with specific issue messages.
 - Internal errors: Unexpected exceptions are caught and reported as 500 with generic messages; refer to logs for details.
+- **New**: Thinking and classification failures: Both endpoints implement intelligent fallback mechanisms - thinking plans and classifications will succeed even if LLM calls fail, returning deterministic fallback results with `_fallback: true`.
+
+**Updated** Added troubleshooting guidance for thinking and classification endpoint fallback behavior
 
 **Section sources**
 - [auth.ts:1-87](file://lib/auth.ts#L1-L87)
-- [route.ts:29-438](file://app/api/generate/route.ts#L29-L438)
+- [route.ts:29-386](file://app/api/generate/route.ts#L29-L386)
+- [route.ts:12-87](file://app/api/think/route.ts#L12-L87)
+- [route.ts:11-80](file://app/api/classify/route.ts#L11-L80)
 - [route.ts:12-79](file://app/api/chunk/route.ts#L12-L79)
 - [route.ts:22-114](file://app/api/suggestions/route.ts#L22-L114)
 - [route.ts:206-455](file://app/api/models/route.ts#L206-L455)
@@ -607,4 +751,4 @@ Hist --> Mem
 - [route.ts:5-59](file://app/api/history/route.ts#L5-L59)
 
 ## Conclusion
-The API layer is organized around clear domain boundaries with consistent request/response patterns, strong security controls, and robust error handling. Authentication is centralized, and most endpoints leverage shared validation and security utilities. The generation pipeline integrates multiple stages with careful attention to performance and reliability, while workspace and project endpoints provide a cohesive developer experience. Serverless deployment characteristics are respected through explicit duration limits, timeouts, and caching strategies.
+The API layer is organized around clear domain boundaries with consistent request/response patterns, strong security controls, and robust error handling. Authentication is centralized, and most endpoints leverage shared validation and security utilities. The generation pipeline integrates multiple stages with careful attention to performance and reliability, while workspace and project endpoints provide a cohesive developer experience. **New thinking and classification endpoints** provide AI-driven intent analysis with intelligent fallback mechanisms, ensuring reliable user experiences even under rate limiting or network constraints. Serverless deployment characteristics are respected through explicit duration limits, timeouts, and caching strategies, with special attention to Vercel deployment compatibility for AI processing endpoints.

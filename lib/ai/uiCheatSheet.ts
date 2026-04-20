@@ -22,6 +22,11 @@ export const UI_ECOSYSTEM_API_CHEAT_SHEET = `
 
 @ui/tokens USAGE:
 - Colors: colors.primary.bg, colors.surface.base, colors.text.primary
+  * colors.primary has: bg, hover, text, muted, ring
+  * colors.surface has: base, raised, overlay, sunken
+  * colors.text has: primary, secondary, muted, inverse, link (NO .fg suffix!)
+  * colors.border has: default, hover, focus, error, success
+  * colors.gradient has: primary, warm, cool, sunset, aurora, midnight, glass
 - Spacing: spacing.stackMd, spacing.inlineSm  
 - Radius: radius.xl, radius.lg
 - Shadow: shadow.md, shadow.glow
