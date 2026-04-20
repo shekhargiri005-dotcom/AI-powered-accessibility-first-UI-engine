@@ -183,7 +183,7 @@ export function Motion({
 
 // Playwright / UI Engine Fallback: AI sometimes hallucinates <Motion.div> 
 // instead of importing framer-motion directly. This prevents a catastrophic white-screen crash.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 (Motion as unknown as Record<string, (props: Record<string, unknown>) => React.ReactElement>).div = function MotionDivFallback(props) {
   // We strip framer-motion specific props to prevent DOM warnings, but pass the rest
   const { initial, animate, transition, variants, whileHover, whileTap, ...rest } = props;

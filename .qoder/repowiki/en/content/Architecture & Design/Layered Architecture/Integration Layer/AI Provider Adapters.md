@@ -5,28 +5,25 @@
 - [index.ts](file://lib/ai/adapters/index.ts)
 - [base.ts](file://lib/ai/adapters/base.ts)
 - [openai.ts](file://lib/ai/adapters/openai.ts)
-- [anthropic.ts](file://lib/ai/adapters/anthropic.ts)
 - [google.ts](file://lib/ai/adapters/google.ts)
-- [ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [unconfigured.ts](file://lib/ai/adapters/unconfigured.ts)
 - [types.ts](file://lib/ai/types.ts)
 - [tools.ts](file://lib/ai/tools.ts)
 - [cache.ts](file://lib/ai/cache.ts)
 - [metrics.ts](file://lib/ai/metrics.ts)
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
-- [adapters.test.ts](file://__tests__/adapters.test.ts)
-- [adapterIndex.test.ts](file://__tests__/adapterIndex.test.ts)
 - [status.route.ts](file://app/api/providers/status/route.ts)
+- [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Updated supported providers list from 5 to 4 providers (OpenAI, Anthropic, Google, Groq)
-- Removed Ollama adapter from factory pattern implementation and dynamic instantiation
-- Updated provider detection logic to exclude Ollama from model-based detection
-- Removed Ollama-specific configuration examples and troubleshooting guides
-- Updated architecture diagrams and dependency analysis to reflect Ollama removal
-- Removed universal LLM_KEY system and provider configuration now requires explicit provider-specific keys only
+- Updated Ollama integration to use cloud service via OpenAI-compatible API instead of local self-hosted deployment
+- Removed local runtime detection and model listing capabilities for Ollama
+- Updated provider detection logic to route Ollama models to cloud service
+- Enhanced Ollama configuration with API key requirement and cloud service URL
+- Updated architecture diagrams and dependency analysis to reflect cloud-based Ollama integration
+- Revised provider status reporting to reflect cloud service availability
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -41,12 +38,12 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document explains the AI provider adapter system that powers provider-agnostic AI integration in the engine. It covers the universal AIAdapter interface, the adapter factory pattern, dynamic adapter instantiation, and provider-specific implementations for OpenAI, Anthropic, Google, and Groq. The system features explicit provider configuration with dedicated API keys for each provider, enhanced provider status reporting, and refined API key management interface that requires explicit provider-specific key configuration.
+This document explains the AI provider adapter system that powers provider-agnostic AI integration in the engine. It covers the universal AIAdapter interface, the adapter factory pattern, dynamic adapter instantiation, and provider-specific implementations for OpenAI, Google, Groq, and Ollama. The system features explicit provider configuration with dedicated API keys for each provider, enhanced provider status reporting, and refined API key management interface that requires explicit provider-specific key configuration.
 
-**Updated** Removed Ollama adapter support, reducing supported providers from 5 to 4. The system now focuses on cloud-based providers with explicit key management requirements.
+**Updated** Ollama integration now uses cloud service via OpenAI-compatible API instead of local self-hosted deployment. The system supports 4 providers with cloud-based inference capabilities and enhanced local development flexibility.
 
 ## Project Structure
-The adapter system lives under lib/ai/adapters and is complemented by shared types, tool definitions, caching, metrics, and explicit provider configuration management. Note: Ollama adapter has been removed from the current implementation.
+The adapter system lives under lib/ai/adapters and is complemented by shared types, tool definitions, caching, metrics, and explicit provider configuration management. The Ollama adapter is integrated as an OpenAI-compatible provider with cloud service routing.
 
 ```mermaid
 graph TB
@@ -54,8 +51,7 @@ subgraph "Adapters"
 IDX["index.ts<br/>Factory & Registry"]
 BASE["base.ts<br/>AIAdapter interface"]
 OA["openai.ts<br/>OpenAIAdapter"]
-AA["anthropic.ts<br/>AnthropicAdapter"]
-GA["google.ts<br/>GoogleAdapter"]
+GOO["google.ts<br/>GoogleAdapter"]
 UC["unconfigured.ts<br/>UnconfiguredAdapter"]
 end
 subgraph "Shared"
@@ -69,20 +65,19 @@ RDA["resolveDefaultAdapter.ts<br/>Provider-specific key resolution"]
 end
 subgraph "API Layer"
 STATUS["status/route.ts<br/>Provider Status API"]
+MODELS["modelRegistry.ts<br/>Cloud Model Registry"]
 end
 IDX --> OA
-IDX --> AA
-IDX --> GA
+IDX --> GOO
 IDX --> UC
 OA --- TOOLS
-GA --- TOOLS
+GOO --- TOOLS
 OA --- TYPES
-AA --- TYPES
-GA --- TYPES
+GOO --- TYPES
 OA --- CACHE
-AA --- CACHE
-GA --- CACHE
+GOO --- CACHE
 STATUS --> IDX
+MODELS --> IDX
 UA["UnconfiguredAdapter"] --- TYPES
 RDA --> IDX
 ```
@@ -101,11 +96,11 @@ RDA --> IDX
 ## Core Components
 - Universal AIAdapter interface: Defines provider-agnostic generate() and stream() methods, plus a provider identifier. See [AIAdapter:50-72](file://lib/ai/adapters/base.ts#L50-L72).
 - Enhanced adapter factory and registry: Resolves credentials securely with explicit provider-specific key requirements, detects provider automatically from model names, and instantiates the appropriate adapter. See [getWorkspaceAdapter:223-297](file://lib/ai/adapters/index.ts#L223-L297) and [createAdapter:147-202](file://lib/ai/adapters/index.ts#L147-L202).
-- Explicit provider configuration: Requires dedicated API keys for each provider (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY) with no universal fallback support. See [getWorkspaceAdapter:235-257](file://lib/ai/adapters/index.ts#L235-L257) and [resolveApiKeyForProvider:136-149](file://lib/ai/resolveDefaultAdapter.ts#L136-L149).
+- Explicit provider configuration: Requires dedicated API keys for each provider (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY) with cloud-based Ollama support. See [getWorkspaceAdapter:235-257](file://lib/ai/adapters/index.ts#L235-L257) and [resolveApiKeyForProvider:136-149](file://lib/ai/resolveDefaultAdapter.ts#L136-L149).
 - Caching wrapper: Adds deterministic caching for generate() and stream() with cache key generation. See [CachedAdapter:83-139](file://lib/ai/adapters/index.ts#L83-L139) and [generateCacheKey:128-140](file://lib/ai/cache.ts#L128-L140).
 - Metrics dispatcher: Centralized logging and persistence of usage and latency. See [dispatchMetrics:36-88](file://lib/ai/metrics.ts#L36-L88).
 - Shared types and tools: Client-safe types and unified tool schema for cross-provider compatibility. See [types.ts:1-130](file://lib/ai/types.ts#L1-L130) and [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175).
-- Enhanced provider Status API: Comprehensive debugging capabilities with explicit provider configuration awareness and runtime environment variable checking. See [GET:138-233](file://app/api/providers/status/route.ts#L138-L233).
+- Enhanced provider Status API: Comprehensive debugging capabilities with explicit provider configuration awareness and cloud service connectivity checking. See [GET:138-233](file://app/api/providers/status/route.ts#L138-L233).
 
 **Section sources**
 - [base.ts:48-72](file://lib/ai/adapters/base.ts#L48-L72)
@@ -118,7 +113,7 @@ RDA --> IDX
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Architecture Overview
-The system enforces strict server-only credential resolution with explicit provider configuration requirements. The factory resolves keys from workspace storage or environment variables using dedicated provider-specific keys, selects a provider adapter, wraps it in a cache-aware adapter, and returns it to callers.
+The system enforces strict server-only credential resolution with explicit provider configuration requirements. The factory resolves keys from workspace storage or environment variables using dedicated provider-specific keys, selects a provider adapter, wraps it in a cache-aware adapter, and returns it to callers. Ollama is now supported as a cloud-based OpenAI-compatible provider with API key authentication.
 
 ```mermaid
 sequenceDiagram
@@ -187,21 +182,22 @@ class AIAdapter {
 ### Enhanced Adapter Factory Pattern and Dynamic Instantiation
 - Enhanced credential resolution hierarchy:
   1) Workspace key service lookup (encrypted keys per workspace).
-  2) **Updated**: Environment variables fallback using dedicated provider-specific keys only.
+  2) **Updated**: Environment variables fallback using dedicated provider-specific keys including Ollama cloud service support.
   3) **Updated**: No universal fallback mechanism - each provider requires its own specific key.
   4) Unconfigured fallback for graceful degradation.
 - **Updated**: Explicit provider configuration requirements:
-  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
-  - No automatic provider detection from key formats - keys must match the provider they represent.
+  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY.
+  - Ollama requires API key authentication with cloud service URL.
   - Provider-specific key resolution: resolveApiKeyForProvider() checks only the specific provider's environment variable.
 - Provider detection:
   - Explicit provider overrides model-based detection.
-  - Model-based detection supports OpenAI, Anthropic, Google, and Groq-hosted models.
-  - **Updated**: Removed Ollama and DeepSeek detection from model-based detection logic.
+  - Model-based detection supports OpenAI, Google, Groq, and Ollama-hosted models.
+  - **Updated**: Added Ollama detection for llama3, codellama, qwen2.5, phi4, deepseek-coder, mistral, and gemma2 models, routing to cloud service.
 - OpenAI-compatible providers:
-  - Groq is routed through an OpenAI-compatible adapter using base URLs.
+  - Groq and Ollama are routed through an OpenAI-compatible adapter using base URLs.
+  - Ollama now uses cloud service URL: 'https://ollama.com/v1'.
 - Named adapters:
-  - OpenAI, Anthropic, and Google are instantiated directly.
+  - OpenAI, Google are instantiated directly.
 
 ```mermaid
 flowchart TD
@@ -217,9 +213,8 @@ Detect --> Compat{"OpenAI-compatible?"}
 Compat -- Yes --> OA["OpenAIAdapter(baseUrl)"]
 Compat -- No --> Named{"Named provider?"}
 Named -- Yes --> OA2["OpenAIAdapter"] --> Wrap["Wrap in CachedAdapter"]
-Named -- Yes --> AN["AnthropicAdapter"] --> Wrap
 Named -- Yes --> GOO["GoogleAdapter"] --> Wrap
-Named -- No --> OL["Fallback Ollama"] --> Wrap
+Named -- No --> OL["Ollama (Cloud Service)"] --> Wrap
 Unconfigured --> UC["UnconfiguredAdapter"] --> End(["Return"])
 Wrap --> End
 ```
@@ -236,15 +231,16 @@ Wrap --> End
 - **Updated**: No universal LLM_KEY system - each provider requires its own specific key.
 - Dedicated provider-specific keys:
   - OpenAI: OPENAI_API_KEY
-  - Anthropic: ANTHROPIC_API_KEY
   - Google: GOOGLE_API_KEY or GEMINI_API_KEY
   - Groq: GROQ_API_KEY
+  - **New**: Ollama: OLLAMA_API_KEY (required for cloud service access)
 - Provider-specific key resolution:
   - resolveApiKeyForProvider() checks only the specific provider's environment variable.
+  - Ollama requires API key authentication with cloud service URL.
   - No automatic key format detection or universal fallback mechanisms.
 - Environment variable fallback hierarchy:
   - Workspace key service lookup (encrypted keys per workspace).
-  - Provider-specific environment variables: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
+  - Provider-specific environment variables: OPENAI_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY.
   - Google supports both GOOGLE_API_KEY and GEMINI_API_KEY as alternatives.
 
 ```mermaid
@@ -297,33 +293,6 @@ AIAdapter <|.. OpenAIAdapter
 - [openai.ts:64-157](file://lib/ai/adapters/openai.ts#L64-L157)
 - [openai.ts:159-221](file://lib/ai/adapters/openai.ts#L159-L221)
 
-### Anthropic Adapter
-- Uses the native Anthropic /v1/messages endpoint via fetch.
-- Constraints:
-  - No response_format support; JSON mode is emulated by appending instructions to the system prompt.
-  - Per-model output caps enforced to prevent 400 errors.
-- Streaming: parses SSE-like events and yields deltas until message_stop.
-
-```mermaid
-classDiagram
-class AnthropicAdapter {
-+string provider
--apiKey string
-+constructor(apiKey?)
-+generate(options) GenerateResult
-+stream(options) AsyncGenerator~StreamChunk~
-}
-AIAdapter <|.. AnthropicAdapter
-```
-
-**Diagram sources**
-- [anthropic.ts:71-210](file://lib/ai/adapters/anthropic.ts#L71-L210)
-- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
-
-**Section sources**
-- [anthropic.ts:89-145](file://lib/ai/adapters/anthropic.ts#L89-L145)
-- [anthropic.ts:147-207](file://lib/ai/adapters/anthropic.ts#L147-L207)
-
 ### Google Adapter
 - Uses Google AI Studio's OpenAI-compatible endpoint.
 - Constraints:
@@ -350,6 +319,41 @@ AIAdapter <|.. GoogleAdapter
 **Section sources**
 - [google.ts:35-69](file://lib/ai/adapters/google.ts#L35-L69)
 - [google.ts:71-88](file://lib/ai/adapters/google.ts#L71-L88)
+
+### Ollama Adapter (Updated)
+- **Updated**: Cloud-based inference provider using OpenAI-compatible API.
+- **Updated**: Now uses cloud service via OpenAI-compatible API with base URL 'https://ollama.com/v1'.
+- **Updated**: Requires API key authentication with OLLAMA_API_KEY environment variable.
+- **Updated**: No local runtime detection or model listing capabilities - operates purely as cloud service.
+- **Updated**: API key requirement with specific error message directing users to get key at https://ollama.com.
+- OpenAI-compatible interface:
+  - Implements AIAdapter contract with generate() and stream() methods
+  - Supports tool calling, streaming, and response formatting
+  - Integrates seamlessly with existing adapter infrastructure
+- Provider detection:
+  - Automatically detected for models containing 'llama3', 'codellama', 'qwen2.5', 'phi4', 'deepseek-coder', 'mistral', 'gemma2'
+  - Routes to cloud service URL regardless of model type
+
+```mermaid
+classDiagram
+class OllamaAdapter {
++string provider
+-client OpenAI (OpenAI-compatible)
+-effectiveBaseURL string
++constructor(apiKey?, baseURL?)
++generate(options) GenerateResult
++stream(options) AsyncGenerator~StreamChunk~
+}
+AIAdapter <|.. OllamaAdapter
+```
+
+**Diagram sources**
+- [index.ts:151-156](file://lib/ai/adapters/index.ts#L151-L156)
+- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
+
+**Section sources**
+- [index.ts:151-156](file://lib/ai/adapters/index.ts#L151-L156)
+- [index.ts:55-58](file://lib/ai/adapters/index.ts#L55-L58)
 
 ### Unconfigured Adapter
 - Graceful fallback when no credentials are available.
@@ -409,13 +413,14 @@ Append --> Next["Resume generation()"]
 - [base.ts:70-72](file://lib/ai/adapters/base.ts#L70-L72)
 - [types.ts:48-55](file://lib/ai/types.ts#L48-L55)
 - [openai.ts:98-101](file://lib/ai/adapters/openai.ts#L98-L101)
-- [anthropic.ts:95-98](file://lib/ai/adapters/anthropic.ts#L95-L98)
+- [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
 
 ### Fallback Mechanisms and Error Handling
 - ConfigurationError is thrown when a cloud provider lacks credentials; surfaced to the UI for configuration.
-- **Updated**: Ollama support has been completely removed from the factory pattern.
+- **Updated**: Ollama support is now fully integrated into the factory pattern with proper API key requirement handling.
 - UnconfiguredAdapter is returned when no credentials are available (including Vercel environments where local daemons are unreachable).
 - **Updated**: Enhanced error logging with explicit provider configuration context for debugging.
+- **Updated**: Ollama-specific error handling with clear API key requirement message.
 - Upstash Redis initialization failure falls back to in-memory cache; cache write errors are swallowed to avoid blocking requests.
 
 **Section sources**
@@ -428,25 +433,30 @@ Append --> Next["Resume generation()"]
 - OpenAI:
   - Automatic HuggingFace endpoint migration and router detection.
   - Token caps and parameter adjustments for reasoning models and HuggingFace.
-- Anthropic:
-  - System role merging for specific models and per-model output caps.
 - Google:
   - Response format exclusion due to proxy limitations.
-- **Updated**: Ollama support has been completely removed from provider-specific optimizations.
+- **Updated**: Ollama:
+  - Cloud service integration with OpenAI-compatible API.
+  - API key requirement for authentication.
+  - Seamless integration as OpenAI-compatible provider.
+  - No local runtime detection or model listing capabilities.
 - **Updated**: Explicit provider configuration optimization:
   - Dedicated environment variables eliminate universal key detection overhead.
   - Direct provider-specific key access reduces configuration complexity.
+  - Cloud service routing eliminates local dependency requirements.
 
 **Section sources**
 - [openai.ts:46-62](file://lib/ai/adapters/openai.ts#L46-L62)
 - [openai.ts:119-126](file://lib/ai/adapters/openai.ts#L119-L126)
-- [anthropic.ts:105-108](file://lib/ai/adapters/anthropic.ts#L105-L108)
 - [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
+- [index.ts:151-156](file://lib/ai/adapters/index.ts#L151-L156)
 
 ### Enhanced Provider Status API
 - **Updated**: Comprehensive debugging capabilities for provider configuration verification with explicit provider configuration awareness.
 - **Updated**: Runtime environment variable checking with detailed logging including provider-specific key status.
 - **Updated**: No universal key detection - only provider-specific keys are checked for status reporting.
+- **Updated**: Ollama cloud service support with API key requirement and connectivity checking.
+- **Updated**: Cloud service URL 'https://ollama.com/v1' for health endpoint testing.
 - Debug information includes available environment variables, configuration status, provider detection results, and Node.js environment details.
 - Prevents caching to ensure real-time status checks.
 
@@ -482,9 +492,10 @@ AddDebug --> Return
   - Example invocation pattern is demonstrated in tests for all adapters.
 - Provider selection:
   - Explicit provider via getWorkspaceAdapter or model-based detection via detectProvider.
-  - **Updated**: Model-based detection no longer includes Ollama or DeepSeek models.
+  - **Updated**: Model-based detection now includes Ollama models for cloud service inference.
 - **Updated**: Explicit provider configuration:
-  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY.
+  - Each provider requires its own dedicated environment variable: OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY.
+  - Ollama requires API key authentication with cloud service URL.
   - No automatic key format detection or universal fallback mechanisms.
   - Key format patterns: standard API key formats for each provider.
 - Streaming:
@@ -494,12 +505,11 @@ AddDebug --> Return
 - **Updated**: Enhanced provider status checking:
   - Use GET /api/providers/status to verify configuration and debug environment variables including provider-specific key status.
   - Check console logs for debug information including available env vars, provider detection results, and configuration status.
+  - **Updated**: Ollama cloud service connectivity checking with health endpoint verification.
 
 **Section sources**
 - [index.ts:223-297](file://lib/ai/adapters/index.ts#L223-L297)
 - [index.ts:55-65](file://lib/ai/adapters/index.ts#L55-L65)
-- [adapters.test.ts:57-108](file://__tests__/adapters.test.ts#L57-L108)
-- [adapterIndex.test.ts:48-70](file://__tests__/adapterIndex.test.ts#L48-L70)
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Dependency Analysis
@@ -509,26 +519,24 @@ The adapter system exhibits low coupling and high cohesion with explicit provide
 - **Updated**: resolveDefaultAdapter provides centralized provider-specific key management without universal fallback.
 - Caching and metrics are orthogonal concerns wrapped around the adapter.
 - Tools and types are shared utilities consumed by adapters.
-- **Updated**: Removed dependencies on Ollama, DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers.
+- **Updated**: Added dependencies on Ollama cloud service with API key authentication.
 
 ```mermaid
 graph LR
 IDX["index.ts"] --> OA["openai.ts"]
-IDX --> AA["anthropic.ts"]
-IDX --> GA["google.ts"]
+IDX --> GOO["google.ts"]
 IDX --> UC["unconfigured.ts"]
 RDA["resolveDefaultAdapter.ts"] --> IDX
 OA --> TOOLS["tools.ts"]
-GA --> TOOLS
+GOO --> TOOLS
 OA --> TYPES["types.ts"]
-AA --> TYPES
-GA --> TYPES
+GOO --> TYPES
 OA --> CACHE["cache.ts"]
-AA --> CACHE
-GA --> CACHE
+GOO --> CACHE
 OA --> METRICS["metrics.ts"]
 STATUS["status/route.ts"] --> IDX
 STATUS --> RDA
+MODELS["modelRegistry.ts"] --> IDX
 ```
 
 **Diagram sources**
@@ -552,53 +560,64 @@ STATUS --> RDA
   - Prevents upstream 400 errors and wasted compute.
 - **Updated**: Provider status API uses unstable_noStore() to prevent caching and ensure real-time configuration verification.
 - **Updated**: Explicit provider configuration eliminates universal key detection overhead and reduces memory usage.
+- **Updated**: Ollama adapter performance considerations:
+  - Cloud service performance depends on network connectivity and API response times.
+  - API key authentication adds minimal overhead during adapter creation.
+  - Health endpoint checking ensures reliable cloud service connectivity.
 
 ## Troubleshooting Guide
 - Missing API key:
   - Symptom: ConfigurationError thrown during adapter creation.
   - Action: Configure provider key in workspace settings or environment variables.
-  - **Updated**: Ollama support has been completely removed; no longer available as a fallback option.
+  - **Updated**: Ollama now requires API key authentication with cloud service URL.
 - **Updated**: Provider-specific key issues:
   - Symptom: Provider not working despite key being set.
-  - Action: Verify the key matches the correct provider-specific environment variable (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY).
+  - Action: Verify the key matches the correct provider-specific environment variable (OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, GROQ_API_KEY, OLLAMA_API_KEY).
   - Action: Ensure the key format matches the provider's expected format.
+  - **Updated**: Ollama requires valid API key for cloud service access.
 - Local daemon unreachable (Vercel):
   - Behavior: UnconfiguredAdapter returned to show helpful UI.
   - Action: Use cloud providers or run locally with reachable daemons.
+  - **Updated**: Ollama cloud service eliminates local daemon dependency.
+- **Updated**: Ollama-specific troubleshooting:
+  - Symptom: Ollama connection failures.
+  - Action: Verify OLLAMA_API_KEY environment variable contains valid API key.
+  - Action: Check cloud service availability at https://ollama.com.
+  - Action: Ensure required models are available in cloud service catalog.
+  - **Updated**: No local model listing or runtime detection capabilities.
 - Provider-specific errors:
   - OpenAI: Review reasoning model constraints and HuggingFace router behavior.
-  - Anthropic: Respect system role merging and output caps.
   - Google: Do not send response_format; ensure correct endpoint.
-  - **Updated**: Ollama is no longer supported; remove any Ollama configuration attempts.
+  - **Updated**: Ollama: Check API key authentication and cloud service connectivity.
 - Streaming issues:
   - Verify provider supports streaming and that usage is only available on the final chunk when supported.
 - **Updated**: Enhanced provider status debugging:
   - Use GET /api/providers/status to verify configuration and check environment variables including provider-specific key status.
   - Check console logs for debug information including available env vars, provider detection results, and configuration status.
   - Look for "[providers/status]" logs showing provider-specific key configuration status.
+  - **Updated**: Ollama cloud service connectivity verification with health endpoint testing.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
 - [index.ts:204-207](file://lib/ai/adapters/index.ts#L204-L207)
 - [openai.ts:98-111](file://lib/ai/adapters/openai.ts#L98-L111)
-- [anthropic.ts:105-108](file://lib/ai/adapters/anthropic.ts#L105-L108)
 - [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
 - [status.route.ts:138-233](file://app/api/providers/status/route.ts#L138-L233)
 
 ## Conclusion
-The adapter system provides a robust, provider-agnostic foundation for AI integration with explicit provider configuration requirements. By enforcing secure credential resolution with dedicated provider-specific keys, offering a unified interface, and encapsulating provider-specific quirks, it simplifies multi-provider orchestration while maintaining performance and reliability through caching and metrics. The recent updates streamline supported providers from 5 to 4 (OpenAI, Anthropic, Google, Groq), enhance Ollama integration removal, provide comprehensive debugging capabilities for configuration management, and introduce explicit provider configuration requirements that eliminate universal key management complexity.
+The adapter system provides a robust, provider-agnostic foundation for AI integration with explicit provider configuration requirements. By enforcing secure credential resolution with dedicated provider-specific keys, offering a unified interface, and encapsulating provider-specific quirks, it simplifies multi-provider orchestration while maintaining performance and reliability through caching and metrics. The recent updates add comprehensive Ollama cloud service integration supporting OpenAI-compatible API with API key authentication, expand supported providers from 3 to 4 (OpenAI, Google, Groq, Ollama), eliminate local runtime dependencies, provide enhanced cloud-based inference capabilities, and introduce explicit provider configuration requirements that streamline the development experience.
 
 ## Appendices
 
 ### Supported Providers and Authentication
-- **Updated**: Currently supported providers: OpenAI, Anthropic, Google, and Groq.
-- **Removed**: Ollama, DeepSeek, Mistral, OpenRouter, Together, Meta, Qwen, and Gemma providers.
+- **Updated**: Currently supported providers: OpenAI, Google, Groq, and Ollama.
+- **Updated**: Ollama cloud service support with OpenAI-compatible API and API key authentication.
 - **Updated**: Explicit provider configuration requirements with dedicated API keys for each provider.
 - Authentication requirements:
   - OpenAI: OPENAI_API_KEY
-  - Anthropic: ANTHROPIC_API_KEY
   - Google: GOOGLE_API_KEY or GEMINI_API_KEY
   - Groq: GROQ_API_KEY
+  - **New**: Ollama: OLLAMA_API_KEY (required for cloud service access)
 
 **Section sources**
 - [index.ts:10-12](file://lib/ai/adapters/index.ts#L10-L12)
@@ -609,22 +628,39 @@ The adapter system provides a robust, provider-agnostic foundation for AI integr
 ### Provider Capability Matrix
 - Tool calling: OpenAI, Google (provider-dependent).
 - Streaming: All adapters.
-- Response format: OpenAI JSON mode (with restrictions), Anthropic via system prompt, Google excludes response_format.
+- Response format: OpenAI JSON mode (with restrictions), Google excludes response_format.
 
 **Section sources**
 - [openai.ts:98-111](file://lib/ai/adapters/openai.ts#L98-L111)
-- [anthropic.ts:95-98](file://lib/ai/adapters/anthropic.ts#L95-L98)
 - [google.ts:46-49](file://lib/ai/adapters/google.ts#L46-L49)
 
 ### Provider Detection Logic
-- **Updated**: Model-based detection no longer includes Ollama or DeepSeek models.
+- **Updated**: Model-based detection now includes Ollama models for cloud service inference.
 - **Updated**: No universal key detection - relies solely on explicit provider configuration.
 - Detection rules:
   - gpt-*, o1 series → OpenAI
   - claude series → Anthropic
   - gemini series → Google
   - llama, mixtral, gemma2 → Groq
+  - **New**: llama3, codellama, qwen2.5, phi4, deepseek-coder, mistral → Ollama (cloud service)
   - Default → OpenAI
 
 **Section sources**
 - [index.ts:55-65](file://lib/ai/adapters/index.ts#L55-L65)
+
+### Ollama Configuration Examples
+- **Updated**: Ollama cloud service configuration:
+  - OLLAMA_API_KEY: API key for Ollama cloud service authentication
+  - Base URL: 'https://ollama.com/v1' for OpenAI-compatible API
+- **Updated**: Cloud service model availability:
+  - Qwen3 Coder Next: qwen3-coder-next
+  - Gemma 4 2B: gemma4:e2b
+  - Devstral Small 2 24B: devstral-small-2
+  - DeepSeek V3.2: deepseek-v3.2
+  - Qwen 3.5 9B: qwen3.5:9b
+
+**Section sources**
+- [index.ts:42-45](file://lib/ai/adapters/index.ts#L42-L45)
+- [index.ts:55-58](file://lib/ai/adapters/index.ts#L55-L58)
+- [resolveDefaultAdapter.ts:30-36](file://lib/ai/resolveDefaultAdapter.ts#L30-L36)
+- [modelRegistry.ts:403-516](file://lib/ai/modelRegistry.ts#L403-L516)

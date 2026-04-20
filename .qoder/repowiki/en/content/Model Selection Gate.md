@@ -8,16 +8,18 @@
 - [login/page.tsx](file://app/login/page.tsx)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
+- [index.ts](file://lib/ai/adapters/index.ts)
+- [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 - [VERCEL_CONNECTION_FIX.md](file://VERCEL_CONNECTION_FIX.md)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced error messaging with comprehensive environment variable instructions and Vercel setup guidance
-- Improved user experience with cleaner, more concise error reporting (reduced from 136 to 67 characters)
-- Better provider configuration guidance with detailed LLM_KEY format examples and provider-specific key instructions
-- Enhanced provider status checking with universal key detection and improved error reporting
-- Added detailed environment variable setup instructions for LLM_KEY and provider-specific keys
+- Updated Ollama support to reflect Cloud-only deployment model with OLLAMA_API_KEY environment variable
+- Removed references to self-hosted deployment and local runtime detection
+- Enhanced Ollama Cloud service configuration with dedicated API key management
+- Updated provider status checking to focus on Ollama Cloud connectivity
+- Revised error messaging to reflect Ollama Cloud setup requirements
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -39,12 +41,12 @@ The Model Selection Gate is a critical component in the AI-powered accessibility
 
 The gate operates as a modal overlay that appears when no existing AI configuration is detected in localStorage, ensuring that users cannot proceed with the application until they have properly configured their AI provider settings. This design choice prioritizes security by preventing accidental operation without proper authentication and by providing clear guidance for API key configuration.
 
-**Updated** The component now displays all 5 major AI providers with enhanced visual indicators:
+**Updated** The component now displays all 4 major AI providers with enhanced visual indicators:
 - **OpenAI**: Emerald green branding with GPT-4o models
 - **Anthropic**: Amber orange branding with Claude models  
 - **Google Gemini**: Blue branding with Gemini 2.0 Flash and 1.5 Pro
 - **Groq**: Orange branding with ultra-fast Llama and Mixtral models
-- **Ollama**: Gray branding for local model deployment
+- **Ollama**: Purple branding for Ollama Cloud service with dedicated API key configuration
 
 **Updated** Enhanced provider status checking now supports universal LLM_KEY detection with auto-detection of provider from key format, improving the configuration experience.
 
@@ -93,7 +95,7 @@ ENDPOINT7 --> ENDPOINT8
 - [page.tsx:57-60](file://app/page.tsx#L57-L60)
 
 **Section sources**
-- [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
+- [ModelSelectionGate.tsx:1-455](file://components/ModelSelectionGate.tsx#L1-L455)
 - [page.tsx:546-551](file://app/page.tsx#L546-L551)
 
 ## Core Components
@@ -110,9 +112,10 @@ The Model Selection Gate system has been enhanced to operate as a mandatory comp
 - Provides streamlined configuration workflow without server calls
 - **Updated**: Enforces mandatory flow after login with always-display behavior
 - **Updated**: Includes preselection logic for previously used providers
-- **Updated**: Displays all 5 AI providers with visual configuration indicators
+- **Updated**: Displays all 4 AI providers with visual configuration indicators
 - **Updated**: Shows 'NEEDS KEY' badges for unconfigured providers and 'LAST USED' badges for previously selected providers
-- **Updated**: Enhanced error messaging with comprehensive environment variable instructions (reduced to 67 characters for cleaner reporting)
+- **Updated**: Enhanced error messaging with comprehensive environment variable instructions
+- **Updated**: Enhanced Ollama support with dedicated API key configuration for Cloud service
 
 **Provider Status API**
 - Returns configured providers based on environment variables
@@ -121,8 +124,9 @@ The Model Selection Gate system has been enhanced to operate as a mandatory comp
 - Filters providers based on availability and key format
 - **Updated**: Enhanced to support LLM_KEY universal key detection with auto-detection of provider from key format
 - **Updated**: Simplified to focus solely on provider discovery with enhanced status checking
-- **Updated**: Supports all 5 major AI providers with brand-specific configurations
+- **Updated**: Supports all 4 major AI providers with brand-specific configurations
 - **Updated**: Improved error reporting with detailed diagnostic information
+- **Updated**: Enhanced Ollama Cloud configuration with dedicated API key management
 
 **Workspace Settings API**
 - **New**: Loads previously used provider configurations from database
@@ -139,12 +143,14 @@ The Model Selection Gate system has been enhanced to operate as a mandatory comp
 - **New**: Provides universal key detection and provider auto-detection
 - **New**: Supports LLM_KEY format-based provider identification
 - **New**: Enables seamless integration with universal key configuration
+- **Updated**: Enhanced model detection to support Ollama Cloud models
 
 **Section sources**
-- [ModelSelectionGate.tsx:65-456](file://components/ModelSelectionGate.tsx#L65-L456)
+- [ModelSelectionGate.tsx:65-455](file://components/ModelSelectionGate.tsx#L65-L455)
 - [providers/status/route.ts:137-234](file://app/api/providers/status/route.ts#L137-L234)
 - [workspace/settings/route.ts:34-55](file://app/api/workspace/settings/route.ts#L34-L55)
 - [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)
+- [index.ts:39-69](file://lib/ai/adapters/index.ts#L39-L69)
 
 ## Architecture Overview
 
@@ -236,15 +242,15 @@ The component implements a comprehensive state management system with the follow
 
 #### Enhanced Provider Integration and Branding
 
-The component supports five major AI providers, each with customized branding and optimized settings:
+The component supports four major AI providers, each with customized branding and optimized settings:
 
 | Provider | Brand Color | Icon | Recommended Models | Configuration Status |
 |----------|-------------|------|-------------------|---------------------|
 | OpenAI | Emerald Green | ✨ | GPT-4o, GPT-4o-mini, o3-mini | ✅ Ready / ❌ NEEDS KEY |
 | Anthropic | Amber Orange | 💻 | Claude 3.5 Sonnet, Claude 3 Opus | ✅ Ready / ❌ NEEDS KEY |
-| Google | Blue | 🌍 | Gemini 2.0 Flash, Gemini 1.5 Pro | ✅ Ready / ❌ NEEDS KEY |
+| Google Gemini | Blue | 🌍 | Gemini 2.0 Flash, Gemini 1.5 Pro | ✅ Ready / ❌ NEEDS KEY |
 | Groq | Orange | ⚡ | Llama 3.3 70B, Mixtral 8x7B | ✅ Ready / ❌ NEEDS KEY |
-| Ollama | Gray | 🖥️ | Local models | ✅ Ready / ❌ NEEDS KEY |
+| Ollama | Purple | 🖥️ | Qwen3 Coder Next, Gemma 4 2B, Devstral Small 2, DeepSeek V3.2, Qwen 3.5 9B | ✅ Ready / ❌ NEEDS KEY |
 
 Each provider integration includes:
 - Custom branded visual elements with gradient backgrounds
@@ -253,6 +259,7 @@ Each provider integration includes:
 - **Updated**: Security indicators showing environment variable-based key resolution
 - **Updated**: Visual 'LAST USED' badge for previously selected providers
 - **Updated**: Visual 'NEEDS KEY' badge for unconfigured providers
+- **Updated**: Dedicated API key configuration for Ollama Cloud service
 
 #### Enhanced Security Implementation
 
@@ -268,17 +275,20 @@ The Model Selection Gate implements a client-side security model that leverages 
 - **Updated**: Server-side encryption and database storage eliminated
 - **Updated**: Provider detection now focuses on environment variable validation with universal key support
 - **Updated**: Reduced server dependencies for configuration management
+- **Updated**: Enhanced Ollama Cloud support with dedicated API key management
 
 **Universal Key Support**:
 - **New**: LLM_KEY universal key detection with auto-detection of provider from key format
 - **New**: Enhanced provider status checking with format-based key identification
 - **New**: Seamless integration with universal key configuration across all providers
+- **Updated**: Enhanced model detection to support Ollama Cloud models
 
 **Section sources**
 - [ModelSelectionGate.tsx:55-62](file://components/ModelSelectionGate.tsx#L55-L62)
 - [ModelSelectionGate.tsx:20-39](file://components/ModelSelectionGate.tsx#L20-L39)
 - [providers/status/route.ts:62-120](file://app/api/providers/status/route.ts#L62-L120)
 - [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)
+- [index.ts:53-64](file://lib/ai/adapters/index.ts#L53-L64)
 
 ### API Integration Layer
 
@@ -296,8 +306,9 @@ The `/api/providers/status` endpoint serves as the central hub for provider disc
 - Real-time configuration status
 - **Updated**: Enhanced to support LLM_KEY universal key detection with provider auto-detection
 - **Updated**: Simplified to focus on provider discovery only with enhanced status checking
-- **Updated**: Supports all 5 major AI providers with brand-specific configurations
+- **Updated**: Supports all 4 major AI providers with brand-specific configurations
 - **Updated**: Improved error reporting with detailed diagnostic information
+- **Updated**: Enhanced Ollama Cloud configuration with dedicated API key management
 
 #### Workspace Settings API
 
@@ -318,11 +329,13 @@ The `resolveDefaultAdapter` service provides universal key detection and provide
 - Auto-detection of provider from key format patterns
 - Seamless integration with universal key configuration
 - Enhanced security through format-based validation
+- **Updated**: Enhanced model detection to support Ollama Cloud models
 
 **Section sources**
 - [providers/status/route.ts:137-234](file://app/api/providers/status/route.ts#L137-L234)
 - [workspace/settings/route.ts:34-55](file://app/api/workspace/settings/route.ts#L34-L55)
 - [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)
+- [index.ts:42-64](file://lib/ai/adapters/index.ts#L42-L64)
 
 ### Security Architecture
 
@@ -433,6 +446,7 @@ The remember provider feature is implemented using localStorage for client-side 
 - **Updated**: Simplified configuration process without server dependencies
 - **Updated**: Mandatory flow ensures proper user onboarding
 - **Updated**: Enhanced visual feedback with 'NEEDS KEY' and 'LAST USED' badges
+- **Updated**: Enhanced Ollama Cloud support with dedicated API key configuration
 
 #### User Interface Enhancements
 
@@ -442,6 +456,7 @@ The remember provider feature is implemented using localStorage for client-side 
 - **Responsive Design**: Improved mobile and desktop user experience
 - **LAST USED Badge**: Visual indicator for previously selected providers
 - **NEEDS KEY Badge**: Immediate visual cue for unconfigured providers
+- **Ollama Cloud Branding**: Purple gradient background with dedicated API key configuration
 
 **Section sources**
 - [ModelSelectionGate.tsx:84-116](file://components/ModelSelectionGate.tsx#L84-L116)
@@ -449,7 +464,7 @@ The remember provider feature is implemented using localStorage for client-side 
 
 ### Enhanced Provider Display System
 
-**New Feature**: The Model Selection Gate now displays all 5 AI providers with enhanced visual indicators and 'LAST USED' badge functionality.
+**New Feature**: The Model Selection Gate now displays all 4 AI providers with enhanced visual indicators and 'LAST USED' badge functionality.
 
 #### Provider Display Features
 
@@ -458,6 +473,7 @@ The remember provider feature is implemented using localStorage for client-side 
 - **LAST USED Badge**: Emerald badge with "LAST USED" label for previously selected providers
 - **Model Recommendations**: Shows default models for each provider
 - **Hover Effects**: Interactive animations and visual feedback
+- **Ollama Cloud Integration**: Dedicated purple branding with API key configuration for Cloud service
 
 #### Visual Design Elements
 
@@ -467,6 +483,7 @@ The remember provider feature is implemented using localStorage for client-side 
 - **Responsive Grid**: Adaptive layout for different screen sizes
 - **Visual Hierarchy**: Clear emphasis on available providers vs. unavailable ones
 - **Badge System**: Enhanced visual feedback for configuration status
+- **Ollama Cloud Icon**: Dedicated icon for Cloud service configuration
 
 **Section sources**
 - [ModelSelectionGate.tsx:240-290](file://components/ModelSelectionGate.tsx#L240-L290)
@@ -492,6 +509,7 @@ The remember provider feature is implemented using localStorage for client-side 
 | `AIzaSy...` | Google | Direct prefix match |
 | `sk-proj-...` | OpenAI | Direct prefix match |
 | `sk-...` | OpenAI | Generic OpenAI format |
+| `ollama:` | Ollama | Model prefix detection |
 
 #### User Experience Benefits
 
@@ -499,10 +517,12 @@ The remember provider feature is implemented using localStorage for client-side 
 - **Auto-Detection**: Automatic provider identification from key format
 - **Reduced Complexity**: Eliminates need to manage multiple provider-specific keys
 - **Enhanced Flexibility**: Supports multiple providers with a single configuration
+- **Ollama Cloud Support**: Enhanced model detection for Cloud service deployment
 
 **Section sources**
 - [providers/status/route.ts:146-157](file://app/api/providers/status/route.ts#L146-L157)
 - [resolveDefaultAdapter.ts:73-84](file://lib/ai/resolveDefaultAdapter.ts#L73-L84)
+- [index.ts:53-64](file://lib/ai/adapters/index.ts#L53-L64)
 
 ### Enhanced Error Messaging and Environment Variable Instructions
 
@@ -515,6 +535,7 @@ The remember provider feature is implemented using localStorage for client-side 
 - **Vercel Setup Guidance**: Step-by-step instructions for configuring environment variables in Vercel
 - **Format Examples**: Clear examples of supported key formats for each provider
 - **Actionable Troubleshooting**: Specific steps to resolve common configuration issues
+- **Ollama Cloud Setup Instructions**: Detailed guidance for configuring OLLAMA_API_KEY for Cloud service
 
 #### Environment Variable Setup Instructions
 
@@ -525,6 +546,7 @@ The component now provides detailed instructions for configuring environment var
 - **Provider-Specific Keys**: Detailed setup instructions for each individual provider
 - **Vercel Integration**: Step-by-step Vercel environment variable configuration
 - **Format Validation**: Examples of correct key format patterns
+- **Ollama Cloud API Key**: Detailed setup instructions for OLLAMA_API_KEY configuration
 
 #### User Experience Benefits
 
@@ -532,6 +554,7 @@ The component now provides detailed instructions for configuring environment var
 - **Proactive Problem Resolution**: Detailed error messages help users resolve issues independently
 - **Enhanced Developer Experience**: Comprehensive documentation integrated directly into the UI
 - **Improved Onboarding**: New users can quickly set up their environment with minimal confusion
+- **Ollama Cloud Integration**: Seamless setup process for Cloud service deployment
 
 **Section sources**
 - [ModelSelectionGate.tsx:190-224](file://components/ModelSelectionGate.tsx#L190-L224)
@@ -598,6 +621,7 @@ The Model Selection Gate demonstrates excellent design principles with low inter
 - Deep integration with environment variables for credential resolution
 - Seamless integration with localStorage for configuration persistence
 - Integration with resolveDefaultAdapter for universal key detection
+- **Updated**: Integration with Ollama Cloud service for API key management
 
 ### Data Flow Patterns
 
@@ -614,6 +638,8 @@ The system implements a mandatory data flow pattern:
 **Mandatory Flow Integration**: Preselection logic flows from workspace settings to provider selection, ensuring consistent user experience.
 
 **Universal Key Integration**: Enhanced data flow for universal key detection with provider auto-detection.
+
+**Ollama Cloud Integration**: New data flow for Cloud service configuration with dedicated API key management.
 
 **Section sources**
 - [ModelSelectionGate.tsx:77-154](file://components/ModelSelectionGate.tsx#L77-L154)
@@ -661,6 +687,8 @@ The component is designed with memory efficiency in mind:
 **Mandatory Flow Optimization**: Preselection logic minimizes unnecessary API calls for returning users.
 
 **Universal Key Optimization**: Efficient key detection and validation with minimal performance impact.
+
+**Ollama Cloud Optimization**: Efficient API key detection and validation with minimal performance impact.
 
 **Section sources**
 - [ModelSelectionGate.tsx:76-81](file://components/ModelSelectionGate.tsx#L76-L81)
@@ -717,6 +745,21 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - **New**: Solution: Verify environment variable instructions are properly formatted
 - **New**: Prevention: Ensure comprehensive error messaging is implemented
 
+**Ollama Cloud Configuration Issues**:
+- **New**: Symptom: Ollama not appearing as available provider
+- **New**: Solution: Verify OLLAMA_API_KEY environment variable is properly configured
+- **New**: Prevention: Ensure Ollama Cloud service is accessible and API key is valid
+
+**Ollama Cloud API Key Issues**:
+- **New**: Symptom: Ollama shows as configured but not connecting
+- **New**: Solution: Verify OLLAMA_API_KEY is valid and Cloud service is reachable
+- **New**: Prevention: Check Ollama Cloud service status and API key permissions
+
+**Model Detection Issues**:
+- **New**: Symptom: Ollama Cloud models not recognized or auto-detected
+- **New**: Solution: Verify model names match supported Cloud service patterns
+- **New**: Prevention**: Ensure Ollama Cloud service has the requested models available
+
 ### Diagnostic Tools
 
 **Debug Information**: The system provides detailed debug information in development environments, including:
@@ -729,6 +772,8 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - **New**: Preselection logic diagnostics
 - **New**: Badge functionality diagnostics
 - **New**: Enhanced error messaging diagnostics
+- **New**: Ollama Cloud configuration diagnostics
+- **New**: Model detection diagnostics
 
 **Error Logging**: Comprehensive error logging with structured data for troubleshooting:
 
@@ -741,6 +786,8 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - **New**: Mandatory flow and preselection logic errors
 - **New**: Provider display and badge functionality errors
 - **New**: Enhanced error messaging and environment variable instruction errors
+- **New**: Ollama Cloud configuration and API key errors
+- **New**: Model detection and auto-detection errors
 
 ### Universal Key Troubleshooting
 
@@ -764,6 +811,24 @@ The Model Selection Gate system includes comprehensive error handling and diagno
 - **New**: Check LLM_KEY format compliance with supported patterns
 - **New**: Ensure provider-specific keys are properly formatted
 - **New**: Validate Vercel deployment after environment variable changes
+- **New**: Verify OLLAMA_API_KEY format and Cloud service accessibility
+
+**Ollama Cloud Troubleshooting**
+
+**API Key Issues**:
+- Verify OLLAMA_API_KEY is properly configured in Vercel
+- Check that the API key has access to Ollama Cloud service
+- Ensure the key is not expired or revoked
+
+**Service Connectivity Issues**:
+- Verify Ollama Cloud service is accessible from Vercel
+- Check network connectivity between application and Ollama Cloud
+- Ensure proper CORS configuration if applicable
+
+**Model Availability Issues**:
+- Verify requested Ollama Cloud models are available
+- Check Ollama Cloud service status and model availability
+- Ensure sufficient quota or subscription for requested models
 
 **Section sources**
 - [ModelSelectionGate.tsx:190-224](file://components/ModelSelectionGate.tsx#L190-L224)
@@ -780,13 +845,15 @@ The Model Selection Gate represents a significantly enhanced implementation of A
 - **Enhanced User Experience**: Improved provider detection, environment variable-based credential management, and visual feedback
 - **Optimized Performance**: Elimination of server dependencies and reduced configuration steps for returning users
 - **Simplified Security Model**: Environment variable-based key resolution with enhanced security
-- **Updated**: Display of all 5 AI providers (OpenAI, Anthropic, Groq, Ollama, Google Gemini) with visual configuration indicators
+- **Updated**: Display of all 4 AI providers (OpenAI, Anthropic, Groq, Ollama) with visual configuration indicators
 - **Updated**: LAST USED badge functionality for previously selected providers
 - **Updated**: Enhanced visual design with brand-specific styling and interactive elements
 - **Updated**: Universal key detection with auto-detection of provider from key format
 - **Updated**: 'NEEDS KEY' badges for immediate visual feedback on provider configuration status
 - **Updated**: Enhanced error messaging with detailed environment variable instructions and Vercel setup guidance (reduced to 67 characters for cleaner reporting)
 - **Updated**: Enhanced troubleshooting capabilities with actionable diagnostic information
+- **Updated**: Enhanced Ollama Cloud support with dedicated API key configuration and Cloud service integration
+- **Updated**: Enhanced model detection to support Ollama Cloud models with automatic provider identification
 
 Key achievements of the system include:
 
@@ -808,8 +875,12 @@ Key achievements of the system include:
 
 **Enhanced Error Messaging**: Comprehensive error handling with detailed environment variable instructions, Vercel setup guidance, and actionable troubleshooting steps improves the overall user experience. The recent optimization to reduce error message length from 136 to 67 characters while maintaining essential information demonstrates improved user experience with cleaner error reporting.
 
+**Ollama Cloud Integration**: Comprehensive Cloud service support with dedicated API key configuration, connectivity validation, and model detection capabilities makes Ollama Cloud deployment accessible and user-friendly.
+
 **Universal Key Integration**: Seamless integration of universal key detection with provider auto-detection creates a frictionless configuration experience.
 
 **Enhanced Error Messaging**: Comprehensive error handling with detailed environment variable instructions, Vercel setup guidance, and actionable troubleshooting steps improves the overall user experience. The recent optimization to reduce error message length from 136 to 67 characters while maintaining essential information demonstrates improved user experience with cleaner error reporting.
 
-The Model Selection Gate serves as a foundational component that enables the broader AI-powered accessibility-first UI engine to deliver a secure, reliable, and user-friendly experience for generating accessible user interfaces through AI assistance. The recent mandatory flow implementation, preselection logic, enhanced provider display system, universal key detection, and comprehensive error messaging make it an even more effective tool for onboarding new users while improving the experience for returning users through the remember provider feature and streamlined workflow.
+**Ollama Cloud Integration**: Comprehensive Cloud service support with dedicated API key configuration, connectivity validation, and model detection capabilities makes Ollama Cloud deployment accessible and user-friendly.
+
+The Model Selection Gate serves as a foundational component that enables the broader AI-powered accessibility-first UI engine to deliver a secure, reliable, and user-friendly experience for generating accessible user interfaces through AI assistance. The recent mandatory flow implementation, preselection logic, enhanced provider display system, universal key detection, comprehensive error messaging, and Ollama Cloud integration make it an even more effective tool for onboarding new users while improving the experience for returning users through the remember provider feature and streamlined workflow.

@@ -23,12 +23,12 @@
 
 ## Update Summary
 **Changes Made**
-- Updated adapter factory documentation to reflect 3 supported providers instead of 4
-- Removed Anthropic and Ollama-specific configuration examples, local runtime detection, and model support documentation
-- Updated project structure to reflect the removal of Anthropic and Ollama adapter implementations
-- Revised architecture diagrams and component analyses to exclude Anthropic and Ollama references
-- Updated troubleshooting guide to remove Anthropic and Ollama-specific connectivity issues
-- Modified implementation examples to reflect the simplified provider configuration approach with only OpenAI, Google, and Groq providers
+- Updated Ollama cloud API integration documentation to reflect standardized base URL 'https://ollama.com/v1'
+- Added comprehensive OLLAMA_API_KEY authentication documentation
+- Updated provider configuration examples to reflect simplified cloud service configuration
+- Revised Ollama model recognition patterns and default models
+- Enhanced security features documentation to include Ollama API key management
+- Updated troubleshooting guide to include Ollama-specific connectivity issues
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -38,14 +38,15 @@
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Enhanced Security Features](#enhanced-security-features)
 7. [Universal LLM_KEY Scoping Implementation](#universal-llm-key-scoping-implementation)
-8. [Dependency Analysis](#dependency-analysis)
-9. [Performance Considerations](#performance-considerations)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
-12. [Appendices](#appendices)
+8. [Ollama Cloud Integration](#ollama-cloud-integration)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
+13. [Appendices](#appendices)
 
 ## Introduction
-This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Google, and Groq (OpenAI-compatible). The system now features enhanced security with proper universal LLM_KEY scoping, ensuring credentials are only applied to their designated provider rather than all providers.
+This document explains the universal AI adapter system that provides model-agnostic access to multiple AI providers. It covers the adapter factory pattern, the base adapter interface, and provider-specific implementations for OpenAI, Google, and Ollama (cloud service). The system now features enhanced security with proper universal LLM_KEY scoping, ensuring credentials are only applied to their designated provider rather than all providers.
 
 **Updated** The system has been enhanced with comprehensive security features including proper universal LLM_KEY scoping implementation, explicit provider validation when using universal keys, and simplified provider configuration that requires explicit per-provider setup rather than auto-detection. The adapter system now enforces explicit provider configuration through the ModelSelectionGate interface, ensuring users understand which provider they're configuring.
 
@@ -58,6 +59,7 @@ subgraph "Adapters"
 BASE["base.ts<br/>AIAdapter interface"]
 OA["openai.ts<br/>OpenAIAdapter"]
 GA["google.ts<br/>GoogleAdapter"]
+OL["ollama.ts<br/>OllamaAdapter (Cloud Service)"]
 IDX["index.ts<br/>Factory + Registry + Explicit Provider Config"]
 UNC["unconfigured.ts<br/>UnconfiguredAdapter"]
 END
@@ -77,6 +79,7 @@ TOOLS["tools.ts<br/>Tool/ToolCall/Exec"]
 END
 IDX --> OA
 IDX --> GA
+IDX --> OL
 IDX --> UNC
 RDA --> IDX
 RDA --> ENC
@@ -85,14 +88,16 @@ MSG --> PSTATUS
 PSTATUS --> RDA
 OA --> TYPES
 GA --> TYPES
+OL --> TYPES
 OA --> TOOLS
 GA --> TOOLS
+OL --> TOOLS
 IDX --> WKS
 WKS --> ENC
 ```
 
 **Diagram sources**
-- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
 - [openai.ts:1-218](file://lib/ai/adapters/openai.ts#L1-L218)
@@ -104,10 +109,10 @@ WKS --> ENC
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [WorkspaceSettingsPanel.tsx:1-211](file://components/WorkspaceSettingsPanel.tsx#L1-L211)
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 **Section sources**
-- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
@@ -115,11 +120,11 @@ WKS --> ENC
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [WorkspaceSettingsPanel.tsx:1-211](file://components/WorkspaceSettingsPanel.tsx#L1-L211)
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 ## Core Components
 - AIAdapter interface: Defines the provider-agnostic contract with generate() and stream().
-- Provider adapters: Implementations for OpenAI, Google, and Groq (OpenAI-compatible).
+- Provider adapters: Implementations for OpenAI, Google, and Ollama (cloud service).
 - Factory and registry: Centralized creation logic with workspace-aware resolution, fallbacks, and enhanced universal key validation.
 - **Enhanced security system**: Comprehensive server-side credential management with AES-256-GCM encryption, workspace-scoped keys, caching, global fallback, and universal key provider scoping.
 - **Universal LLM_KEY scoping**: Explicit provider validation ensuring LLM_KEY credentials are only applied to their designated provider via LLM_PROVIDER environment variable.
@@ -248,6 +253,31 @@ AIAdapter <|.. GoogleAdapter
 - [google.ts:28-69](file://lib/ai/adapters/google.ts#L28-L69)
 - [google.ts:71-88](file://lib/ai/adapters/google.ts#L71-L88)
 
+### Ollama Adapter (Cloud Service)
+**Updated** Implements the OpenAI-compatible interface for Ollama cloud service integration. Connects to Ollama's cloud API endpoint (`https://ollama.com/v1`) using bearer authentication with OLLAMA_API_KEY. Supports multiple Ollama models including Qwen3 Coder Next, Gemma 4 2B, Devstral Small 2, DeepSeek V3.2, and Qwen 3.5 9B.
+
+```mermaid
+classDiagram
+class OllamaAdapter {
++string provider
+-client OpenAI (Cloud Service)
+-effectiveBaseURL string
++constructor(apiKey?)
++generate(options) GenerateResult
++stream(options) AsyncGenerator~StreamChunk~
+}
+AIAdapter <|.. OllamaAdapter
+```
+
+**Diagram sources**
+- [openai.ts:36-218](file://lib/ai/adapters/openai.ts#L36-L218)
+- [base.ts:50-72](file://lib/ai/adapters/base.ts#L50-L72)
+
+**Section sources**
+- [index.ts:151-157](file://lib/ai/adapters/index.ts#L151-L157)
+- [route.ts:95-105](file://app/api/providers/status/route.ts#L95-L105)
+- [modelRegistry.ts:403-470](file://lib/ai/modelRegistry.ts#L403-L470)
+
 ### Adapter Factory and Registry
 Central factory with enhanced universal key validation:
 - detectProvider(model): Heuristic to infer provider from model name (now used as fallback only).
@@ -267,7 +297,7 @@ D --> |not found| E["process.env.LLM_KEY (universal fallback)"]
 E --> |found| F{"providerId === LLM_PROVIDER?"}
 F --> |yes| C
 F --> |no| I["return UnconfiguredAdapter"]
-C --> J{"provId in ['openai','google','groq']?"}
+C --> J{"provId in ['openai','google','ollama']?"}
 J --> |yes| K["new NamedAdapter(...)"]
 J --> |no| L["OpenAIAdapter(key, compatUrl)"]
 K --> M["CachedAdapter(...)"]
@@ -331,9 +361,9 @@ ToolCall <.. Tools
 - [tools.ts:144-174](file://lib/ai/tools.ts#L144-L174)
 
 ### Types and Pricing
-Client-safe types define messages, generation options/results, and streaming chunks. Pricing utilities estimate costs per provider/model.
+Client-safe types define messages, generation options/results, and streaming chunks. Pricing utilities estimate costs per provider.
 
-**Updated** Pricing information reflects the simplified provider structure with uniform treatment of all providers excluding Anthropic and Ollama and enhanced security validation.
+**Updated** Pricing information reflects the simplified provider structure with uniform treatment of all providers including Ollama and enhanced security validation.
 
 **Section sources**
 - [types.ts:10-55](file://lib/ai/types.ts#L10-L55)
@@ -351,7 +381,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 - **Interactive Provider Cards**: Feature gradient backgrounds, provider-specific theming, and security badges
 - **Universal Key Notice**: Prominent badge indicating LLM_KEY configuration status
 - **Enhanced Visual Design**: Provider brand color integration with recommended provider highlighting
-- **Standard Configuration Approach**: All providers including Groq use unified configuration
+- **Standard Configuration Approach**: All providers including Ollama use unified configuration
 
 **Explicit Provider Configuration**
 - Fetches configured providers from `/api/providers/status` which checks environment variables
@@ -364,7 +394,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 - **LLM_KEY Notice**: Prominent badge indicating universal key configuration
 - **Provider Binding Validation**: Ensures universal keys are only applied to designated provider
 - **Security Warning**: Prevents credential misuse across providers
-- **Standard configuration for all providers** including Groq
+- **Standard configuration for all providers** including Ollama
 
 **Section sources**
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
@@ -373,7 +403,7 @@ The ModelSelectionGate provides a comprehensive configuration experience with ex
 The WorkspaceSettingsPanel offers detailed provider configuration with comprehensive provider definitions, automatic credential validation, and universal key status:
 
 **Enhanced Provider Options with Uniform Treatment**
-- **All Providers**: OpenAI, Google, Groq with explicit key detection
+- **All Providers**: OpenAI, Google, Groq, Ollama with explicit key detection
 - **Enhanced Visual Design**: Provider cards with brand-specific color schemes and visual indicators
 - **Universal Key Notice**: Clear indication of LLM_KEY configuration status
 - **Recommended provider highlighting**: Prominent badges for optimal provider selection
@@ -408,7 +438,7 @@ The `/api/providers/status` endpoint provides explicit provider detection based 
 - Recommended provider flags for UI prioritization
 
 **Section sources**
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 ### Server-Side Security Architecture
 The system implements comprehensive server-side credential management with explicit provider configuration and universal key validation:
@@ -440,7 +470,7 @@ The system implements comprehensive server-side credential management with expli
 **Section sources**
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 ## Universal LLM_KEY Scoping Implementation
 
@@ -505,6 +535,68 @@ Both ModelSelectionGate and WorkspaceSettingsPanel now provide universal key not
 - [ModelSelectionGate.tsx:123-136](file://components/ModelSelectionGate.tsx#L123-L136)
 - [WorkspaceSettingsPanel.tsx:123-136](file://components/WorkspaceSettingsPanel.tsx#L123-L136)
 
+## Ollama Cloud Integration
+
+### Cloud Service Architecture
+**Updated** Ollama now operates as a cloud service instead of self-hosted instances. The system connects to Ollama's managed cloud infrastructure using the OpenAI-compatible API endpoint.
+
+**Cloud API Endpoint**
+- Base URL: `https://ollama.com/v1`
+- Authentication: Bearer token using `OLLAMA_API_KEY`
+- Model Support: Qwen3 Coder Next, Gemma 4 2B, Devstral Small 2, DeepSeek V3.2, Qwen 3.5 9B
+- Streaming: Reliable streaming support for Ollama models
+
+**Provider Configuration**
+- Environment Variable: `OLLAMA_API_KEY`
+- Health Endpoint: `https://ollama.com/v1/models`
+- Default Models: 
+  - Intent/Classifier: `qwen3-coder-next`
+  - Generation: `gemma4:e2b`
+  - Thinking/Review/Repair: `devstral-small-2`
+
+**Section sources**
+- [index.ts:42-45](file://lib/ai/adapters/index.ts#L42-L45)
+- [index.ts:151-157](file://lib/ai/adapters/index.ts#L151-L157)
+- [route.ts:95-105](file://app/api/providers/status/route.ts#L95-L105)
+- [resolveDefaultAdapter.ts:29-36](file://lib/ai/resolveDefaultAdapter.ts#L29-L36)
+
+### Model Recognition Patterns
+**Updated** Enhanced model recognition patterns for Ollama cloud service integration:
+
+**Model Detection Logic**
+- Qwen family: `qwen3`, `qwen3-coder`, `qwen3.5`
+- Code generation models: `gemma4`, `devstral`, `deepseek-v3.2`
+- Ollama-specific prefixes: `ollama:`, `gemma4:`
+- Phi-4 and Mistral models: `phi4`, `mistral`
+
+**Default Model Selection**
+- Fastest/cheapest: `gemma4:e2b` (2B parameters, good general purpose)
+- Best for code: `qwen3-coder-next` (80B parameters, excellent coding)
+- Balanced: `devstral-small-2` (24B parameters, versatile)
+
+**Section sources**
+- [index.ts:55-63](file://lib/ai/adapters/index.ts#L55-L63)
+- [modelRegistry.ts:403-470](file://lib/ai/modelRegistry.ts#L403-L470)
+
+### Pricing and Cost Management
+**Updated** Ollama models are priced differently from cloud providers:
+
+**Cost Estimation**
+- Local Ollama models: Free (no API costs)
+- Cloud Ollama service: Usage-based pricing varies by model
+- Default to zero cost for Ollama models in pricing calculations
+
+**Model Capabilities**
+- Qwen3 Coder Next: 80B parameters, excellent coding, tool support
+- Gemma 4 2B: 2B parameters, fast and cheap, good for classification
+- Devstral Small 2: 24B parameters, agentic coding, multi-file editing
+- DeepSeek V3.2: Strong reasoning, agentic capabilities
+- Qwen 3.5 9B: Multimodal, good balance of speed and quality
+
+**Section sources**
+- [modelRegistry.ts:403-470](file://lib/ai/modelRegistry.ts#L403-L470)
+- [types.ts:102-120](file://lib/ai/types.ts#L102-L120)
+
 ## Dependency Analysis
 - Adapters depend on shared types and tools for message and tool-calling normalization.
 - The factory depends on workspaceKeyService for secure credential resolution and environment variables as fallbacks.
@@ -516,6 +608,7 @@ Both ModelSelectionGate and WorkspaceSettingsPanel now provide universal key not
 - **Enhanced universal key validation** affects all credential resolution flows.
 - Encryption service provides secure key storage for all credential management flows.
 - **ResolveDefaultAdapter** provides universal key validation for pipeline operations.
+- **Ollama adapter** integrates with OpenAI-compatible infrastructure for cloud service access.
 
 **Updated** Dependencies have been enhanced with universal key validation throughout the system, affecting adapter resolution, provider status detection, and UI notifications.
 
@@ -523,10 +616,13 @@ Both ModelSelectionGate and WorkspaceSettingsPanel now provide universal key not
 graph LR
 TYPES["types.ts"] --> OA["openai.ts"]
 TYPES --> GA["google.ts"]
+TYPES --> OL["ollama.ts"]
 TOOLS["tools.ts"] --> OA
 TOOLS --> GA
+TOOLS --> OL
 IDX["index.ts"] --> OA
 IDX --> GA
+IDX --> OL
 IDX --> UNC["unconfigured.ts"]
 IDX --> WKS["workspaceKeyService.ts"]
 RDA["resolveDefaultAdapter.ts"] --> IDX
@@ -538,7 +634,7 @@ WSP["WorkspaceSettingsPanel.tsx"] --> MR["modelRegistry.ts"]
 ```
 
 **Diagram sources**
-- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [types.ts:1-128](file://lib/ai/types.ts#L1-L128)
 - [tools.ts:1-175](file://lib/ai/tools.ts#L1-L175)
@@ -546,14 +642,14 @@ WSP["WorkspaceSettingsPanel.tsx"] --> MR["modelRegistry.ts"]
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [WorkspaceSettingsPanel.tsx:1-211](file://components/WorkspaceSettingsPanel.tsx#L1-L211)
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 **Section sources**
-- [index.ts:1-282](file://lib/ai/adapters/index.ts#L1-L282)
+- [index.ts:1-296](file://lib/ai/adapters/index.ts#L1-L296)
 - [resolveDefaultAdapter.ts:1-191](file://lib/ai/resolveDefaultAdapter.ts#L1-L191)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
-- [route.ts:1-208](file://app/api/providers/status/route.ts#L1-L208)
+- [route.ts:1-226](file://app/api/providers/status/route.ts#L1-L226)
 
 ## Performance Considerations
 - Caching: CachedAdapter caches both full results and streaming chunks keyed by normalized options, reducing provider calls and enabling latency metrics.
@@ -565,6 +661,7 @@ WSP["WorkspaceSettingsPanel.tsx"] --> MR["modelRegistry.ts"]
 - **Standardized configuration flow** improves performance across all provider types.
 - **Enhanced universal key validation** adds minimal overhead with comprehensive security benefits.
 - **Provider binding validation** occurs only when LLM_KEY is present, avoiding unnecessary checks.
+- **Ollama cloud service** provides consistent performance with managed infrastructure.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -577,16 +674,17 @@ Common issues and resolutions:
 - **Credential misuse errors**: Ensure LLM_KEY is only applied to its designated provider via LLM_PROVIDER
 - **Provider configuration issues**: All providers now use standard configuration approach without special local handling.
 - **Groq connectivity problems**: Use standard provider configuration with GROQ_API_KEY environment variable.
-- **Local runtime detection removed**: No longer applicable as all providers are treated uniformly.
-- Encryption key issues: Check ENCRYPTION_SECRET environment variable format and length.
-- Cache invalidation: WorkspaceKeyService automatically invalidates cache on configuration changes.
-- Model selection problems: Use ModelSelectionGate component for guided model selection with credential validation.
-- Security warnings: The system provides non-fatal warnings during build phase to prevent deployment failures.
-- Provider detection failures: Check Vercel environment variables for proper provider configuration.
+- **Ollama cloud service issues**: Ensure OLLAMA_API_KEY is set and points to correct cloud endpoint
+- **Ollama model recognition problems**: Verify model names match supported Ollama models (qwen3-coder-next, gemma4:e2b, devstral-small-2, deepseek-v3.2, qwen3.5:9b)
+- **Ollama streaming issues**: Ollama streaming is reliable in this implementation; use stream() for better performance
+- **Encryption key issues**: Check ENCRYPTION_SECRET environment variable format and length.
+- **Cache invalidation**: WorkspaceKeyService automatically invalidates cache on configuration changes.
+- **Model selection problems**: Use ModelSelectionGate component for guided model selection with credential validation.
+- **Security warnings**: The system provides non-fatal warnings during build phase to prevent deployment failures.
+- **Provider detection failures**: Check Vercel environment variables for proper provider configuration.
 - **Explicit provider configuration required**: All providers must be explicitly configured via environment variables
 - **Universal key validation failures**: Check LLM_KEY and LLM_PROVIDER environment variables for proper binding
 - **Configuration problems**: Use comprehensive ModelSelectionGate workflow with standard provider configuration.
-- **Anthropic/Ollama issues**: No longer applicable as these providers are removed from the system.
 
 **Section sources**
 - [index.ts:28-40](file://lib/ai/adapters/index.ts#L28-L40)
@@ -603,11 +701,11 @@ Common issues and resolutions:
 ## Conclusion
 The AI adapter system provides a robust, provider-agnostic abstraction over multiple AI providers with comprehensive security enhancements and streamlined configuration workflows. The recent enhancement introduces proper universal LLM_KEY scoping implementation, ensuring credentials are only applied to their designated provider rather than all providers. This significantly improves security while maintaining the unified experience across all providers through the ModelSelectionGate component.
 
-The system now features enhanced security with explicit provider validation for universal keys, comprehensive server-side credential management using AES-256-GCM encryption, and explicit provider configuration that eliminates auto-detection. The removal of the isLocal property and Anthropic/Ollama-specific local execution logic has created a more maintainable and consistent system that provides flexible configuration options for different use cases and performance requirements.
+**Updated** The system now supports three major providers: OpenAI, Google, and Ollama (cloud service). Ollama's transition to cloud service operation provides consistent performance and reliability while maintaining the familiar OpenAI-compatible interface. The enhanced security features include proper universal LLM_KEY scoping implementation, explicit provider validation when using universal keys, and simplified provider configuration that requires explicit per-provider setup rather than auto-detection.
+
+The system now features enhanced security with explicit provider validation for universal keys, comprehensive server-side credential management using AES-256-GCM encryption, and explicit provider configuration that eliminates auto-detection. The addition of Ollama cloud service integration expands the range of available models while maintaining the streamlined architecture and unified provider treatment that simplifies configuration and usage.
 
 By centralizing credential resolution, enforcing server-only secrets, implementing universal key provider scoping, and normalizing provider differences through a unified interface, the system enables seamless switching between models and providers with enterprise-grade security and user-friendly configuration. The enhanced UI components provide clear security notices and validation feedback, ensuring users understand the security benefits of the universal key system.
-
-**Updated** The system has been enhanced with comprehensive security features including proper universal LLM_KEY scoping implementation, explicit provider validation when using universal keys, and simplified provider configuration that requires explicit per-provider setup rather than auto-detection, significantly improving security posture while maintaining the streamlined architecture and unified provider treatment that simplifies configuration and usage.
 
 ## Appendices
 
@@ -635,8 +733,9 @@ References:
 - **Explicit Provider Detection**: Environment variable-based provider availability checking with universal LLM_KEY support and provider binding validation
 - **Workspace-level**: Store encrypted keys in workspace settings; retrieved via workspaceKeyService with global fallback
 - **Environment Variables**: Set provider-specific environment variables for explicit credential detection and universal key provider binding
+- **Ollama Cloud Service**: Configure OLLAMA_API_KEY for cloud service access to Ollama models
 - **Unconfigured fallback**: When no keys are found, UnconfiguredAdapter returns a helpful UI or JSON
-- **Standard Configuration**: All providers including Groq use standard environment variable configuration with universal key validation
+- **Standard Configuration**: All providers including Ollama use standard environment variable configuration with universal key validation
 
 References:
 - [ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
@@ -673,6 +772,7 @@ References:
 - **Universal Key Validation**: All providers benefit from enhanced security with universal key provider binding validation.
 - **Uniform Provider Features**: All providers use standard OpenAI-compatible interfaces without special local handling.
 - **Enhanced Security**: Universal keys validated against provider binding for improved security.
+- **Ollama Cloud Service**: Supports multiple models with standardized OpenAI-compatible API interface.
 
 **Updated** Provider-specific features now use a unified approach with enhanced security validation, ensuring universal keys are only applied to their designated providers.
 
@@ -684,7 +784,7 @@ References:
 - [resolveDefaultAdapter.ts:141-190](file://lib/ai/resolveDefaultAdapter.ts#L141-L190)
 
 ### Example Workflows and Tests
-- Adapter usage and streaming are validated in tests for OpenAI, Google, and Groq.
+- Adapter usage and streaming are validated in tests for OpenAI, Google, and Ollama.
 - **Tests validate unified provider configuration** without special local handling.
 - Tests demonstrate tool-calling and streaming behavior across all providers.
 - Encryption service tests validate AES-256-GCM implementation with fallback mechanisms.
@@ -692,6 +792,7 @@ References:
 - Provider status API tests validate environment variable-based provider detection and universal key notices.
 - **All tests now reflect the enhanced security architecture** with universal key provider binding validation.
 - **Security tests validate universal key scoping** and provider binding enforcement.
+- **Ollama cloud service tests** validate API key configuration and model recognition patterns.
 
 **Updated** Example workflows now reflect the enhanced adapter system with universal key validation and improved security features.
 

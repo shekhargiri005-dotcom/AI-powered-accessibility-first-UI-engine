@@ -44,7 +44,7 @@ export class OpenAIAdapter implements AIAdapter {
   private readonly isHuggingFace: boolean;
 
   constructor(apiKey?: string, baseURL?: string) {
-    let finalBaseUrl = baseURL ?? '';
+    const finalBaseUrl = baseURL ?? '';
 
     this.client = new OpenAI({
       apiKey: apiKey ?? process.env.OPENAI_API_KEY,

@@ -58,7 +58,7 @@ export async function generateAppManifest(
       'Ensure your manifest implies a router or slide orchestrator component (usually App.tsx) that manages navigation between distinct feature screens/views.';
   }
 
-  let result: any;
+  let result: unknown;
   let retries = 0;
   const maxRetries = 3;
   const baseDelayMs = 1500;
@@ -86,7 +86,7 @@ export async function generateAppManifest(
     }
   }
 
-  const raw = result.content || '[]';
+  const raw = (result as { content?: string }).content || '[]';
   try {
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed))                                   return parsed;
@@ -177,7 +177,7 @@ export async function generateFileChunk(
 
   prompt += 'RETURN ONLY THE RAW CODE.';
 
-  let result: any;
+  let result: unknown;
   let retries = 0;
   const maxRetries = 3;
   const baseDelayMs = 2000;
@@ -203,7 +203,7 @@ export async function generateFileChunk(
     }
   }
 
-  let rawContent = result.content || '';
+  let rawContent = (result as { content?: string }).content || '';
 
   const match = rawContent.match(/```(?:tsx?|jsx?|typescript|javascript)?\s*([\s\S]*?)(?:```|$)/i);
   if (match && match[1]) {

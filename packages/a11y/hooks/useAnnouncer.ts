@@ -27,6 +27,7 @@ export function useAnnouncer() {
     if (!el) return;
     el.setAttribute('aria-live', politeness);
     // Clear and re-set to ensure re-announcement of same message
+    // eslint-disable-next-line react-hooks/immutability
     el.textContent = '';
     requestAnimationFrame(() => {
       el!.textContent = message;

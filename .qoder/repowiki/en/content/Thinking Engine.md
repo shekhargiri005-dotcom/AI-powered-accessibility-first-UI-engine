@@ -24,6 +24,8 @@
 
 ## Update Summary
 **Changes Made**
+- Enhanced JSON extraction algorithm with balanced brace matching and new Stage 5 preamble stripping functionality
+- Increased maximum token limit from 800 to 1200 for improved expert-level reasoning capabilities
 - Enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests
 - Improved execution mode suggestion logic incorporating depth_ui detection alongside existing component and app modes
 - Added comprehensive depth_ui schema validation and type definitions
@@ -53,8 +55,9 @@ The Thinking Engine consists of:
 - Robust logging and error handling with streamlined retry logic
 - Deterministic fallback mechanisms for resilience with enhanced performance
 - **Enhanced** Sophisticated depth_ui mode detection with keyword matching for immersive UI requests
+- **Enhanced** Advanced JSON extraction algorithm with balanced brace matching and stage-based parsing
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality.
 
 ## Project Structure
 The Thinking Engine spans frontend UI components, backend API routes, validation schemas, AI adapters, and infrastructure utilities. The following diagram shows the high-level structure and key interactions.
@@ -130,8 +133,9 @@ ADAPTERS --> METRICS
 - Authentication and Logging: JWT-based session retrieval and structured request-scoped logging for observability.
 - Planning Engine: Core logic that generates structured thinking plans with expert reasoning, streamlined retry mechanisms, and enhanced fallback capabilities.
 - **Enhanced** Depth UI Detection: Sophisticated keyword matching system that intelligently detects immersive UI requests and suggests depth_ui mode alongside component and app modes.
+- **Enhanced** Advanced JSON Extraction: Five-stage parsing algorithm with balanced brace matching, truncated JSON repair, and preamble stripping for robust parsing of AI responses.
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with intelligent keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation for visually rich interfaces, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality.
 
 **Section sources**
 - [app/api/think/route.ts:8-86](file://app/api/think/route.ts#L8-L86)
@@ -390,18 +394,25 @@ The core planning logic that generates structured thinking plans:
 - Model capability detection for JSON mode support
 - 30-second timeout for request processing to prevent resource exhaustion
 - **Enhanced** Intelligent depth_ui mode detection using sophisticated keyword matching
+- **Enhanced** Advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping
 
 Key features:
 - Expert reasoning framework with 8 contextual dimensions
 - Prompt understanding enrichment with likely sections
 - Deterministic fallback generation for reliability
-- Multi-stage JSON extraction for robust parsing
+- **Enhanced** Multi-stage JSON extraction with five stages for robust parsing:
+  - Stage 1: Direct JSON parsing for cloud models
+  - Stage 2: Markdown fence extraction for deepseek-coder
+  - Stage 3: First {...} block extraction with balanced brace matching
+  - Stage 4: Truncated JSON repair with delimiter counting
+  - **Enhanced** Stage 5: Common LLM preamble stripping with balanced brace matching
 - Provider fallback mechanisms when user-selected provider fails
 - Exponential backoff retry mechanism (up to 3 attempts) for transient network errors and rate limits
 - Comprehensive error categorization and logging
 - **Enhanced** Keyword-based depth_ui detection with patterns like parallax, depth, cinematic, floating, layered, immersive, 3d, landing page, hero section
+- **Enhanced** Increased maxTokens from 800 to 1200 for expert-level reasoning capabilities
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, and comprehensive depth_ui schema validation for visually rich interfaces.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive depth_ui schema validation, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. The maximum token limit has been increased from 800 to 1200 to support expert-level reasoning capabilities.
 
 **Section sources**
 - [lib/ai/thinkingEngine.ts:11-64](file://lib/ai/thinkingEngine.ts#L11-L64)
@@ -542,13 +553,14 @@ CLASS["lib/ai/intentClassifier.ts"] --> PROMPTS["lib/ai/prompts.ts"]
 - Concurrency: Ensure adapters are instantiated once per provider to reuse connections and minimize overhead
 - Retry logic: Streamlined exponential backoff for network errors and rate limits (up to 3 attempts with 1s, 2s, and 4s delays)
 - Timeout handling: 30-second timeout for thinking requests prevents resource exhaustion
-- JSON parsing: Multi-stage extraction reduces parsing failures and improves reliability
+- **Enhanced** JSON parsing: Five-stage extraction with balanced brace matching reduces parsing failures and improves reliability
 - Error handling: Enhanced patterns for graceful degradation and fallback mechanisms
 - Metrics collection: Centralized metrics tracking for performance monitoring and optimization
 - **Enhanced** Keyword matching optimization: Efficient regex-based depth_ui detection reduces computational overhead
 - **Enhanced** Schema validation caching: Reused depth_ui schema validation reduces parsing overhead for immersive UI requests
+- **Enhanced** Token budget optimization: Increased maxTokens from 800 to 1200 supports expert-level reasoning while maintaining performance
 
-**Updated** Enhanced performance considerations now include depth_ui keyword matching optimization, schema validation caching, and comprehensive metrics collection for immersive UI generation.
+**Updated** Enhanced performance considerations now include depth_ui keyword matching optimization, schema validation caching, comprehensive metrics collection for immersive UI generation, and five-stage JSON extraction with balanced brace matching for improved reliability.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -565,6 +577,8 @@ Common issues and resolutions:
 - Metrics collection: Monitor usage logs and cost estimates for optimization opportunities
 - **Enhanced** Depth UI detection failures: Verify keyword matching patterns and ensure depth_ui mode is properly configured
 - **Enhanced** Schema validation errors: Check depth_ui schema compliance and validate parallax coefficient ranges
+- **Enhanced** JSON extraction failures: Review the five-stage parsing algorithm and verify balanced brace matching is working correctly
+- **Enhanced** Token limit issues: Verify maxTokens setting is appropriate for the model and consider increasing beyond 1200 for complex reasoning tasks
 
 Operational checks:
 - Review structured logs for request IDs and durations
@@ -575,8 +589,9 @@ Operational checks:
 - Analyze cache performance and hit rates for optimization
 - **Enhanced** Monitor depth_ui keyword detection accuracy and mode suggestion effectiveness
 - **Enhanced** Validate depth_ui schema parsing and parallax coefficient validation
+- **Enhanced** Verify five-stage JSON extraction algorithm is functioning correctly with balanced brace matching
 
-**Updated** Enhanced troubleshooting guidance now includes depth_ui detection monitoring, schema validation troubleshooting, and comprehensive metrics analysis for immersive UI generation.
+**Updated** Enhanced troubleshooting guidance now includes depth_ui detection monitoring, schema validation troubleshooting, comprehensive metrics analysis for immersive UI generation, and five-stage JSON extraction algorithm validation with balanced brace matching.
 
 **Section sources**
 - [app/api/think/route.ts:19-21](file://app/api/think/route.ts#L19-L21)
@@ -590,4 +605,4 @@ Operational checks:
 ## Conclusion
 The Thinking Engine provides a robust, secure, and user-friendly planning layer for AI-driven UI generation. By enforcing strict security boundaries, offering deterministic fallbacks with streamlined retry logic, and presenting a clear, iteratively refineable plan, it enables reliable workflows from initial intent to executable code. Its modular architecture with provider adapters and structured validation supports extensibility and maintainability across diverse AI backends. The enhanced retry mechanisms with exponential backoff and improved error handling patterns ensure resilience against network failures and rate limits, while caching optimizations and comprehensive metrics collection enhance performance and reduce cold-start latency. The streamlined architecture with over 150 lines of code removed demonstrates significant improvements in decision-making process efficiency and overall system reliability.
 
-**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive schema validation, and integrated depth_ui support throughout the architecture. These enhancements make it more reliable, efficient, and capable of handling visually rich interfaces with intelligent detection and generation capabilities.
+**Updated** The Thinking Engine now features enhanced depth_ui mode detection with sophisticated keyword matching for immersive UI requests, improved execution mode suggestion logic, comprehensive schema validation, integrated depth_ui support throughout the architecture, and an advanced JSON extraction algorithm with five-stage parsing including balanced brace matching and preamble stripping functionality. These enhancements make it more reliable, efficient, and capable of handling visually rich interfaces with intelligent detection and generation capabilities. The increased maximum token limit from 800 to 1200 supports expert-level reasoning capabilities while maintaining the system's robustness and performance.

@@ -27,7 +27,7 @@ interface CenterWorkspaceProps {
   onPromptSubmit: (prompt: string, mode: GenerationMode, options?: SubmitOptions) => void;
   isLoading: boolean;
   hasActiveProject: boolean;
-  aiPayload?: Record<string, any>;
+  aiPayload?: Record<string, unknown>;
   onIntentDetected: (classification: IntentClassification | null) => void;
   stage: string;
   pipelineStep: PipelineStep;

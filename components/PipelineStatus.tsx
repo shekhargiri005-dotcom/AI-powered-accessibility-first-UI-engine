@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { signIn } from 'next-auth/react';
 import {
   CheckCircle, Loader2, AlertCircle,
@@ -79,10 +79,37 @@ const STEPS: Step[] = [
 ];
 
 export default function PipelineStatus({ currentStep, errorMessage, estimatedTimeRemaining, startTime }: PipelineStatusProps) {
-  if (currentStep === 'idle') return null;
+  // Calculate elapsed time using state to avoid impure function during render
+  const [elapsedTime, setElapsedTime] = useState(() => 
+    startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
+  );
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    if (!startTime) {
+      // Use requestAnimationFrame to avoid synchronous setState
+      const rafId = requestAnimationFrame(() => setElapsedTime(0));
+      return () => cancelAnimationFrame(rafId);
+    }
+    
+    intervalRef.current = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [startTime]);
 
-  // Calculate elapsed time
-  const elapsedTime = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+  if (currentStep === 'idle') return null;
   
   // Format time as mm:ss
   const formatTime = (seconds: number) => {

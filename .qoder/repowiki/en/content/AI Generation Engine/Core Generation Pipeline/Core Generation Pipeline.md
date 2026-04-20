@@ -37,7 +37,7 @@
 
 ## Update Summary
 **Changes Made**
-- Updated to reflect Applied Changes: Expanded component generation constraints with new depth_ui mode support
+- Updated to reflect Applied Changes: Improved intent classification logic with sophisticated pattern matching for component-scope vs app-scope detection, replacing simple word-count heuristics with regex-based detection for UI components and full applications
 - Enhanced component-focused generation rules now include depth_ui mode alongside component and app modes
 - Added comprehensive layout structure rules for immersive UI experiences
 - Integrated Depth Experience Engine for deterministic parallax and motion specification
@@ -278,8 +278,11 @@ The pipeline automatically detects free-tier providers through:
 For each major pipeline stage, the system provides deterministic fallback implementations:
 
 **Classify Fast Path**
-- Uses `buildLocalClassification()` function with simple heuristics
-- Keywords: "fix", "change", "update", "improve", "make the", "adjust", "modify", "refine", "edit", "remove", "add a", "replace" for refinement detection
+- Uses `buildLocalClassification()` function with sophisticated regex-based pattern matching
+- **Updated**: Enhanced component-scope vs app-scope detection using regex patterns instead of simple word counts
+- **Updated**: Component scope detection: `/\b(?:card|badge|button|input|textarea|chip|tag|avatar|tooltip|alert|stat|metric|toggle|checkbox|radio|slider|progress|calendar|clock|icon|pill|dot|separator|divider|breadcrumb|tab\s*item|nav\s*item|menu\s*item|list\s*item|table\s*row)\b/i`
+- **Updated**: Full app scope detection: `/\b(?:full\s*app|entire\s*app|complete\s*app|multi\s*page|dashboard\s+app|admin\s+panel|saas\s+tool|layout\s+with\s+sidebar|app\s+with\s+nav|app\s+with\s+routing|multiple\s*screens|multi\s*screen)\b/i`
+- **Updated**: Depth UI detection: Counts occurrences of depth-related keywords (`parallax|depth|cinematic|floating|layered|immersive|3d|landing\s*page|hero\s*(section|layout)`) to suggest depth_ui mode
 - Confidence: 0.6 (lower confidence for local fallback)
 - Mode detection: Multi-component prompts → suggests app mode, depth_ui mode detection added
 
@@ -460,6 +463,7 @@ DepthToggle["Depth UI Mode Toggle"] --> Route
 - **Updated**: Free-tier fast path: Eliminates expensive LLM calls for Google and Groq free-tier providers, reducing CPU usage by up to 90% and token consumption by 100%.
 - **Updated**: Deterministic fallback functions: Provide instant responses (typically < 10ms) compared to LLM calls (typically 1-5 seconds).
 - **Updated**: Rate limit detection: Automatic switching between LLM and fallback modes based on provider quotas and network conditions.
+- **Updated**: Enhanced intent classification: Sophisticated regex-based pattern matching improves accuracy of component-scope vs app-scope detection, reducing misclassification errors.
 - **Updated**: Depth UI optimization: Deterministic motion specifications prevent arbitrary calculations and ensure consistent performance across different providers.
 
 ## Troubleshooting Guide
@@ -473,6 +477,7 @@ Common issues and resolutions:
 - Unauthorized errors: The PipelineStatus component detects unauthorized states and prompts sign-in.
 - **Updated**: Free-tier provider issues: If free-tier fast path is not working, verify provider detection logic and ensure rate limit detection is functioning properly.
 - **Updated**: Deterministic fallback failures: Check that local classification and thinking functions are properly configured and returning valid results.
+- **Updated**: Enhanced intent classification issues: Verify regex pattern matching is working correctly for component-scope vs app-scope detection.
 - **Updated**: Depth UI mode issues: Verify depth experience evaluation is working correctly and parallax coefficients are being injected properly.
 - **Updated**: Depth UI accessibility concerns: Ensure forbidden zones are respected and reduced motion fallback is properly implemented.
 
@@ -491,6 +496,7 @@ The core generation pipeline integrates intent parsing, model selection, expert 
 - Free-tier optimization: Use Google or Groq free-tier providers to leverage automatic fast path optimization with deterministic fallback functions.
 - Deterministic fallback: When rate limits are exceeded, the pipeline automatically switches to local fallback functions for immediate response.
 - Multi-file app generation: The generator may return a file map; the dependency resolver patches imports/exports and merges A11y repairs into the primary file.
+- **Updated**: Enhanced intent classification: Sophisticated regex-based pattern matching improves accuracy of component-scope vs app-scope detection, reducing misclassification errors.
 - **Updated**: Depth UI immersive experience: Request parallax or depth-based UI with specific motion requirements; the pipeline evaluates depth experience and generates layered parallax effects.
 - **Updated**: Depth UI accessibility compliance: Ensure motion design respects reduced motion preferences and accessibility guidelines.
 
@@ -505,6 +511,7 @@ The core generation pipeline integrates intent parsing, model selection, expert 
 - Workspace key service tests: Confirm workspace-level configuration and key handling.
 - Project documentation: Architectural and environment setup guides.
 - **Updated**: Depth UI schema tests: Validate depth experience evaluation and motion specification compliance.
+- **Updated**: Intent classification tests: Validate regex-based pattern matching for component-scope vs app-scope detection accuracy.
 
 **Section sources**
 - [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)

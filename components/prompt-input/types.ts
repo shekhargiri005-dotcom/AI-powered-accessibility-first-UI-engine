@@ -16,7 +16,7 @@ export interface PromptInputProps {
   isLoading: boolean;
   onIntentDetected?: (classification: IntentClassification) => void;
   hasActiveProject?: boolean;
-  aiPayload?: Record<string, any>;
+  aiPayload?: Record<string, unknown>;
   /** Pre-fill the prompt textarea with this value (e.g. for refine) */
   initialPrompt?: string;
   /** Increment this counter to auto-focus the textarea (e.g. when refine is clicked) */

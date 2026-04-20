@@ -265,7 +265,7 @@ export async function generateComponent(
 
     // Only inject tools when the model has an explicit registry entry with supportsToolCalls:true.
     // Fallback/unknown models must NOT receive tools — they may silently reject them (400 no body).
-    let toolsEnabled = explicitProfile !== null && maxToolRounds > 0;
+    const toolsEnabled = explicitProfile !== null && maxToolRounds > 0;
 
     // Generation-level retry for 429 rate limit errors
     const MAX_GEN_RETRIES = 3;

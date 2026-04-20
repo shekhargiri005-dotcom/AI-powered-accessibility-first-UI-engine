@@ -113,12 +113,11 @@ interface CrashObserverProps {
 function SandpackCrashObserver({ onCrashDetected }: CrashObserverProps) {
   const { sandpack } = useSandpack();
   const firedRef = useRef(false);
-  const startTimeRef = useRef(Date.now());
-
+  const startTimeRef = useRef<number>(0);
+  
   useEffect(() => {
     startTimeRef.current = Date.now();
-    firedRef.current = false;
-  }, [sandpack.files]); // Reset when files change
+  }, []);
 
   useEffect(() => {
     if (firedRef.current) return;

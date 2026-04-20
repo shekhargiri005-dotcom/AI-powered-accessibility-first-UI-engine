@@ -19,16 +19,20 @@
 - [designRules.ts](file://lib/intelligence/designRules.ts)
 - [blueprintEngine.ts](file://lib/intelligence/blueprintEngine.ts)
 - [prompts.ts](file://lib/ai/prompts.ts)
+- [uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
+- [useAnnouncer.ts](file://packages/a11y/hooks/useAnnouncer.ts)
+- [useKeyboardNav.ts](file://packages/a11y/hooks/useKeyboardNav.ts)
+- [index.ts](file://packages/tokens/index.ts)
+- [transitions.ts](file://packages/tokens/transitions.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Enhanced multi-component prompt handling with intent parsing capabilities that detect when users request multiple separate UI components
-- Updated COMPONENT_GENERATOR_SYSTEM_PROMPT and APP_MODE_SYSTEM_PROMPT now include comprehensive LAYOUT STRUCTURE RULES requiring structured grid layouts and proper visual hierarchy
-- Refined tiered pipeline configuration with adjusted token budgets, temperature settings, and timeouts
-- Updated architectural improvements for better performance and quality
-- Added new design rules for Depth UI and modern visual aesthetics
-- Improved blueprint engine with enhanced visual style detection
+- Enhanced accessibility hook documentation with comprehensive usage examples for useAnnouncer(), useKeyboardNav(), and useRoveFocus() hooks
+- Added design token import examples including missing easing and duration token imports
+- Updated system prompts to include detailed accessibility hook documentation and design token usage patterns
+- Enhanced UI cheat sheet with complete accessibility utility examples
+- Improved prompt engineering strategies for accessibility-first component generation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,23 +41,24 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Enhanced Design System](#enhanced-design-system)
-7. [Multi-Component Generation Pipeline](#multi-component-generation-pipeline)
-8. [Dependency Analysis](#dependency-analysis)
-9. [Performance Considerations](#performance-considerations)
-10. [Troubleshooting Guide](#troubleshooting-guide)
-11. [Conclusion](#conclusion)
+7. [Accessibility Hook Integration](#accessibility-hook-integration)
+8. [Multi-Component Generation Pipeline](#multi-component-generation-pipeline)
+9. [Dependency Analysis](#dependency-analysis)
+10. [Performance Considerations](#performance-considerations)
+11. [Troubleshooting Guide](#troubleshooting-guide)
+12. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the AI generation engine that powers UI component creation. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with enhanced design guidelines, refined architectural improvements for superior output quality, and comprehensive multi-component generation capabilities.
+This document explains the AI generation engine that powers UI component creation with enhanced accessibility-first design principles. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with comprehensive accessibility hook integration, enhanced design token usage patterns, and detailed accessibility utility documentation.
 
 ## Project Structure
-The generation engine spans API routes, adapters, and orchestration logic with enhanced design intelligence and multi-component handling:
-- API routes handle requests, validate inputs, and coordinate the pipeline.
-- Adapters encapsulate provider-specific clients behind a unified interface.
-- Orchestrators assemble prompts, manage tool loops, and post-process outputs.
-- Utilities provide model profiles, classification, review/repair logic, and enhanced design systems.
-- Intelligence modules handle blueprint selection, design rules application, and visual style detection.
-- Enhanced intent parsing system detects and handles multi-component requests with structured layout requirements.
+The generation engine spans API routes, adapters, and orchestration logic with enhanced accessibility intelligence and comprehensive design system integration:
+- API routes handle requests, validate inputs, and coordinate the pipeline with accessibility-first prompts.
+- Adapters encapsulate provider-specific clients behind a unified interface with enhanced token and hook support.
+- Orchestrators assemble prompts with accessibility hooks, manage tool loops, and post-process outputs.
+- Utilities provide model profiles, classification, review/repair logic, and comprehensive design systems.
+- Intelligence modules handle blueprint selection, design rules application, visual style detection, and accessibility integration.
+- Enhanced accessibility system provides comprehensive hook documentation and design token examples.
 
 ```mermaid
 graph TB
@@ -84,6 +89,8 @@ MR["modelRegistry"]
 TP["tieredPipeline"]
 PB["promptBuilder"]
 PR["prompts.ts"]
+ACS["Accessibility Hooks"]
+DT["Design Tokens"]
 end
 GEN --> CG
 GEN --> UR
@@ -102,6 +109,8 @@ ADI --> OL
 CG --> MR
 CG --> TP
 CG --> PB
+CG --> ACS
+CG --> DT
 ```
 
 **Diagram sources**
@@ -119,7 +128,12 @@ CG --> PB
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
-- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
+- [prompts.ts:1-556](file://lib/ai/prompts.ts#L1-L556)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+- [index.ts:1-26](file://packages/tokens/index.ts#L1-L26)
+- [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 **Section sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
@@ -133,17 +147,20 @@ CG --> PB
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
-- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
+- [prompts.ts:1-556](file://lib/ai/prompts.ts#L1-L556)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
 
 ## Core Components
-- Universal Adapter Interface: A single AIAdapter contract defines generate() and stream(), enabling provider-agnostic code.
-- Adapter Factory: Securely resolves credentials from workspace settings or environment variables, selects the correct adapter, and caches results.
-- Component Generator: Orchestrates intent-driven generation with model-aware prompts, tool loops, extraction, beautification, and deterministic repair.
+- Universal Adapter Interface: A single AIAdapter contract defines generate() and stream(), enabling provider-agnostic code with enhanced accessibility hook support.
+- Adapter Factory: Securely resolves credentials from workspace settings or environment variables, selects the correct adapter, and caches results with accessibility-aware configurations.
+- Component Generator: Orchestrates intent-driven generation with model-aware prompts, tool loops, extraction, beautification, and deterministic repair with comprehensive accessibility hook integration.
 - Enhanced Intent Parser: Advanced intent classification system with multi-component detection capabilities that can identify when users request multiple separate UI components.
-- Expert Reviewer and Repair Agent: Second-pass review with JSON schema validation and targeted repair using a dedicated repair model.
-- Model Registry: Static capability profiles drive pipeline tiers, token budgets, extraction strategies, and timeouts.
-- Enhanced Design Intelligence: Advanced design rules, blueprint engine, and visual style detection for creating visually stunning components with structured layouts.
-- Tiered Pipeline: Refined configuration system with optimized token budgets, temperature settings, and timeout management.
+- Expert Reviewer and Repair Agent: Second-pass review with JSON schema validation and targeted repair using a dedicated repair model with accessibility compliance checks.
+- Model Registry: Static capability profiles drive pipeline tiers, token budgets, extraction strategies, and timeouts with accessibility hook support.
+- Enhanced Design Intelligence: Advanced design rules, blueprint engine, and visual style detection for creating visually stunning components with structured layouts and comprehensive design token usage.
+- Tiered Pipeline: Refined configuration system with optimized token budgets, temperature settings, and timeout management including accessibility hook documentation.
+- Accessibility Hook System: Comprehensive documentation and integration of useAnnouncer(), useKeyboardNav(), and useRoveFocus() hooks with detailed usage examples.
+- Design Token Integration: Enhanced design token import examples including missing easing and duration token imports for consistent animation and transition patterns.
 
 **Section sources**
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
@@ -156,9 +173,13 @@ CG --> PB
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 - [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+- [index.ts:1-26](file://packages/tokens/index.ts#L1-L26)
+- [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Architecture Overview
-The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced design intelligence and multi-component handling.
+The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced accessibility intelligence, comprehensive design token usage, and detailed accessibility hook documentation.
 
 ```mermaid
 sequenceDiagram
@@ -177,13 +198,13 @@ GenRoute->>Classifier : classifyIntent(prompt, ...)
 Classifier-->>GenRoute : Intent classification with multi-component support
 GenRoute->>Gen : generateComponent(intent, mode, ...)
 Gen->>Adapter : getWorkspaceAdapter(cfg, workspaceId, userId)
-Adapter-->>Gen : AIAdapter
-Gen-->>GenRoute : Generated code (TSX) with structured grid layout
+Adapter-->>Gen : AIAdapter with accessibility hook support
+Gen-->>GenRoute : Generated code (TSX) with accessibility hooks and design tokens
 GenRoute->>Review : reviewGeneratedCode(code, intentContext, override?)
-Review-->>GenRoute : Review result (JSON)
+Review-->>GenRoute : Review result (JSON) with accessibility compliance
 alt Needs repair
 GenRoute->>Repair : repairGeneratedCode(code, instructions, override?)
-Repair-->>GenRoute : Repaired code
+Repair-->>GenRoute : Repaired code with enhanced accessibility
 end
 GenRoute-->>Client : {success, code, a11yReport, tests, ...}
 ```
@@ -199,7 +220,7 @@ GenRoute-->>Client : {success, code, a11yReport, tests, ...}
 ## Detailed Component Analysis
 
 ### Universal Adapter System
-The adapter system provides a unified interface for multiple providers and supports local and cloud models through a single factory.
+The adapter system provides a unified interface for multiple providers and supports local and cloud models through a single factory with enhanced accessibility hook integration.
 
 ```mermaid
 classDiagram
@@ -238,6 +259,7 @@ AIAdapter <|.. UnconfiguredAdapter
 - Provider resolution: The factory detects provider from model name or explicit provider, supports OpenAI-compatible providers, and falls back to local Ollama/LM Studio when appropriate.
 - Credential resolution: Credentials are resolved server-side via workspace key service or environment variables; the factory avoids accepting client-provided secrets.
 - Caching: A cached adapter wraps underlying adapters to cache generation results and stream chunks and dispatch metrics.
+- Accessibility hook support: Enhanced adapter configurations support accessibility hook integration and design token usage patterns.
 
 **Diagram sources**
 - [base.ts:1-73](file://lib/ai/adapters/base.ts#L1-L73)
@@ -257,6 +279,7 @@ AIAdapter <|.. UnconfiguredAdapter
 - getWorkspaceAdapter: Resolves credentials from workspace settings, environment variables, or returns an unconfigured adapter for graceful degradation.
 - Compatibility providers: OpenAI-compatible providers (e.g., Groq, LM Studio) are routed through the OpenAI adapter with appropriate base URLs.
 - Local models: On Vercel, local providers return an unconfigured adapter to prevent connection errors; otherwise, OllamaAdapter is used.
+- Enhanced accessibility support: Adapter configurations now include accessibility hook and design token integration capabilities.
 
 **Section sources**
 - [index.ts:236-278](file://lib/ai/adapters/index.ts#L236-L278)
@@ -282,6 +305,7 @@ Proceed --> End(["Return Enhanced Intent"])
 - Automatic app mode activation: Converts multi-component requests to app mode with structured layout requirements.
 - Screen organization: Creates individual screens for each requested component with proper visual hierarchy.
 - Layout enforcement: Ensures structured grid layouts with proper visual identity for each component section.
+- Accessibility integration: Automatically includes accessibility requirements for multi-component scenarios.
 
 **Diagram sources**
 - [prompts.ts:74-78](file://lib/ai/prompts.ts#L74-L78)
@@ -290,7 +314,7 @@ Proceed --> End(["Return Enhanced Intent"])
 - [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
 
 ### Component Generator Orchestration
-The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence, now including comprehensive multi-component support.
+The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence, now including comprehensive multi-component support and accessibility hook integration.
 
 ```mermaid
 flowchart TD
@@ -298,7 +322,7 @@ Start(["Start generateComponent"]) --> Blueprint["Select blueprint + design rule
 Blueprint --> ResolveCfg["Resolve model + credentials"]
 ResolveCfg --> Profiles["Get model profile + pipeline config"]
 Profiles --> Memory["Fetch memory + semantic context"]
-Memory --> Prompt["Build model-aware prompt with layout rules"]
+Memory --> Prompt["Build model-aware prompt with accessibility hooks and design tokens"]
 Prompt --> Tools{"Tools enabled?"}
 Tools -- Yes --> ToolLoop["Execute tool-call loop (0..maxToolRounds)"]
 Tools -- No --> Generate["Single adapter.generate()"]
@@ -320,6 +344,8 @@ RunRepair --> Done
 - Beautification and deterministic repair: Cleans and validates output before optional AI repair.
 - Enhanced design integration: Blueprint engine and design rules provide visual style guidance throughout the generation process.
 - Multi-component layout enforcement: Structured grid layouts with proper visual hierarchy for multi-component requests.
+- Accessibility hook integration: Comprehensive documentation and usage examples for accessibility utilities.
+- Design token usage: Enhanced token import examples including easing and duration tokens.
 
 **Diagram sources**
 - [componentGenerator.ts:61-402](file://lib/ai/componentGenerator.ts#L61-L402)
@@ -332,7 +358,7 @@ RunRepair --> Done
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 
 ### Expert Reviewer Stage and AI Repair Agent
-The reviewer stage applies a second-pass expert review and optionally repairs issues.
+The reviewer stage applies a second-pass expert review and optionally repairs issues with enhanced accessibility compliance checking.
 
 ```mermaid
 sequenceDiagram
@@ -343,19 +369,20 @@ participant RevAdapter as "getWorkspaceAdapter(REVIEW)"
 participant RepAdapter as "getWorkspaceAdapter(REPAIR)"
 GenRoute->>Review : reviewGeneratedCode(code, intentContext, override?)
 Review->>RevAdapter : getWorkspaceAdapter(cfg)
-RevAdapter-->>Review : AIAdapter
-Review-->>GenRoute : {passed, score, critiques, repairInstructions}
+RevAdapter-->>Review : AIAdapter with accessibility support
+Review-->>GenRoute : {passed, score, critiques, repairInstructions, a11yCompliance}
 alt Needs repair
 GenRoute->>Repair : repairGeneratedCode(code, repairInstructions, override?)
 Repair->>RepAdapter : getWorkspaceAdapter(cfg)
-RepAdapter-->>Repair : AIAdapter
-Repair-->>GenRoute : Repaired code
+RepAdapter-->>Repair : AIAdapter with accessibility support
+Repair-->>GenRoute : Repaired code with enhanced accessibility
 end
 ```
 
 - Reviewer adapter override: Honors the user's selected provider for consistency with the generation setup.
-- Review schema: Enforces JSON output with pass/fail, score, critiques, and repair instructions.
-- Repair agent: Applies exact repair instructions to fix structural, visual, or logical issues.
+- Review schema: Enforces JSON output with pass/fail, score, critiques, repair instructions, and accessibility compliance.
+- Repair agent: Applies exact repair instructions to fix structural, visual, logical, and accessibility issues.
+- Accessibility compliance: Enhanced review process includes accessibility hook usage validation.
 
 **Diagram sources**
 - [route.ts:241-323](file://app/api/generate/route.ts#L241-L323)
@@ -367,7 +394,7 @@ end
 - [route.ts:241-323](file://app/api/generate/route.ts#L241-L323)
 
 ### Enhanced Intent Classification Pipeline
-The intent classifier determines intent type, suggested mode, and whether code generation should proceed immediately or require clarification, now with enhanced multi-component detection capabilities.
+The intent classifier determines intent type, suggested mode, and whether code generation should proceed immediately or require clarification, now with enhanced multi-component detection capabilities and accessibility requirement identification.
 
 ```mermaid
 flowchart TD
@@ -377,12 +404,13 @@ Resolve --> Adapter["getWorkspaceAdapter(...)"]
 Adapter --> Call["adapter.generate(system + user)"]
 Call --> Parse["Parse + coerce JSON"]
 Parse --> Validate["Zod schema validation"]
-Validate --> Result(["Return classification"])
+Validate --> Result(["Return classification with accessibility requirements"])
 ```
 
-- Output format: Strict JSON schema with intent type, confidence, summary, suggested mode, and metadata.
+- Output format: Strict JSON schema with intent type, confidence, summary, suggested mode, and metadata including accessibility requirements.
 - Retry on rate limits: Implements exponential backoff for 429 errors.
 - Multi-component awareness: Enhanced classification that recognizes multi-component requests and suggests appropriate modes.
+- Accessibility requirement detection: Automatically identifies accessibility needs based on component type and user intent.
 
 **Diagram sources**
 - [route.ts:1-76](file://app/api/classify/route.ts#L1-L76)
@@ -394,11 +422,13 @@ Validate --> Result(["Return classification"])
 - [intentClassifier.ts:1-208](file://lib/ai/intentClassifier.ts#L1-L208)
 
 ### Model Selection and Configuration
-- Model registry: Centralized capability profiles define tiers, prompt strategies, token budgets, tool support, extraction strategy, and timeouts.
+- Model registry: Centralized capability profiles define tiers, prompt strategies, token budgets, tool support, extraction strategy, and timeouts with accessibility hook support.
 - Tiered pipeline: Different strategies for tiny/small/medium/large/cloud models govern temperature, tool rounds, and repair priority.
 - Prompt engineering: Model-aware prompt building, token budget enforcement, and merging of system prompts for providers that do not support system roles.
 - Enhanced design integration: Visual style detection and design rules application integrated into model selection process.
 - Layout structure enforcement: Comprehensive layout rules embedded in system prompts for structured grid layouts and visual hierarchy.
+- Accessibility hook documentation: Detailed usage examples and integration patterns for accessibility utilities.
+- Design token enhancement: Comprehensive token import examples including missing easing and duration token usage.
 
 **Section sources**
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
@@ -410,7 +440,7 @@ Validate --> Result(["Return classification"])
 ## Enhanced Design System
 
 ### Visual Style Detection and Blueprint Engineering
-The engine now includes sophisticated visual style detection and blueprint engineering for creating visually stunning UI components with structured layouts.
+The engine now includes sophisticated visual style detection and blueprint engineering for creating visually stunning UI components with structured layouts and comprehensive design token integration.
 
 ```mermaid
 flowchart TD
@@ -442,7 +472,7 @@ AS --> Cinematic["Cinematic"]
 - [blueprintEngine.ts:83-90](file://lib/intelligence/blueprintEngine.ts#L83-L90)
 
 ### Design Rules Application
-The design rules system provides comprehensive guidance for creating visually appealing and accessible components with structured layout requirements.
+The design rules system provides comprehensive guidance for creating visually appealing and accessible components with structured layout requirements and enhanced design token usage.
 
 - Navigation styles: Sidebar, top-nav, bottom-nav, or none based on content complexity
 - Layout complexity: Minimal, standard, rich, or immersive based on design choices
@@ -452,15 +482,95 @@ The design rules system provides comprehensive guidance for creating visually ap
 - Typography scales: Compact for admin interfaces, balanced for general use, display for hero sections
 - Accessibility prioritization: WCAG 2.1 AA compliance with proper contrast ratios and semantic HTML
 - **Updated**: Structured grid layout requirements for multi-component scenarios with proper visual hierarchy
+- **Updated**: Comprehensive design token usage patterns including easing and duration tokens for consistent animations
 
 **Section sources**
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
 
+## Accessibility Hook Integration
+
+### Comprehensive Accessibility Hook Documentation
+The AI system now includes detailed documentation and usage examples for accessibility hooks, ensuring generated components meet WCAG 2.1 AA compliance standards.
+
+```mermaid
+flowchart TD
+AH["Accessibility Hooks"] --> UA["useAnnouncer()"]
+AH --> UKN["useKeyboardNav()"]
+AH --> URF["useRoveFocus()"]
+UA --> Announce["Screen reader announcements"]
+UKN --> Shortcuts["Global keyboard shortcuts"]
+URF --> Navigation["Arrow key navigation"]
+Announce --> Polite["Polite announcements"]
+Announce --> Assertive["Assertive announcements"]
+Shortcuts --> CtrlAlt["Ctrl/Cmd + Key combinations"]
+Navigation --> Horizontal["Horizontal arrow navigation"]
+Navigation --> Vertical["Vertical arrow navigation"]
+```
+
+**Diagram sources**
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+
+### Enhanced System Prompt Integration
+System prompts now include comprehensive accessibility hook documentation and usage examples for developers and AI models.
+
+#### useAnnouncer Hook Usage
+- **Purpose**: Provides screen reader announcements for dynamic content updates
+- **Usage Pattern**: `const announce = useAnnouncer(); announce('Message', 'polite');`
+- **Implementation**: Creates aria-live region with polite or assertive politeness levels
+- **Best Practices**: Clear, concise messages with appropriate politeness level
+
+#### useKeyboardNav Hook Usage
+- **Purpose**: Enables global keyboard shortcuts for application-wide actions
+- **Usage Pattern**: `useKeyboardNav([{ key:'k', ctrl:true, handler:() => {} }]);`
+- **Implementation**: Event listener for keyboard combinations with modifier keys
+- **Best Practices**: Descriptive key combinations, preventDefault for handled events
+
+#### useRoveFocus Hook Usage
+- **Purpose**: Implements arrow key navigation for roving focus management
+- **Usage Pattern**: `const { currentIndex, handleKeyDown } = useRoveFocus(5, 'horizontal');`
+- **Implementation**: Circular focus management with Home/End support
+- **Best Practices**: Proper orientation handling, currentIndex state management
+
+**Section sources**
+- [prompts.ts:93-98](file://lib/ai/prompts.ts#L93-L98)
+- [prompts.ts:252-256](file://lib/ai/prompts.ts#L252-L256)
+- [promptBuilder.ts:69-70](file://lib/ai/promptBuilder.ts#L69-L70)
+- [promptBuilder.ts:252-256](file://lib/ai/promptBuilder.ts#L252-L256)
+- [uiCheatSheet.ts:48-55](file://lib/ai/uiCheatSheet.ts#L48-L55)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+
+### Enhanced Design Token Integration
+The system now includes comprehensive design token import examples, including previously missing easing and duration token imports for consistent animation and transition patterns.
+
+#### Design Token Categories
+- **Colors**: Semantic color scales with brand variations and status colors
+- **Spacing**: Consistent spacing scale from 1px increments to large gaps
+- **Typography**: Hierarchical text styles with toStyle() conversion
+- **Transitions**: Complete easing curves and duration presets
+- **Shadows**: Multi-level shadow system for depth indication
+- **Radius**: Rounded corner scale for modern UI elements
+
+#### Transition Token Usage
+- **Duration Presets**: instant (0ms), fast (100ms), normal (200ms), slow (300ms), slower (500ms), slowest (700ms)
+- **Easing Curves**: Linear, in/out variants, elastic, back, and exponential curves
+- **Motion Presets**: Consistent timing functions for micro-interactions and page transitions
+
+**Section sources**
+- [prompts.ts:102](file://lib/ai/prompts.ts#L102)
+- [prompts.ts:285](file://lib/ai/prompts.ts#L285)
+- [promptBuilder.ts:77](file://lib/ai/promptBuilder.ts#L77)
+- [promptBuilder.ts:259](file://lib/ai/promptBuilder.ts#L259)
+- [uiCheatSheet.ts:88-97](file://lib/ai/uiCheatSheet.ts#L88-L97)
+- [index.ts:24-25](file://packages/tokens/index.ts#L24-L25)
+- [transitions.ts:10-36](file://packages/tokens/transitions.ts#L10-L36)
+
 ## Multi-Component Generation Pipeline
 
 ### Enhanced Layout Structure Rules
-Both component generator and app mode system prompts now include comprehensive layout structure rules that enforce structured grid layouts and proper visual hierarchy.
+Both component generator and app mode system prompts now include comprehensive layout structure rules that enforce structured grid layouts and proper visual hierarchy with enhanced accessibility considerations.
 
 ```mermaid
 flowchart TD
@@ -475,7 +585,8 @@ Sectioning --> Enforce
 Hierarchy --> Enforce
 Identity --> Enforce
 StandardLayout --> Enforce
-Enforce --> Output["Structured Output"]
+Enforce --> Accessibility["Accessibility Compliance"]
+Accessibility --> Output["Structured Output"]
 ```
 
 - **Critical**: When the intent describes MULTIPLE components/sections, organize them in a STRUCTURED GRID LAYOUT — NOT a flat vertical stack.
@@ -484,6 +595,8 @@ Enforce --> Output["Structured Output"]
 - **Page Container**: Use a page-level container with consistent padding and a header: `<div className="min-h-screen bg-[color] p-6 md:p-8">`.
 - **Visual Identity**: Each section should have: title, description, and its own visual identity (border, rounded corners, shadow).
 - **Proper Grouping**: NEVER dump all elements in a single flat list — always create visual hierarchy and grouping.
+- **Accessibility**: Each section should include proper ARIA labels and semantic HTML structure.
+- **Navigation**: Include skip links and keyboard navigation support for multi-component layouts.
 
 **Diagram sources**
 - [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
@@ -494,13 +607,15 @@ Enforce --> Output["Structured Output"]
 - [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
 
 ## Dependency Analysis
-The generation engine exhibits clear separation of concerns with enhanced design intelligence and multi-component handling:
-- API routes depend on orchestrators and validators.
-- Orchestrators depend on adapters, model registry, and intelligence modules.
-- Intelligence modules handle design rules, blueprint selection, and visual style detection.
-- Adapters depend on provider SDKs or direct APIs.
-- Utilities (classification, review, registry) are shared across flows.
-- Enhanced intent parsing system provides multi-component detection capabilities.
+The generation engine exhibits clear separation of concerns with enhanced accessibility intelligence, comprehensive design token usage, and detailed accessibility hook integration:
+- API routes depend on orchestrators and validators with enhanced accessibility support.
+- Orchestrators depend on adapters, model registry, and intelligence modules with accessibility hook integration.
+- Intelligence modules handle design rules, blueprint selection, visual style detection, and accessibility requirements.
+- Adapters depend on provider SDKs or direct APIs with enhanced accessibility configurations.
+- Utilities (classification, review, registry) are shared across flows with accessibility compliance checking.
+- Enhanced intent parsing system provides multi-component detection capabilities with accessibility requirements.
+- Accessibility hook system provides comprehensive documentation and integration patterns.
+- Design token system ensures consistent animation and transition patterns across components.
 
 ```mermaid
 graph LR
@@ -515,11 +630,19 @@ CG --> PB["promptBuilder"]
 CG --> DE["designRules"]
 CG --> BE["blueprintEngine"]
 CG --> IP["intentParser"]
+CG --> AH["Accessibility Hooks"]
+CG --> DT["Design Tokens"]
 IP --> PR["prompts.ts"]
 ADI --> OAI["OpenAIAdapter"]
 ADI --> AN["AnthropicAdapter"]
 ADI --> GG["GoogleAdapter"]
 ADI --> OL["OllamaAdapter"]
+AH --> UA["useAnnouncer"]
+AH --> UKN["useKeyboardNav"]
+AH --> URF["useRoveFocus"]
+DT --> EAS["easing"]
+DT --> DUR["duration"]
+DT --> TRANS["transition"]
 ```
 
 **Diagram sources**
@@ -533,7 +656,12 @@ ADI --> OL["OllamaAdapter"]
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
-- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
+- [prompts.ts:1-556](file://lib/ai/prompts.ts#L1-L556)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+- [index.ts:1-26](file://packages/tokens/index.ts#L1-L26)
+- [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 **Section sources**
 - [route.ts:1-451](file://app/api/generate/route.ts#L1-L451)
@@ -546,7 +674,8 @@ ADI --> OL["OllamaAdapter"]
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
 - [blueprintEngine.ts:1-215](file://lib/intelligence/blueprintEngine.ts#L1-L215)
-- [prompts.ts:1-501](file://lib/ai/prompts.ts#L1-L501)
+- [prompts.ts:1-556](file://lib/ai/prompts.ts#L1-L556)
+- [uiCheatSheet.ts:1-140](file://lib/ai/uiCheatSheet.ts#L1-L140)
 
 ## Performance Considerations
 - Streaming vs non-streaming: Streaming is used for live previews; non-streaming is used for production generation. Streaming reliability varies by model and provider.
@@ -557,8 +686,8 @@ ADI --> OL["OllamaAdapter"]
 - Enhanced design processing: Blueprint and design rule computation adds overhead but significantly improves output quality.
 - Visual style optimization: Pre-computed visual styles reduce runtime processing during generation.
 - **Updated**: Multi-component layout enforcement adds computational overhead but ensures structured, professional output.
-
-[No sources needed since this section provides general guidance]
+- **Updated**: Accessibility hook integration adds minimal overhead while significantly improving accessibility compliance.
+- **Updated**: Design token usage patterns ensure consistent animation performance across components.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -571,6 +700,9 @@ Common issues and resolutions:
 - Visual style mismatch: If the generated component doesn't match the intended visual style, adjust the prompt or blueprint parameters.
 - **Updated**: Multi-component layout issues: If components aren't properly structured in grid layouts, check that the intent parser correctly detected multiple components and that layout structure rules are being enforced.
 - **Updated**: Structured grid layout problems: Ensure that the generated code follows the structured grid layout requirements with proper sectioning and visual hierarchy.
+- **Updated**: Accessibility hook integration issues: If accessibility hooks aren't working properly, verify that the hooks are imported correctly and that the usage examples match the implementation patterns.
+- **Updated**: Design token import problems: If design tokens aren't recognized, ensure that the complete token import pattern is used including easing and duration tokens for consistent animation behavior.
+- **Updated**: Missing easing/duration tokens: Verify that the design token import includes both easing and duration presets for consistent animation timing across components.
 
 **Section sources**
 - [componentGenerator.ts:330-397](file://lib/ai/componentGenerator.ts#L330-L397)
@@ -579,6 +711,9 @@ Common issues and resolutions:
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
 - [prompts.ts:98-120](file://lib/ai/prompts.ts#L98-L120)
 - [prompts.ts:248-267](file://lib/ai/prompts.ts#L248-L267)
+- [useAnnouncer.ts:1-39](file://packages/a11y/hooks/useAnnouncer.ts#L1-L39)
+- [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
+- [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Conclusion
-The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, and structured layout enforcement. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive and accessible user interfaces that properly handle both single components and complex multi-component scenarios.
+The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components with WCAG 2.1 AA accessibility compliance. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, structured layout enforcement, and comprehensive accessibility hook integration. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. The comprehensive accessibility hook documentation and design token integration provide developers with detailed usage examples and consistent implementation patterns. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive, accessible, and professionally structured user interfaces that properly handle both single components and complex multi-component scenarios with full accessibility support.

@@ -13,6 +13,7 @@
 - [promptBuilder.ts](file://lib/ai/promptBuilder.ts)
 - [uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
 - [a11yValidator.ts](file://lib/validation/a11yValidator.ts)
+- [prompts.ts](file://lib/ai/prompts.ts)
 - [globals.css](file://app/globals.css)
 - [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)
 - [engine-config/route.ts](file://app/api/engine-config/route.ts)
@@ -42,12 +43,10 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive @ui/tokens design system implementation documentation
-- Documented color tokens, spacing tokens, typography tokens, and transition tokens
-- Updated Style DNA system to integrate with @ui/tokens design system
-- Enhanced design rules framework to leverage design tokens for consistency
-- Added @ui/tokens integration with AI ecosystem components
-- Updated architecture diagrams to reflect the complete design system integration
+- Enhanced design system token exports with comprehensive spacing, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, statusColors, and keyframes categories
+- Updated @ui/tokens package to provide complete design system integration with all major token categories
+- Expanded design token system coverage for complete design system enforcement across component generation and validation
+- Improved AI ecosystem integration with enhanced token category access for better component generation consistency
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -72,7 +71,7 @@ This document explains how the comprehensive @ui/tokens design system is integra
 - Guidance for extending design rules, customizing style DNA, and integrating new design system elements
 - How generated components are validated against design system constraints and how violations are surfaced and resolved
 
-**Updated** Added comprehensive @ui/tokens design system implementation including color tokens, spacing tokens, typography tokens, transition tokens, and complete integration with AI ecosystem.
+**Updated** Enhanced design system token exports with comprehensive spacing, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, statusColors, and keyframes categories for complete design system integration.
 
 ## Project Structure
 The design system spans several layers with the new @ui/tokens package providing comprehensive design tokens:
@@ -105,6 +104,7 @@ subgraph "AI Ecosystem Integration"
 PB["promptBuilder.ts<br/>AI Prompt Integration"]
 UCS["uiCheatSheet.ts<br/>Component Reference"]
 AV["a11yValidator.ts<br/>Accessibility Validation"]
+PROMPTS["prompts.ts<br/>System Prompt Templates"]
 end
 subgraph "API Orchestration"
 GEN["generate/route.ts"]
@@ -199,6 +199,7 @@ BE --> RPW
 TOKENS --> PB
 TOKENS --> UCS
 TOKENS --> AV
+TOKENS --> PROMPTS
 COLORS --> TOKENS
 SPACING --> TOKENS
 TYPO --> TOKENS
@@ -240,6 +241,7 @@ GCSS -. "Consumed by generated components" .- RPW
 - [promptBuilder.ts:77](file://lib/ai/promptBuilder.ts#L77)
 - [uiCheatSheet.ts:87-97](file://lib/ai/uiCheatSheet.ts#L87-L97)
 - [a11yValidator.ts:173-237](file://lib/validation/a11yValidator.ts#L173-L237)
+- [prompts.ts:92-115](file://lib/ai/prompts.ts#L92-L115)
 - [globals.css:3-21](file://app/globals.css#L3-L21)
 - [generate/route.ts](file://app/api/generate/route.ts)
 - [parse/route.ts](file://app/api/parse/route.ts)
@@ -276,6 +278,7 @@ GCSS -. "Consumed by generated components" .- RPW
 - [promptBuilder.ts:77](file://lib/ai/promptBuilder.ts#L77)
 - [uiCheatSheet.ts:87-97](file://lib/ai/uiCheatSheet.ts#L87-L97)
 - [a11yValidator.ts:173-237](file://lib/validation/a11yValidator.ts#L173-L237)
+- [prompts.ts:92-115](file://lib/ai/prompts.ts#L92-L115)
 - [globals.css:1-156](file://app/globals.css#L1-L156)
 
 ## Core Components
@@ -283,7 +286,7 @@ GCSS -. "Consumed by generated components" .- RPW
 - Style DNA System: Comprehensive visual personality system that resolves design constraints and Tailwind class hints for consistent component styling using design tokens.
 - Blueprint Engine: Assembles UI blueprints with layout specifications, component requirements, and assembly rules for generation.
 - @ui/tokens Design System: Complete semantic design token system providing colors, spacing, typography, and transitions for consistent component styling.
-- AI Ecosystem Integration: Seamless integration of design tokens into AI-generated components and validation systems.
+- AI Ecosystem Integration: Seamless integration of design tokens into AI-generated components and validation systems with enhanced token category access.
 - API Orchestration: Routes integrate design decisions into generation and validation workflows, ensuring design system constraints are applied consistently.
 
 Key responsibilities:
@@ -295,8 +298,9 @@ Key responsibilities:
 - Generate Tailwind class hints for consistent component styling
 - Provide semantic design tokens for AI ecosystem components
 - Validate design token usage in generated components
+- Ensure consistent token usage across all design system categories
 
-**Updated** Enhanced Style DNA system documentation to reflect the current implementation with comprehensive preset definitions and trigger mapping, plus added @ui/tokens design system integration.
+**Updated** Enhanced design system token exports with comprehensive spacing, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, statusColors, and keyframes categories for complete design system integration.
 
 **Section sources**
 - [designRules.ts:9-32](file://lib/intelligence/designRules.ts#L9-L32)
@@ -332,11 +336,11 @@ StyleDNA-->>API : "StyleDNA Object"
 API->>Blueprint : "selectBlueprint(prompt, classification)"
 Blueprint-->>API : "UI Blueprint"
 API->>Tokens : "Access design tokens for component styling"
-Tokens-->>API : "Semantic tokens (colors, spacing, typography)"
+Tokens-->>API : "Semantic tokens (colors, spacing, typography, transitions, zIndex, breakpoints, containers, statusColors, keyframes)"
 API->>Validator : "Validate component against design rules"
-Validator-->>API : "A11y report with token validation"
+Validator-->>API : "A11y report with comprehensive token validation"
 API->>Renderer : "Render with style DNA classes and tokens"
-Renderer-->>User : "Accessible, consistent UI with design tokens"
+Renderer-->>User : "Accessible, consistent UI with complete design tokens"
 ```
 
 **Diagram sources**
@@ -498,6 +502,7 @@ The @ui/tokens design system provides comprehensive semantic design tokens for c
 - **Text Hierarchy**: Primary, secondary, muted, inverse, and link text colors
 - **Borders**: Default, hover, focus, and status-specific border colors
 - **Gradients**: Primary, warm, cool, sunset, aurora, midnight, and glass gradients
+- **Status Colors**: Online, offline, busy, away, error, warning, success, info, default status indicators
 
 #### Spacing Tokens
 - **Base Unit Scale**: 4px increments from 0 to 384px for consistent spacing
@@ -518,9 +523,11 @@ The @ui/tokens design system provides comprehensive semantic design tokens for c
 
 #### Transition Tokens
 - **Duration Scale**: Instant to slowest with both CSS and JS millisecond values
-- **Easing Curves**: Linear, in/out, inOut, spring, smooth, and specialized curves
-- **Transition Presets**: Fast, normal, slow, spring, bounce, and smooth transitions
-- **Animation Keyframes**: Fade, slide, scale, spin, pulse, bounce, shimmer, and float animations
+- **Easing Curves**: Linear, in/out, inOut, outBack, inBack, outExpo, inOutExpo, spring, smooth easing curves
+- **Transition Presets**: Fast, normal, slow, spring, bounce, smooth transitions
+- **Animation Keyframes**: Fade, slide, scale, spin, pulse, bounce, shimmer, float animations
+
+**Updated** Enhanced design token system documentation to reflect comprehensive token categories including spacing, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, statusColors, and keyframes for complete design system integration.
 
 **Section sources**
 - [colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
@@ -530,12 +537,13 @@ The @ui/tokens design system provides comprehensive semantic design tokens for c
 - [index.ts:1-26](file://packages/tokens/index.ts#L1-L26)
 
 ### AI Ecosystem Integration with Design Tokens
-The @ui/tokens system integrates seamlessly with the AI ecosystem:
+The @ui/tokens system integrates seamlessly with the AI ecosystem, now providing enhanced token category access:
 
-- **Prompt Builder Integration**: Direct import of design tokens for component styling guidance
-- **Component Reference**: Comprehensive cheat sheet documenting token usage patterns
+- **Prompt Builder Integration**: Direct import of design tokens for component styling guidance with comprehensive token categories
+- **Component Reference**: Comprehensive cheat sheet documenting token usage patterns including detailed transition token examples
 - **Accessibility Validation**: Token-aware validation for color contrast and semantic usage
-- **Consistent Component Generation**: AI models receive design tokens to ensure consistent styling
+- **Consistent Component Generation**: AI models receive design tokens to ensure consistent styling with improved motion patterns
+- **Enhanced Token Category Access**: Complete access to spacing, zIndex, breakpoint, containerWidth, fontFamily, fontSize, fontWeight, letterSpacing, statusColors, and keyframes categories
 
 ```mermaid
 sequenceDiagram
@@ -545,24 +553,28 @@ participant Tokens as "@ui/tokens"
 participant UCS as "UI Cheat Sheet"
 participant AV as "Accessibility Validator"
 AI->>PB : "Request component generation"
-PB->>Tokens : "Import semantic tokens"
-Tokens-->>PB : "colors, spacing, typography, transitions"
-PB-->>AI : "Enhanced prompt with tokens"
-AI->>UCS : "Access component reference"
-UCS-->>AI : "Token usage patterns"
-AI->>AV : "Validate generated component"
-AV-->>AI : "Token-compliant accessibility report"
+PB->>Tokens : "Import comprehensive token categories"
+Tokens-->>PB : "colors, spacing, typography, transitions, zIndex, breakpoints, containers, statusColors, keyframes"
+PB-->>AI : "Enhanced prompt with complete token guidance"
+AI->>UCS : "Access component reference with token patterns"
+UCS-->>AI : "Detailed token usage examples across all categories"
+AI->>AV : "Validate generated component with comprehensive token awareness"
+AV-->>AI : "Token-compliant accessibility report with complete token validation"
 ```
+
+**Updated** Enhanced AI ecosystem integration documentation to reflect comprehensive token category access and improved design system integration.
 
 **Diagram sources**
 - [promptBuilder.ts:77](file://lib/ai/promptBuilder.ts#L77)
 - [uiCheatSheet.ts:87-97](file://lib/ai/uiCheatSheet.ts#L87-L97)
 - [a11yValidator.ts:173-237](file://lib/validation/a11yValidator.ts#L173-L237)
+- [prompts.ts:92-115](file://lib/ai/prompts.ts#L92-L115)
 
 **Section sources**
 - [promptBuilder.ts:77](file://lib/ai/promptBuilder.ts#L77)
 - [uiCheatSheet.ts:87-97](file://lib/ai/uiCheatSheet.ts#L87-L97)
 - [a11yValidator.ts:173-237](file://lib/validation/a11yValidator.ts#L173-L237)
+- [prompts.ts:92-115](file://lib/ai/prompts.ts#L92-L115)
 
 ### Theming Integration and Typography Hierarchy
 - Tailwind theme injection binds fonts to CSS variables for consistent typography across components.
@@ -585,7 +597,7 @@ AV-->>AI : "Token-compliant accessibility report"
 - The design rules engine surfaces warnings for motion-heavy or performance-intensive combinations, guiding safer defaults.
 - Blueprint engine includes WCAG 2.1 AA requirements and best practice notes.
 - @ui/tokens provides semantic color tokens for proper contrast validation.
-- AI ecosystem validates token usage during component generation.
+- AI ecosystem validates token usage during component generation with comprehensive token category access.
 
 ```mermaid
 sequenceDiagram
@@ -598,12 +610,14 @@ Gen->>DR : "applyDesignRules(...)"
 DR-->>Gen : "DesignRulesResult"
 Gen->>SDNA : "resolveStyleDNA(...)"
 SDNA-->>Gen : "StyleDNA Object"
-Gen->>Tokens : "Validate token usage"
-Tokens-->>Gen : "Token compliance report"
-Gen->>AXE : "Run a11y checks with tokens"
+Gen->>Tokens : "Validate token usage with comprehensive category access"
+Tokens-->>Gen : "Complete token compliance report with all categories"
+Gen->>AXE : "Run a11y checks with comprehensive tokens"
 AXE-->>Gen : "Report with violations"
 Gen-->>Gen : "Adjust component to resolve violations"
 ```
+
+**Updated** Enhanced accessibility validation workflow to include comprehensive token category validation.
 
 **Diagram sources**
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
@@ -622,7 +636,7 @@ Gen-->>Gen : "Adjust component to resolve violations"
 - The design reasoning layer is formatted and injected into prompts to steer model outputs toward design-consistent results.
 - Style DNA objects are resolved and formatted for prompt injection alongside design rules.
 - @ui/tokens provides semantic design tokens for consistent component styling.
-- AI ecosystem integrates design tokens into component generation and validation.
+- AI ecosystem integrates design tokens into component generation and validation with comprehensive token category access.
 
 ```mermaid
 sequenceDiagram
@@ -638,18 +652,18 @@ Route->>SDNA : "resolveStyleDNA(prompt, pageType, mode)"
 SDNA-->>Route : "StyleDNA Object"
 Route->>BP : "selectBlueprint(prompt, classification)"
 BP-->>Route : "UI Blueprint"
-Route->>Tokens : "Access design tokens"
-Tokens-->>Route : "Semantic tokens for styling"
+Route->>Tokens : "Access comprehensive design tokens"
+Tokens-->>Route : "Complete token categories for styling"
 Route->>Prompt : "formatDesignRulesForPrompt(result)"
 Prompt-->>Route : "Enhanced prompt"
 Route->>Prompt : "formatStyleDNAForPrompt(styleDNA)"
 Prompt-->>Route : "Enhanced prompt"
 Route->>Prompt : "formatBlueprintForPrompt(blueprint)"
 Prompt-->>Route : "Final prompt"
-Route-->>Route : "Generate and validate component with tokens"
+Route-->>Route : "Generate and validate component with complete tokens"
 ```
 
-**Updated** Added @ui/tokens design system integration to the API orchestration workflow and AI ecosystem integration.
+**Updated** Enhanced API orchestration workflow to reflect comprehensive design token integration across all token categories.
 
 **Diagram sources**
 - [designRules.ts:225-244](file://lib/intelligence/designRules.ts#L225-L244)
@@ -689,11 +703,14 @@ Route-->>Route : "Generate and validate component with tokens"
 
 ## Dependency Analysis
 - The design rules engine, style DNA system, and blueprint engine are consumed by all generation-related routes.
-- @ui/tokens design system provides semantic design tokens for consistent component styling.
+- @ui/tokens design system provides comprehensive semantic design tokens for consistent component styling.
 - Global CSS is a shared dependency for rendering consistent visuals.
 - Accessibility validation is integrated into the pipeline to ensure design system compliance.
 - AI ecosystem components depend on @ui/tokens for consistent design token usage.
 - Style DNA provides Tailwind class hints that guide component styling consistency.
+- Comprehensive token category access improves motion consistency across AI-generated components.
+
+**Updated** Enhanced dependency analysis to reflect comprehensive design token integration across all token categories.
 
 ```mermaid
 graph LR
@@ -785,6 +802,7 @@ TOKENS --> WSSET
 TOKENS --> AUTH
 TOKENS --> FPW
 TOKENS --> RPW
+TOKENS --> PROMPTS
 GCSS["globals.css"] --> GEN
 GCSS --> PARSE
 GCSS --> THINK
@@ -808,8 +826,6 @@ GCSS --> AUTH
 GCSS --> FPW
 GCSS --> RPW
 ```
-
-**Updated** Added @ui/tokens design system and AI ecosystem dependencies to the dependency graph.
 
 **Diagram sources**
 - [designRules.ts:100-223](file://lib/intelligence/designRules.ts#L100-L223)
@@ -859,9 +875,10 @@ GCSS --> RPW
 - Use transform layers and reduced motion fallbacks to maintain accessibility while preserving performance.
 - Style DNA system provides motion restraint settings to balance visual appeal with performance considerations.
 - @ui/tokens design system provides efficient semantic tokens for consistent styling without performance overhead.
-- AI ecosystem benefits from token-based styling for faster component generation and validation.
+- AI ecosystem benefits from comprehensive token-based styling for faster component generation and validation.
+- Comprehensive token category access enables more efficient design system usage across all component types.
 
-**Updated** Added @ui/tokens design system and AI ecosystem performance considerations.
+**Updated** Enhanced performance considerations to reflect comprehensive design token integration and improved design enforcement capabilities.
 
 **Section sources**
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
@@ -878,8 +895,11 @@ Common issues and resolutions:
 - Blueprint assembly errors: Follow assembly rules and component compatibility requirements.
 - Token usage errors: Ensure @ui/tokens imports are properly configured in the AI ecosystem.
 - Design token conflicts: Use semantic tokens consistently across components to avoid visual inconsistencies.
+- Comprehensive token validation: Ensure all token categories are used correctly with proper token naming conventions.
+- Status color conflicts: Use statusColors tokens for consistent status indicator styling across components.
+- Animation keyframe conflicts: Use keyframes tokens for consistent animation patterns across generated components.
 
-**Updated** Added @ui/tokens design system and AI ecosystem troubleshooting guidance.
+**Updated** Enhanced troubleshooting guide to include comprehensive token category conflicts and improved design token usage guidance.
 
 **Section sources**
 - [designRules.ts:167-169](file://lib/intelligence/designRules.ts#L167-L169)
@@ -889,9 +909,9 @@ Common issues and resolutions:
 - [colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
 
 ## Conclusion
-The design system integration ensures that generated components adhere to a coherent visual language and accessibility standards through the comprehensive @ui/tokens design system. The design rules engine provides a structured decision-making layer, while the comprehensive Style DNA system offers deterministic visual personality resolution using semantic design tokens. The Blueprint Engine coordinates layout and component assembly, and the @ui/tokens design system establishes a reusable design token foundation. Together with validation and warning mechanisms, the system enforces consistency and safety across diverse UI scenarios while providing seamless AI ecosystem integration.
+The design system integration ensures that generated components adhere to a coherent visual language and accessibility standards through the comprehensive @ui/tokens design system. The design rules engine provides a structured decision-making layer, while the comprehensive Style DNA system offers deterministic visual personality resolution using semantic design tokens. The Blueprint Engine coordinates layout and component assembly, and the @ui/tokens design system establishes a reusable design token foundation. Together with validation and warning mechanisms, the system enforces consistency and safety across diverse UI scenarios while providing seamless AI ecosystem integration with comprehensive token category access for improved component generation consistency.
 
-**Updated** Enhanced conclusion to reflect the comprehensive @ui/tokens design system integration and improved design enforcement capabilities.
+**Updated** Enhanced conclusion to reflect the comprehensive @ui/tokens design system integration and improved design enforcement capabilities across all token categories.
 
 ## Appendices
 
@@ -906,7 +926,7 @@ The design system integration ensures that generated components adhere to a cohe
 
 ### Customizing Style DNA
 - Modify preset definitions in the Style DNA system to reflect brand updates or new visual personalities.
-- Update trigger keywords and anti-keywords to improve preset resolution accuracy.
+- Update trigger keywords and anti-words to improve preset resolution accuracy.
 - Adjust Tailwind class hints to align with evolving design requirements.
 - Maintain motion restraint settings to balance visual appeal with performance considerations.
 - Integrate @ui/tokens design tokens for consistent semantic styling across presets.
@@ -926,8 +946,9 @@ The design system integration ensures that generated components adhere to a cohe
 - Update the blueprint engine to accommodate new component requirements and assembly rules.
 - Validate new elements through accessibility tests and adjust warnings accordingly.
 - Integrate new design tokens into AI ecosystem components for consistent usage.
+- Comprehensive token category integration ensures complete design system coverage.
 
-**Updated** Added @ui/tokens design system and AI ecosystem integration guidance.
+**Updated** Enhanced integration guidance to include comprehensive token category integration and improved design system coverage.
 
 **Section sources**
 - [designRules.ts:225-244](file://lib/intelligence/designRules.ts#L225-L244)
@@ -942,8 +963,13 @@ Comprehensive usage patterns for @ui/tokens design system:
 - **Color Tokens**: Use semantic colors (colors.primary.bg, colors.destructive.hover) for consistent brand application
 - **Spacing Tokens**: Use space.* tokens (space.inlineMd, space.stackLg) for consistent layout spacing
 - **Typography Tokens**: Use text.* presets (text.h1, text.body) with toStyle() conversion for typography consistency
-- **Transition Tokens**: Use transition.* and duration.* tokens for consistent motion patterns
-- **Chart Palettes**: Use chartPalette and getChartColor() for data visualization consistency
+- **Transition Tokens**: Use transition.*, duration.*, and easing.* tokens for consistent motion patterns
+- **Layout Tokens**: Use zIndex, breakpoint, and containerWidth tokens for responsive design consistency
+- **Status Tokens**: Use statusColors tokens for consistent status indicator styling
+- **Animation Tokens**: Use keyframes tokens for consistent animation patterns across components
+- **Chart Tokens**: Use chartPalette and getChartColor() for data visualization consistency
+
+**Updated** Enhanced design token usage patterns to include comprehensive token categories for complete design system integration.
 
 **Section sources**
 - [colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
@@ -970,3 +996,22 @@ Each preset includes detailed Tailwind class hints, spacing guidelines, and moti
 - [spacing.ts:1-144](file://packages/tokens/spacing.ts#L1-L144)
 - [typography.ts:1-163](file://packages/tokens/typography.ts#L1-L163)
 - [transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
+
+### Comprehensive Token Category Integration
+The @ui/tokens system now provides complete design system integration with comprehensive token categories:
+
+- **Spacing Categories**: Complete spacing scale with semantic spacing tokens for consistent layout design
+- **Layout Categories**: zIndex scale for stacking order control, breakpoint tokens for responsive design, containerWidth tokens for content area sizing
+- **Typography Categories**: Complete font family scale, font size scale, font weight scale, and letter spacing scale for consistent typography
+- **Color Categories**: Complete color palette with statusColors for consistent status indicator design
+- **Animation Categories**: Comprehensive animation keyframes for consistent motion patterns across components
+- **Integration Benefits**: Seamless AI ecosystem integration with complete token category access for improved component generation consistency
+
+**Updated** Added comprehensive documentation for enhanced token category integration and complete design system coverage.
+
+**Section sources**
+- [spacing.ts:1-144](file://packages/tokens/spacing.ts#L1-L144)
+- [typography.ts:1-163](file://packages/tokens/typography.ts#L1-L163)
+- [colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)
+- [transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
+- [index.ts:1-26](file://packages/tokens/index.ts#L1-L26)

@@ -2,13 +2,12 @@ describe('Adapter Index', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let indexModule: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     process.env.OPENAI_API_KEY = 'sk-test';
     process.env.GOOGLE_API_KEY = 'ai-test';
     process.env.GROQ_API_KEY  = 'gsk-test';
     jest.resetModules();
-    // eslint-disable-next-line @typescript-eslint/no-require-import
-    indexModule = require('@/lib/ai/adapters/index');
+    indexModule = await import('@/lib/ai/adapters/index');
     jest.clearAllMocks();
   });
 

@@ -26,7 +26,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = (credentials?.password as string | undefined)?.trim();
         
         // Clean up hash in case user accidentally pasted it with quotes in Vercel
-        let cleanHash = ACCESS_HASH.replace(/^["']|["']$/g, '').trim();
+        const cleanHash = ACCESS_HASH.replace(/^["']|["']$/g, '').trim();
 
         console.log('[Auth] Attempting login...');
         console.log(`[Auth] Provided PW length: ${password?.length || 0}`);

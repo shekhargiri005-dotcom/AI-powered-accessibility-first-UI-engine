@@ -9,7 +9,6 @@
 - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - [adapters/base.ts](file://lib/ai/adapters/base.ts)
 - [adapters/openai.ts](file://lib/ai/adapters/openai.ts)
-- [adapters/ollama.ts](file://lib/ai/adapters/ollama.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 - [models/route.ts](file://app/api/models/route.ts)
 - [workspace/settings/route.ts](file://app/api/workspace/settings/route.ts)
@@ -21,11 +20,10 @@
 
 ## Update Summary
 **Changes Made**
-- Updated provider support to reflect current cloud-based providers (OpenAI, Anthropic, Google, Groq) with Ollama removed
-- Enhanced ModelSelectionGate component with streamlined configuration flow and improved provider status checking
-- Added universal LLM_KEY support for simplified credential management
-- Updated visual design system with violet theme and improved UI components
-- Revised adapter resolution to prioritize cloud providers over local Ollama support
+- Updated Ollama Cloud model registry entry for gemma4 to use base model identifier 'gemma4' instead of 'gemma4:e2b'
+- Corrected model identification in provider status API and default adapter configuration
+- Enhanced model capability detection and partial matching logic for Ollama Cloud models
+- Updated troubleshooting guidance for model selection scenarios involving Ollama Cloud models
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -47,7 +45,7 @@ This document explains the model resolution and configuration phase of the gener
 - Implementation specifics for capability detection, pipeline parameter mapping, and fallback mechanisms
 - Examples of model selection scenarios and troubleshooting configuration conflicts
 
-**Updated** Enhanced with streamlined ModelSelectionGate configuration flow, universal LLM_KEY support, and cloud-first provider prioritization
+**Updated** Enhanced with corrected Ollama Cloud model naming and improved model identification for gemma4 profile
 
 ## Project Structure
 The model resolution system spans several modules:
@@ -133,7 +131,7 @@ PS --> GCSS
 - ModelSelectionGate: streamlined provider selection UI with violet theme and universal LLM_KEY support.
 - Provider Status API: checks environment variables for configured providers and returns optimized settings.
 
-**Updated** Removed Ollama provider support and enhanced with universal LLM_KEY credential management
+**Updated** Enhanced with corrected Ollama Cloud model naming and improved model identification
 
 **Section sources**
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
@@ -156,7 +154,7 @@ The model resolution pipeline:
 3. Select an adapter using workspace settings and environment variables.
 4. Execute generation with provider-specific parameter normalization and safety checks.
 
-**Updated** Enhanced with universal LLM_KEY support and streamlined provider selection flow
+**Updated** Enhanced with corrected Ollama Cloud model naming and streamlined provider selection flow
 
 ```mermaid
 sequenceDiagram
@@ -205,6 +203,8 @@ Key behaviors:
 - Safe defaults for unknown models
 - Explicit handling for reasoning models (OpenAI o1/o3) with different API constraints
 
+**Updated** Corrected Ollama Cloud model entry for gemma4 to use base model identifier 'gemma4' instead of 'gemma4:e2b'
+
 **Section sources**
 - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 
@@ -245,7 +245,7 @@ The resolver selects an adapter based on:
 - Purpose-specific environment overrides (e.g., INTENT_MODEL/PROVIDER/API_KEY)
 - Generic DEFAULT_MODEL/PROVIDER overrides
 - Provider API keys discovered in priority order (Groq, Google, Anthropic, OpenAI)
-- **Updated** Removed Ollama/LM Studio fallback - now prioritizes cloud providers
+- **Updated** Enhanced with corrected Ollama Cloud model naming for gemma4 profile
 - Unconfigured adapter as a graceful fallback
 
 Credential resolution:
@@ -316,7 +316,7 @@ Optimizer <.. OpenAIAdapter : "detects reasoning models"
 ### Adapter Factory and Safety
 - Provider detection and base URL mapping for OpenAI-compatible providers
 - **Enhanced** Strict credential resolution: never accept client-provided keys; resolve via workspace DB or environment
-- **Updated** Removed Ollama adapter - now focuses on cloud providers only
+- **Updated** Enhanced with corrected Ollama Cloud model naming for improved model identification
 - Cached adapter wrapper for performance and metrics
 - Unconfigured adapter for graceful UI messaging when no credentials are available
 
@@ -420,7 +420,7 @@ Guide --> Check
 The provider status system checks environment variables for configured providers and returns optimized settings:
 - **Enhanced** Universal LLM_KEY support for all providers
 - **Improved** Debug logging and environment variable inspection
-- **Updated** Provider configuration with optimized settings
+- **Updated** Enhanced with corrected Ollama Cloud model naming for accurate model listing
 - **New** Provider-specific environment variable fallbacks
 
 Key functionality:
@@ -437,7 +437,6 @@ Key functionality:
 - tieredPipeline.ts depends on modelRegistry.ts and constructs PipelineConfig instances
 - adapters/index.ts depends on workspaceKeyService.ts for workspace-scoped keys and environment variables for fallbacks
 - **Updated** adapters/openai.ts depends on provider SDKs and normalizes parameters according to model/profile constraints
-- **Removed** adapters/ollama.ts - Ollama support removed in favor of cloud providers
 - resolveDefaultAdapter.ts orchestrates environment-based selection and falls back to cloud providers
 - **Updated** API routes depend on adapters and workspace services to expose model catalogs and settings
 - **New** ModelSelectionGate depends on provider status API for real-time configuration
@@ -484,12 +483,14 @@ PS --> IDX
 - Cache adapter instances and leverage the built-in caching wrapper for generation and streaming responses
 - Avoid enabling JSON mode or tool calls for models that do not support them to prevent 400 errors
 - **New** Leverage universal LLM_KEY for simplified credential management across all providers
+- **Updated** Enhanced model identification for Ollama Cloud models improves resolution accuracy and reduces misconfiguration
 
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Unknown model ID
   - Symptom: null profile leads to cloud fallback
   - Action: Register the model in the registry or ensure partial match; verify model ID spelling
+  - **Updated** For Ollama Cloud models, ensure correct base model identifier (e.g., 'gemma4' not 'gemma4:e2b')
   - Section sources
     - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 - Missing API key
@@ -516,6 +517,13 @@ Common issues and resolutions:
   - Section sources
     - [ModelSelectionGate.tsx](file://components/ModelSelectionGate.tsx)
     - [providers/status/route.ts](file://app/api/providers/status/route.ts)
+- **Updated** Ollama Cloud model identification issues
+  - Symptom: gemma4 model not recognized or incorrectly resolved
+  - Action: Use base model identifier 'gemma4' instead of 'gemma4:e2b'; verify model appears in provider status listing
+  - Section sources
+    - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
+    - [providers/status/route.ts](file://app/api/providers/status/route.ts)
+    - [resolveDefaultAdapter.ts](file://lib/ai/resolveDefaultAdapter.ts)
 - Reasoning model parameter errors
   - Symptom: 400 errors when sending temperature or response_format
   - Action: Use optimizer's reasoning detection; rely on adapter normalization; avoid unsupported params
@@ -542,4 +550,4 @@ Common issues and resolutions:
     - [modelRegistry.ts](file://lib/ai/modelRegistry.ts)
 
 ## Conclusion
-The model resolution and configuration system centers on a static registry of model capabilities, a robust pipeline builder that maps profiles to runnable configurations, and a hardened adapter factory that enforces secure credential resolution and provider-specific parameter normalization. **Updated** The system now prioritizes cloud providers (OpenAI, Anthropic, Google, Groq) with universal LLM_KEY support, streamlines provider selection through ModelSelectionGate, and enhances the visual design system with violet themes. Together with default adapter resolution and workspace settings, it ensures predictable, efficient, and safe generation across diverse providers and model families, while gracefully handling unknown models and configuration conflicts.
+The model resolution and configuration system centers on a static registry of model capabilities, a robust pipeline builder that maps profiles to runnable configurations, and a hardened adapter factory that enforces secure credential resolution and provider-specific parameter normalization. **Updated** The system now prioritizes cloud providers (OpenAI, Anthropic, Google, Groq) with universal LLM_KEY support, streamlines provider selection through ModelSelectionGate, and enhances the visual design system with violet themes. The corrected Ollama Cloud model naming ensures accurate model identification and capability profiling for gemma4 and other Ollama-hosted models. Together with default adapter resolution and workspace settings, it ensures predictable, efficient, and safe generation across diverse providers and model families, while gracefully handling unknown models and configuration conflicts.
