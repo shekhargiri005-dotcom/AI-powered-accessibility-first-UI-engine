@@ -201,6 +201,7 @@ export default function HomePage() {
 
   // Called when the user saves AI Engine Config
   // SECURITY: The config passed here has apiKey='••••' (masked) - real key is stored server-side
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEngineConfigSaved = useCallback((config: AIEngineConfig) => {
     setAiConfig(config);
     setIsFullAppMode(config.fullAppMode);
@@ -210,6 +211,7 @@ export default function HomePage() {
   }, []);
 
   // Called when the user clicks "Stop & Deactivate Engine"
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleEngineDeactivated = useCallback(() => {
     setAiConfig(null);
     setGenerationMeta(null);

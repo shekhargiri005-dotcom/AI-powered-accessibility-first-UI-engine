@@ -61,6 +61,7 @@ const CommandInput = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
           )}
           placeholder="Type a command or search..."
           onChange={(e) => { setSearch(e.target.value); onChange?.(e); }}
+          value={value}
           {...props}
         />
       </div>

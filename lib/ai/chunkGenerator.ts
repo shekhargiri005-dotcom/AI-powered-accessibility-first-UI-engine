@@ -10,7 +10,7 @@
  * Never accepts apiKey or baseUrl from client requests.
  */
 
-import { getWorkspaceAdapter, type ConfigurationError } from './adapters/index';
+import { getWorkspaceAdapter } from './adapters/index';
 import type { ProviderName } from './types';
 import { type UIIntent } from '../validation/schemas';
 import { buildSemanticContext } from './semanticKnowledgeBase';

@@ -26,6 +26,7 @@
 - Removed references to deleted temporary workspace data files (seed-workspace.sql, ts_feedback.txt, verify_multitenancy.ts)
 - Added documentation for newly present scripts (seed-neon.ts, reset-password.js)
 - Updated package.json scripts section to reflect current script availability
+- Enhanced seed-workspace-db.mjs documentation to highlight improved code cleanup practices
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -87,7 +88,7 @@ SN --> SC
 - [deploy-setup.sh:1-19](file://scripts/deploy-setup.sh#L1-L19)
 - [build-ecosystem.mjs:1-48](file://scripts/build-ecosystem.mjs#L1-L48)
 - [seed-embeddings.ts:1-69](file://scripts/seed-embeddings.ts#L1-L69)
-- [seed-workspace-db.mjs:1-96](file://scripts/seed-workspace-db.mjs#L1-L96)
+- [seed-workspace-db.mjs:1-95](file://scripts/seed-workspace-db.mjs#L1-L95)
 - [ingest-ui.ts:1-81](file://scripts/ingest-ui.ts#L1-L81)
 - [sync-knowledge.ts:1-192](file://scripts/sync-knowledge.ts#L1-L192)
 - [seed-neon.ts:1-55](file://scripts/seed-neon.ts#L1-L55)
@@ -103,7 +104,7 @@ SN --> SC
 - [deploy-setup.sh:1-19](file://scripts/deploy-setup.sh#L1-L19)
 - [build-ecosystem.mjs:1-48](file://scripts/build-ecosystem.mjs#L1-L48)
 - [seed-embeddings.ts:1-69](file://scripts/seed-embeddings.ts#L1-L69)
-- [seed-workspace-db.mjs:1-96](file://scripts/seed-workspace-db.mjs#L1-L96)
+- [seed-workspace-db.mjs:1-95](file://scripts/seed-workspace-db.mjs#L1-L95)
 - [ingest-ui.ts:1-81](file://scripts/ingest-ui.ts#L1-L81)
 - [sync-knowledge.ts:1-192](file://scripts/sync-knowledge.ts#L1-L192)
 - [seed-neon.ts:1-55](file://scripts/seed-neon.ts#L1-L55)
@@ -130,7 +131,7 @@ SN --> SC
 - [deploy-setup.sh:1-19](file://scripts/deploy-setup.sh#L1-L19)
 - [build-ecosystem.mjs:1-48](file://scripts/build-ecosystem.mjs#L1-L48)
 - [seed-embeddings.ts:1-69](file://scripts/seed-embeddings.ts#L1-L69)
-- [seed-workspace-db.mjs:1-96](file://scripts/seed-workspace-db.mjs#L1-L96)
+- [seed-workspace-db.mjs:1-95](file://scripts/seed-workspace-db.mjs#L1-L95)
 - [ingest-ui.ts:1-81](file://scripts/ingest-ui.ts#L1-L81)
 - [sync-knowledge.ts:1-192](file://scripts/sync-knowledge.ts#L1-L192)
 - [seed-neon.ts:1-55](file://scripts/seed-neon.ts#L1-L55)
@@ -241,16 +242,18 @@ Purpose:
 - Supports reset via --reset flag
 
 Execution:
-- Writes SQL to a temporary file to avoid shell escaping issues
+- Writes SQL to a temporary file to avoid shell-escaping issues
 - Executes via npx prisma db execute with explicit --url pointing to workspace.db
 - Logs generated ids and reminders to update encrypted API key
+
+**Updated** Improved code efficiency by removing unused imports and variable declarations, demonstrating better code cleanup practices.
 
 Error handling:
 - Catches and logs failures
 - Prints fallback SQL for manual execution
 
 **Section sources**
-- [seed-workspace-db.mjs:1-96](file://scripts/seed-workspace-db.mjs#L1-L96)
+- [seed-workspace-db.mjs:1-95](file://scripts/seed-workspace-db.mjs#L1-L95)
 
 #### Ingest UI (ingest-ui.ts)
 Purpose:
@@ -519,7 +522,7 @@ Commonly used commands:
 - [deploy-setup.sh:1-19](file://scripts/deploy-setup.sh#L1-L19)
 - [build-ecosystem.mjs:1-48](file://scripts/build-ecosystem.mjs#L1-L48)
 - [seed-embeddings.ts:1-69](file://scripts/seed-embeddings.ts#L1-L69)
-- [seed-workspace-db.mjs:1-96](file://scripts/seed-workspace-db.mjs#L1-L96)
+- [seed-workspace-db.mjs:1-95](file://scripts/seed-workspace-db.mjs#L1-L95)
 - [ingest-ui.ts:1-81](file://scripts/ingest-ui.ts#L1-L81)
 - [sync-knowledge.ts:1-192](file://scripts/sync-knowledge.ts#L1-L192)
 - [seed-neon.ts:1-55](file://scripts/seed-neon.ts#L1-L55)

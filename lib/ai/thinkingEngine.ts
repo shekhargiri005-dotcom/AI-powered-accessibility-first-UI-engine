@@ -420,7 +420,6 @@ export async function generateThinkingPlan(
     let retries = 0;
     const maxRetries = 3;
     const baseDelayMs = 1000;
-    const requestTimeout = 30000; // 30 second timeout for thinking requests
 
     while (true) {
       try {

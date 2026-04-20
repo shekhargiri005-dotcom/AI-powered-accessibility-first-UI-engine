@@ -39,7 +39,7 @@ export default function PromptInput({
   const [isProcessingImage, setIsProcessingImage] = useState(false);
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [liveIntent, setLiveIntent] = useState<import('@/lib/validation/schemas').IntentClassification | null>(null);
-  const [confidenceHistory, setConfidenceHistory] = useState<number[]>([]);
+  const [, setConfidenceHistory] = useState<number[]>([]);
   const [isClassifying, setIsClassifying] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [interimTranscript, setInterimTranscript] = useState('');

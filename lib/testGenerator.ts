@@ -5,7 +5,7 @@ interface GeneratedTests {
   playwright: string;
 }
 
-export function generateTests(intent: UIIntent, _componentCode: string): GeneratedTests {
+export function generateTests(intent: UIIntent, _componentCode: string): GeneratedTests { // eslint-disable-line @typescript-eslint/no-unused-vars
   const { componentName, fields, interactions, componentType } = intent;
 
   const rtl = generateRTLTests(componentName, fields, interactions);

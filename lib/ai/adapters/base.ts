@@ -8,7 +8,7 @@
  * Import from lib/ai/types.ts for client-safe types.
  */
 
-import type { Tool, ToolCall, ToolChoice } from '../tools';
+import type { Tool, ToolChoice } from '../tools';
 
 // Re-export client-safe types from types.ts for backward compatibility
 export type {

@@ -62,7 +62,8 @@ export async function generateComponent(
   mode: GenerationMode = 'component',
   requestedModel: string = '',
   maxTokens: number = 5000,
-  isMultiSlide: boolean = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _isMultiSlide: boolean = false,
   refinementContext?: { code: string; manifest?: unknown },
   /** Pass a pre-selected blueprint to skip automatic selection. */
   blueprintOverride?: ReturnType<typeof selectBlueprint>,

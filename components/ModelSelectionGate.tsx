@@ -4,12 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Shield, 
-  ChevronRight, 
-  Check,
   AlertCircle,
   Loader2,
   Zap,
-  Cpu,
   Globe,
   Server
 } from 'lucide-react';

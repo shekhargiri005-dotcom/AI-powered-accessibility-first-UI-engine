@@ -7,7 +7,6 @@
 
 import React from 'react';
 import { Command } from 'lucide-react';
-import type { GenerationMode } from './types';
 
 interface ModeToggleProps {
   scopeMode: 'component' | 'app';

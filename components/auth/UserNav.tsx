@@ -13,7 +13,7 @@ interface UserNavProps {
   onDeactivated?: () => void;
 }
 
-export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) {
+export default function UserNav({ onConfigSaved, onDeactivated }: UserNavProps) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const { data: session, status } = useSession();
   const [isOpen,       setIsOpen]       = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);

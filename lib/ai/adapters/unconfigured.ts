@@ -73,7 +73,7 @@ export default function AIUnconfiguredAlert() {
     };
   }
 
-  async *stream(options: GenerateOptions): AsyncGenerator<StreamChunk, void, unknown> {
+  async *stream(_options: GenerateOptions): AsyncGenerator<StreamChunk, void, unknown> { // eslint-disable-line @typescript-eslint/no-unused-vars
     const reactCodeLines = [
       `import React from 'react';\n`,
       `import { AlertCircle } from 'lucide-react';\n\n`,

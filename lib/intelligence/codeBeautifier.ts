@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file lib/intelligence/codeBeautifier.ts
  *
  * Deterministic post-generation beautifier.
@@ -211,7 +211,7 @@ const TRANSFORMS: Transform[] = [
  * @param code      Raw extracted code from any model
  * @param blueprint The blueprint used for this generation (used for context)
  */
-export function beautifyOutput(code: string, _blueprint?: UIBlueprint): BeautifyResult {
+export function beautifyOutput(code: string, _blueprint?: UIBlueprint): BeautifyResult { // eslint-disable-line @typescript-eslint/no-unused-vars
   if (!code || code.trim().length === 0) {
     return { code: '', transformations: [] };
   }
@@ -230,3 +230,5 @@ export function beautifyOutput(code: string, _blueprint?: UIBlueprint): Beautify
 
   return { code: result.trim(), transformations };
 }
+
+

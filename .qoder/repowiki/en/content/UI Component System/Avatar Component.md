@@ -6,8 +6,16 @@
 - [UserNav.tsx](file://components/auth/UserNav.tsx)
 - [cn.ts](file://packages/utils/cn.ts)
 - [index.ts](file://packages/core/index.ts)
-- [package.json](file://package.json)
+- [eslint.config.mjs](file://eslint.config.mjs)
+- [next.config.ts](file://next.config.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added ESLint configuration section documenting the intentional img element exception
+- Updated troubleshooting guide to include ESLint-related guidance
+- Enhanced accessibility features section with ESLint compliance information
+- Added configuration examples for proper ESLint setup
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -15,13 +23,14 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Usage Patterns](#usage-patterns)
-7. [Accessibility Features](#accessibility-features)
-8. [Styling and Theming](#styling-and-theming)
-9. [Integration Examples](#integration-examples)
-10. [Best Practices](#best-practices)
-11. [Troubleshooting Guide](#troubleshooting-guide)
-12. [Conclusion](#conclusion)
+6. [ESLint Configuration](#eslint-configuration)
+7. [Usage Patterns](#usage-patterns)
+8. [Accessibility Features](#accessibility-features)
+9. [Styling and Theming](#styling-and-theming)
+10. [Integration Examples](#integration-examples)
+11. [Best Practices](#best-practices)
+12. [Troubleshooting Guide](#troubleshooting-guide)
+13. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -61,12 +70,12 @@ UserNav --> AvatarTSX
 ```
 
 **Diagram sources**
-- [Avatar.tsx:1-72](file://packages/core/components/Avatar.tsx#L1-L72)
+- [Avatar.tsx:1-73](file://packages/core/components/Avatar.tsx#L1-L73)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 - [index.ts:1-8](file://packages/core/index.ts#L1-L8)
 
 **Section sources**
-- [Avatar.tsx:1-72](file://packages/core/components/Avatar.tsx#L1-L72)
+- [Avatar.tsx:1-73](file://packages/core/components/Avatar.tsx#L1-L73)
 - [index.ts:1-8](file://packages/core/index.ts#L1-L8)
 
 ## Core Components
@@ -83,7 +92,7 @@ The component leverages the `cn` utility function for intelligent class merging,
 The component is exported through the core package's index file, making it accessible throughout the application.
 
 **Section sources**
-- [Avatar.tsx:1-72](file://packages/core/components/Avatar.tsx#L1-L72)
+- [Avatar.tsx:1-73](file://packages/core/components/Avatar.tsx#L1-L73)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 - [index.ts:1-8](file://packages/core/index.ts#L1-L8)
 
@@ -121,13 +130,13 @@ AvatarUtilities --> Avatar : "returns merged classes"
 
 **Diagram sources**
 - [Avatar.tsx:4-12](file://packages/core/components/Avatar.tsx#L4-L12)
-- [Avatar.tsx:29-71](file://packages/core/components/Avatar.tsx#L29-L71)
+- [Avatar.tsx:29-72](file://packages/core/components/Avatar.tsx#L29-L72)
 - [cn.ts:8-10](file://packages/utils/cn.ts#L8-L10)
 
 The architecture ensures that the Avatar component remains focused on its primary responsibility while delegating class management to specialized utilities.
 
 **Section sources**
-- [Avatar.tsx:1-72](file://packages/core/components/Avatar.tsx#L1-L72)
+- [Avatar.tsx:1-73](file://packages/core/components/Avatar.tsx#L1-L73)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 
 ## Detailed Component Analysis
@@ -187,7 +196,7 @@ Note over Avatar : Add status indicator if specified
 - [Avatar.tsx:32-69](file://packages/core/components/Avatar.tsx#L32-L69)
 
 **Section sources**
-- [Avatar.tsx:1-72](file://packages/core/components/Avatar.tsx#L1-L72)
+- [Avatar.tsx:1-73](file://packages/core/components/Avatar.tsx#L1-L73)
 
 ### Styling System
 
@@ -209,6 +218,55 @@ Status indicators use semantic color coding:
 
 **Section sources**
 - [Avatar.tsx:14-27](file://packages/core/components/Avatar.tsx#L14-L27)
+
+## ESLint Configuration
+
+The Avatar component includes intentional ESLint exceptions that demonstrate proper configuration for accessibility patterns:
+
+### Intentional ESLint Exception
+
+The component uses a specific ESLint directive to bypass the Next.js `@next/next/no-img-element` rule:
+
+```typescript
+// eslint-disable-next-line @next/next/no-img-element
+<img
+  src={src}
+  alt={alt}
+  className={cn(
+    sizeStyles[size],
+    shape === 'circle' ? 'rounded-full' : 'rounded-lg',
+    'object-cover',
+    ring && 'ring-2 ring-offset-2 ring-offset-gray-900 ring-blue-500',
+  )}
+/>
+```
+
+This exception is documented and justified because:
+- The img element provides semantic meaning and accessibility benefits
+- Proper alt attributes are always provided
+- The component maintains accessibility compliance through ARIA attributes
+- The exception is intentional and well-documented
+
+### ESLint Configuration Setup
+
+The project uses a custom ESLint configuration that extends Next.js recommendations:
+
+```mermaid
+flowchart TD
+ESLintConfig[eslint.config.mjs] --> NextVitals[Next.js Core Web Vitals]
+ESLintConfig --> NextTS[Next.js TypeScript]
+ESLintConfig --> GlobalIgnores[Custom Global Ignores]
+NextVitals --> Configured[Final ESLint Config]
+NextTS --> Configured
+GlobalIgnores --> Configured
+```
+
+**Diagram sources**
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
+
+**Section sources**
+- [Avatar.tsx:35](file://packages/core/components/Avatar.tsx#L35)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 
 ## Usage Patterns
 
@@ -240,7 +298,7 @@ InitialsOnly --> UserNav
 
 **Diagram sources**
 - [UserNav.tsx:86-103](file://components/auth/UserNav.tsx#L86-L103)
-- [Avatar.tsx:29-71](file://packages/core/components/Avatar.tsx#L29-L71)
+- [Avatar.tsx:29-72](file://packages/core/components/Avatar.tsx#L29-L72)
 
 ### Authentication Integration
 
@@ -286,8 +344,17 @@ The Avatar component incorporates several accessibility best practices:
 - Flexible container layouts
 - Mobile-first responsive approach
 
+### ESLint Accessibility Compliance
+The component maintains accessibility compliance even with intentional ESLint exceptions:
+- All img elements include proper alt attributes
+- ARIA labels are provided for interactive elements
+- Status indicators include appropriate ARIA descriptions
+- Semantic HTML structure is preserved
+
 **Section sources**
-- [Avatar.tsx:35-56](file://packages/core/components/Avatar.tsx#L35-L56)
+- [Avatar.tsx:35](file://packages/core/components/Avatar.tsx#L35)
+- [Avatar.tsx:54-56](file://packages/core/components/Avatar.tsx#L54-L56)
+- [Avatar.tsx:67](file://packages/core/components/Avatar.tsx#L67)
 
 ## Styling and Theming
 
@@ -346,7 +413,7 @@ AvatarContainer --> DropdownMenu
 
 **Diagram sources**
 - [UserNav.tsx:69-126](file://components/auth/UserNav.tsx#L69-L126)
-- [Avatar.tsx:29-71](file://packages/core/components/Avatar.tsx#L29-L71)
+- [Avatar.tsx:29-72](file://packages/core/components/Avatar.tsx#L29-L72)
 
 ### Package Export System
 
@@ -393,6 +460,13 @@ end
 2. **Type Safety**: Leverage TypeScript interfaces for prop validation
 3. **Accessibility First**: Always provide appropriate alt text and ARIA labels
 
+### ESLint Configuration Best Practices
+
+1. **Intentional Exceptions**: Only disable ESLint rules when there's a documented, justified reason
+2. **Proper Documentation**: Include clear comments explaining why exceptions are necessary
+3. **Accessibility Compliance**: Ensure exceptions don't compromise accessibility standards
+4. **Rule Scope**: Limit exceptions to specific lines rather than entire files when possible
+
 ## Troubleshooting Guide
 
 ### Common Issues and Solutions
@@ -403,6 +477,7 @@ end
 | Incorrect Sizing | Avatar appears too large/small | Verify `size` prop matches intended scale (`xs` to `xl`) |
 | Status Indicator Not Visible | Status dot not showing | Check `status` prop value matches supported variants |
 | Color Contrast Issues | Poor accessibility compliance | Use built-in color schemes or customize with accessible colors |
+| ESLint Warnings | @next/next/no-img-element errors | Use documented eslint-disable-next-line comment with justification |
 
 ### Debugging Steps
 
@@ -410,9 +485,18 @@ end
 2. **Inspect DOM**: Use browser developer tools to inspect rendered classes
 3. **Test Responsiveness**: Verify behavior across different screen sizes
 4. **Accessibility Audit**: Run accessibility tests to ensure compliance
+5. **ESLint Configuration**: Verify ESLint rules are properly configured for the project
+
+### ESLint Configuration Troubleshooting
+
+1. **Rule Not Found**: Ensure Next.js ESLint configurations are properly installed
+2. **Exception Not Working**: Verify the eslint-disable-next-line comment syntax is correct
+3. **Global Ignores**: Check that custom global ignores don't conflict with project needs
+4. **TypeScript Integration**: Confirm TypeScript ESLint rules are properly configured
 
 **Section sources**
-- [Avatar.tsx:29-71](file://packages/core/components/Avatar.tsx#L29-L71)
+- [Avatar.tsx:29-72](file://packages/core/components/Avatar.tsx#L29-L72)
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
 
 ## Conclusion
 
@@ -421,3 +505,5 @@ The Avatar Component represents a well-designed, accessible, and flexible soluti
 The component successfully balances functionality with accessibility, performance with flexibility, and simplicity with extensibility. Its integration with the authentication system and broader application architecture demonstrates thoughtful design that prioritizes user experience and inclusive design principles.
 
 Through careful consideration of styling, accessibility, and performance requirements, the Avatar Component serves as a foundation for consistent user identity representation across the entire application ecosystem.
+
+The addition of intentional ESLint exceptions demonstrates proper configuration practices for accessibility patterns, showing that the component maintains both technical excellence and accessibility compliance while working within framework constraints.

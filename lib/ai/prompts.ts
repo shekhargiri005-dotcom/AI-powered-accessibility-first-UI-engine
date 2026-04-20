@@ -2,7 +2,6 @@
  * Prompt templates for the AI-Powered Accessibility-First UI Engine.
  * All prompts include injection-prevention guards and enforce strict output formats.
  */
-import { UI_ECOSYSTEM_API_CHEAT_SHEET } from './uiCheatSheet';
 import type { MemoryEntry } from './memory';
 
 export const INTENT_PARSER_SYSTEM_PROMPT = `You are a strict UI intent parser for an accessibility-first component generation system.

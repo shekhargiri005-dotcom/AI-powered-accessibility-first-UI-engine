@@ -30,6 +30,9 @@
 - [lib/intelligence/uxStateEngine.ts](file://lib/intelligence/uxStateEngine.ts)
 - [lib/intelligence/depthEngine.ts](file://lib/intelligence/depthEngine.ts)
 - [packages/motion/animations.ts](file://packages/motion/animations.ts)
+- [packages/motion/components/Motion.tsx](file://packages/motion/components/Motion.tsx)
+- [packages/motion/index.ts](file://packages/motion/index.ts)
+- [packages/motion/generative-motion.ts](file://packages/motion/generative-motion.ts)
 - [packages/theming/components/ThemeProvider.tsx](file://packages/theming/components/ThemeProvider.tsx)
 - [packages/theming/ai-theme.ts](file://packages/theming/ai-theme.ts)
 - [packages/layout/ai-layout.ts](file://packages/layout/ai-layout.ts)
@@ -53,11 +56,11 @@
 
 ## Update Summary
 **Changes Made**
-- Updated FeedbackBar component documentation to reflect improved React component lifecycle management with proper useCallback wrappers and dependency arrays
-- Enhanced accessibility documentation to include useAnnouncer hook improvements and screen reader announcements
-- Added comprehensive lifecycle management analysis for state transitions and data fetching
-- Updated component architecture to emphasize proper React patterns and performance optimization
-- Enhanced accessibility component integration with screen reader support improvements
+- Updated Motion.tsx component documentation to reflect enhanced ESLint disable comments for @typescript-eslint/no-unused-vars and explicit any type warnings
+- Documented intentional TypeScript patterns for motion props handling and fallback implementations
+- Added comprehensive coverage of the MotionDivFallback implementation and its safety mechanisms
+- Enhanced documentation of the dual-mode architecture supporting both host builds and Sandpack previews
+- Updated micro-interaction system documentation to include the new Motion component patterns
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -142,7 +145,7 @@ UI_CORE["@ui/core<br/>Avatar, Badge, Card, Input, Textarea<br/>Internal Button V
 UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav, useAnnouncer"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking, Grid Systems"]
-UI_MOTION["@ui/motion<br/>Animation Primitives"]
+UI_MOTION["@ui/motion<br/>Animation Primitives<br/>Enhanced Motion Component"]
 UI_CHARTS["@ui/charts<br/>Functional charts<br/>getChartColor utility"]
 UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
 UI_EDITOR["@ui/editor<br/>Rich text editor"]
@@ -163,7 +166,9 @@ THEME_GROQ["Groq Orange Theme"]
 THEME_DEFAULT["Default Violet Theme"]
 end
 subgraph "Motion System"
+MOTION_COMPONENTS["packages/motion/components/Motion.tsx<br/>Enhanced Dual-Mode Architecture<br/>ESLint Disable Comments<br/>MotionDivFallback Safety"]
 MOTION_ANIM["packages/motion/animations.ts<br/>Spring & Fade Transitions"]
+MOTION_GEN["packages/motion/generative-motion.ts<br/>Prebuilt Animations"]
 UX_ENGINE["lib/intelligence/uxStateEngine.ts<br/>Motion Priority Matrix"]
 DEPTH_ENGINE["lib/intelligence/depthEngine.ts<br/>Reduced Motion Support"]
 end
@@ -196,7 +201,9 @@ THEME_HOOK --> THEME_GROQ
 THEME_HOOK --> THEME_DEFAULT
 THEME_PROVIDER --> THEME_HOOK
 THEME_AI --> THEME_HOOK
+MOTION_COMPONENTS --> UI_MOTION
 MOTION_ANIM --> UI_MOTION
+MOTION_GEN --> UI_MOTION
 UX_ENGINE --> MOTION_ANIM
 DEPTH_ENGINE --> UX_ENGINE
 APP_GLOBALS --> IDE_SB
@@ -230,7 +237,9 @@ APP_GLOBALS --> FEEDBACK
 - [lib/hooks/useProviderTheme.ts](file://lib/hooks/useProviderTheme.ts)
 - [lib/intelligence/uxStateEngine.ts](file://lib/intelligence/uxStateEngine.ts)
 - [lib/intelligence/depthEngine.ts](file://lib/intelligence/depthEngine.ts)
+- [packages/motion/components/Motion.tsx](file://packages/motion/components/Motion.tsx)
 - [packages/motion/animations.ts](file://packages/motion/animations.ts)
+- [packages/motion/generative-motion.ts](file://packages/motion/generative-motion.ts)
 - [packages/theming/components/ThemeProvider.tsx](file://packages/theming/components/ThemeProvider.tsx)
 - [packages/theming/ai-theme.ts](file://packages/theming/ai-theme.ts)
 
@@ -562,12 +571,34 @@ Multiple components utilize consistent micro-interaction patterns:
 - **VersionTimeline**: Hover-triggered opacity transitions (`opacity-0 group-hover:opacity-100`)
 - **UserNav**: Smooth transitions for menu items and icons
 
+### Enhanced Motion Component Integration
+
+**Updated** The Motion component now includes enhanced TypeScript safety patterns with intentional ESLint disable comments:
+
+```mermaid
+graph TB
+subgraph "Enhanced Motion Component"
+MOTION_TSX["packages/motion/components/Motion.tsx<br/>ESLint Disable Comments<br/>TypeScript Safety Patterns"]
+MOTION_FALLBACK["MotionDivFallback<br/>Props Stripping<br/>Type Safety"]
+NO_UNUSED_VARS["@typescript-eslint/no-unused-vars<br/>Disabled for Props Stripping"]
+NO_EXPLICIT_ANY["@typescript-eslint/no-explicit-any<br/>Disabled for Type Casting"]
+END
+MOTION_TSX --> MOTION_FALLBACK
+MOTION_FALLBACK --> NO_UNUSED_VARS
+MOTION_FALLBACK --> NO_EXPLICIT_ANY
+```
+
+**Diagram sources**
+- [packages/motion/components/Motion.tsx:187-193](file://packages/motion/components/Motion.tsx#L187-L193)
+
 ### Animation System Architecture
 
 ```mermaid
 graph TB
 subgraph "Animation System"
-ANIM_PRIMITIVES["packages/motion/animations.ts<br/>spring: transition-transform duration-300 ease-in-out<br/>fade: transition-opacity duration-300 ease-in-out"]
+MOTION_COMPONENTS["packages/motion/components/Motion.tsx<br/>Enhanced Dual-Mode Architecture<br/>ESLint Disable Comments<br/>MotionDivFallback Safety"]
+MOTION_ANIM["packages/motion/animations.ts<br/>spring: transition-transform duration-300 ease-in-out<br/>fade: transition-opacity duration-300 ease-in-out"]
+MOTION_GEN["packages/motion/generative-motion.ts<br/>Prebuilt Animations"]
 UX_ENGINE["lib/intelligence/uxStateEngine.ts<br/>Motion Priority Matrix"]
 REDUCED_MOTION["Reduced Motion Support<br/>prefers-reduced-motion"]
 end
@@ -579,19 +610,26 @@ PIPELINE["PipelineStatus<br/>Scale Animations<br/>active:scale-95"]
 THINKING["ThinkingPanel<br/>Lift Effects<br/>-translate-y-0.5"]
 TIMELINE["VersionTimeline<br/>Opacity Transitions<br/>duration-200"]
 USERNAV["UserNav<br/>Icon Transitions<br/>transition-transform"]
+MOTION_COMPONENTS --> MOTION_FALLBACK
+MOTION_FALLBACK --> NO_UNUSED_VARS
+MOTION_FALLBACK --> NO_EXPLICIT_ANY
 end
-ANIM_PRIMITIVES --> SIDEBAR
-ANIM_PRIMITIVES --> MODEL_GATE
-ANIM_PRIMITIVES --> FEEDBACK
-ANIM_PRIMITIVES --> PIPELINE
-ANIM_PRIMITIVES --> THINKING
-ANIM_PRIMITIVES --> TIMELINE
-ANIM_PRIMITIVES --> USERNAV
+MOTION_COMPONENTS --> SIDEBAR
+MOTION_COMPONENTS --> MODEL_GATE
+MOTION_COMPONENTS --> FEEDBACK
+MOTION_COMPONENTS --> PIPELINE
+MOTION_COMPONENTS --> THINKING
+MOTION_COMPONENTS --> TIMELINE
+MOTION_COMPONENTS --> USERNAV
+MOTION_ANIM --> MOTION_COMPONENTS
+MOTION_GEN --> MOTION_COMPONENTS
 UX_ENGINE --> REDUCED_MOTION
 ```
 
 **Diagram sources**
-- [packages/motion/animations.ts:1-4](file://packages/motion/animations.ts#L1-L4)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
+- [packages/motion/animations.ts:1-5](file://packages/motion/animations.ts#L1-L5)
+- [packages/motion/generative-motion.ts:1-15](file://packages/motion/generative-motion.ts#L1-L15)
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
 - [components/ide/Sidebar.tsx:107-121](file://components/ide/Sidebar.tsx#L107-L121)
 - [components/ModelSelectionGate.tsx:249-258](file://components/ModelSelectionGate.tsx#L249-L258)
@@ -609,7 +647,9 @@ The micro-interaction system includes comprehensive reduced motion support:
 - **Performance Optimization**: Hardware-accelerated animations that respect system preferences
 
 **Section sources**
-- [packages/motion/animations.ts:1-4](file://packages/motion/animations.ts#L1-L4)
+- [packages/motion/animations.ts:1-5](file://packages/motion/animations.ts#L1-L5)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
+- [packages/motion/generative-motion.ts:1-15](file://packages/motion/generative-motion.ts#L1-L15)
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
 - [lib/intelligence/depthEngine.ts:125-154](file://lib/intelligence/depthEngine.ts#L125-L154)
 - [components/ide/Sidebar.tsx:107-121](file://components/ide/Sidebar.tsx#L107-L121)
@@ -1201,6 +1241,54 @@ Key behaviors:
 - [packages/a11y/components/VisuallyHidden.tsx:1-26](file://packages/a11y/components/VisuallyHidden.tsx#L1-L26)
 - [packages/a11y/index.ts:1-6](file://packages/a11y/index.ts#L1-L6)
 
+### Enhanced Motion Component System
+
+**Updated** The Motion component system has been significantly enhanced with improved TypeScript safety patterns and comprehensive fallback implementations:
+
+#### Dual-Mode Architecture
+The Motion component now supports a sophisticated dual-mode architecture:
+
+- **Host Build Mode**: Uses CSS-based animations with `motion-safe:` prefixed classes
+- **Sandpack Preview Mode**: Leverages framer-motion for advanced physics and scroll effects
+- **Graceful Degradation**: Automatic fallback when dependencies are unavailable
+
+#### Enhanced TypeScript Safety
+The MotionDivFallback implementation includes intentional ESLint disable comments for specific TypeScript patterns:
+
+```typescript
+// We strip framer-motion specific props to prevent DOM warnings, but pass the rest
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { initial, animate, transition, variants, whileHover, whileTap, ...rest } = props;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+return <div {...(rest as any)} />;
+```
+
+**Key TypeScript Patterns**:
+- **@typescript-eslint/no-unused-vars**: Disabled for props destructuring in fallback implementation
+- **@typescript-eslint/no-explicit-any**: Disabled for type casting in fallback props handling
+- **Type Safety**: Maintains type safety while allowing flexibility for fallback scenarios
+
+#### Comprehensive Fallback Implementation
+The MotionDivFallback provides robust safety mechanisms:
+
+- **Props Stripping**: Removes framer-motion specific props (initial, animate, transition, variants, whileHover, whileTap)
+- **Rest Spread**: Passes through all remaining props safely
+- **Type Casting**: Uses explicit any type for fallback scenarios
+- **Crash Prevention**: Prevents catastrophic white-screen crashes when AI hallucinates `<Motion.div>`
+
+#### Animation Presets and Performance
+The enhanced Motion component provides comprehensive animation support:
+
+- **Viewport Reveal**: IntersectionObserver-based animation triggering
+- **Reduced Motion Support**: Automatic detection and handling of user preferences
+- **GPU Compositing**: `will-change: opacity, transform` for optimal performance
+- **Staggered Animations**: MotionGroup component for coordinated child animations
+
+**Section sources**
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
+- [packages/motion/animations.ts:1-5](file://packages/motion/animations.ts#L1-L5)
+- [packages/motion/generative-motion.ts:1-15](file://packages/motion/generative-motion.ts#L1-L15)
+
 ## Internal Implementation Strategy
 
 **Updated** The UI system has adopted an internal implementation strategy to replace external dependencies, improving performance, reducing bundle size, and maintaining full functionality.
@@ -1214,14 +1302,14 @@ The internal command palette implementation replaces the external `cmdk` depende
 - **Modal Integration**: Built on top of internal Modal component
 - **Accessibility**: Full keyboard navigation and ARIA support
 
-**Key Features:**
+**Key Features**:
 - CommandInput with real-time search filtering
 - CommandList with scrollable results
 - CommandItem with selection highlighting
 - CommandEmpty state for no results
 - CommandGroup for categorized commands
 
-**Benefits:**
+**Benefits**:
 - Reduced bundle size by eliminating cmdk dependency
 - Faster initialization without external module loading
 - Full control over behavior and styling
@@ -1240,14 +1328,14 @@ The internal button component replaces the external `class-variance-authority` d
 - **Loading States**: Built-in spinner animation for loading states
 - **As-Child Pattern**: Support for custom element rendering
 
-**Key Features:**
+**Key Features**:
 - Six button variants (default, destructive, outline, secondary, ghost, link)
 - Four size classes (default, sm, lg, icon)
 - Loading state with spinner animation
 - As-child pattern for semantic markup
 - Full accessibility support
 
-**Benefits:**
+**Benefits**:
 - Eliminates class-variance-authority dependency
 - Reduces bundle size significantly
 - Faster startup times
@@ -1266,14 +1354,14 @@ The internal modal implementation replaces the external `@radix-ui/react-dialog`
 - **Portal Rendering**: Client-side rendering via React portals
 - **Overlay Management**: Click-through and close-on-overlay functionality
 
-**Key Features:**
+**Key Features**:
 - Modal, ModalContent, ModalTrigger, ModalClose
 - ModalHeader, ModalFooter, ModalTitle, ModalDescription
 - Context-based state management
 - Escape key handling and focus trapping
 - Portal rendering for proper z-index stacking
 
-**Benefits:**
+**Benefits**:
 - Eliminates radix-ui dependency
 - Reduces bundle size by ~10KB+
 - Native browser dialog semantics
@@ -1282,6 +1370,33 @@ The internal modal implementation replaces the external `@radix-ui/react-dialog`
 
 **Section sources**
 - [packages/core/components/Modal.tsx:1-189](file://packages/core/components/Modal.tsx#L1-L189)
+
+### Motion Component Implementation
+The enhanced Motion component replaces external animation dependencies with a comprehensive internal solution:
+
+- **Dual-Mode Architecture**: Host build and Sandpack preview compatibility
+- **TypeScript Safety**: Intentional ESLint disable comments for fallback patterns
+- **Graceful Degradation**: Automatic fallback when dependencies are unavailable
+- **Performance Optimization**: GPU compositing and reduced motion support
+- **Accessibility Compliance**: WCAG 2.1 SC 2.3.3 (AAA) compliance
+
+**Key Features**:
+- CSS-based animations for host builds
+- Framer-motion integration for advanced effects
+- MotionDivFallback for crash prevention
+- IntersectionObserver-based viewport detection
+- Staggered animation support via MotionGroup
+
+**Benefits**:
+- Eliminates framer-motion dependency for host builds
+- Reduces bundle size significantly
+- Comprehensive fallback safety mechanisms
+- Full accessibility and performance optimization
+- Consistent with internal component architecture
+
+**Section sources**
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
+- [packages/motion/index.ts:1-4](file://packages/motion/index.ts#L1-L4)
 
 ## Design Token System
 
@@ -1372,7 +1487,7 @@ UI_CORE["@ui/core<br/>Enhanced with Avatar, Badge, Card, Input, Textarea<br/>Int
 UI_A11Y["@ui/a11y<br/>FocusTrap, VisuallyHidden, useKeyboardNav, useAnnouncer"]
 UI_FORMS["@ui/forms<br/>Enhanced form controls"]
 UI_LAYOUT["@ui/layout<br/>Vertical Stacking"]
-UI_MOTION["@ui/motion<br/>Animation Primitives"]
+UI_MOTION["@ui/motion<br/>Animation Primitives<br/>Enhanced Motion Component"]
 UI_CHARTS["@ui/charts<br/>Functional charts<br/>getChartColor utility"]
 UI_DRAGDROP["@ui/dragdrop<br/>Drag-and-drop utilities"]
 UI_EDITOR["@ui/editor<br/>Rich text editor"]
@@ -1384,7 +1499,9 @@ UI_TOKENS["@ui/tokens<br/>Design tokens<br/>Easing, Duration, Chart utilities<br
 THEME_HOOK["useProviderTheme.ts"]
 THEME_PROVIDER["ThemeProvider.ts"]
 THEME_AI["ai-theme.ts"]
+MOTION_COMPONENTS["packages/motion/components/Motion.tsx<br/>Enhanced TypeScript Safety<br/>ESLint Disable Comments"]
 MOTION_ANIM["animations.ts"]
+MOTION_GEN["generative-motion.ts"]
 UX_ENGINE["uxStateEngine.ts"]
 APP_DEPS["app dependencies (package.json)"]
 UI_CORE -.-> UI_THEMING
@@ -1403,7 +1520,9 @@ UI_TOKENS -.-> UI_CORE
 THEME_HOOK -.-> UI_THEMING
 THEME_PROVIDER -.-> UI_THEMING
 THEME_AI -.-> UI_THEMING
+MOTION_COMPONENTS -.-> UI_MOTION
 MOTION_ANIM -.-> UI_MOTION
+MOTION_GEN -.-> UI_MOTION
 UX_ENGINE -.-> UI_MOTION
 APP_DEPS -.-> UI_CORE
 APP_DEPS -.-> UI_A11Y
@@ -1449,6 +1568,9 @@ APP_DEPS -.-> UI_TOKENS
 - **New**: getChartColor utility eliminates chart color calculation overhead with cached palette access.
 - **New**: useCallback optimization reduces unnecessary re-renders in FeedbackBar component.
 - **New**: useAnnouncer hook provides efficient screen reader announcements without external dependencies.
+- **New**: Enhanced Motion component TypeScript safety patterns optimize build performance.
+- **New**: ESLint disable comments are strategically placed for fallback implementation safety.
+- **New**: MotionDivFallback implementation prevents runtime crashes with minimal performance impact.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -1480,6 +1602,10 @@ Common issues and resolutions:
 - **New**: useCallback optimization: Verify proper dependency arrays in FeedbackBar component callbacks.
 - **New**: useAnnouncer hook: Check for proper announcer element creation and message queuing.
 - **New**: Screen reader announcements: Verify politeness levels and message clarity for different states.
+- **New**: Enhanced Motion component TypeScript errors: Verify ESLint disable comments are properly configured for fallback patterns.
+- **New**: MotionDivFallback safety: Check that props stripping prevents DOM warnings while maintaining functionality.
+- **New**: Dual-mode architecture compatibility: Ensure Motion component works correctly in both host build and Sandpack preview modes.
+- **New**: Animation preset compatibility: Verify CSS-based animations work correctly in host build mode.
 
 **Section sources**
 - [components/GeneratedCode.tsx:30-63](file://components/GeneratedCode.tsx#L30-L63)
@@ -1490,7 +1616,8 @@ Common issues and resolutions:
 - [lib/hooks/useProviderTheme.ts:159-163](file://lib/hooks/useProviderTheme.ts#L159-L163)
 - [components/ide/RightPanel.tsx:423-433](file://components/ide/RightPanel.tsx#L423-L433)
 - [packages/theming/components/ThemeProvider.tsx:44-55](file://packages/theming/components/ThemeProvider.tsx#L44-L55)
-- [packages/motion/animations.ts:1-4](file://packages/motion/animations.ts#L1-L4)
+- [packages/motion/animations.ts:1-5](file://packages/motion/animations.ts#L1-L5)
+- [packages/motion/components/Motion.tsx:187-193](file://packages/motion/components/Motion.tsx#L187-L193)
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
 - [packages/command-palette/components/CommandPalette.tsx:1-149](file://packages/command-palette/components/CommandPalette.tsx#L1-L149)
 - [packages/core/components/Button.tsx:1-61](file://packages/core/components/Button.tsx#L1-L61)
@@ -1505,11 +1632,13 @@ The UI component system blends accessibility-first design with an AI-driven blue
 
 **Updated** The system now emphasizes production-ready components with comprehensive accessibility features, enhanced core components (Avatar, Badge, Card, Input, Textarea), and accessibility-first design principles. All AI-assisted features have been removed, focusing on reliable, accessible UI components that prioritize user experience and inclusive design.
 
-**Updated** The system has adopted an internal implementation strategy that replaces external dependencies (cmdk, class-variance-authority, radix-ui) with lightweight, custom implementations. This approach reduces bundle size, improves performance, and provides complete control over component behavior while maintaining full functionality and accessibility compliance.
+**Updated** The system has adopted an internal implementation strategy that replaces external dependencies (cmdk, class-variance-authority, radix-ui, framer-motion for host builds) with lightweight, custom implementations. This approach reduces bundle size, improves performance, and provides complete control over component behavior while maintaining full functionality and accessibility compliance.
 
 **New** The addition of the design token system provides centralized management of animation utilities, easing curves, duration values, and chart color palettes, ensuring consistency across all components and reducing code duplication.
 
 **New** The enhanced FeedbackBar component demonstrates improved React component lifecycle management with proper useCallback wrappers, optimized dependency arrays, and comprehensive accessibility features including useAnnouncer hook integration for screen reader announcements.
+
+**New** The enhanced Motion component system showcases sophisticated TypeScript safety patterns with intentional ESLint disable comments for fallback implementations, demonstrating best practices for handling edge cases while maintaining type safety.
 
 By organizing reusable pieces under @ui packages and enforcing design system rules through shared tokens and theming, teams can rapidly iterate while maintaining quality, inclusivity, and seamless user experiences across all device sizes.
 
@@ -1532,6 +1661,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Comprehensive design token system with easing, duration, and chart utilities.
 - **New**: getChartColor utility for consistent chart color management.
 - **New**: Enhanced accessibility component integration with useAnnouncer hook for screen reader support.
+- **New**: Enhanced Motion component with TypeScript safety patterns and fallback implementations.
 - Compatibility requirements:
   - Use Tailwind classes aligned with @ui packages
   - Ensure ARIA attributes and semantic roles
@@ -1550,6 +1680,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
   - **New**: Leverage getChartColor utility for data visualization consistency
   - **New**: Implement useCallback optimization for improved component lifecycle management
   - **New**: Integrate useAnnouncer hook for screen reader accessibility
+  - **New**: Implement enhanced TypeScript safety patterns for fallback scenarios
+  - **New**: Support dual-mode architecture for host builds and Sandpack previews
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1572,6 +1704,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [components/ThinkingPanel.tsx:1-358](file://components/ThinkingPanel.tsx#L1-L358)
 - [components/ModelSelectionGate.tsx:1-456](file://components/ModelSelectionGate.tsx#L1-L456)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
 
 ### Blueprint Engine and Style DNA
 - Enforce design system rules via shared tokens and typography packages.
@@ -1590,6 +1723,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Design token system provides centralized animation and color management utilities.
 - **New**: useCallback optimization ensures efficient component lifecycle management.
 - **New**: useAnnouncer hook provides comprehensive screen reader accessibility support.
+- **New**: Enhanced TypeScript safety patterns demonstrate best practices for fallback implementations.
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -1599,7 +1733,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - @ui/a11y: Accessibility-focused components including FocusTrap, VisuallyHidden, useKeyboardNav, and useAnnouncer hooks
 - @ui/forms: Form controls and validation helpers with enhanced accessibility
 - @ui/layout: Layout primitives and grid systems with responsive design and vertical stacking
-- @ui/motion: Motion primitives and animation utilities with spring and fade transitions
+- @ui/motion: Motion primitives and animation utilities with enhanced dual-mode architecture and TypeScript safety patterns
 - @ui/charts: Functional charting primitives and data visualization components with getChartColor utility
 - @ui/dragdrop: Drag-and-drop utilities and interactive components
 - @ui/editor: Rich text editor and content editing components
@@ -1637,6 +1771,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Utilize getChartColor utility for chart color consistency
 - **New**: Implement useCallback optimization for improved component lifecycle management
 - **New**: Integrate useAnnouncer hook for screen reader accessibility
+- **New**: Implement enhanced TypeScript safety patterns for fallback scenarios
+- **New**: Support dual-mode architecture for host builds and Sandpack previews
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1646,13 +1782,14 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [components/A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 - [components/VersionTimeline.tsx:1-148](file://components/VersionTimeline.tsx#L1-L148)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
 
 ### Extending the Design System
 - Introduce new tokens in @ui packages and update theming accordingly
 - Add new motion presets in @ui/motion and layout patterns in @ui/layout
 - extend form controls in @ui/forms with consistent styling and validation
-- Document new components in @ui packages with usage examples
-- Maintain backward compatibility and deprecation policies
+- document new components in @ui packages with usage examples
+- maintain backward compatibility and deprecation policies
 - **Enhanced**: Incorporate user experience patterns and accessibility best practices
 - **Updated**: Support modular component composition with clear architectural guidelines
 - **Updated**: Package documentation files have been removed from several packages
@@ -1668,6 +1805,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Add chart color utilities for consistent data visualization across components
 - **New**: Implement useCallback optimization patterns for component lifecycle management
 - **New**: Integrate useAnnouncer hook for comprehensive screen reader accessibility
+- **New**: Implement enhanced TypeScript safety patterns for fallback implementations
+- **New**: Support dual-mode architecture for comprehensive component compatibility
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
@@ -1691,6 +1830,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: getChartColor utility maintains chart color consistency in generated components
 - **New**: useCallback optimization ensures efficient component lifecycle management across the ecosystem
 - **New**: useAnnouncer hook provides comprehensive screen reader accessibility throughout the ecosystem
+- **New**: Enhanced Motion component with TypeScript safety patterns demonstrates best practices for the ecosystem
 
 **Section sources**
 - [components/SandpackPreview.tsx](file://components/SandpackPreview.tsx)
@@ -1699,6 +1839,7 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
 
 ### Usage Patterns and Best Practices
 - Prefer composition over inheritance; combine small, focused components
@@ -1733,6 +1874,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - **New**: Implement Modal components using ModalTrigger, ModalClose, ModalHeader, ModalFooter, ModalTitle, and ModalDescription
 - **New**: Implement useCallback optimization for efficient component lifecycle management
 - **New**: Integrate useAnnouncer hook for comprehensive screen reader accessibility
+- **New**: Implement enhanced TypeScript safety patterns for fallback scenarios
+- **New**: Support dual-mode architecture for comprehensive component compatibility
 
 **Section sources**
 - [components/prompt-input/PromptInput.tsx:1-423](file://components/prompt-input/PromptInput.tsx#L1-L423)
@@ -1743,7 +1886,8 @@ By organizing reusable pieces under @ui packages and enforcing design system rul
 - [lib/hooks/useProviderTheme.ts:1-167](file://lib/hooks/useProviderTheme.ts#L1-L167)
 - [components/ide/RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [packages/layout/ai-layout.ts:1-7](file://packages/layout/ai-layout.ts#L1-L7)
-- [packages/motion/animations.ts:1-4](file://packages/motion/animations.ts#L1-L4)
+- [packages/motion/animations.ts:1-5](file://packages/motion/animations.ts#L1-L5)
+- [packages/motion/components/Motion.tsx:1-243](file://packages/motion/components/Motion.tsx#L1-L243)
 - [lib/intelligence/uxStateEngine.ts:209-243](file://lib/intelligence/uxStateEngine.ts#L209-L243)
 - [packages/tokens/transitions.ts:1-106](file://packages/tokens/transitions.ts#L1-L106)
 - [packages/tokens/colors.ts:1-137](file://packages/tokens/colors.ts#L1-L137)

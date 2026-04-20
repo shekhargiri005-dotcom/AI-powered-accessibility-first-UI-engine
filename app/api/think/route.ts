@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateThinkingPlan, buildFallbackPlan } from '@/lib/ai/thinkingEngine';
-import type { IntentType, ThinkingPlan } from '@/lib/validation/schemas';
+import type { IntentType } from '@/lib/validation/schemas';
 import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import type { ProviderName } from '@/lib/ai/types';

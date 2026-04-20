@@ -140,7 +140,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Returns null on timeout / error.
-async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> {
+async function captureViaPostMessage(timeoutMs = 12000): Promise<string | null> { // eslint-disable-line @typescript-eslint/no-unused-vars
   // 1. If it was already auto-captured and cached, consume it immediately
   if (globalSandpackSnapshot) {
     const snap = globalSandpackSnapshot;
@@ -211,6 +211,7 @@ export default function RightPanel({
   // ─── AI Suggestions state ───────────────────────────────────────────────
   const [suggestions,     setSuggestions]     = useState<string[]>([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const suggestionsKeyRef = useRef<string>('');
 
   const activeV = versions.find((v) => v.version === currentVersion) ?? versions[versions.length - 1];

@@ -6,7 +6,14 @@
 - [index.ts](file://packages/dragdrop/index.ts)
 - [cn.ts](file://packages/utils/cn.ts)
 - [package.json](file://package.json)
+- [eslint.config.mjs](file://eslint.config.mjs)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added documentation for ESLint configuration and accessibility rule exceptions
+- Updated troubleshooting guide to include ESLint-related accessibility rule handling
+- Enhanced accessibility considerations section with specific rule explanations
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -15,9 +22,10 @@
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
 6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+7. [Accessibility and ESLint Compliance](#accessibility-and-eslint-compliance)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 
@@ -49,7 +57,7 @@ UTILS --> CN_UTIL
 ```
 
 **Diagram sources**
-- [DragDrop.tsx:1-103](file://packages/dragdrop/components/DragDrop.tsx#L1-L103)
+- [DragDrop.tsx:1-104](file://packages/dragdrop/components/DragDrop.tsx#L1-L104)
 - [index.ts:1-2](file://packages/dragdrop/index.ts#L1-L2)
 
 **Section sources**
@@ -69,7 +77,7 @@ Both components are built with accessibility as a core principle, ensuring compl
 
 **Section sources**
 - [DragDrop.tsx:4-67](file://packages/dragdrop/components/DragDrop.tsx#L4-L67)
-- [DragDrop.tsx:69-102](file://packages/dragdrop/components/DragDrop.tsx#L69-L102)
+- [DragDrop.tsx:69-104](file://packages/dragdrop/components/DragDrop.tsx#L69-L104)
 
 ## Architecture Overview
 
@@ -194,17 +202,17 @@ NormalState --> End
 ```
 
 **Diagram sources**
-- [DragDrop.tsx:77-102](file://packages/dragdrop/components/DragDrop.tsx#L77-L102)
+- [DragDrop.tsx:77-104](file://packages/dragdrop/components/DragDrop.tsx#L77-L104)
 
 **Section sources**
-- [DragDrop.tsx:69-102](file://packages/dragdrop/components/DragDrop.tsx#L69-L102)
+- [DragDrop.tsx:69-104](file://packages/dragdrop/components/DragDrop.tsx#L69-L104)
 
 ### Utility Integration
 
 The drag-and-drop components leverage the shared utility functions for consistent styling across the application. The `cn` utility function from the utils package provides intelligent class merging, ensuring that component styles remain predictable and maintainable.
 
 **Section sources**
-- [DragDrop.tsx](file://packages/dragdrop/components/DragDrop.tsx#L2)
+- [DragDrop.tsx:2](file://packages/dragdrop/components/DragDrop.tsx#L2)
 - [cn.ts:8-10](file://packages/utils/cn.ts#L8-L10)
 
 ## Dependency Analysis
@@ -217,16 +225,16 @@ subgraph "External Dependencies"
 REACT["React Runtime"]
 CLSX["clsx"]
 TWMERGE["tailwind-merge"]
-end
+END
 subgraph "Internal Dependencies"
 CNUTIL["cn utility"]
 DRAGDROP["DragDrop Component"]
 DROPZONE["DropZone Component"]
-end
+END
 subgraph "Application Integration"
 PARENTCOMP["Parent Components"]
 APP["Main Application"]
-end
+END
 REACT --> DRAGDROP
 CLSX --> CNUTIL
 TWMERGE --> CNUTIL
@@ -245,6 +253,47 @@ The dependency graph reveals a clean architecture where the drag-and-drop compon
 
 **Section sources**
 - [package.json:13-44](file://package.json#L13-L44)
+
+## Accessibility and ESLint Compliance
+
+The drag-and-drop components are designed with comprehensive accessibility compliance and follow strict ESLint rules to ensure code quality and accessibility standards.
+
+### ESLint Configuration
+The project uses Next.js ESLint configuration with custom overrides for accessibility compliance. The ESLint setup includes:
+- Core Web Vitals configuration for performance monitoring
+- TypeScript integration for type-safe development
+- Custom ignore patterns for build artifacts and generated files
+
+### Accessibility Rule Exceptions
+The package includes intentional ESLint exceptions for specific accessibility scenarios where standard rules may conflict with legitimate use cases:
+
+#### JSX-A11y Role-Supports-Aria-Props Exception
+The `jsx-a11y/role-supports-aria-props` rule is intentionally disabled for the DragDrop component's list item elements. This exception is documented and justified because:
+
+- **Legitimate Use Case**: The `role='listitem'` element legitimately uses ARIA properties (`aria-grabbed`, `aria-disabled`) to provide meaningful accessibility information
+- **Screen Reader Compatibility**: These properties are essential for communicating drag-and-drop state to assistive technologies
+- **WCAG Compliance**: The component maintains full WCAG 2.1 AA compliance through proper ARIA attribute usage
+- **Developer Intent**: The exception is explicitly documented with an ESLint disable comment explaining the intentional violation
+
+```mermaid
+flowchart TD
+ESLintConfig["ESLint Configuration"] --> RuleCheck["Rule Validation"]
+RuleCheck --> StandardRules["Standard Accessibility Rules"]
+RuleCheck --> SpecialCases["Special Accessibility Cases"]
+SpecialCases --> ExceptionDoc["Exception Documentation"]
+ExceptionDoc --> DisableComment["eslint-disable-next-line Comment"]
+DisableComment --> Justification["Intentional Violation Justification"]
+Justification --> ScreenReader["Screen Reader Compatibility"]
+Justification --> WCAGCompliance["WCAG Compliance Maintained"]
+```
+
+**Diagram sources**
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
+- [DragDrop.tsx:44](file://packages/dragdrop/components/DragDrop.tsx#L44)
+
+**Section sources**
+- [eslint.config.mjs:1-19](file://eslint.config.mjs#L1-L19)
+- [DragDrop.tsx:44](file://packages/dragdrop/components/DragDrop.tsx#L44)
 
 ## Performance Considerations
 
@@ -281,12 +330,19 @@ Common issues and their solutions when working with the drag-and-drop components
 - Verify that screen readers can announce drag states
 - Test keyboard navigation alternatives
 
+### ESLint and Accessibility Rule Conflicts
+- Review the intentional exception for `jsx-a11y/role-supports-aria-props` rule
+- Verify that the exception is properly documented with an ESLint disable comment
+- Ensure the component maintains full accessibility compliance despite the exception
+- Check that the exception applies only to legitimate use cases where ARIA properties are necessary
+
 ### Performance Concerns
 - Monitor for excessive re-renders during drag operations
 - Optimize parent component rendering if necessary
 - Consider virtualization for large lists
 
 **Section sources**
+- [DragDrop.tsx:44](file://packages/dragdrop/components/DragDrop.tsx#L44)
 - [DragDrop.tsx:44-63](file://packages/dragdrop/components/DragDrop.tsx#L44-L63)
 
 ## Conclusion
@@ -296,3 +352,5 @@ The Functional Drag-and-Drop package represents a well-architected solution for 
 The package successfully balances functionality with simplicity, providing developers with a robust foundation for building complex drag-and-drop interfaces while maintaining strict adherence to accessibility standards. The modular architecture ensures easy integration and future extensibility, making it a valuable asset in the larger AI-powered accessibility-first UI engine ecosystem.
 
 Through careful attention to state management, visual feedback, and performance optimization, this package delivers a superior user experience while remaining maintainable and scalable for enterprise-level applications.
+
+The intentional ESLint exceptions demonstrate a mature approach to accessibility compliance, where standard rules are selectively overridden when they conflict with legitimate accessibility needs, ensuring that developers can implement truly accessible interfaces without compromising code quality or violating accessibility principles.

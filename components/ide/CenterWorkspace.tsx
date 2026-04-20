@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Sparkles, Brain, Cpu, MessageSquare, RefreshCw, User, Bot } from 'lucide-react';
 import { PromptInput } from '@/components/prompt-input';
 import type { GenerationMode, SubmitOptions } from '@/components/prompt-input';

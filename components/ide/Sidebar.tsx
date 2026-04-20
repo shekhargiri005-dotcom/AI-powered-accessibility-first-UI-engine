@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Clock, Search, Folders,
-  Code, Box, Layers, ChevronRight, Hash, X
+  Layers, ChevronRight, Hash, X
 } from 'lucide-react';
 import type { ProjectSummary } from '@/lib/projects/projectStore';
 import WorkspaceSettingsPanel from '@/components/WorkspaceSettingsPanel';
@@ -20,12 +20,6 @@ interface SidebarProps {
   onCloseMobile: () => void;
   provider?: string | null;
 }
-
-const TYPE_ICONS: Record<string, string> = {
-  component: 'component',
-  app: 'app',
-  depth_ui: 'depth_ui',
-};
 
 export default function Sidebar({
   activeProjectId,

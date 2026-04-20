@@ -93,6 +93,7 @@ RULES (non-negotiable):
 function buildFillInBlankPrompt(
   intent: UIIntent,
   blueprint: UIBlueprint,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _config: PipelineConfig,
 ): BuiltPrompt {
   const componentName = intent.componentName || 'GeneratedComponent';

@@ -1,5 +1,3 @@
-import ts from 'typescript';
-
 /**
  * Code Validator — pre-preview validation of generated TSX/JSX code.
  * Ensures code is browser-safe and structurally valid before Sandpack.
@@ -261,7 +259,7 @@ const A11Y_CHECKS: Array<{ test: (code: string) => boolean; code: string; severi
 /**
  * Validate a single code string (component TSX/JSX file).
  */
-export function validateGeneratedCode(code: string, _fileName = 'component.tsx'): CodeValidationResult {
+export function validateGeneratedCode(code: string, _fileName = 'component.tsx'): CodeValidationResult { // eslint-disable-line @typescript-eslint/no-unused-vars
   const errors:   ValidationError[] = [];
   const warnings: ValidationError[] = [];
 
