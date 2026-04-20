@@ -127,14 +127,13 @@ export function DonutChart({ data, size = 160, thickness = 24, className }: Donu
   const radius = (size - thickness) / 2;
   const center = size / 2;
 
-  let cumulativeAngle = 0;
-  const segments = data.map((item, i) => {
+  const segments = data.reduce<{ startAngle: number; angle: number; color: string; value: number; label?: string }[]>((acc, item, i) => {
     const angle = (item.value / total) * 360;
-    const startAngle = cumulativeAngle;
-    cumulativeAngle += angle;
+    const startAngle = acc.length > 0 ? acc[acc.length - 1].startAngle + acc[acc.length - 1].angle : 0;
     const color = item.color || defaultColors[i % defaultColors.length];
-    return { ...item, startAngle, angle, color };
-  });
+    acc.push({ ...item, startAngle, angle, color });
+    return acc;
+  }, []);
 
   const describeArc = (startAngle: number, angle: number) => {
     const start = (startAngle - 90) * (Math.PI / 180);
