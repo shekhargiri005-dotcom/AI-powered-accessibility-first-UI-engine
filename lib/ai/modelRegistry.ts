@@ -423,9 +423,9 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     timeoutMs: 90000,
   },
 
-  'gemma4:e2b': {
-    id: 'gemma4:e2b',
-    displayName: 'Gemma 4 2B (Ollama Cloud)',
+  'gemma4': {
+    id: 'gemma4',
+    displayName: 'Gemma 4 (Ollama Cloud)',
     provider: 'ollama',
     tier: 'cloud',
     contextWindow: 32768,
@@ -435,8 +435,8 @@ export const MODEL_REGISTRY: Record<string, ModelCapabilityProfile> = {
     supportsToolCalls: true,
     supportsJsonMode: false,
     streamingReliable: true,
-    strengths: ['fast and cheap', 'good for classify/think', 'tool support', 'frontier quality at 2B'],
-    weaknesses: ['small model — weaker code generation', 'may truncate long output'],
+    strengths: ['fast and cheap', 'good for classify/think', 'tool support', 'frontier quality'],
+    weaknesses: ['smaller model — weaker code generation', 'may truncate long output'],
     promptStrategy: 'guided-freeform',
     maxBlueprintTokens: 2000,
     needsExplicitImports: true,
