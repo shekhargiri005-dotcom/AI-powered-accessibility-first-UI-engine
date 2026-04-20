@@ -249,7 +249,10 @@ AVAILABLE IMPORTS (sandbox only — no other packages exist):
   - \`import { Form, FormField, Select, Checkbox, Toggle, RadioGroup } from '@ui/forms'\`
   - \`import { Grid, Stack, Container, Divider, Section } from '@ui/layout'\`
   - \`import { Icon } from '@ui/icons'\` (50+ SVG icons by name)
-  - \`import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer } from '@ui/a11y'\`
+  - \`import { FocusTrap, SkipLink, VisuallyHidden, useAnnouncer, useKeyboardNav, useRoveFocus } from '@ui/a11y'\`
+    * useAnnouncer(): returns announce fn — usage: const announce = useAnnouncer(); announce('Message', 'polite');
+    * useKeyboardNav(bindings): for global shortcuts — usage: useKeyboardNav([{ key:'k', ctrl:true, handler:() => {} }]);
+    * useRoveFocus(itemCount, orientation): for arrow-key navigation — usage: const { currentIndex, handleKeyDown } = useRoveFocus(5, 'horizontal');
   - \`import { ChartContainer, BarChart as UiBarChart, LineChart as UiLineChart, DonutChart, SparkLine } from '@ui/charts'\`
   - \`import { Motion, MotionGroup } from '@ui/motion'\`
   - \`import { ThemeProvider, useTheme } from '@ui/theming'\`
