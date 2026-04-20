@@ -10,6 +10,12 @@
 - [package.json](file://package.json)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated Performance Considerations section to reflect optimization changes
+- Added information about interface to type alias conversion for bundle size optimization
+- Enhanced Technical Implementation details with optimization insights
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -189,6 +195,8 @@ The component supports five distinct visual variants, each optimized for specifi
 - **Outline**: Border-only card for minimal visual weight
 - **Gradient**: Multi-stop gradient background for visual interest
 
+**Updated** The CardProps interface has been optimized by converting it from an interface to a type alias for improved bundle size efficiency while maintaining identical functionality.
+
 **Section sources**
 - [Card.tsx:10-23](file://packages/core/components/Card.tsx#L10-L23)
 
@@ -291,6 +299,12 @@ The dependency graph reveals a clean separation of concerns with the Card compon
 ## Performance Considerations
 The Card Components are designed with performance optimization in mind, utilizing efficient rendering patterns and minimal DOM overhead.
 
+### Bundle Size Optimization
+**Updated** Recent optimizations have reduced bundle size through strategic interface conversions:
+- **CardProps Interface**: Converted from interface to type alias for improved tree-shaking efficiency
+- **Props Type Aliases**: All sub-component props (CardHeaderProps, CardTitleProps, CardDescriptionProps, CardContentProps, CardFooterProps) remain as type aliases
+- **Bundle Impact**: Slight reduction in overall bundle size while maintaining identical functionality
+
 ### Rendering Optimizations
 - **Static Style Mapping**: Variant and padding styles are pre-computed and cached
 - **Conditional Rendering**: Hover effects are only applied when enabled
@@ -344,5 +358,6 @@ Key strengths of the implementation include:
 - **Composition Patterns**: Modular components that work together seamlessly
 - **AI Integration**: Native support for automated component generation
 - **Performance Optimization**: Efficient rendering with minimal overhead
+- **Bundle Efficiency**: Strategic type alias conversions for reduced bundle size
 
 The Card Components serve as a cornerstone of the UI ecosystem, enabling developers to create sophisticated card-based interfaces while maintaining consistency, accessibility, and performance standards.

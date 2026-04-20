@@ -197,7 +197,7 @@ export default function HomePage() {
         window.removeEventListener(event, handleActivity);
       });
     };
-  }, [aiConfig, resetLLMConfig, updateActivity]);
+  }, [aiConfig, resetLLMConfig, updateActivity, INACTIVITY_TIMEOUT]);
 
   // Called when the user saves AI Engine Config
   // SECURITY: The config passed here has apiKey='••••' (masked) - real key is stored server-side
@@ -452,7 +452,7 @@ export default function HomePage() {
       setPipelineError('Network error during generation.');
       addChatMessage({ role: 'assistant', content: 'Network error during generation. Please try again.', type: 'error' });
     }
-  }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject]);
+  }, [aiConfig, aiPayload, isFullAppMode, isMultiSlideMode, activeProjectId, persistProject, addChatMessage, thinkingPlan]);
 
   // ─── Interaction Handlers ─────────────────────────────────────────────────
   const handlePromptSubmit = useCallback(async (prompt: string, mode: GenerationMode, options?: SubmitOptions) => {
@@ -527,7 +527,7 @@ export default function HomePage() {
       setIsThinkingLoading(false);
     }
     setStage('awaiting_confirm');
-  }, [liveClassification, activeProjectId, output, aiPayload]);
+  }, [liveClassification, activeProjectId, output, aiPayload, addChatMessage]);
 
   // Direct refinement: skips classify/think/parse entirely and calls /api/generate
   // directly with the existing intent + refine instructions for fast results.

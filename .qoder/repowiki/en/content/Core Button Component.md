@@ -7,6 +7,13 @@
 - [README.md](file://README.md)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced React 19 compatibility documentation in asChild pattern section
+- Updated troubleshooting guide with React 19 ref-in-render error prevention
+- Added explanatory comments for ref handling in asChild mode
+- Updated component analysis to reflect improved ref management
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -20,6 +27,8 @@
 
 ## Introduction
 The Core Button Component is a fundamental UI element designed with accessibility and flexibility in mind. Built as part of an AI-powered accessibility-first UI engine, this component serves as a reusable foundation for interactive elements across the application ecosystem. The component emphasizes inclusive design principles while maintaining high performance and developer experience.
+
+**Updated**: Enhanced with React 19 compatibility improvements and improved ref handling for better integration with modern React patterns.
 
 ## Project Structure
 The Button component is organized within the core package structure alongside other essential UI primitives. The component follows a modular architecture that promotes code reusability and maintainability.
@@ -140,6 +149,8 @@ ButtonComponent --> UtilityFunctions : "imports"
 ### Component Implementation Pattern
 The Button component employs React's forwardRef pattern to enable parent components to access the underlying DOM element reference. This pattern is essential for accessibility implementations and programmatic control.
 
+**Updated**: Enhanced with React 19 compatibility improvements in the asChild pattern implementation.
+
 ```mermaid
 sequenceDiagram
 participant Parent as Parent Component
@@ -150,6 +161,7 @@ Parent->>Button : Render with props
 Button->>Button : Check asChild prop
 alt asChild is true
 Button->>Button : Validate child element
+Note over Button : Ref is not passed in asChild mode to avoid React 19 ref-in-render issues
 Button->>Utils : Merge variant classes
 Button->>DOM : Clone child with merged props
 else asChild is false
@@ -225,7 +237,7 @@ ButtonTSX[Button.tsx]
 CNUtils[cn.ts]
 end
 subgraph "External Dependencies"
-React[React 18+]
+React[React 18+ / React 19+]
 clsx[clsx]
 tailwind-merge[tailwind-merge]
 end
@@ -248,7 +260,7 @@ ButtonTSX --> Keyboard
 - [cn.ts:1-2](file://packages/utils/cn.ts#L1-L2)
 
 ### Dependency Characteristics
-- **React Integration**: Direct dependency on React 18+ for component rendering
+- **React Integration**: Direct dependency on React 18+ for component rendering, with enhanced React 19 compatibility
 - **Utility Enhancement**: Lightweight dependency on clsx and tailwind-merge for class management
 - **Zero Runtime Dependencies**: No additional runtime dependencies beyond React
 - **Tree Shaking Compatible**: Modular structure enables optimal bundle optimization
@@ -258,7 +270,7 @@ ButtonTSX --> Keyboard
 - [cn.ts:1-2](file://packages/utils/cn.ts#L1-L2)
 
 ## Performance Considerations
-The Button component is optimized for performance through several strategic design decisions:
+The Button component is optimized for performance through several strategic design decisions.
 
 ### Rendering Optimization
 - **Minimal Re-renders**: Pure functional component with no internal state
@@ -298,10 +310,19 @@ The Button component is optimized for performance through several strategic desi
 **Problem**: Custom styles overriding component styles
 **Solution**: Use the `className` prop to append custom styles rather than override variant classes
 
+### React 19 Compatibility Issues
+**Issue**: Ref-in-render errors when using asChild pattern
+**Resolution**: The component now automatically handles ref propagation in asChild mode to prevent React 19 ref-in-render errors. The implementation avoids passing ref props through the cloned element spread operation to maintain compatibility with React 19's stricter ref handling.
+
+**Issue**: asChild pattern not working correctly
+**Resolution**: Ensure you're passing a valid React element as children when using the `asChild` prop. The component validates the child element before attempting to clone it.
+
 **Section sources**
 - [Button.tsx:30-58](file://packages/core/components/Button.tsx#L30-L58)
 
 ## Conclusion
 The Core Button Component represents a mature, accessible, and performant solution for interactive UI elements in modern web applications. Its architecture demonstrates best practices in component design, accessibility compliance, and performance optimization. The component's modular structure and comprehensive feature set make it an ideal foundation for building inclusive user interfaces while maintaining excellent developer experience.
+
+**Updated**: The component now includes enhanced React 19 compatibility features, particularly in the asChild pattern implementation, ensuring smooth integration with modern React versions while maintaining backward compatibility.
 
 The component successfully balances flexibility with simplicity, providing developers with powerful customization options while ensuring consistent behavior across different contexts. Its integration with the broader accessibility-first UI ecosystem positions it as a cornerstone component for building inclusive digital experiences.

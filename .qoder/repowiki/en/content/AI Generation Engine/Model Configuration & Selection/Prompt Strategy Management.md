@@ -11,6 +11,13 @@
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated Section 3.1 to document the new mandatory import rule requiring imports to be at the TOP of the file
+- Enhanced Section 4.3 to explain the importance of import placement for preventing ReferenceError exceptions
+- Added new subsection in Section 4.4 covering import validation and error prevention
+- Updated troubleshooting guidance to include import placement issues
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -24,6 +31,8 @@
 
 ## Introduction
 This document explains the prompt strategy management system that controls how AI models receive instructions during generation. It covers the four prompt strategies—fill-in-blank (structured slot-filling), structured-template (numbered steps with blueprints), guided-freeform (style guidelines with design rules), and freeform (unrestricted generation)—along with token budget allocation, blueprint injection mechanisms, and context window optimization. It also documents the prompt construction algorithms, template formatting, strategy selection logic, and the relationship between prompt strategies and model tier classifications.
+
+**Updated** Added new mandatory rule requiring imports to be at the TOP of the file before any component code to prevent ReferenceError exceptions in AI-generated code.
 
 ## Project Structure
 The prompt strategy system spans several modules:
@@ -162,7 +171,7 @@ CG-->>Client : GenerationResult
 ### Blueprint Injection Mechanisms and Context Window Optimization
 - Blueprint serialization: The blueprint is formatted into a structured block and injected into prompts.
 - Truncation helpers:
-  - Strategy-level truncation: Blueprints are truncated to the model’s blueprintTokenBudget using a 4-character-per-token heuristic.
+  - Strategy-level truncation: Blueprints are truncated to the model's blueprintTokenBudget using a 4-character-per-token heuristic.
   - System prompt cap: Enforced via maxSystemPromptTokens per tier; if exceeded, optional sections are trimmed progressively.
   - Context fitting: Knowledge and cheat sheets are injected only when budget remains; otherwise trimmed or omitted.
 - Merge system into user: For models that do not honor the system role, the system prompt is merged into the user message.
@@ -213,8 +222,10 @@ Merge --> Done
 - Guided-freeform:
   - System prompt includes design guidelines, available imports, and blueprint.
   - User prompt is built from intent with optional memory examples.
+  - **Updated**: Critical import placement rule requiring imports to be at the TOP of the file before any component code.
 - Freeform:
   - System prompts from prompts.ts are used; user prompt includes intent and optional intelligence context.
+  - **Updated**: Critical import placement rule requiring imports to be at the TOP of the file before any component code.
 
 **Section sources**
 - [promptBuilder.ts:69-144](file://lib/ai/promptBuilder.ts#L69-L144)
@@ -294,6 +305,18 @@ ModelCapabilityProfile --> PipelineConfig : "getPipelineConfig()"
 - [tieredPipeline.ts:88-179](file://lib/ai/tieredPipeline.ts#L88-L179)
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
 
+### Import Validation and Error Prevention
+**Updated** The system now enforces a critical import placement rule to prevent ReferenceError exceptions in AI-generated code.
+
+- **Mandatory Import Placement**: All imports must be placed at the TOP of the file, before any component code. This prevents ReferenceError exceptions when the AI attempts to use components or functions that haven't been imported yet.
+- **Validation Enforcement**: The system validates that imports are positioned correctly and rejects code that violates this rule.
+- **Error Prevention**: This rule specifically targets the common issue where AI models generate code with imports scattered throughout the file, causing runtime errors when components reference symbols before their imports.
+- **Implementation Details**: The rule applies to both guided-freeform and freeform strategies, ensuring consistent import placement across all model tiers.
+
+**Section sources**
+- [promptBuilder.ts:267](file://lib/ai/promptBuilder.ts#L267)
+- [prompts.ts:110](file://lib/ai/prompts.ts#L110)
+
 ### Customization Examples and Hybrid Approaches
 - Customizing prompt styles:
   - Adjust blueprintTokenBudget and maxSystemPromptTokens per model profile to tailor context usage.
@@ -305,6 +328,7 @@ ModelCapabilityProfile --> PipelineConfig : "getPipelineConfig()"
 - Hybrid approaches:
   - Combine guided-freeform with blueprint truncation and append design rules to the user prompt for cloud/large models.
   - Use refinement mode to constrain edits to existing code, bypassing strategy selection.
+  - **Updated**: Ensure that any hybrid approach maintains proper import placement at the top of the file.
 
 **Section sources**
 - [tieredPipeline.ts:191-235](file://lib/ai/tieredPipeline.ts#L191-L235)
@@ -355,8 +379,7 @@ PM["prompts.ts"] --> PB
 - Progressive trimming: System prompts are trimmed to maxSystemPromptTokens; optional blocks are removed first to preserve essential instructions.
 - Streaming and timeouts: Streaming is enabled for medium/large/cloud tiers; timeouts vary by tier to balance responsiveness and quality.
 - Output extraction: Strategy-based extraction reduces post-processing overhead and improves reliability.
-
-[No sources needed since this section provides general guidance]
+- **Updated**: Import validation adds minimal overhead while preventing costly runtime errors and reprocessing.
 
 ## Troubleshooting Guide
 - Context overflow on small models:
@@ -368,6 +391,10 @@ PM["prompts.ts"] --> PB
   - For tiny models, confirm that the fill-in-blank skeleton is complete and that extraction confidence is acceptable.
 - Tool call errors:
   - Ensure tools are only enabled for models explicitly registered with supportsToolCalls; otherwise, disable tools to avoid silent 400 errors.
+- **Updated** Import placement errors:
+  - Verify that all imports are positioned at the TOP of the file, before any component code.
+  - Check for ReferenceError exceptions caused by components referencing symbols before their imports.
+  - Ensure that the critical import placement rule is followed in both guided-freeform and freeform strategies.
 
 **Section sources**
 - [promptBudget.ts:59-78](file://lib/ai/promptBudget.ts#L59-L78)
@@ -377,3 +404,5 @@ PM["prompts.ts"] --> PB
 
 ## Conclusion
 The prompt strategy management system aligns model capabilities with tailored prompting strategies, ensuring high-quality, context-safe generation across a wide range of models. By enforcing token budgets, truncating context thoughtfully, and selecting appropriate strategies per tier, the system maintains reliability and performance while preserving creative freedom for capable models.
+
+**Updated** The addition of the mandatory import placement rule significantly improves code quality and prevents ReferenceError exceptions in AI-generated code, making the system more robust and production-ready across all model tiers and strategies.

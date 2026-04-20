@@ -12,6 +12,12 @@
 - [uiCheatSheet.ts](file://lib/ai/uiCheatSheet.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated DonutChart component implementation details to reflect the fix for cumulativeAngle reassignment issue
+- Revised DonutChart algorithm explanation to clarify the use of reduce operation for proper angle calculation
+- Enhanced troubleshooting guidance for DonutChart rendering reliability improvements
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -61,12 +67,12 @@ M --> D
 ```
 
 **Diagram sources**
-- [Charts.tsx:1-203](file://packages/charts/components/Charts.tsx#L1-L203)
+- [Charts.tsx:1-202](file://packages/charts/components/Charts.tsx#L1-L202)
 - [index.ts:1-2](file://packages/charts/index.ts#L1-L2)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 
 **Section sources**
-- [Charts.tsx:1-203](file://packages/charts/components/Charts.tsx#L1-L203)
+- [Charts.tsx:1-202](file://packages/charts/components/Charts.tsx#L1-L202)
 - [index.ts:1-2](file://packages/charts/index.ts#L1-L2)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 
@@ -84,7 +90,7 @@ SVG-based vertical bar chart with configurable heights, labels, and value displa
 Smooth line chart with optional area filling and data point indicators. Includes minimum data point validation and flexible styling options.
 
 ### DonutChart Component
-Circular donut chart with percentage labels and customizable sizing. Provides clear data segmentation visualization.
+**Updated** Circular donut chart with percentage labels and customizable sizing. Now uses a reduce operation for proper cumulative angle calculation, ensuring reliable segment positioning and improved rendering consistency.
 
 ### SparkLine Component
 Compact trend indicator perfect for dashboards and summary views. Optimized for minimal space usage while maintaining visual clarity.
@@ -163,7 +169,7 @@ SparkLine --> Utils : "uses"
 - [cn.ts:8-10](file://packages/utils/cn.ts#L8-L10)
 
 **Section sources**
-- [Charts.tsx:1-203](file://packages/charts/components/Charts.tsx#L1-L203)
+- [Charts.tsx:1-202](file://packages/charts/components/Charts.tsx#L1-L202)
 - [cn.ts:1-11](file://packages/utils/cn.ts#L1-L11)
 
 ## Detailed Component Analysis
@@ -234,16 +240,22 @@ LineChart-->>Client : Rendered SVG element
 
 ### DonutChart Implementation
 
-The DonutChart component creates circular segment visualization with percentage calculations:
+**Updated** The DonutChart component creates circular segment visualization with improved cumulative angle calculation:
 
 ```mermaid
 flowchart TD
-Start([DonutChart Props]) --> CalcTotal["Calculate Total Value"]
+Start([DonutChart Props]) --> CalcTotal["Calculate Total Value using Reduce"]
 CalcTotal --> CheckTotal{"Total Zero?"}
 CheckTotal --> |Yes| SetDefault["Set Default to 1"]
-CheckTotal --> |No| CalcSegments["Calculate Segment Angles"]
+CheckTotal --> |No| CalcSegments["Calculate Segment Angles using Reduce"]
 SetDefault --> CalcSegments
-CalcSegments --> GenerateArcs["Generate SVG Arc Paths"]
+CalcSegments --> IterateData["Iterate Through Data with Accumulator"]
+IterateData --> CalcAngle["Calculate Individual Angle"]
+CalcAngle --> CalcStartAngle["Calculate Cumulative Start Angle"]
+CalcStartAngle --> PushSegment["Push Segment to Accumulator"]
+PushSegment --> CheckMore{"More Data?"}
+CheckMore --> |Yes| IterateData
+CheckMore --> |No| GenerateArcs["Generate SVG Arc Paths"]
 GenerateArcs --> RenderCircle["Render Background Circle"]
 RenderCircle --> RenderSegments["Render Colored Segments"]
 RenderSegments --> RenderLabels["Render Percentage Labels"]
@@ -254,6 +266,8 @@ RenderLabels --> End([Complete])
 - [Charts.tsx:124-175](file://packages/charts/components/Charts.tsx#L124-L175)
 
 #### Specialized Features:
+- **Improved Angle Calculation**: Uses reduce operation with accumulator for proper cumulative angle assignment
+- **Reliable Segment Positioning**: Eliminates cumulativeAngle reassignment issues through sequential calculation
 - **Arc Mathematics**: Precise SVG arc path generation
 - **Percentage Display**: Automatic percentage calculation and formatting
 - **Segment Colors**: Consistent color palette assignment
@@ -426,6 +440,7 @@ const lineData = [
 ```
 
 ### Donut Chart with Percentage Display
+**Updated** Improved rendering with reliable cumulative angle calculation
 ```typescript
 const donutData = [
   { label: 'React', value: 45 },
@@ -502,6 +517,19 @@ const sparkData = [1, 3, 2, 5, 4, 7, 6, 9, 8];
 - Leverage the utility function for safe class merging
 - Check for conflicting CSS frameworks
 
+#### Issue: Donut Chart Rendering Problems
+**Updated** Fixed cumulativeAngle reassignment issues
+**Symptoms**: Segments overlapping, incorrect percentages, or misaligned chart segments
+**Causes**: 
+- Previous map-based approach caused cumulativeAngle reassignment issues
+- Improper angle calculation sequence leading to rendering inconsistencies
+
+**Solutions**:
+- Ensure data contains valid numeric values
+- Verify total calculation is not zero (defaults to 1 if empty)
+- Check that segment angles sum to 360 degrees
+- Use the improved reduce-based calculation for reliable cumulative angle assignment
+
 **Section sources**
 - [Charts.tsx:84](file://packages/charts/components/Charts.tsx#L84)
 - [Charts.tsx:186](file://packages/charts/components/Charts.tsx#L186)
@@ -517,5 +545,7 @@ Key strengths include:
 - **Flexible Integration**: Seamless compatibility with Sandpack and AI generation workflows
 - **Comprehensive Coverage**: Five distinct chart types for diverse visualization needs
 - **Developer Experience**: TypeScript support with clear interfaces and documentation
+
+**Updated** The DonutChart component now features improved reliability through the adoption of reduce operations for cumulative angle calculation, eliminating previous rendering inconsistencies and ensuring proper segment positioning. This enhancement maintains the project's commitment to accessibility, performance, and developer experience while providing more robust chart rendering capabilities.
 
 The components serve as a bridge between traditional chart libraries and the project's unique requirements, offering a self-contained solution that maintains the project's commitment to accessibility, performance, and developer experience.

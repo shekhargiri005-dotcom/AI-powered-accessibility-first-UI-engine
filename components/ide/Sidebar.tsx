@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Plus, Clock, Search, Folders,
   Code, Box, Layers, ChevronRight, Hash, X
@@ -42,11 +42,7 @@ export default function Sidebar({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const { activeWorkspaceId } = useWorkspace();
 
-  useEffect(() => {
-    fetchProjects();
-  }, [activeProjectId, activeWorkspaceId]); // Refetch when active project OR workspace changes
-
-  const fetchProjects = async () => {
+  const fetchProjects = useCallback(async () => {
     try {
       const qs = activeWorkspaceId ? `?workspaceId=${activeWorkspaceId}` : '';
       const res = await fetch(`/api/projects${qs}`);
@@ -55,7 +51,11 @@ export default function Sidebar({
     } catch { /* ignore */ } finally {
       setLoading(false);
     }
-  };
+  }, [activeWorkspaceId]);
+
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects, activeProjectId, activeWorkspaceId]); // Refetch when active project OR workspace changes
 
   const filtered = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase()) ||

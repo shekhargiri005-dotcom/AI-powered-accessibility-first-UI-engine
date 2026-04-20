@@ -65,21 +65,7 @@ export default function FeedbackBar({
   const [analytics,     setAnalytics]     = useState<FeedbackAnalytics | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Load feedback history when entering history state
-  useEffect(() => {
-    if (barState === 'history') {
-      fetchFeedbackHistory();
-    }
-  }, [barState]);
-
-  // Load analytics when entering analytics state
-  useEffect(() => {
-    if (barState === 'analytics') {
-      fetchAnalytics();
-    }
-  }, [barState]);
-
-  const fetchFeedbackHistory = async () => {
+  const fetchFeedbackHistory = useCallback(async () => {
     setLoadingHistory(true);
     try {
       const res = await fetch(`/api/feedback/history?workspaceId=${workspaceId || 'default'}&limit=20`);
@@ -92,9 +78,9 @@ export default function FeedbackBar({
     } finally {
       setLoadingHistory(false);
     }
-  };
+  }, [workspaceId]);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     try {
       const res = await fetch(`/api/feedback/analytics?workspaceId=${workspaceId || 'default'}`);
       if (res.ok) {
@@ -104,7 +90,21 @@ export default function FeedbackBar({
     } catch (e) {
       console.error('Failed to load analytics', e);
     }
-  };
+  }, [workspaceId]);
+
+  // Load feedback history when entering history state
+  useEffect(() => {
+    if (barState === 'history') {
+      fetchFeedbackHistory();
+    }
+  }, [barState, fetchFeedbackHistory]);
+
+  // Load analytics when entering analytics state
+  useEffect(() => {
+    if (barState === 'analytics') {
+      fetchAnalytics();
+    }
+  }, [barState, fetchAnalytics]);
 
   const submit = useCallback(async (
     signal:        'thumbs_up' | 'thumbs_down' | 'corrected' | 'discarded',
