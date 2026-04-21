@@ -203,6 +203,19 @@ export default function SandpackPreviewComponent({
   const [editMode, setEditMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [crashDetected, setCrashDetected] = useState(false);
+  const previousCodeRef = useRef<string>(typeof code === 'string' ? code : JSON.stringify(code));
+
+  // Auto-remount Sandpack when code changes (e.g., refine, new generation)
+  // This prevents sending new code to a crashed/dead iframe
+  useEffect(() => {
+    const codeString = typeof code === 'string' ? code : JSON.stringify(code);
+    if (codeString !== previousCodeRef.current && previousCodeRef.current.length > 0) {
+      // Code changed - reset crash state and force remount
+      setCrashDetected(false);
+      setRefreshKey((k) => k + 1);
+    }
+    previousCodeRef.current = codeString;
+  }, [code]);
 
   const handleCrashDetected = useCallback(() => {
     setCrashDetected(true);
