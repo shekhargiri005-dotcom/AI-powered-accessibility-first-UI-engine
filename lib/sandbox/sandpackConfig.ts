@@ -255,18 +255,39 @@ module.exports = {
   };
 
   files['/src/CaptureWrapper.tsx'] = {
-    code: `import React, { useEffect, useRef, useCallback } from 'react';
+    code: `import React, { useEffect, useRef, useCallback, useState } from 'react';
+
+// Error boundary to catch crashes from generated code
+class SandboxErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: '' };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error: error?.message || 'Unknown error' };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 bg-gray-950 min-h-screen flex flex-col items-center justify-center text-center gap-4">
+          <div className="text-amber-400 text-4xl">⚠️</div>
+          <h2 className="text-white font-bold text-lg">Component Crashed</h2>
+          <p className="text-gray-400 text-sm max-w-md font-mono bg-gray-900 p-4 rounded-lg">
+            {this.state.error}
+          </p>
+          <p className="text-gray-500 text-xs">This error was caught by the sandbox. The generated code has a runtime bug.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function CaptureWrapper({ children }) {
   const ref = useRef(null);
 
-  // Snapshot support: respond to REQUEST_SNAPSHOT messages from the host frame.
-  // html2canvas is intentionally NOT imported here — it caused Vite build-time
-  // resolution errors in Sandpack's Nodebox. Screenshots are now handled
-  // externally by the host (SandpackPreview) using its own capture mechanism.
   const handleMessage = useCallback((e) => {
     if (e.data?.type === 'REQUEST_SNAPSHOT') {
-      // Signal that snapshot is not available inside the sandbox
       window.top.postMessage({ type: 'SNAPSHOT_ERROR', payload: 'Capture not available in sandbox' }, '*');
     }
   }, []);
@@ -276,7 +297,13 @@ export default function CaptureWrapper({ children }) {
     return () => window.removeEventListener('message', handleMessage);
   }, [handleMessage]);
 
-  return <div ref={ref} className="w-full min-h-screen bg-[#0c0c0e] flex flex-col">{children}</div>;
+  return (
+    <div ref={ref} className="w-full min-h-screen bg-[#0c0c0e] flex flex-col">
+      <SandboxErrorBoundary>
+        {children}
+      </SandboxErrorBoundary>
+    </div>
+  );
 }`,
     active: false,
   };

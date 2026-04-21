@@ -3,25 +3,29 @@
 <cite>
 **Referenced Files in This Document**
 - [route.ts](file://app/api/generate/route.ts)
+- [codeAutoRepair.ts](file://lib/intelligence/codeAutoRepair.ts)
+- [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
+- [repairPipeline.ts](file://lib/intelligence/repairPipeline.ts)
 - [a11yValidator.ts](file://lib/validation/a11yValidator.ts)
 - [schemas.ts](file://lib/validation/schemas.ts)
 - [security.ts](file://lib/validation/security.ts)
-- [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
-- [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 - [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
 - [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
+- [uiReviewer.ts](file://lib/ai/uiReviewer.ts)
 - [A11yReport.tsx](file://components/A11yReport.tsx)
+- [codeAutoRepair.test.ts](file://__tests__/codeAutoRepair.test.ts)
 - [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts)
 - [security.test.ts](file://__tests__/security.test.ts)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Removed visionReviewer component documentation (file no longer exists)
-- Updated UI Expert Review section to reflect simplified conditional logic for free-tier providers
-- Revised architecture overview to remove browserless rendering and visual critique
-- Updated troubleshooting guide to reflect new provider tier detection system
-- Enhanced performance considerations to account for provider tier awareness
+- Added comprehensive code auto-repair system that operates as a pre-validation step
+- Enhanced syntax validation and repair for style properties, token paths, and export statements
+- Integrated deterministic auto-repair capabilities that complement existing accessibility auto-repair
+- Updated architecture to include pre-validation auto-repair phase before browser safety checks
+- Added new codeAutoRepair module with regex-based fixes for common AI-generated code mistakes
+- Enhanced repair pipeline with additional rule-based repairs and AI-assisted fallback
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,6 +41,7 @@
 ## Introduction
 This document describes the validation and auto-repair system embedded in the generation pipeline. It covers:
 - Comprehensive code validation for syntax errors, semantic correctness, and React component compliance
+- Enhanced auto-repair capabilities that operate as a pre-validation step, fixing common AI-generated code mistakes
 - An adaptive repair pipeline that applies rule-based fixes first, optionally followed by AI-assisted repairs
 - WCAG 2.1 AA–aligned accessibility validation and automated repair
 - Strategy selection based on model tier and resource availability
@@ -46,19 +51,24 @@ This document describes the validation and auto-repair system embedded in the ge
 ## Project Structure
 The validation and repair system spans several modules:
 - Route orchestration: [route.ts](file://app/api/generate/route.ts)
-- Validation utilities: [a11yValidator.ts](file://lib/validation/a11yValidator.ts), [codeValidator.ts](file://lib/intelligence/codeValidator.ts), [security.ts](file://lib/validation/security.ts), [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
+- Pre-validation auto-repair: [codeAutoRepair.ts](file://lib/intelligence/codeAutoRepair.ts)
+- Validation utilities: [codeValidator.ts](file://lib/intelligence/codeValidator.ts), [repairPipeline.ts](file://lib/intelligence/repairPipeline.ts), [security.ts](file://lib/validation/security.ts), [inputValidator.ts](file://lib/intelligence/inputValidator.ts)
 - Repair orchestration: [uiReviewer.ts](file://lib/ai/uiReviewer.ts), [componentGenerator.ts](file://lib/ai/componentGenerator.ts)
+- Accessibility validation: [a11yValidator.ts](file://lib/validation/a11yValidator.ts)
 - UI reporting: [A11yReport.tsx](file://components/A11yReport.tsx)
-- Tests: [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts), [security.test.ts](file://__tests__/security.test.ts)
+- Tests: [codeAutoRepair.test.ts](file://__tests__/codeAutoRepair.test.ts), [a11yValidator.test.ts](file://__tests__/a11yValidator.test.ts), [security.test.ts](file://__tests__/security.test.ts)
 
 ```mermaid
 graph TB
 subgraph "API Layer"
 R["app/api/generate/route.ts"]
 end
+subgraph "Pre-Validation Auto-Repair"
+CAR["lib/intelligence/codeAutoRepair.ts"]
+end
 subgraph "Validation"
-AV["lib/validation/a11yValidator.ts"]
 CV["lib/intelligence/codeValidator.ts"]
+RP["lib/intelligence/repairPipeline.ts"]
 SEC["lib/validation/security.ts"]
 IV["lib/intelligence/inputValidator.ts"]
 end
@@ -66,11 +76,16 @@ subgraph "Repair"
 UR["lib/ai/uiReviewer.ts"]
 CG["lib/ai/componentGenerator.ts"]
 end
+subgraph "Accessibility"
+AV["lib/validation/a11yValidator.ts"]
+end
 subgraph "UI"
 AR["components/A11yReport.tsx"]
 end
+R --> CAR
 R --> IV
 R --> CV
+R --> RP
 R --> SEC
 R --> AV
 R --> UR
@@ -79,62 +94,76 @@ AV --> AR
 ```
 
 **Diagram sources**
-- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
-- [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
-- [codeValidator.ts:1-388](file://lib/intelligence/codeValidator.ts#L1-L388)
+- [route.ts:25-401](file://app/api/generate/route.ts#L25-L401)
+- [codeAutoRepair.ts:1-107](file://lib/intelligence/codeAutoRepair.ts#L1-L107)
+- [codeValidator.ts:1-386](file://lib/intelligence/codeValidator.ts#L1-L386)
+- [repairPipeline.ts:1-287](file://lib/intelligence/repairPipeline.ts#L1-L287)
 - [security.ts:1-129](file://lib/validation/security.ts#L1-L129)
 - [inputValidator.ts:1-137](file://lib/intelligence/inputValidator.ts#L1-L137)
 - [uiReviewer.ts:1-199](file://lib/ai/uiReviewer.ts#L1-L199)
-- [componentGenerator.ts:1-419](file://lib/ai/componentGenerator.ts#L1-L419)
+- [componentGenerator.ts:1-436](file://lib/ai/componentGenerator.ts#L1-L436)
+- [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
 - [A11yReport.tsx:1-193](file://components/A11yReport.tsx#L1-L193)
 
 **Section sources**
-- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
+- [route.ts:25-401](file://app/api/generate/route.ts#L25-L401)
 
 ## Core Components
 - Input validation: [validatePromptInput:53-117](file://lib/intelligence/inputValidator.ts#L53-L117), [validateGenerationMode:119-125](file://lib/intelligence/inputValidator.ts#L119-L125)
-- Deterministic syntax and structural validation: [validateGeneratedCode:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- Pre-validation auto-repair: [autoRepairCode:25-93](file://lib/intelligence/codeAutoRepair.ts#L25-L93), [needsRepair:98-107](file://lib/intelligence/codeAutoRepair.ts#L98-L107)
+- Deterministic syntax and structural validation: [validateGeneratedCode:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
 - Browser safety validation: [validateBrowserSafeCode:6-34](file://lib/validation/security.ts#L6-L34), [sanitizeGeneratedCode:44-128](file://lib/validation/security.ts#L44-L128)
 - Accessibility validation and auto-repair: [validateAccessibility:264-297](file://lib/validation/a11yValidator.ts#L264-L297), [autoRepairA11y:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
+- Rule-based repair pipeline: [applyRuleBasedRepairs:210-229](file://lib/intelligence/repairPipeline.ts#L210-L229), [runRepairPipeline:238-286](file://lib/intelligence/repairPipeline.ts#L238-L286)
 - UI expert review and repair: [reviewGeneratedCode:58-126](file://lib/ai/uiReviewer.ts#L58-L126), [repairGeneratedCode:137-199](file://lib/ai/uiReviewer.ts#L137-L199)
-- Generation-time repair integration: [generateComponent:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
+- Generation-time repair integration: [generateComponent:63-435](file://lib/ai/componentGenerator.ts#L63-L435)
 
 **Section sources**
 - [inputValidator.ts:53-125](file://lib/intelligence/inputValidator.ts#L53-L125)
-- [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+- [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
+- [repairPipeline.ts:210-286](file://lib/intelligence/repairPipeline.ts#L210-L286)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
+- [componentGenerator.ts:63-435](file://lib/ai/componentGenerator.ts#L63-L435)
 
 ## Architecture Overview
-The generation pipeline performs validation and repair in stages:
+The generation pipeline performs validation and repair in stages with enhanced pre-validation auto-repair capabilities:
 1. Input sanitization and intent parsing
-2. Deterministic syntax and structural validation
-3. Optional UI expert review and repair (conditional based on provider tier)
-4. Browser safety validation and sanitization
-5. Parallel accessibility validation and test generation
-6. Dependency resolution and persistence
+2. Pre-validation auto-repair for common AI syntax errors (style props, token paths, exports)
+3. Deterministic syntax and structural validation
+4. Optional UI expert review and repair (conditional based on provider tier)
+5. Browser safety validation and sanitization
+6. Parallel accessibility validation and test generation
+7. Dependency resolution and persistence
 
-**Updated** The system now uses conditional logic to skip review/repair phases for free-tier providers rather than relying on browserless rendering. This simplifies the architecture while maintaining quality through deterministic fallbacks.
+**Updated** The system now includes a comprehensive pre-validation auto-repair phase that catches and fixes common AI-generated code mistakes before they reach the deterministic validation stage, significantly improving the success rate of code generation.
 
 ```mermaid
 sequenceDiagram
 participant Client as "Client"
 participant Route as "Generate Route"
+participant CAR as "autoRepairCode"
 participant Gen as "generateComponent"
 participant CV as "validateGeneratedCode"
+participant RP as "runRepairPipeline"
 participant UR as "reviewGeneratedCode"
 participant RR as "repairGeneratedCode"
 participant AV as "validateAccessibility/autoRepairA11y"
 participant SEC as "validateBrowserSafeCode/sanitize"
 Client->>Route : POST /api/generate
+Route->>CAR : needsRepair(code)
+alt Code needs repair
+Route->>CAR : autoRepairCode(code)
+CAR-->>Route : {code, fixes, hadErrors}
+end
 Route->>Gen : generateComponent(intent, mode, ...)
 Gen-->>Route : {code, blueprint, validationWarnings, repairsApplied}
 Route->>CV : validateGeneratedCode(code)
 alt Deterministic fails
-Route->>RR : repairGeneratedCode(code, reason)
-RR-->>Route : repairedCode
+Route->>RP : runRepairPipeline(code)
+RP-->>Route : {code, repairsApplied}
 end
 opt Cloud reviewer available (non-free tier)
 Route->>UR : reviewGeneratedCode(code, intent)
@@ -151,18 +180,59 @@ AV-->>Route : {passed, score, violations, suggestions}
 and
 Route->>Route : generateTests(intent, code)
 end
-Route-->>Client : {code, a11yReport, tests, ...}
+Route-->>Client : {code, a11yReport, tests, autoRepairs, ...}
 ```
 
 **Diagram sources**
-- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
-- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
-- [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- [route.ts:25-401](file://app/api/generate/route.ts#L25-L401)
+- [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+- [componentGenerator.ts:63-435](file://lib/ai/componentGenerator.ts#L63-L435)
+- [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
+- [repairPipeline.ts:238-286](file://lib/intelligence/repairPipeline.ts#L238-L286)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 
 ## Detailed Component Analysis
+
+### Pre-Validation Auto-Repair System
+Purpose:
+- Catch and fix common AI-generated code syntax errors before deterministic validation
+- Operates as a deterministic, regex-based fixer that runs immediately after code extraction
+- Prevents common mistakes like invalid style prop syntax, wrong token paths, and missing exports
+
+Key behaviors:
+- Fixes invalid style prop syntax (style= ... → style={{...}})
+- Corrects wrong token paths (colors.text.primary.fg → colors.text.primary)
+- Adds missing export default statements
+- Fixes incomplete/spread syntax in JSX
+- Detects and fixes unclosed JSX expressions
+
+Scoring and thresholds:
+- Returns fixes array with specific repair descriptions
+- hadErrors flag indicates whether any repairs were applied
+- Works independently of validation results to maximize success rate
+
+```mermaid
+flowchart TD
+Start(["autoRepairCode"]) --> CheckStyle["Check for invalid style prop syntax"]
+CheckStyle --> FixSpread["Fix spread syntax without braces"]
+FixSpread --> FixObject["Fix object property assignment without braces"]
+FixObject --> CheckTokens["Check for wrong token paths"]
+CheckTokens --> FixTokens["Fix colors.text.*.fg/bg to colors.text.*"]
+FixTokens --> CheckExport["Check for missing export default"]
+CheckExport --> AddExport["Add export default if missing"]
+AddExport --> CheckExpressions["Check for unclosed JSX expressions"]
+CheckExpressions --> FixExpressions["Fix unclosed style={{...}} expressions"]
+FixExpressions --> Return(["Return {code, fixes, hadErrors}"])
+```
+
+**Diagram sources**
+- [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+
+**Section sources**
+- [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+- [codeAutoRepair.test.ts:1-108](file://__tests__/codeAutoRepair.test.ts#L1-L108)
 
 ### Deterministic Syntax and Structural Validation
 Purpose:
@@ -190,10 +260,39 @@ Aggregate --> End(["Return {valid, errors, warnings, summary}"])
 ```
 
 **Diagram sources**
-- [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
 
 **Section sources**
-- [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
+
+### Rule-Based Repair Pipeline
+Purpose:
+- Apply systematic fixes for common generation failures before preview.
+- Provides deterministic repairs that don't require AI reasoning.
+
+Key behaviors:
+- Removes browser-unsafe imports and TTY API calls
+- Replaces hallucinated library imports with available alternatives
+- Adds missing export default statements
+- Fixes CSS @import ordering and multi-line template literals
+- Removes duplicate export statements
+
+```mermaid
+flowchart TD
+Start(["runRepairPipeline"]) --> RuleRepairs["Apply rule-based repairs"]
+RuleRepairs --> Validate["Re-validate repaired code"]
+Validate --> Valid{"Valid?"}
+Valid --> |Yes| Success["Return repaired code"]
+Valid --> |No| AIRepair["AI repair fallback"]
+AIRepair --> Revalidate["Re-validate AI-repaired code"]
+Revalidate --> Finalize["Return final result"]
+```
+
+**Diagram sources**
+- [repairPipeline.ts:238-286](file://lib/intelligence/repairPipeline.ts#L238-L286)
+
+**Section sources**
+- [repairPipeline.ts:210-286](file://lib/intelligence/repairPipeline.ts#L210-L286)
 
 ### Browser Safety and Sanitization
 Purpose:
@@ -306,12 +405,12 @@ end
 ```
 
 **Diagram sources**
-- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
+- [route.ts:229-271](file://app/api/generate/route.ts#L229-L271)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
 
 **Section sources**
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
+- [route.ts:229-271](file://app/api/generate/route.ts#L229-L271)
 
 ### Generation-Time Repair Integration
 Purpose:
@@ -335,58 +434,71 @@ RunRPOnly --> Final
 ```
 
 **Diagram sources**
-- [componentGenerator.ts:370-398](file://lib/ai/componentGenerator.ts#L370-L398)
+- [componentGenerator.ts:394-409](file://lib/ai/componentGenerator.ts#L394-L409)
 
 **Section sources**
-- [componentGenerator.ts:370-398](file://lib/ai/componentGenerator.ts#L370-L398)
+- [componentGenerator.ts:394-409](file://lib/ai/componentGenerator.ts#L394-L409)
 
 ## Dependency Analysis
-- The generation route orchestrates all validations and repairs, conditionally invoking the reviewer based on provider tier detection.
-- Deterministic validation is performed before expensive reviewer calls to reduce cost and latency.
+- The generation route orchestrates all validations and repairs, with the new pre-validation auto-repair phase catching common syntax errors before expensive reviewer calls.
+- Pre-validation auto-repair operates independently of deterministic validation to maximize success rates.
+- Deterministic validation is performed after auto-repair to catch any remaining issues.
 - Accessibility validation runs in parallel with test generation to optimize throughput.
 - Security sanitization occurs after reviewer repairs to preserve fixes while ensuring browser compatibility.
 
-**Updated** The simplified architecture removes the visionReviewer dependency, making the system more efficient and provider-tier aware.
+**Updated** The simplified architecture removes the visionReviewer dependency and adds the new pre-validation auto-repair phase, making the system more efficient and provider-tier aware.
 
 ```mermaid
 graph LR
-Route["route.ts"] --> CV["codeValidator.ts"]
+Route["route.ts"] --> CAR["codeAutoRepair.ts"]
+Route --> CV["codeValidator.ts"]
+Route --> RP["repairPipeline.ts"]
 Route --> SEC["security.ts"]
 Route --> AV["a11yValidator.ts"]
 Route --> UR["uiReviewer.ts"]
 Route --> CG["componentGenerator.ts"]
 CG --> CV
+CG --> RP
 CG --> UR
 CG --> AV
 CG --> SEC
 ```
 
 **Diagram sources**
-- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
-- [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+- [route.ts:25-401](file://app/api/generate/route.ts#L25-L401)
+- [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+- [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
+- [repairPipeline.ts:210-286](file://lib/intelligence/repairPipeline.ts#L210-L286)
 - [security.ts:6-128](file://lib/validation/security.ts#L6-L128)
 - [a11yValidator.ts:264-375](file://lib/validation/a11yValidator.ts#L264-L375)
 - [uiReviewer.ts:58-199](file://lib/ai/uiReviewer.ts#L58-L199)
-- [componentGenerator.ts:60-419](file://lib/ai/componentGenerator.ts#L60-L419)
+- [componentGenerator.ts:63-435](file://lib/ai/componentGenerator.ts#L63-L435)
 
 **Section sources**
-- [route.ts:25-387](file://app/api/generate/route.ts#L25-L387)
+- [route.ts:25-401](file://app/api/generate/route.ts#L25-L401)
 
 ## Performance Considerations
+- Pre-validation auto-repair reduces unnecessary reviewer calls and speeds up the pipeline by catching common syntax errors early.
 - Early deterministic validation reduces unnecessary reviewer calls and speeds up the pipeline.
 - Parallel execution of accessibility validation and test generation minimizes total latency.
 - **Updated** Provider tier awareness skips expensive review/repair phases for free-tier providers, significantly reducing API costs and avoiding rate limiting.
 - Security sanitization avoids costly retries by fixing parser-breaking artifacts upfront.
 - Model tier awareness selects appropriate repair strategies to balance quality and cost.
+- **Updated** The new pre-validation auto-repair system provides deterministic fixes that are much faster than AI-based repairs, improving overall pipeline performance.
 
-**Updated** The new provider tier detection system conserves API quotas by intelligently skipping review/repair for free-tier providers, making the system more cost-effective while maintaining quality standards.
+**Updated** The new pre-validation auto-repair system conserves API quotas by fixing common syntax errors deterministically, making the system more cost-effective while maintaining high-quality, accessible, and production-ready React components.
 
 ## Troubleshooting Guide
 Common validation failures and resolutions:
+- Pre-validation auto-repair failures
+  - Cause: Common AI-generated syntax errors like invalid style props, wrong token paths, or missing exports
+  - Resolution: The auto-repair system automatically fixes these issues before validation. Check the autoRepairs array in the response for specific fixes applied.
+  - Reference: [route.ts:194-203](file://app/api/generate/route.ts#L194-L203), [codeAutoRepair.ts:25-107](file://lib/intelligence/codeAutoRepair.ts#L25-L107)
+
 - Deterministic validation errors
   - Cause: Truncated or malformed code (unbalanced braces/brackets), missing export, or insufficient JSX.
   - Resolution: The pipeline attempts AI repair with specific reasons. If not available, ensure the model tier supports AI repair or rely on deterministic fixes.
-  - Reference: [route.ts:196-207](file://app/api/generate/route.ts#L196-L207), [codeValidator.ts:264-364](file://lib/intelligence/codeValidator.ts#L264-L364)
+  - Reference: [route.ts:208-219](file://app/api/generate/route.ts#L208-L219), [codeValidator.ts:262-362](file://lib/intelligence/codeValidator.ts#L262-L362)
 
 - Browser safety violations
   - Cause: Node/tty imports, process.exit, or missing export.
@@ -402,12 +514,12 @@ Common validation failures and resolutions:
   - Cause: Provider quota limits or missing API keys.
   - Resolution: The system defaults to pass and continues with original code; add keys or switch providers.
   - **Updated** Free-tier providers automatically skip review/repair to conserve API quotas.
-  - Reference: [uiReviewer.ts:115-125](file://lib/ai/uiReviewer.ts#L115-L125), [route.ts:210-259](file://app/api/generate/route.ts#L210-L259)
+  - Reference: [uiReviewer.ts:115-125](file://lib/ai/uiReviewer.ts#L115-L125), [route.ts:229-271](file://app/api/generate/route.ts#L229-L271)
 
 - Provider tier detection issues
   - Cause: Incorrect provider configuration or missing REVIEW_MODEL environment variable.
   - Resolution: Configure appropriate provider settings or set REVIEW_MODEL for dedicated review capabilities.
-  - Reference: [route.ts:220-222](file://app/api/generate/route.ts#L220-L222)
+  - Reference: [route.ts:229-234](file://app/api/generate/route.ts#L229-L234)
 
 ## Conclusion
-The validation and auto-repair system integrates deterministic checks, accessibility scanning, browser safety sanitization, and optional expert review. **Updated** The simplified architecture uses conditional logic to skip review/repair phases for free-tier providers, making the system more cost-effective while maintaining high-quality, accessible, and production-ready React components. The system adapts repair strategies to model capabilities and environment constraints, ensuring efficient delivery of quality UI components.
+The validation and auto-repair system integrates comprehensive pre-validation auto-repair capabilities, deterministic checks, accessibility scanning, browser safety sanitization, and optional expert review. **Updated** The enhanced system now includes a pre-validation auto-repair phase that catches and fixes common AI-generated code mistakes before they reach the deterministic validation stage, significantly improving the success rate of code generation. The system adapts repair strategies to model capabilities and environment constraints, ensuring efficient delivery of quality UI components while conserving API quotas and improving overall performance.

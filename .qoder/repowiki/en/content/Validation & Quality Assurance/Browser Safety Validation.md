@@ -5,12 +5,18 @@
 - [security.ts](file://lib/validation/security.ts)
 - [security.test.ts](file://__tests__/security.test.ts)
 - [a11yValidator.ts](file://lib/validation/a11yValidator.ts)
-- [schemas.ts](file://lib/validation/schemas.ts)
 - [codeValidator.ts](file://lib/intelligence/codeValidator.ts)
 - [route.ts](file://app/api/generate/route.ts)
 - [encryption.ts](file://lib/security/encryption.ts)
 - [workspaceKeyService.ts](file://lib/security/workspaceKeyService.ts)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced React component export validation in browser safety checks
+- Strengthened validation rules for proper React component exports
+- Updated browser safety validation to address previous failures due to missing export declarations
+- Improved integration with the generation pipeline for stricter quality gates
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,7 +30,7 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document describes the browser safety validation system that ensures generated UI code is safe for execution in web browsers. It covers:
+This document describes the browser safety validation system that ensures generated UI code is safe for execution in web browsers. The system has been recently enhanced with stricter validation rules for AI-generated code export requirements, specifically targeting React component exports to address previous browser safety check failures due to missing export declarations. It covers:
 - Security scanning algorithms that detect unsafe patterns and constructs
 - Input validation and sanitization processes that prepare generated code for preview and execution
 - Accessibility validation aligned with WCAG criteria
@@ -65,7 +71,7 @@ GEN --> KEY
 ```
 
 **Diagram sources**
-- [route.ts:314-351](file://app/api/generate/route.ts#L314-L351)
+- [route.ts:264-273](file://app/api/generate/route.ts#L264-L273)
 - [security.ts:6-34](file://lib/validation/security.ts#L6-L34)
 - [security.ts:44-128](file://lib/validation/security.ts#L44-L128)
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
@@ -75,15 +81,15 @@ GEN --> KEY
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
 
 **Section sources**
-- [route.ts:25-440](file://app/api/generate/route.ts#L25-L440)
+- [route.ts:200-387](file://app/api/generate/route.ts#L200-L387)
 - [security.ts:1-129](file://lib/validation/security.ts#L1-L129)
 - [a11yValidator.ts:1-376](file://lib/validation/a11yValidator.ts#L1-L376)
-- [codeValidator.ts:1-291](file://lib/intelligence/codeValidator.ts#L1-L291)
+- [codeValidator.ts:1-386](file://lib/intelligence/codeValidator.ts#L1-L386)
 - [encryption.ts:1-95](file://lib/security/encryption.ts#L1-L95)
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 
 ## Core Components
-- Browser safety validator: detects Node.js/TTY imports, disallowed process APIs, and missing React exports.
+- Browser safety validator: detects Node.js/TTY imports, disallowed process APIs, and missing React exports with enhanced validation rules.
 - Code sanitizer: flattens multi-line template literals, removes carriage returns, and cleans AI artifacts that break parsers.
 - Accessibility validator: enforces WCAG 2.1 AA rules (labels, roles, focus, contrast, headings, interactive elements).
 - Deterministic syntax validator: catches structural and registry hallucinations before expensive review steps.
@@ -93,12 +99,12 @@ GEN --> KEY
 - [security.ts:6-34](file://lib/validation/security.ts#L6-L34)
 - [security.ts:44-128](file://lib/validation/security.ts#L44-L128)
 - [a11yValidator.ts:19-260](file://lib/validation/a11yValidator.ts#L19-L260)
-- [codeValidator.ts:28-291](file://lib/intelligence/codeValidator.ts#L28-L291)
+- [codeValidator.ts:28-386](file://lib/intelligence/codeValidator.ts#L28-L386)
 - [encryption.ts:27-69](file://lib/security/encryption.ts#L27-L69)
 - [workspaceKeyService.ts:32-95](file://lib/security/workspaceKeyService.ts#L32-L95)
 
 ## Architecture Overview
-The generation pipeline applies deterministic checks first, then sanitizes code, validates browser safety, and finally runs accessibility checks with optional auto-repairs. Failures at any stage act as quality gates.
+The generation pipeline applies deterministic checks first, then sanitizes code, validates browser safety with enhanced export validation, and finally runs accessibility checks with optional auto-repairs. Failures at any stage act as quality gates, with particular emphasis on React component export compliance.
 
 ```mermaid
 sequenceDiagram
@@ -114,8 +120,8 @@ API->>DETERM : "Pre-validate syntax"
 DETERM-->>API : "Validation result"
 API->>SAN : "Sanitize code"
 SAN-->>API : "Sanitized code"
-API->>SAFE : "Browser safety check"
-SAFE-->>API : "Pass/Fail"
+API->>SAFE : "Enhanced browser safety check"
+SAFE-->>API : "Pass/Fail (with export validation)"
 API->>A11Y : "Accessibility report"
 A11Y-->>API : "Initial report"
 API->>REPAIR : "Auto-repair if needed"
@@ -124,7 +130,7 @@ API-->>Client : "Final code + report"
 ```
 
 **Diagram sources**
-- [route.ts:200-351](file://app/api/generate/route.ts#L200-L351)
+- [route.ts:264-273](file://app/api/generate/route.ts#L264-L273)
 - [codeValidator.ts:264-291](file://lib/intelligence/codeValidator.ts#L264-L291)
 - [security.ts:44-128](file://lib/validation/security.ts#L44-L128)
 - [security.ts:6-34](file://lib/validation/security.ts#L6-L34)
@@ -134,14 +140,17 @@ API-->>Client : "Final code + report"
 ## Detailed Component Analysis
 
 ### Browser Safety Validator
+**Updated** Enhanced with stricter React component export validation to address previous browser safety check failures due to missing export declarations.
+
 Purpose:
 - Block code containing Node.js standard library imports, TTY/console utilities, process exits, and missing React exports.
 - Act as a quality gate to prevent unsafe code from reaching previews.
+- Ensure generated React components have proper export declarations for browser compatibility.
 
 Detection logic:
 - Imports and requires for Node-only modules are flagged.
 - Disallows process.exit and terminal/TTY manipulation.
-- Ensures presence of React exports for valid components.
+- **Enhanced**: Ensures presence of React exports for valid components with stricter validation rules.
 
 ```mermaid
 flowchart TD
@@ -154,14 +163,18 @@ ExitOK --> |Yes| AddIssue2["Add issue: process.exit()"]
 ExitOK --> |No| CheckTTY["Scan for terminal/TTY methods"]
 CheckTTY --> TTYOK{"Match?"}
 TTYOK --> |Yes| AddIssue3["Add issue: Terminal/TTY methods"]
-TTYOK --> |No| CheckExports["Check for React exports"]
+TTYOK --> |No| CheckExports["Enhanced: Check for React exports"]
 CheckExports --> ExportsOK{"Export present?"}
 ExportsOK --> |No| AddIssue4["Add issue: Missing React export"]
-ExportsOK --> |Yes| Done["Return result"]
+ExportsOK --> |Yes| CheckExportTypes["Validate export types"]
+CheckExportTypes --> ExportTypesOK{"Valid export type?"}
+ExportTypesOK --> |No| AddIssue5["Add issue: Invalid export type"]
+ExportTypesOK --> |Yes| Done["Return result"]
 AddIssue1 --> Done
 AddIssue2 --> Done
 AddIssue3 --> Done
 AddIssue4 --> Done
+AddIssue5 --> Done
 ```
 
 **Diagram sources**
@@ -169,7 +182,22 @@ AddIssue4 --> Done
 
 **Section sources**
 - [security.ts:6-34](file://lib/validation/security.ts#L6-L34)
-- [security.test.ts:5-37](file://__tests__/security.test.ts#L5-L37)
+- [security.test.ts:26-31](file://__tests__/security.test.ts#L26-L31)
+
+### Enhanced React Export Validation
+**New Section** The browser safety validation now includes stricter checks for proper React component exports to address previous failures.
+
+The enhanced validation ensures that generated React components have valid export declarations:
+
+- **Default exports**: `export default function Component()` or `export default Component`
+- **Named exports**: `export const Component = () => ...` or `export function Component()`
+- **Function exports**: `export function Component()` for functional components
+
+This addresses common issues where AI-generated code lacks proper export declarations, causing browser safety validation failures and preventing components from rendering correctly in the preview environment.
+
+**Section sources**
+- [security.ts:25-28](file://lib/validation/security.ts#L25-L28)
+- [security.test.ts:26-31](file://__tests__/security.test.ts#L26-L31)
 
 ### Code Sanitizer
 Purpose:
@@ -198,7 +226,7 @@ StripSemicolons --> SOut["Return sanitized code"]
 
 **Section sources**
 - [security.ts:44-128](file://lib/validation/security.ts#L44-L128)
-- [security.test.ts:41-58](file://__tests__/security.test.ts#L41-L58)
+- [security.test.ts:40-58](file://__tests__/security.test.ts#L40-L58)
 
 ### Accessibility Validator (WCAG 2.1 AA)
 Purpose:
@@ -238,7 +266,6 @@ Score --> Report["Return report + timestamp"]
 **Section sources**
 - [a11yValidator.ts:19-260](file://lib/validation/a11yValidator.ts#L19-L260)
 - [a11yValidator.ts:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
-- [schemas.ts:301-318](file://lib/validation/schemas.ts#L301-L318)
 
 ### Deterministic Syntax Validator
 Purpose:
@@ -264,7 +291,7 @@ Summarize --> DOut["Return validation result"]
 - [codeValidator.ts:264-291](file://lib/intelligence/codeValidator.ts#L264-L291)
 
 **Section sources**
-- [codeValidator.ts:28-291](file://lib/intelligence/codeValidator.ts#L28-L291)
+- [codeValidator.ts:28-386](file://lib/intelligence/codeValidator.ts#L28-L386)
 
 ### Encryption and Workspace Key Management
 Purpose:
@@ -299,19 +326,19 @@ workspaceKeyService --> encryptionService : "uses"
 - [workspaceKeyService.ts:1-138](file://lib/security/workspaceKeyService.ts#L1-L138)
 
 ## Dependency Analysis
-The generation pipeline orchestrates safety checks in a specific order to maximize throughput while ensuring safety.
+The generation pipeline orchestrates safety checks in a specific order to maximize throughput while ensuring safety. The enhanced browser safety validation now includes stricter React export checks as a critical quality gate.
 
 ```mermaid
 graph LR
 R["/api/generate/route.ts"] --> CV["codeValidator.ts"]
 R --> SC["security.ts (sanitize)"]
-R --> SB["security.ts (browser safety)"]
+R --> SB["security.ts (enhanced browser safety)"]
 R --> AV["a11yValidator.ts"]
 AV --> AR["autoRepairA11y()"]
 ```
 
 **Diagram sources**
-- [route.ts:200-351](file://app/api/generate/route.ts#L200-L351)
+- [route.ts:264-273](file://app/api/generate/route.ts#L264-L273)
 - [codeValidator.ts:264-291](file://lib/intelligence/codeValidator.ts#L264-L291)
 - [security.ts:44-128](file://lib/validation/security.ts#L44-L128)
 - [security.ts:6-34](file://lib/validation/security.ts#L6-L34)
@@ -319,38 +346,43 @@ AV --> AR["autoRepairA11y()"]
 - [a11yValidator.ts:303-375](file://lib/validation/a11yValidator.ts#L303-L375)
 
 **Section sources**
-- [route.ts:200-412](file://app/api/generate/route.ts#L200-L412)
+- [route.ts:200-387](file://app/api/generate/route.ts#L200-L387)
 
 ## Performance Considerations
 - Early deterministic checks reduce the need for expensive reviewer calls.
 - Sanitization avoids parser failures that could trigger retries or crashes.
 - Accessibility auto-repair reduces manual intervention and re-runs.
 - Caching of decrypted workspace keys minimizes database overhead.
+- **Enhanced**: The stricter React export validation adds minimal overhead while significantly improving code quality.
 
 ## Troubleshooting Guide
 Common safety issues and resolutions:
 - Node.js standard library imports: Remove or replace with browser-compatible alternatives.
 - process.exit(): Replace with graceful UI state updates or error boundaries.
 - Terminal/TTY methods: Remove or guard behind feature detection.
-- Missing React exports: Ensure a default or named export for a valid component.
+- **Enhanced**: Missing React exports: Ensure a default or named export for a valid component. Common patterns:
+  - `export default function MyComponent() { ... }`
+  - `export const MyComponent = () => { ... }`
+  - `export function MyComponent() { ... }`
 - Multi-line template literals in JSX: Allowed after sanitization; ensure no stray semicolons after JSX attribute closures.
 - AI comment artifacts: Automatically cleaned by sanitizer; verify final code parses.
 
 Integration points:
 - The pipeline returns structured safety issues and aborts with a 422 status when browser safety fails.
+- **Enhanced**: The browser safety validation now specifically targets React export issues as a critical failure condition.
 - Accessibility reports include suggestions and a scored compliance level.
 - Deterministic validation failures trigger an automatic repair step before expensive review.
 
 **Section sources**
-- [security.test.ts:5-37](file://__tests__/security.test.ts#L5-L37)
-- [route.ts:317-326](file://app/api/generate/route.ts#L317-L326)
+- [security.test.ts:26-31](file://__tests__/security.test.ts#L26-L31)
+- [route.ts:264-273](file://app/api/generate/route.ts#L264-L273)
 - [a11yValidator.ts:264-297](file://lib/validation/a11yValidator.ts#L264-L297)
 
 ## Conclusion
-The browser safety validation system provides layered protections:
+The browser safety validation system provides layered protections with enhanced React export validation:
 - Deterministic syntax and hallucination checks
-- Browser safety validation
+- **Enhanced**: Browser safety validation with stricter React component export requirements
 - Code sanitization
 - WCAG-aligned accessibility validation with auto-repair
 
-These components integrate tightly into the generation pipeline, acting as quality gates that prevent unsafe or inaccessible code from being returned to clients. The system is designed to be extensible: new browser safety rules, accessibility rules, and sanitization strategies can be added to the existing modular architecture.
+The recent enhancement addresses previous browser safety check failures by implementing stricter validation rules for AI-generated code export requirements. These components integrate tightly into the generation pipeline, acting as quality gates that prevent unsafe or inaccessible code from being returned to clients. The system is designed to be extensible: new browser safety rules, accessibility rules, and sanitization strategies can be added to the existing modular architecture while maintaining the enhanced export validation standards.

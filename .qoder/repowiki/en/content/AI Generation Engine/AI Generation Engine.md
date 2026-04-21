@@ -27,8 +27,10 @@
 
 ## Update Summary
 **Changes Made**
-- Removed ThinkingPlan type import from API route handler to streamline error handling approaches
-- Cleaned up unused imports in AI adapters and chunk generator
+- Enhanced AI prompt requirements with strengthened export statement requirements and clearer guidance for token usage patterns
+- Added explicit export default statements requirement across all generation modes
+- Strengthened token usage syntax rules with detailed examples and validation patterns
+- Improved syntax rules enforcement for design token imports and usage
 - Enhanced error handling consistency across the generation pipeline
 - Improved code hygiene by removing unnecessary type imports
 
@@ -47,7 +49,7 @@
 12. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the AI generation engine that powers UI component creation with enhanced accessibility-first design principles. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with comprehensive accessibility hook integration, enhanced design token usage patterns, and streamlined error handling approaches.
+This document explains the AI generation engine that powers UI component creation with enhanced accessibility-first design principles. It covers the multi-stage generation pipeline (intent classification, expert reviewer stage, and AI repair agent), the universal adapter system supporting multiple providers (OpenAI, Anthropic, Google, DeepSeek, Ollama), model selection and configuration, tiered pipeline configuration for different quality levels, and prompt engineering strategies. The engine now emphasizes visually stunning UI components with comprehensive accessibility hook integration, enhanced design token usage patterns, and streamlined error handling approaches with strengthened export statement requirements.
 
 ## Project Structure
 The generation engine spans API routes, adapters, and orchestration logic with enhanced accessibility intelligence and comprehensive design system integration:
@@ -143,7 +145,7 @@ CG --> DT
 ## Core Components
 - Universal Adapter Interface: A single AIAdapter contract defines generate() and stream(), enabling provider-agnostic code with enhanced accessibility hook support.
 - Adapter Factory: Securely resolves credentials from workspace settings or environment variables, selects the correct adapter, and caches results with accessibility-aware configurations.
-- Component Generator: Orchestrates intent-driven generation with model-aware prompts, tool loops, extraction, beautification, and deterministic repair with comprehensive accessibility hook integration.
+- Component Generator: Orchestrates intent-driven generation with model-aware prompts, tool loops, extraction, beautification, and deterministic repair with comprehensive accessibility hook integration and strengthened export statement requirements.
 - Enhanced Intent Parser: Advanced intent classification system with multi-component detection capabilities that can identify when users request multiple separate UI components.
 - Expert Reviewer and Repair Agent: Second-pass review with JSON schema validation and targeted repair using a dedicated repair model with accessibility compliance checks.
 - Model Registry: Static capability profiles drive pipeline tiers, token budgets, extraction strategies, and timeouts with accessibility hook support.
@@ -171,7 +173,7 @@ CG --> DT
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Architecture Overview
-The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced accessibility intelligence, comprehensive design token usage, and streamlined error handling approaches.
+The generation pipeline integrates intent classification, component generation, expert review, and parallel validations with enhanced accessibility intelligence, comprehensive design token usage, and streamlined error handling approaches with strengthened export statement requirements.
 
 ```mermaid
 sequenceDiagram
@@ -191,12 +193,12 @@ Classifier-->>GenRoute : Intent classification with multi-component support
 GenRoute->>Gen : generateComponent(intent, mode, ...)
 Gen->>Adapter : getWorkspaceAdapter(cfg, workspaceId, userId)
 Adapter-->>Gen : AIAdapter with accessibility hook support
-Gen-->>GenRoute : Generated code (TSX) with accessibility hooks and design tokens
+Gen-->>GenRoute : Generated code (TSX) with accessibility hooks, design tokens, and export default statements
 GenRoute->>Review : reviewGeneratedCode(code, intentContext, override?)
-Review-->>GenRoute : Review result (JSON) with accessibility compliance
+Review-->>GenRoute : Review result (JSON) with accessibility compliance and export validation
 alt Needs repair
 GenRoute->>Repair : repairGeneratedCode(code, instructions, override?)
-Repair-->>GenRoute : Repaired code with enhanced accessibility
+Repair-->>GenRoute : Repaired code with enhanced accessibility and export compliance
 end
 GenRoute-->>Client : {success, code, a11yReport, tests, ...}
 ```
@@ -302,7 +304,7 @@ Proceed --> End(["Return Enhanced Intent"])
 - [prompts.ts:8-78](file://lib/ai/prompts.ts#L8-L78)
 
 ### Component Generator Orchestration
-The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence, now including comprehensive multi-component support and accessibility hook integration.
+The generator coordinates intent-driven generation with model-aware strategies and enhanced design intelligence, now including comprehensive multi-component support, accessibility hook integration, and strengthened export statement requirements.
 
 ```mermaid
 flowchart TD
@@ -310,7 +312,7 @@ Start(["Start generateComponent"]) --> Blueprint["Select blueprint + design rule
 Blueprint --> ResolveCfg["Resolve model + credentials"]
 ResolveCfg --> Profiles["Get model profile + pipeline config"]
 Profiles --> Memory["Fetch memory + semantic context"]
-Memory --> Prompt["Build model-aware prompt with accessibility hooks and design tokens"]
+Memory --> Prompt["Build model-aware prompt with accessibility hooks, design tokens, and export requirements"]
 Prompt --> Tools{"Tools enabled?"}
 Tools -- Yes --> ToolLoop["Execute tool-call loop (0..maxToolRounds)"]
 Tools -- No --> Generate["Single adapter.generate()"]
@@ -334,6 +336,7 @@ RunRepair --> Done
 - Multi-component layout enforcement: Structured grid layouts with proper visual hierarchy for multi-component requests.
 - Accessibility hook integration: Comprehensive documentation and usage examples for accessibility utilities.
 - Design token usage: Enhanced token import examples including easing and duration tokens.
+- **Updated**: Export statement enforcement: All generated components must include proper export default statements with validation checks.
 
 **Diagram sources**
 - [componentGenerator.ts:61-402](file://lib/ai/componentGenerator.ts#L61-L402)
@@ -346,7 +349,7 @@ RunRepair --> Done
 - [tieredPipeline.ts:1-285](file://lib/ai/tieredPipeline.ts#L1-L285)
 
 ### Expert Reviewer Stage and AI Repair Agent
-The reviewer stage applies a second-pass expert review and optionally repairs issues with enhanced accessibility compliance checking.
+The reviewer stage applies a second-pass expert review and optionally repairs issues with enhanced accessibility compliance checking and export statement validation.
 
 ```mermaid
 sequenceDiagram
@@ -358,19 +361,19 @@ participant RepAdapter as "getWorkspaceAdapter(REPAIR)"
 GenRoute->>Review : reviewGeneratedCode(code, intentContext, override?)
 Review->>RevAdapter : getWorkspaceAdapter(cfg)
 RevAdapter-->>Review : AIAdapter with accessibility support
-Review-->>GenRoute : {passed, score, critiques, repairInstructions, a11yCompliance}
+Review-->>GenRoute : {passed, score, critiques, repairInstructions, a11yCompliance, exportCompliant}
 alt Needs repair
 GenRoute->>Repair : repairGeneratedCode(code, repairInstructions, override?)
 Repair->>RepAdapter : getWorkspaceAdapter(cfg)
 RepAdapter-->>Repair : AIAdapter with accessibility support
-Repair-->>GenRoute : Repaired code with enhanced accessibility
+Repair-->>GenRoute : Repaired code with enhanced accessibility and export compliance
 end
 ```
 
 - Reviewer adapter override: Honors the user's selected provider for consistency with the generation setup.
-- Review schema: Enforces JSON output with pass/fail, score, critiques, repair instructions, and accessibility compliance.
-- Repair agent: Applies exact repair instructions to fix structural, visual, logical, and accessibility issues.
-- Accessibility compliance: Enhanced review process includes accessibility hook usage validation.
+- Review schema: Enforces JSON output with pass/fail, score, critiques, repair instructions, accessibility compliance, and export statement validation.
+- Repair agent: Applies exact repair instructions to fix structural, visual, logical, accessibility, and export statement issues.
+- Accessibility compliance: Enhanced review process includes accessibility hook usage validation and export statement verification.
 
 **Diagram sources**
 - [route.ts:226-259](file://app/api/generate/route.ts#L226-L259)
@@ -417,6 +420,8 @@ Validate --> Result(["Return classification with accessibility requirements"])
 - Layout structure enforcement: Comprehensive layout rules embedded in system prompts for structured grid layouts and visual hierarchy.
 - Accessibility hook documentation: Detailed usage examples and integration patterns for accessibility utilities.
 - Design token enhancement: Comprehensive token import examples including missing easing and duration token usage.
+- **Updated**: Export statement enforcement: All generation modes now require explicit export default statements with validation checks.
+- **Updated**: Token usage syntax rules: Strengthened guidance for design token imports with detailed examples and validation patterns.
 
 **Section sources**
 - [modelRegistry.ts:1-1138](file://lib/ai/modelRegistry.ts#L1-L1138)
@@ -432,6 +437,7 @@ Recent improvements have focused on removing unnecessary type imports and cleani
 - **Unused Import Cleanup**: Removed unused imports in AI adapters and chunk generator to improve code maintainability.
 - **Consistent Error Handling**: Enhanced error handling consistency across the generation pipeline with streamlined approach.
 - **Code Hygiene**: Improved code cleanliness by eliminating unnecessary type dependencies.
+- **Export Statement Validation**: Enhanced validation logic to ensure all generated components include proper export default statements.
 
 **Section sources**
 - [route.ts:48-52](file://app/api/generate/route.ts#L48-L52)
@@ -485,6 +491,7 @@ The design rules system provides comprehensive guidance for creating visually ap
 - Accessibility prioritization: WCAG 2.1 AA compliance with proper contrast ratios and semantic HTML
 - **Updated**: Structured grid layout requirements for multi-component scenarios with proper visual hierarchy
 - **Updated**: Comprehensive design token usage patterns including easing and duration tokens for consistent animations
+- **Updated**: Export statement requirements: All generated components must include proper export default statements
 
 **Section sources**
 - [designRules.ts:1-245](file://lib/intelligence/designRules.ts#L1-L245)
@@ -515,7 +522,7 @@ Navigation --> Vertical["Vertical arrow navigation"]
 - [useKeyboardNav.ts:1-66](file://packages/a11y/hooks/useKeyboardNav.ts#L1-L66)
 
 ### Enhanced System Prompt Integration
-System prompts now include comprehensive accessibility hook documentation and usage examples for developers and AI models.
+System prompts now include comprehensive accessibility hook documentation and usage examples for developers and AI models, with strengthened export statement requirements.
 
 #### useAnnouncer Hook Usage
 - **Purpose**: Provides screen reader announcements for dynamic content updates
@@ -572,7 +579,7 @@ The system now includes comprehensive design token import examples, including pr
 ## Multi-Component Generation Pipeline
 
 ### Enhanced Layout Structure Rules
-Both component generator and app mode system prompts now include comprehensive layout structure rules that enforce structured grid layouts and proper visual hierarchy with enhanced accessibility considerations.
+Both component generator and app mode system prompts now include comprehensive layout structure rules that enforce structured grid layouts and proper visual hierarchy with enhanced accessibility considerations and export statement requirements.
 
 ```mermaid
 flowchart TD
@@ -587,7 +594,8 @@ Sectioning --> Enforce
 Hierarchy --> Enforce
 Identity --> Enforce
 StandardLayout --> Enforce
-Enforce --> Accessibility["Accessibility Compliance"]
+Enforce --> Export["Export Default Requirements"]
+Export --> Accessibility["Accessibility Compliance"]
 Accessibility --> Output["Structured Output"]
 ```
 
@@ -597,6 +605,7 @@ Accessibility --> Output["Structured Output"]
 - **Page Container**: Use a page-level container with consistent padding and a header: `<div className="min-h-screen bg-[color] p-6 md:p-8">`.
 - **Visual Identity**: Each section should have: title, description, and its own visual identity (border, rounded corners, shadow).
 - **Proper Grouping**: NEVER dump all elements in a single flat list — always create visual hierarchy and grouping.
+- **Export Statements**: Each component section must include proper export default statements.
 - **Accessibility**: Each section should include proper ARIA labels and semantic HTML structure.
 - **Navigation**: Include skip links and keyboard navigation support for multi-component layouts.
 
@@ -619,6 +628,7 @@ The generation engine exhibits clear separation of concerns with enhanced access
 - Accessibility hook system provides comprehensive documentation and integration patterns.
 - Design token system ensures consistent animation and transition patterns across components.
 - **Updated**: Streamlined error handling reduces dependency on unnecessary type imports.
+- **Updated**: Export statement validation ensures all generated components meet export requirements.
 
 ```mermaid
 graph LR
@@ -692,6 +702,7 @@ DT --> TRANS["transition"]
 - **Updated**: Accessibility hook integration adds minimal overhead while significantly improving accessibility compliance.
 - **Updated**: Design token usage patterns ensure consistent animation performance across components.
 - **Updated**: Streamlined error handling reduces unnecessary type imports and improves code maintainability.
+- **Updated**: Export statement validation adds minimal overhead but ensures all generated components are properly exported.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -708,6 +719,8 @@ Common issues and resolutions:
 - **Updated**: Design token import problems: If design tokens aren't recognized, ensure that the complete token import pattern is used including easing and duration tokens for consistent animation behavior.
 - **Updated**: Missing easing/duration tokens: Verify that the design token import includes both easing and duration presets for consistent animation timing across components.
 - **Updated**: Type import issues: Recent cleanup removed unnecessary ThinkingPlan imports, resolving potential type conflicts in error handling.
+- **Updated**: Export statement failures: If components fail export validation, ensure that each component includes proper export default statements with correct component names.
+- **Updated**: Token usage syntax errors: Verify that design token imports follow the correct syntax patterns and that style properties are applied correctly using the style prop.
 
 **Section sources**
 - [componentGenerator.ts:330-397](file://lib/ai/componentGenerator.ts#L330-L397)
@@ -721,4 +734,4 @@ Common issues and resolutions:
 - [transitions.ts:1-36](file://packages/tokens/transitions.ts#L1-L36)
 
 ## Conclusion
-The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components with WCAG 2.1 AA accessibility compliance. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, structured layout enforcement, and comprehensive accessibility hook integration. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality. The comprehensive accessibility hook documentation and design token integration provide developers with detailed usage examples and consistent implementation patterns. Recent improvements have streamlined error handling approaches by removing unnecessary type imports and cleaning up unused dependencies, resulting in more maintainable and efficient code. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive, accessible, and professionally structured user interfaces that properly handle both single components and complex multi-component scenarios with full accessibility support.
+The AI generation engine combines a universal adapter system, a model-agnostic orchestrator, enhanced design intelligence, expert review/repair, and comprehensive multi-component generation capabilities to deliver high-quality, visually stunning UI components with WCAG 2.1 AA accessibility compliance. The adapter factory securely resolves credentials, the model registry drives pipeline configuration with refined token budgets and temperature settings, and the enhanced design system ensures premium output with sophisticated visual style detection, blueprint engineering, structured layout enforcement, and comprehensive accessibility hook integration. The enhanced intent parsing system now detects multi-component requests and automatically applies structured grid layout requirements for professional, organized output. The expert reviewer stage ensures accessibility compliance and overall quality with strengthened export statement validation. The comprehensive accessibility hook documentation and design token integration provide developers with detailed usage examples and consistent implementation patterns. Recent improvements have streamlined error handling approaches by removing unnecessary type imports and cleaning up unused dependencies, resulting in more maintainable and efficient code. The enhanced export statement requirements ensure that all generated components are properly exported, while strengthened token usage syntax rules provide clearer guidance for design token integration. Together, these components provide a robust, extensible foundation for UI generation across providers and environments with a focus on creating visually impressive, accessible, and professionally structured user interfaces that properly handle both single components and complex multi-component scenarios with full accessibility support and proper export compliance.
