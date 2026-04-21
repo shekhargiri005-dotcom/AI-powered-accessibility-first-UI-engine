@@ -14,6 +14,14 @@ export const UI_ECOSYSTEM_API_CHEAT_SHEET = `
 @ui/core: Button, Card, CardHeader/Title/Description/Content/Footer, Input, Textarea, Badge, Avatar, Modal
 @ui/forms: Form, FormField, Select, Checkbox, Toggle, RadioGroup  
 @ui/layout: Grid, Stack, Container, Divider, Section
+
+@ui/layout USAGE:
+- Container: <Container size="md">content</Container> — max-width wrapper with padding
+- Stack: <Stack gap="md">items</Stack> — vertical spacing (use Stack direction="row" for horizontal)
+- Grid: <Grid cols={3} gap="lg">items</Grid> — responsive grid layout
+- Section: <Section>content</Section> — semantic section with padding
+- Divider: <Divider /> — horizontal line separator
+
 @ui/icons: Icon (name: arrow-right, check, search, settings, user, etc.)
 @ui/a11y: FocusTrap, useAnnouncer, useKeyboardNav, useRoveFocus
 @ui/charts: ChartContainer, BarChart, LineChart, DonutChart
@@ -36,4 +44,5 @@ export const UI_ECOSYSTEM_API_CHEAT_SHEET = `
 THIRD-PARTY:
 import { motion } from 'framer-motion'
 import { ArrowRight, Check, Search } from 'lucide-react'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 `.trim();

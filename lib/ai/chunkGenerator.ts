@@ -156,7 +156,24 @@ export async function generateFileChunk(
     '6. Write dense, production-ready code.\n' +
     '7. CRITICAL: Use `lucide-react` EXCLUSIVELY for icons. Import them individually using destructuring: `import { ... } from \'lucide-react\';`. NEVER append "Icon" to the import name. Use `import { ArrowRight } from \'lucide-react\'`, not `ArrowRightIcon`.\n' +
     '8. NEVER import from "./utils/", "./hooks/", or other non-existent paths. ' +
-    'All custom logic and hooks must be self-contained within this file or imported ONLY from components/files listed in the APP MANIFEST above.\n\n';
+    'All custom logic and hooks must be self-contained within this file or imported ONLY from components/files listed in the APP MANIFEST above.\n' +
+    '9. LAYOUT STRUCTURE (CRITICAL):\n' +
+    '   - Use @ui/layout components (Grid, Stack, Container, Section, Divider) for layout — NOT nested div soup.\n' +
+    '   - Wrap page content in <Container> for consistent max-width and padding.\n' +
+    '   - Use <Stack> for vertical/horizontal spacing instead of manual margin classes.\n' +
+    '   - Use <Section> for distinct page sections with semantic HTML5 tags.\n' +
+    '   - Use <Grid> for 2+ column layouts instead of flexbox with gap overrides.\n' +
+    '   - Proper spacing hierarchy: page > section > card > content.\n' +
+    '   - NEVER use more than 3 levels of nested divs without semantic meaning.\n' +
+    '10. COMPONENT STRUCTURE:\n' +
+    '    - Each page/screen should have a clear hierarchy: Header → Content → Footer.\n' +
+    '    - Cards should use Card, CardHeader, CardContent, CardFooter from @ui/core.\n' +
+    '    - Forms should use Form, FormField from @ui/forms.\n' +
+    '    - Buttons should ALWAYS use Button from @ui/core, not raw <button>.\n' +
+    '11. RESPONSIVE DESIGN:\n' +
+    '    - Mobile-first: base styles for mobile, md: and lg: for larger screens.\n' +
+    '    - Touch targets must be at least 44x44px.\n' +
+    '    - Text must be readable at 16px minimum on mobile.\n\n';
 
   if ((intent as UIIntent & { depthUi?: boolean }).depthUi) {
     prompt +=
@@ -169,10 +186,19 @@ export async function generateFileChunk(
 
   if (isMultiSlide) {
     prompt +=
-      'CRITICAL MULTI-SLIDE ARCHITECTURE REQUIREMENT:\n' +
-      'The app must function as a multi-slide or paginated experience. When generating App.tsx or view components, ' +
-      'include robust navigation state (Next/Prev buttons, dots). ' +
-      'For 3D WebGL scenes, alter the react-three-fiber camera or mesh positions over these slide states.\n\n';
+      'CRITICAL MULTI-SCREEN / ROUTING ARCHITECTURE REQUIREMENT:\n' +
+      'The app must function as a multi-page application with client-side routing.\n' +
+      'Use react-router-dom for navigation between distinct screens/pages.\n' +
+      'In App.tsx, set up BrowserRouter with Routes and Route components.\n' +
+      'Each page should be a separate component file with its own route.\n' +
+      'Include navigation links (navbar, sidebar, or bottom nav) that allow users to move between pages.\n' +
+      'Example structure:\n' +
+      '  - App.tsx: Router setup with Routes\n' +
+      '  - HomePage.tsx: Landing/dashboard\n' +
+      '  - SignInPage.tsx: Authentication form\n' +
+      '  - DashboardPage.tsx: Main app screen\n' +
+      '  - Navigation.tsx: Shared nav component with <Link> elements\n' +
+      'Ensure all navigation uses react-router-dom Link component, NOT <a href>.\n\n';
   }
 
   prompt += 'RETURN ONLY THE RAW CODE.';
