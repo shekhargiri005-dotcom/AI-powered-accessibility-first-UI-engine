@@ -19,6 +19,9 @@ import { auth } from '@/lib/auth';
 import { upsertComponentEmbedding } from '@/lib/ai/vectorStore';
 import type { ProviderName } from '@/lib/ai/types';
 
+// ─── NEW: Auto-repair for common AI syntax errors ────────────────────────────
+import { autoRepairCode, needsRepair } from '@/lib/intelligence/codeAutoRepair';
+
 export const maxDuration = 300;
 
 export async function POST(request: NextRequest) {
@@ -188,7 +191,16 @@ export async function POST(request: NextRequest) {
 
     const code = generationResult.code;
 
-    let finalSourceCode = code;
+    // Step 1.4: Auto-repair common AI syntax errors before validation
+    // This catches style prop misuse, missing exports, wrong token paths, etc.
+    let autoRepairResult = { code, fixes: [] as string[], hadErrors: false };
+    if (needsRepair(code)) {
+      autoRepairResult = autoRepairCode(code);
+      if (autoRepairResult.hadErrors) {
+        reqLogger.info('Auto-repaired AI code', { fixes: autoRepairResult.fixes });
+      }
+    }
+    let finalSourceCode = autoRepairResult.code;
 
     // Step 1.5: Deterministic syntax validation before expensive review calls
     let reviewData: Record<string, unknown> | undefined;
@@ -369,10 +381,12 @@ export async function POST(request: NextRequest) {
       critique: critiqueData,
       tests,
       mode: generationMode,
+      autoRepairs: autoRepairResult.fixes, // NEW: Report auto-repairs to frontend
       generatorMeta: {
         blueprint:          generationResult.blueprint,
         validationWarnings: generationResult.validationWarnings,
         repairsApplied:     [...(generationResult.repairsApplied ?? []), ...resolverPatchLog],
+        autoRepairApplied:  autoRepairResult.hadErrors,
         feedbackEnriched:   generationResult.feedbackEnriched ?? false,
       },
     });
