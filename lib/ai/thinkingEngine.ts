@@ -5,6 +5,10 @@ import { getModelProfile } from './modelRegistry';
 import { ThinkingPlanSchema, type ThinkingPlan, type IntentType } from '../validation/schemas';
 import { findMatchingLayouts } from '../intelligence/layoutRegistry';
 import { selectBlueprint } from '../intelligence/blueprintEngine';
+import { SimpleCache } from '../utils/simpleCache';
+
+// Cache thinking plans for 5 minutes to avoid redundant LLM calls
+const thinkingPlanCache = new SimpleCache<ThinkingResult>(5 * 60 * 1000);
 
 // Removed static instance. Using getOpenAIClient inside the engine function.
 
@@ -370,6 +374,13 @@ export async function generateThinkingPlan(
 ): Promise<ThinkingResult> {
   const sanitized = prompt.substring(0, 10000).replace(/system:|assistant:|<\|.*?\|>/gi, '').trim();
 
+  // ─── Cache key: hash of prompt + intentType ───────────────────────────────
+  const cacheKey = `${intentType}:${sanitized.slice(0, 200)}`;
+  const cached = thinkingPlanCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   // ─── Blueprint pre-enrichment ───────────────────────────────────────────────
   const blueprint = selectBlueprint(sanitized);
   const matchedLayouts = findMatchingLayouts(sanitized, 2);
@@ -554,10 +565,14 @@ export async function generateThinkingPlan(
     const result = ThinkingPlanSchema.safeParse(parsed);
     if (!result.success) {
       // Schema validation failed — fall back to deterministic plan.
-      return { success: true, plan: buildFallbackPlan(sanitized, intentType) };
+      const fallbackResult = { success: true, plan: buildFallbackPlan(sanitized, intentType) };
+      thinkingPlanCache.set(cacheKey, fallbackResult);
+      return fallbackResult;
     }
 
-    return { success: true, plan: result.data };
+    const successResult = { success: true, plan: result.data };
+    thinkingPlanCache.set(cacheKey, successResult);
+    return successResult;
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `Thinking engine API error: ${msg}` };
