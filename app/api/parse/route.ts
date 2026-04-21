@@ -5,6 +5,10 @@ import { validatePromptInput } from '@/lib/intelligence/inputValidator';
 import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import type { ProviderName } from '@/lib/ai/types';
+import { SimpleCache } from '@/lib/utils/simpleCache';
+
+// Cache parsed intents for 5 minutes
+const intentCache = new SimpleCache<Record<string, unknown>>(5 * 60 * 1000);
 
 export const maxDuration = 60;
 
@@ -124,6 +128,15 @@ export async function POST(request: NextRequest) {
       provider: providerId ?? 'env-resolved',
       workspaceId 
     });
+
+    // Check cache for identical prompts
+    const cacheKey = `${generationMode}:${sanitizedPrompt.slice(0, 200)}:${depthUi ?? false}`;
+    const cached = intentCache.get(cacheKey);
+    if (cached) {
+      reqLogger.info('Intent cache hit — returning cached parse');
+      reqLogger.end('Request completed successfully');
+      return NextResponse.json({ success: true, intent: cached });
+    }
     
     const result = await parseIntent(
       sanitizedPrompt,
@@ -151,9 +164,12 @@ export async function POST(request: NextRequest) {
     reqLogger.info('Intent parsed successfully', { intentName: result.intent?.componentName });
     reqLogger.end('Request completed successfully');
 
+    const responseIntent = depthUi ? { ...(result.intent as object), depthUi: true } : result.intent;
+    intentCache.set(cacheKey, responseIntent as Record<string, unknown>);
+
     return NextResponse.json({
       success: true,
-      intent: depthUi ? { ...(result.intent as object), depthUi: true } : result.intent,
+      intent: responseIntent,
     });
   } catch (error) {
     reqLogger.error('Unexpected error during intent parsing', error);

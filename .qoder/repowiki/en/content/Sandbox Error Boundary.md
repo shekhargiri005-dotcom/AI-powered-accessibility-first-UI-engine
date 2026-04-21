@@ -12,10 +12,10 @@
 
 ## Update Summary
 **Changes Made**
-- Added documentation for FeedbackBar component with automatic dismissal functionality
-- Updated integration patterns showing FeedbackBar with SandpackChangeObserver
-- Enhanced user experience documentation for cleaner notification flow
-- Added new sections covering auto-detected edit capture and submission process
+- Updated Performance Considerations section to document React performance optimization using queueMicrotask-based deferral mechanism
+- Enhanced troubleshooting guide with queueMicrotask-related debugging information
+- Added new section covering React performance best practices for state mutations in useEffect
+- Updated architecture diagrams to reflect improved state management patterns
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -32,7 +32,7 @@
 ## Introduction
 This document explains the Sandbox Error Boundary implementation used to gracefully handle runtime crashes in the AI-generated UI preview system. The system consists of two complementary error boundaries: a preview-level boundary that handles React component mounting failures, and a sandbox-level boundary that intercepts runtime errors from generated code within the Sandpack environment. Together, they provide robust error handling for AI-generated React components during live preview.
 
-**Updated** Enhanced with FeedbackBar component integration for improved user experience and automatic dismissal functionality for cleaner notification flow.
+**Updated** Enhanced with React performance optimization using queueMicrotask-based deferral mechanism to prevent state mutations during useEffect execution, eliminating ESLint warnings and improving overall React performance.
 
 ## Project Structure
 The Sandbox Error Boundary spans three key areas:
@@ -40,12 +40,14 @@ The Sandbox Error Boundary spans three key areas:
 - Sandpack-level error boundary: wraps generated code to catch runtime exceptions
 - Code sanitization pipeline: ensures generated code can safely run in the sandbox
 - Feedback system integration: captures user interactions and auto-detected edits
+- **Performance optimization layer: Implements queueMicrotask-based deferral for state mutations**
 
 ```mermaid
 graph TB
 subgraph "Preview Layer"
 PEB["PreviewErrorBoundary<br/>React Error Boundary"]
 FB["FeedbackBar<br/>Auto-dismissal & Edit Capture"]
+PM["Performance Manager<br/>queueMicrotask Deferral"]
 END
 subgraph "Sandpack Layer"
 SEB["SandboxErrorBoundary<br/>React Error Boundary"]
@@ -60,6 +62,7 @@ ECOSYS["ui-ecosystem.json<br/>Virtual Package Graph"]
 END
 PEB --> SP
 FB --> SCOB
+PM --> PEB
 SP --> WRAP
 WRAP --> SEB
 CFG --> SP
@@ -70,6 +73,7 @@ SCOB --> FB
 
 **Diagram sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
 - [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
@@ -78,6 +82,7 @@ SCOB --> FB
 
 **Section sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
 - [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
@@ -91,12 +96,14 @@ SCOB --> FB
 - CaptureWrapper: Higher-order wrapper that injects the sandbox error boundary around generated code
 - Import sanitizer: Validates and sanitizes imports to prevent unresolved dependencies in the sandbox
 - Sandpack file builder: Constructs the virtual filesystem, injects error boundaries, and resolves aliases
+- **Performance Manager**: Enhanced component with queueMicrotask-based deferral mechanism for state mutations
 - **FeedbackBar**: Enhanced component with automatic dismissal and auto-detected edit capture for improved user experience
 
-**Updated** Added FeedbackBar component with automatic dismissal functionality and Sandpack integration.
+**Updated** Added Performance Manager component with queueMicrotask-based deferral mechanism and enhanced FeedbackBar component with automatic dismissal functionality.
 
 **Section sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
 - [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
@@ -104,14 +111,16 @@ SCOB --> FB
 - [importSanitizer.ts:169-224](file://lib/sandbox/importSanitizer.ts#L169-L224)
 
 ## Architecture Overview
-The error boundary architecture operates in two layers:
+The error boundary architecture operates in two layers with enhanced performance optimization:
 1. Preview-level boundary: Catches React errors thrown by the generated component during mount/update
 2. Sandpack-level boundary: Catches runtime exceptions from the generated code executed inside Sandpack
-3. **Feedback integration: Captures user interactions and auto-detected edits for continuous improvement**
+3. **Performance optimization: Implements queueMicrotask-based deferral to prevent state mutations during useEffect execution**
+4. **Feedback integration: Captures user interactions and auto-detected edits for continuous improvement**
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
+participant PM as "Performance Manager"
 participant Preview as "PreviewErrorBoundary"
 participant Sandpack as "Sandpack Provider"
 participant Wrapper as "CaptureWrapper"
@@ -119,7 +128,9 @@ participant SandboxEB as "SandboxErrorBoundary"
 participant GenCode as "Generated Component"
 participant FeedbackBar as "FeedbackBar"
 participant SCOB as "SandpackChangeObserver"
-User->>Preview : Mount preview
+User->>PM : Trigger code change
+PM->>PM : queueMicrotask(deferredStateUpdate)
+PM->>Preview : Update state after microtask
 Preview->>Sandpack : Initialize provider
 Sandpack->>Wrapper : Wrap generated code
 Wrapper->>SandboxEB : Render error boundary
@@ -133,9 +144,10 @@ SCOB-->>FeedbackBar : Return edited code
 FeedbackBar-->>User : Auto-dismiss after 3 seconds
 ```
 
-**Updated** Added feedback system integration showing auto-detected edit capture and automatic dismissal flow.
+**Updated** Added Performance Manager layer with queueMicrotask-based deferral mechanism and enhanced feedback system integration showing auto-detected edit capture and automatic dismissal flow.
 
 **Diagram sources**
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 - [SandpackPreview.tsx:276-360](file://components/SandpackPreview.tsx#L276-L360)
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
 - [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
@@ -166,6 +178,31 @@ class PreviewErrorBoundary {
 
 **Section sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+
+### Performance Manager Enhancement
+The Performance Manager implements a queueMicrotask-based deferral mechanism to prevent state mutations during useEffect execution:
+- **Defer state updates using queueMicrotask to avoid cascading renders**
+- **Eliminates ESLint react-hooks/set-state-in-effect warnings**
+- **Prevents state mutations during effect cleanup phases**
+- **Ensures predictable component lifecycle management**
+
+```mermaid
+flowchart TD
+Start([Code Change Detected]) --> CheckState{"Previous Code != Current Code?"}
+CheckState --> |Yes| DeferUpdate["queueMicrotask(deferredStateUpdate)"]
+CheckState --> |No| End([No Action])
+DeferUpdate --> Microtask["Microtask Execution"]
+Microtask --> UpdateState["setCrashDetected(false)<br/>setRefreshKey(k+1)"]
+UpdateState --> End
+```
+
+**Updated** Added Performance Manager component with queueMicrotask-based deferral mechanism for state mutations.
+
+**Diagram sources**
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
+
+**Section sources**
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 
 ### SandboxErrorBoundary
 The sandbox-level error boundary is injected into the generated code via CaptureWrapper:
@@ -202,6 +239,7 @@ The preview integrates both error boundaries through the Sandpack provider:
 - PreviewErrorBoundary wraps the entire Sandpack setup
 - SandpackErrorBoundary is injected via CaptureWrapper into the generated code
 - Crash detection monitors Sandpack status and error signals
+- **Performance optimization ensures smooth state transitions without blocking effects**
 
 ```mermaid
 flowchart TD
@@ -255,6 +293,7 @@ The FeedbackBar component provides enhanced user interaction with automatic dism
 - **Auto-detected edits**: Captures and submits user code corrections from Sandpack
 - **Multi-state support**: Handles idle, correcting, submitting, done, error, history, and analytics states
 - **Real-time integration**: Seamlessly integrates with SandpackChangeObserver for edit capture
+- **Performance optimization**: Uses efficient setTimeout cleanup to prevent memory leaks
 
 ```mermaid
 stateDiagram-v2
@@ -271,7 +310,7 @@ history --> idle : user closes history
 analytics --> idle : user closes analytics
 ```
 
-**Updated** Added comprehensive state management for FeedbackBar component with auto-dismissal functionality.
+**Updated** Added comprehensive state management for FeedbackBar component with auto-dismissal functionality and performance optimization.
 
 **Diagram sources**
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
@@ -300,7 +339,7 @@ User->>FB : Submit correction
 FB->>FB : Auto-dismiss after 3s
 ```
 
-**Updated** Added SandpackChangeObserver integration for auto-detected edit capture.
+**Updated** Added SandpackChangeObserver integration for auto-detected edit capture with performance optimizations.
 
 **Diagram sources**
 - [RightPanel.tsx:204-205](file://components/ide/RightPanel.tsx#L204-L205)
@@ -320,6 +359,7 @@ The error boundary system relies on several key dependencies:
 - Package alias resolution for @ui ecosystem
 - Import sanitization for sandbox compatibility
 - **Feedback system integration for user interaction tracking**
+- **Performance optimization layer for React state management**
 
 ```mermaid
 graph LR
@@ -329,12 +369,13 @@ CFG --> SP["Sandpack Provider"]
 SP --> PEB["PreviewErrorBoundary"]
 SP --> WRAP["CaptureWrapper"]
 WRAP --> SEB["SandboxErrorBoundary"]
+PM["Performance Manager<br/>queueMicrotask"] --> PEB
 FB["FeedbackBar"] --> SCOB["SandpackChangeObserver"]
 SCOB --> RP["RightPanel"]
 RP --> FB
 ```
 
-**Updated** Added feedback system dependencies and SandpackChangeObserver integration.
+**Updated** Added Performance Manager dependency and enhanced feedback system dependencies with SandpackChangeObserver integration.
 
 **Diagram sources**
 - [sandpackConfig.ts:112-453](file://lib/sandbox/sandpackConfig.ts#L112-L453)
@@ -353,10 +394,12 @@ RP --> FB
 - Sandpack virtual filesystem size impacts startup time; the system optimizes by injecting only needed @ui packages
 - Import sanitization runs once per code generation to prevent repeated sandbox failures
 - Crash detection avoids unnecessary retries by monitoring Sandpack status and error signals
+- **Performance optimization: queueMicrotask-based deferral mechanism prevents state mutations during useEffect execution, eliminating ESLint warnings and improving React performance**
 - **FeedbackBar auto-dismissal uses efficient setTimeout cleanup to prevent memory leaks**
 - **SandpackChangeObserver filters frequent changes to reduce unnecessary re-renders**
+- **Performance Manager ensures smooth state transitions without blocking the main thread**
 
-**Updated** Added performance considerations for new feedback system components.
+**Updated** Added comprehensive performance considerations for React performance optimization using queueMicrotask-based deferral mechanism and enhanced feedback system components.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -364,21 +407,26 @@ Common issues and resolutions:
 - Sandpack timeout errors: Reduce dependency count or simplify the generated component
 - Error boundary not catching errors: Verify both PreviewErrorBoundary and SandboxErrorBoundary are properly wrapped around the generated code
 - Memory limit exceeded: The crash detection logic triggers a retry mechanism to recover from runtime exits
+- **Performance issues with state updates**: Check useEffect implementations for proper queueMicrotask usage to prevent state mutations during effect execution
+- **ESLint warnings about state mutations in effects**: Ensure queueMicrotask-based deferral is used for state updates triggered by effects
 - **FeedbackBar not auto-dismissing**: Check useEffect cleanup in FeedbackBar component for proper timeout management
 - **Auto-detected edits not captured**: Verify SandpackChangeObserver is properly configured and emitting changes
 - **Feedback submission failing**: Check network connectivity and API endpoint availability
 
-**Updated** Added troubleshooting guidance for new feedback system components.
+**Updated** Added troubleshooting guidance for new performance optimization features and enhanced feedback system components.
 
 **Section sources**
 - [SandpackPreview.tsx:113-150](file://components/SandpackPreview.tsx#L113-L150)
+- [SandpackPreview.tsx:213-218](file://components/SandpackPreview.tsx#L213-L218)
 - [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
 - [RightPanel.tsx:204-205](file://components/ide/RightPanel.tsx#L204-L205)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 
 ## Conclusion
-The Sandbox Error Boundary system provides comprehensive error handling for AI-generated React components in the live preview environment. By combining preview-level and sandbox-level error boundaries with a robust import sanitization pipeline, the system ensures reliable operation even when dealing with potentially problematic generated code. 
+The Sandbox Error Boundary system provides comprehensive error handling for AI-generated React components in the live preview environment. By combining preview-level and sandbox-level error boundaries with a robust import sanitization pipeline, the system ensures reliable operation even when dealing with potentially problematic generated code.
 
-**Updated** The enhanced system now includes sophisticated feedback integration with automatic dismissal functionality, providing users with a seamless experience for reporting issues and suggesting improvements. The combination of auto-detected edit capture, real-time feedback collection, and clean notification flow significantly improves the overall user experience while maintaining excellent error handling capabilities.
+**Updated** The enhanced system now includes sophisticated feedback integration with automatic dismissal functionality and advanced React performance optimization using queueMicrotask-based deferral mechanisms. These optimizations eliminate ESLint warnings, prevent state mutations during useEffect execution, and improve overall React performance while maintaining excellent error handling capabilities.
 
-The modular architecture allows for easy maintenance and extension while maintaining excellent user experience through graceful error recovery, informative error messages, and streamlined feedback collection processes.
+The combination of auto-detected edit capture, real-time feedback collection, clean notification flow, and performance-optimized state management significantly improves the overall user experience while maintaining excellent error handling capabilities. The modular architecture allows for easy maintenance and extension while providing graceful error recovery, informative error messages, and streamlined feedback collection processes.
+
+The introduction of queueMicrotask-based deferral mechanisms ensures that state updates are properly deferred until after the current effect execution cycle completes, preventing cascading renders and maintaining predictable component behavior. This approach aligns with React's best practices for managing state updates in response to effect-driven events.

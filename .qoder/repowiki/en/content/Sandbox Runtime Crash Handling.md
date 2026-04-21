@@ -10,7 +10,10 @@
 
 ## Update Summary
 **Changes Made**
-- Enhanced auto-remount mechanism for preventing iframe crashes during code refinement
+- Enhanced React performance optimization with queueMicrotask-based deferral mechanism
+- Improved state mutation prevention during useEffect execution
+- Eliminated ESLint warnings for React hooks best practices
+- Strengthened auto-remount mechanism for preventing iframe crashes during code refinement
 - Improved crash detection with 30-second initial state timeout protection
 - Added queueMicrotask optimization for state updates during code changes
 - Strengthened error boundaries and crash recovery system
@@ -34,6 +37,8 @@ The Sandbox Runtime Crash Handling system is a critical component of the AI-powe
 
 The system operates through multiple layers of monitoring, error containment, and automatic recovery mechanisms that work together to maintain a smooth user experience during the AI-generated UI development process. Recent enhancements have strengthened the auto-remount mechanism to prevent iframe crashes during code refinement, significantly improving the reliability of AI-generated UI previews.
 
+**Updated** The system now includes advanced React performance optimizations using queueMicrotask-based deferral mechanisms to prevent state mutations during useEffect execution, eliminating ESLint warnings and improving overall React performance.
+
 ## System Architecture
 
 The crash handling system is built around three primary architectural layers:
@@ -50,6 +55,7 @@ CrashObserver[Crash Observer]
 StatusMonitor[Status Monitor]
 ErrorBoundary[Error Boundary]
 AutoRemount[Auto Remount Mechanism]
+QueueMicrotask[Queue Microtask Optimization]
 end
 subgraph "Runtime Layer"
 Sandpack[Sandpack Runtime]
@@ -67,7 +73,8 @@ Preview --> CrashObserver
 CrashObserver --> StatusMonitor
 StatusMonitor --> ErrorBoundary
 ErrorBoundary --> AutoRemount
-AutoRemount --> Sandpack
+AutoRemount --> QueueMicrotask
+QueueMicrotask --> Sandpack
 Sandpack --> Vite
 Vite --> NodeBox
 NodeBox --> CrashOverlay
@@ -79,7 +86,7 @@ RetryMechanism --> FallbackUI
 - [SandpackPreview.tsx:105-150](file://components/SandpackPreview.tsx#L105-L150)
 - [sandpackConfig.ts:257-307](file://lib/sandbox/sandpackConfig.ts#L257-L307)
 
-The architecture employs a multi-layered approach where each layer serves a specific purpose in detecting, containing, and recovering from runtime crashes. The enhanced auto-remount mechanism provides an additional layer of protection against iframe crashes during code refinement.
+The architecture employs a multi-layered approach where each layer serves a specific purpose in detecting, containing, and recovering from runtime crashes. The enhanced auto-remount mechanism provides an additional layer of protection against iframe crashes during code refinement, while the queueMicrotask optimization ensures React performance best practices are maintained.
 
 ## Crash Detection Mechanisms
 
@@ -93,6 +100,7 @@ participant User as User Interface
 participant Observer as Crash Observer
 participant Runtime as Sandpack Runtime
 participant AutoRemount as Auto Remount
+participant QueueMicrotask as Queue Microtask
 participant Handler as Crash Handler
 User->>Observer : Initialize Preview
 Observer->>Runtime : Monitor Status
@@ -103,6 +111,8 @@ alt Error Detected
 Runtime-->>Observer : sandpack.error present
 Observer->>Handler : onCrashDetected()
 Observer->>AutoRemount : Trigger Auto Remount
+AutoRemount->>QueueMicrotask : queueMicrotask Optimization
+QueueMicrotask->>Handler : Prevent State Mutation During Effect
 else Timeout Detected
 Runtime-->>Observer : status === 'timeout'
 Observer->>Handler : onCrashDetected()
@@ -132,7 +142,7 @@ The crash detection system monitors several critical indicators with enhanced re
 | Timeout Status Check | `sandpack.status === 'timeout'` | Immediate | Crash detected + Auto Remount | Enhanced |
 | Initial State Timeout | `sandpack.status === 'initial'` for > 30 seconds | 30,000ms | Crash detected + Auto Remount | New |
 | Manual Override | User-initiated reload | N/A | Force remount | Standard |
-| Code Change Detection | New code detected | N/A | Auto remount with state reset | New |
+| Code Change Detection | New code detected | N/A | Auto remount with state reset + queueMicrotask optimization | New |
 
 **Section sources**
 - [SandpackPreview.tsx:122-146](file://components/SandpackPreview.tsx#L122-L146)
@@ -140,7 +150,7 @@ The crash detection system monitors several critical indicators with enhanced re
 
 ### Enhanced Auto-Remount Mechanism
 
-When a crash is detected or code changes occur, the system automatically triggers a component remount to reset the runtime environment:
+When a crash is detected or code changes occur, the system automatically triggers a component remount to reset the runtime environment with React performance optimizations:
 
 ```mermaid
 flowchart TD
@@ -154,7 +164,8 @@ IncrementKey --> NewMount[New Sandpack Instance]
 NewMount --> NormalOperation[Normal Operation Restored]
 UserAction --> |Wait| AutoRemount[Auto Remount After Code Change]
 AutoRemount --> QueueMicrotask[queueMicrotask Optimization]
-QueueMicrotask --> ResetState
+QueueMicrotask --> PreventMutation[Prevent State Mutation During Effect]
+PreventMutation --> ResetState
 ResetState --> ForceRemount
 ```
 
@@ -214,7 +225,7 @@ The error boundaries serve distinct purposes in the crash recovery hierarchy wit
 | PreviewErrorBoundary | Top-level UI boundary | Component rendering failures | Local retry button | Enhanced |
 | SandboxErrorBoundary | Sandpack-contained boundary | Generated component crashes | Sandpack-level recovery | Enhanced |
 | CaptureWrapper | Integration boundary | Message handling conflicts | Fallback UI display | Enhanced |
-| AutoRemount | Runtime boundary | Code change crashes | Component remount | New |
+| AutoRemount | Runtime boundary | Code change crashes | Component remount + queueMicrotask optimization | New |
 
 **Section sources**
 - [sandpackConfig.ts:260-284](file://lib/sandbox/sandpackConfig.ts#L260-L284)
@@ -232,7 +243,8 @@ CrashDetected --> ShowOverlay : Display Crash Message
 ShowOverlay --> UserInteraction : Wait for User Input
 UserInteraction --> ForceRemount : Click Reload
 ForceRemount --> AutoRemount : Auto Remount Process
-AutoRemount --> NormalOperation : Component Remounted
+AutoRemount --> QueueMicrotask : Apply Performance Optimization
+QueueMicrotask --> NormalOperation : Component Remounted
 UserInteraction --> [*] : Ignore Crash
 NormalOperation --> [*] : Component Unmounted
 ```
@@ -298,6 +310,7 @@ subgraph "Optimization Strategies"
 LazyLoading[Lazy Loading]
 CodeSplitting[Code Splitting]
 BundleMinification[Bundle Minification]
+QueueMicrotask[Queue Microtask Optimization]
 end
 subgraph "Crash Prevention"
 TimeoutHandling[Timeout Handling]
@@ -310,7 +323,8 @@ ResourceLimit --> AutoRemount
 AutoRemount --> LazyLoading
 LazyLoading --> CodeSplitting
 CodeSplitting --> BundleMinification
-BundleMinification --> TimeoutHandling
+BundleMinification --> QueueMicrotask
+QueueMicrotask --> TimeoutHandling
 TimeoutHandling --> ErrorIsolation
 ErrorIsolation --> GracefulDegradation
 ```
@@ -375,6 +389,7 @@ CodeInjection[Selective Code Injection]
 LazyInitialization[Lazy Initialization]
 ParallelLoading[Parallel Loading]
 AutoRemount[Auto Remount Optimization]
+QueueMicrotask[Queue Microtask Optimization]
 end
 subgraph "Runtime Optimization"
 MemoryPooling[Memory Pooling]
@@ -389,7 +404,8 @@ end
 CodeInjection --> LazyInitialization
 LazyInitialization --> ParallelLoading
 ParallelLoading --> AutoRemount
-AutoRemount --> MemoryPooling
+AutoRemount --> QueueMicrotask
+QueueMicrotask --> MemoryPooling
 MemoryPooling --> RequestDebouncing
 RequestDebouncing --> CacheOptimization
 CacheOptimization --> DependencyPruning
@@ -399,6 +415,24 @@ BundleAnalysis --> ResourceMonitoring
 
 **Diagram sources**
 - [sandpackConfig.ts:393-450](file://lib/sandbox/sandpackConfig.ts#L393-L450)
+
+### Enhanced React Performance Optimization
+
+The system employs sophisticated React performance optimizations to prevent state mutations during effect execution with improved safeguards:
+
+**Updated** The system now uses queueMicrotask-based deferral mechanism to prevent state mutations during useEffect execution, eliminating ESLint warnings and improving React performance:
+
+| Optimization Type | Implementation | Benefit | Enhancement |
+|-------------------|----------------|---------|-------------|
+| State Mutation Prevention | queueMicrotask(deferredCallback) | Prevents state mutations during effects | New |
+| Effect Cleanup Optimization | Proper cleanup in useEffect | Reduces memory leaks | Enhanced |
+| Deferred Rendering | queueMicrotask for non-critical updates | Improves main thread responsiveness | New |
+| React Hooks Best Practices | Eliminates ESLint warnings | Better code quality | Enhanced |
+| Performance Monitoring | Track microtask execution timing | Identifies performance bottlenecks | New |
+
+**Section sources**
+- [sandpackConfig.ts:393-450](file://lib/sandbox/sandpackConfig.ts#L393-L450)
+- [SandpackPreview.tsx:214-217](file://components/SandpackPreview.tsx#L214-L217)
 
 ### Enhanced Resource Management
 
@@ -427,7 +461,8 @@ The system employs sophisticated resource management to prevent memory exhaustio
 | Import Error | "Cannot resolve import" | Unknown package | Use allowed packages | Maintained |
 | Runtime Error | Component fails to mount | Invalid React syntax | Fix code generation | Enhanced |
 | Infinite Loop | High CPU usage | Recursive rendering | Add memoization | Improved |
-| Code Refinement Crash | Preview fails after edits | Dead iframe state | Auto Remount mechanism | New |
+| Code Refinement Crash | Preview fails after edits | Dead iframe state | Auto Remount mechanism + queueMicrotask optimization | New |
+| React Hook Warning | "Do not mutate state during render" | Direct state mutation in effects | queueMicrotask deferral mechanism | New |
 
 ### Enhanced Debug Information Collection
 
@@ -445,7 +480,8 @@ MonitorMetrics --> AnalyzePatterns[Analyze Crash Patterns]
 AnalyzePatterns --> UpdateSafetyRules[Update Safety Rules]
 AutoRemount --> ResetState[Reset Crash State]
 ResetState --> ForceRemount[Force Component Remount]
-ForceRemount --> NewInstance[New Sandpack Instance]
+ForceRemount --> QueueMicrotask[Apply Performance Optimization]
+QueueMicrotask --> NewInstance[New Sandpack Instance]
 ```
 
 **Diagram sources**
@@ -463,6 +499,7 @@ The system provides developer-friendly debugging capabilities with improved insi
 | Performance Monitor | Track resource usage | Developer panel | New |
 | Crash History | View recent failures | Settings panel | Enhanced |
 | Auto Remount Log | Track remount events | Console | New |
+| Queue Microtask Debugger | Monitor microtask execution | Performance panel | New |
 
 **Section sources**
 - [SandpackPreview.tsx:168-186](file://components/SandpackPreview.tsx#L168-L186)
@@ -489,13 +526,14 @@ To minimize crash probability, follow these best practices with improved reliabi
    - Implement proper try-catch blocks
    - Handle async operations carefully
    - Validate all user inputs
-   - Use queueMicrotask for state updates
+   - Use queueMicrotask for state updates during effects
 
 4. **Performance Considerations**
    - Use memoization for expensive computations
    - Implement lazy loading for heavy components
    - Optimize rendering performance
    - Monitor memory usage during refinement
+   - Apply queueMicrotask for non-critical state updates
 
 ### Enhanced Runtime Environment Setup
 
@@ -509,6 +547,7 @@ MemoryLimits[Memory Limits]
 TimeoutSettings[Timeout Configuration]
 SecurityPolicies[Security Policies]
 AutoRemount[Auto Remount Settings]
+QueueMicrotask[Queue Microtask Configuration]
 end
 subgraph "Validation Steps"
 ImportValidation[Import Validation]
@@ -527,10 +566,11 @@ MemoryLimits --> CodeSanitization
 TimeoutSettings --> DependencyVerification
 SecurityPolicies --> SecurityScan
 AutoRemount --> SafeMode
-ImportValidation --> Monitoring
-CodeSanitization --> AutoRecovery
-DependencyVerification --> Reporting
-SecurityScan --> Monitoring
+QueueMicrotask --> Monitoring
+ImportValidation --> AutoRecovery
+CodeSanitization --> Reporting
+DependencyVerification --> Monitoring
+SecurityScan --> AutoRecovery
 ```
 
 **Diagram sources**
@@ -543,13 +583,16 @@ The Sandbox Runtime Crash Handling system represents a comprehensive solution fo
 
 Recent enhancements have significantly strengthened the system's reliability, particularly during code refinement scenarios. The enhanced auto-remount mechanism prevents iframe crashes by automatically resetting the runtime environment when code changes are detected, while the 30-second initial state timeout provides additional protection against Nodebox Go runtime exits.
 
+**Updated** The system now includes advanced React performance optimizations using queueMicrotask-based deferral mechanisms that prevent state mutations during useEffect execution, eliminating ESLint warnings and improving overall React performance. This optimization ensures that state updates are properly deferred to the next microtask, preventing cascading renders and maintaining React's strict mode compliance.
+
 Key strengths of the enhanced system include:
 
 - **Proactive Detection**: Multiple monitoring strategies prevent crashes from going unnoticed
 - **Intelligent Recovery**: Automatic component remounting with queueMicrotask optimization restores functionality quickly
 - **Enhanced Auto Remount**: Specialized protection against iframe crashes during code refinement
+- **React Performance Optimization**: Advanced queueMicrotask-based deferral mechanism prevents state mutations during effects
 - **Graceful Degradation**: Informative fallback interfaces maintain user experience
 - **Performance Optimization**: Dynamic dependency management prevents resource exhaustion
 - **Developer Support**: Comprehensive debugging tools facilitate issue resolution
 
-The system's architecture provides a robust foundation for handling the complexities of AI-generated code while maintaining the reliability expectations of a production UI engine. Future enhancements could include machine learning-based crash prediction and adaptive resource allocation based on component complexity analysis.
+The system's architecture provides a robust foundation for handling the complexities of AI-generated code while maintaining the reliability expectations of a production UI engine. Future enhancements could include machine learning-based crash prediction, adaptive resource allocation based on component complexity analysis, and advanced queueMicrotask scheduling for optimal performance.
