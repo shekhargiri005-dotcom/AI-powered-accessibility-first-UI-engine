@@ -4,20 +4,26 @@ import { resolveDefaultAdapter } from '@/lib/ai/resolveDefaultAdapter';
 import { logger } from '@/lib/logger';
 import { auth } from '@/lib/auth';
 import type { ProviderName } from '@/lib/ai/types';
+import { UI_ECOSYSTEM_API_CHEAT_SHEET } from '@/lib/ai/uiCheatSheet';
 
 export const maxDuration = 30;
 
 const SUGGESTIONS_SYSTEM_PROMPT = `You are a world-class Senior UI/UX Designer with expertise in React and Tailwind CSS.
 You review generated React component code and suggest targeted, actionable aesthetic improvements.
 
+CRITICAL: This project uses a custom design system. ALL suggestions MUST reference these available components and tokens:
+
+${UI_ECOSYSTEM_API_CHEAT_SHEET}
+
 Your suggestions must be:
 - Short: max 12 words each
 - Actionable: phrased as an instruction (e.g. "Add a glowing gradient to the hero title")
-- Specific: reference actual elements visible in the code
+- Specific: reference actual elements visible in the code and suggest using @ui/* components/tokens when applicable
 - Focused on: visual aesthetics, micro-animations, spacing, color vibrancy, typography, or accessibility
+- Project-aware: suggest using @ui/core components (Card, Button, Badge) or @ui/tokens (colors, spacing, radius) instead of generic Tailwind classes when appropriate
 
 Return ONLY a valid JSON array of exactly 3 suggestion strings. No markdown, no explanation, no preamble.
-Example: ["Add a gradient overlay to the hero background", "Animate card entrance with fade-in on scroll", "Increase heading font weight to font-black"]`;
+Example: ["Replace raw divs with Card from @ui/core", "Use colors.gradient.warm for the hero background", "Add Motion wrapper for fade-in entrance"]`;
 
 export async function POST(request: NextRequest) {
   const reqLogger = logger.createRequestLogger('/api/suggestions');
@@ -60,6 +66,20 @@ export async function POST(request: NextRequest) {
 ${intentDescription ? `Original Goal: "${intentDescription}"\n` : ''}
 CODE (first 2000 chars):
 ${codeSnippet.slice(0, 2000)}
+
+PROJECT DESIGN SYSTEM:
+This code runs in a sandbox with these available imports:
+- @ui/core: Card, Button, Badge, Input, Avatar, Modal
+- @ui/layout: Stack, Grid, Container, Section, Divider
+- @ui/tokens: colors, spacing, radius, shadow, text, toStyle, transition
+- @ui/motion: Motion, MotionGroup
+- @ui/a11y: FocusTrap, useAnnouncer, useKeyboardNav
+
+SUGGESTION RULES:
+1. Recommend using @ui/* components when raw HTML elements are used instead
+2. Suggest specific token values (e.g., colors.gradient.warm, radius.xl) instead of raw values
+3. Focus on accessibility improvements (ARIA labels, keyboard navigation, contrast)
+4. Keep suggestions actionable and specific to the visible code
 
 Suggest exactly 3 specific, targeted UI improvements. Return ONLY a JSON array of 3 strings.`;
 
