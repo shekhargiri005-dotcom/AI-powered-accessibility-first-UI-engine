@@ -3,10 +3,19 @@
 <cite>
 **Referenced Files in This Document**
 - [SandpackPreview.tsx](file://components/SandpackPreview.tsx)
+- [FeedbackBar.tsx](file://components/FeedbackBar.tsx)
+- [RightPanel.tsx](file://components/ide/RightPanel.tsx)
 - [sandpackConfig.ts](file://lib/sandbox/sandpackConfig.ts)
 - [importSanitizer.ts](file://lib/sandbox/importSanitizer.ts)
 - [ui-ecosystem.json](file://lib/sandbox/ui-ecosystem.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added documentation for FeedbackBar component with automatic dismissal functionality
+- Updated integration patterns showing FeedbackBar with SandpackChangeObserver
+- Enhanced user experience documentation for cleaner notification flow
+- Added new sections covering auto-detected edit capture and submission process
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -14,51 +23,63 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Feedback System Integration](#feedback-system-integration)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 This document explains the Sandbox Error Boundary implementation used to gracefully handle runtime crashes in the AI-generated UI preview system. The system consists of two complementary error boundaries: a preview-level boundary that handles React component mounting failures, and a sandbox-level boundary that intercepts runtime errors from generated code within the Sandpack environment. Together, they provide robust error handling for AI-generated React components during live preview.
+
+**Updated** Enhanced with FeedbackBar component integration for improved user experience and automatic dismissal functionality for cleaner notification flow.
 
 ## Project Structure
 The Sandbox Error Boundary spans three key areas:
 - Preview-level error boundary: wraps the Sandpack preview to handle React mounting errors
 - Sandpack-level error boundary: wraps generated code to catch runtime exceptions
 - Code sanitization pipeline: ensures generated code can safely run in the sandbox
+- Feedback system integration: captures user interactions and auto-detected edits
 
 ```mermaid
 graph TB
 subgraph "Preview Layer"
 PEB["PreviewErrorBoundary<br/>React Error Boundary"]
-end
+FB["FeedbackBar<br/>Auto-dismissal & Edit Capture"]
+END
 subgraph "Sandpack Layer"
 SEB["SandboxErrorBoundary<br/>React Error Boundary"]
 SP["Sandpack Provider"]
 WRAP["CaptureWrapper"]
-end
+SCOB["SandpackChangeObserver<br/>Auto-edit Detection"]
+END
 subgraph "Safety Pipeline"
 IS["importSanitizer.ts<br/>Allow-list & Stubs"]
 CFG["sandpackConfig.ts<br/>File Builder & Aliases"]
 ECOSYS["ui-ecosystem.json<br/>Virtual Package Graph"]
-end
+END
 PEB --> SP
+FB --> SCOB
 SP --> WRAP
 WRAP --> SEB
 CFG --> SP
 IS --> CFG
 ECOSYS --> CFG
+SCOB --> FB
 ```
 
 **Diagram sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 - [importSanitizer.ts:16-47](file://lib/sandbox/importSanitizer.ts#L16-L47)
 - [ui-ecosystem.json:1-42](file://lib/sandbox/ui-ecosystem.json#L1-L42)
 
 **Section sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 - [importSanitizer.ts:16-47](file://lib/sandbox/importSanitizer.ts#L16-L47)
 - [ui-ecosystem.json:1-42](file://lib/sandbox/ui-ecosystem.json#L1-L42)
@@ -70,9 +91,14 @@ ECOSYS --> CFG
 - CaptureWrapper: Higher-order wrapper that injects the sandbox error boundary around generated code
 - Import sanitizer: Validates and sanitizes imports to prevent unresolved dependencies in the sandbox
 - Sandpack file builder: Constructs the virtual filesystem, injects error boundaries, and resolves aliases
+- **FeedbackBar**: Enhanced component with automatic dismissal and auto-detected edit capture for improved user experience
+
+**Updated** Added FeedbackBar component with automatic dismissal functionality and Sandpack integration.
 
 **Section sources**
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 - [sandpackConfig.ts:112-453](file://lib/sandbox/sandpackConfig.ts#L112-L453)
 - [importSanitizer.ts:169-224](file://lib/sandbox/importSanitizer.ts#L169-L224)
@@ -81,6 +107,7 @@ ECOSYS --> CFG
 The error boundary architecture operates in two layers:
 1. Preview-level boundary: Catches React errors thrown by the generated component during mount/update
 2. Sandpack-level boundary: Catches runtime exceptions from the generated code executed inside Sandpack
+3. **Feedback integration: Captures user interactions and auto-detected edits for continuous improvement**
 
 ```mermaid
 sequenceDiagram
@@ -90,6 +117,8 @@ participant Sandpack as "Sandpack Provider"
 participant Wrapper as "CaptureWrapper"
 participant SandboxEB as "SandboxErrorBoundary"
 participant GenCode as "Generated Component"
+participant FeedbackBar as "FeedbackBar"
+participant SCOB as "SandpackChangeObserver"
 User->>Preview : Mount preview
 Preview->>Sandpack : Initialize provider
 Sandpack->>Wrapper : Wrap generated code
@@ -98,10 +127,18 @@ SandboxEB->>GenCode : Render component
 GenCode-->>SandboxEB : Throws runtime error
 SandboxEB-->>Preview : Error caught and displayed
 Preview-->>User : Show friendly error UI with retry
+User->>FeedbackBar : Provide feedback
+FeedbackBar->>SCOB : Capture auto-detected edit
+SCOB-->>FeedbackBar : Return edited code
+FeedbackBar-->>User : Auto-dismiss after 3 seconds
 ```
+
+**Updated** Added feedback system integration showing auto-detected edit capture and automatic dismissal flow.
 
 **Diagram sources**
 - [SandpackPreview.tsx:276-360](file://components/SandpackPreview.tsx#L276-L360)
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 
 ## Detailed Component Analysis
@@ -210,12 +247,79 @@ Stub --> Output
 - [importSanitizer.ts:16-47](file://lib/sandbox/importSanitizer.ts#L16-L47)
 - [importSanitizer.ts:169-224](file://lib/sandbox/importSanitizer.ts#L169-L224)
 
+## Feedback System Integration
+
+### FeedbackBar Component
+The FeedbackBar component provides enhanced user interaction with automatic dismissal functionality:
+- **Auto-dismissal**: Automatically transitions from 'done' state to 'idle' after 3 seconds
+- **Auto-detected edits**: Captures and submits user code corrections from Sandpack
+- **Multi-state support**: Handles idle, correcting, submitting, done, error, history, and analytics states
+- **Real-time integration**: Seamlessly integrates with SandpackChangeObserver for edit capture
+
+```mermaid
+stateDiagram-v2
+[*] --> idle
+idle --> correcting : user clicks "I corrected it"
+idle --> history : user clicks history
+idle --> analytics : user clicks analytics
+correcting --> submitting : user submits correction
+submitting --> done : successful submission
+submitting --> error : submission failed
+done --> idle : auto-dismiss after 3s
+error --> idle : user retries
+history --> idle : user closes history
+analytics --> idle : user closes analytics
+```
+
+**Updated** Added comprehensive state management for FeedbackBar component with auto-dismissal functionality.
+
+**Diagram sources**
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [FeedbackBar.tsx:32-32](file://components/FeedbackBar.tsx#L32-L32)
+
+### SandpackChangeObserver Integration
+The SandpackChangeObserver captures real-time code changes for feedback collection:
+- Monitors active file changes in Sandpack
+- Filters meaningful changes (minimum 50 characters)
+- Bubbles up detected edits to FeedbackBar
+- Enables automatic correction submission
+
+```mermaid
+sequenceDiagram
+participant User as "User"
+participant SP as "Sandpack Editor"
+participant SCOB as "SandpackChangeObserver"
+participant RP as "RightPanel"
+participant FB as "FeedbackBar"
+User->>SP : Edit code
+SP->>SCOB : Detect change
+SCOB->>RP : Emit edited code
+RP->>FB : Pass autoDetectedEdit prop
+FB->>FB : Highlight correction button
+User->>FB : Submit correction
+FB->>FB : Auto-dismiss after 3s
+```
+
+**Updated** Added SandpackChangeObserver integration for auto-detected edit capture.
+
+**Diagram sources**
+- [RightPanel.tsx:204-205](file://components/ide/RightPanel.tsx#L204-L205)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
+- [FeedbackBar.tsx:264-271](file://components/FeedbackBar.tsx#L264-L271)
+
+**Section sources**
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [FeedbackBar.tsx:264-271](file://components/FeedbackBar.tsx#L264-L271)
+- [RightPanel.tsx:204-205](file://components/ide/RightPanel.tsx#L204-L205)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
+
 ## Dependency Analysis
 The error boundary system relies on several key dependencies:
 - Sandpack React components for preview hosting
 - Virtual filesystem construction for generated code
 - Package alias resolution for @ui ecosystem
 - Import sanitization for sandbox compatibility
+- **Feedback system integration for user interaction tracking**
 
 ```mermaid
 graph LR
@@ -225,23 +329,34 @@ CFG --> SP["Sandpack Provider"]
 SP --> PEB["PreviewErrorBoundary"]
 SP --> WRAP["CaptureWrapper"]
 WRAP --> SEB["SandboxErrorBoundary"]
+FB["FeedbackBar"] --> SCOB["SandpackChangeObserver"]
+SCOB --> RP["RightPanel"]
+RP --> FB
 ```
+
+**Updated** Added feedback system dependencies and SandpackChangeObserver integration.
 
 **Diagram sources**
 - [sandpackConfig.ts:112-453](file://lib/sandbox/sandpackConfig.ts#L112-L453)
 - [importSanitizer.ts:16-47](file://lib/sandbox/importSanitizer.ts#L16-L47)
 - [ui-ecosystem.json:1-42](file://lib/sandbox/ui-ecosystem.json#L1-L42)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 
 **Section sources**
 - [sandpackConfig.ts:112-453](file://lib/sandbox/sandpackConfig.ts#L112-L453)
 - [importSanitizer.ts:16-47](file://lib/sandbox/importSanitizer.ts#L16-L47)
 - [ui-ecosystem.json:1-42](file://lib/sandbox/ui-ecosystem.json#L1-L42)
+- [RightPanel.tsx:453-459](file://components/ide/RightPanel.tsx#L453-L459)
 
 ## Performance Considerations
 - Error boundaries add minimal overhead during normal operation
 - Sandpack virtual filesystem size impacts startup time; the system optimizes by injecting only needed @ui packages
 - Import sanitization runs once per code generation to prevent repeated sandbox failures
 - Crash detection avoids unnecessary retries by monitoring Sandpack status and error signals
+- **FeedbackBar auto-dismissal uses efficient setTimeout cleanup to prevent memory leaks**
+- **SandpackChangeObserver filters frequent changes to reduce unnecessary re-renders**
+
+**Updated** Added performance considerations for new feedback system components.
 
 ## Troubleshooting Guide
 Common issues and resolutions:
@@ -249,10 +364,21 @@ Common issues and resolutions:
 - Sandpack timeout errors: Reduce dependency count or simplify the generated component
 - Error boundary not catching errors: Verify both PreviewErrorBoundary and SandboxErrorBoundary are properly wrapped around the generated code
 - Memory limit exceeded: The crash detection logic triggers a retry mechanism to recover from runtime exits
+- **FeedbackBar not auto-dismissing**: Check useEffect cleanup in FeedbackBar component for proper timeout management
+- **Auto-detected edits not captured**: Verify SandpackChangeObserver is properly configured and emitting changes
+- **Feedback submission failing**: Check network connectivity and API endpoint availability
+
+**Updated** Added troubleshooting guidance for new feedback system components.
 
 **Section sources**
 - [SandpackPreview.tsx:113-150](file://components/SandpackPreview.tsx#L113-L150)
+- [FeedbackBar.tsx:109-115](file://components/FeedbackBar.tsx#L109-L115)
+- [RightPanel.tsx:204-205](file://components/ide/RightPanel.tsx#L204-L205)
 - [sandpackConfig.ts:257-309](file://lib/sandbox/sandpackConfig.ts#L257-L309)
 
 ## Conclusion
-The Sandbox Error Boundary system provides comprehensive error handling for AI-generated React components in the live preview environment. By combining preview-level and sandbox-level error boundaries with a robust import sanitization pipeline, the system ensures reliable operation even when dealing with potentially problematic generated code. The modular architecture allows for easy maintenance and extension while maintaining excellent user experience through graceful error recovery and informative error messages.
+The Sandbox Error Boundary system provides comprehensive error handling for AI-generated React components in the live preview environment. By combining preview-level and sandbox-level error boundaries with a robust import sanitization pipeline, the system ensures reliable operation even when dealing with potentially problematic generated code. 
+
+**Updated** The enhanced system now includes sophisticated feedback integration with automatic dismissal functionality, providing users with a seamless experience for reporting issues and suggesting improvements. The combination of auto-detected edit capture, real-time feedback collection, and clean notification flow significantly improves the overall user experience while maintaining excellent error handling capabilities.
+
+The modular architecture allows for easy maintenance and extension while maintaining excellent user experience through graceful error recovery, informative error messages, and streamlined feedback collection processes.

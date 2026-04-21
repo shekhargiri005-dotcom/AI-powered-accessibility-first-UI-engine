@@ -210,9 +210,11 @@ export default function SandpackPreviewComponent({
   useEffect(() => {
     const codeString = typeof code === 'string' ? code : JSON.stringify(code);
     if (codeString !== previousCodeRef.current && previousCodeRef.current.length > 0) {
-      // Code changed - reset crash state and force remount
-      setCrashDetected(false);
-      setRefreshKey((k) => k + 1);
+      // Defer state update to avoid cascading renders ( ESLint react-hooks/set-state-in-effect )
+      queueMicrotask(() => {
+        setCrashDetected(false);
+        setRefreshKey((k) => k + 1);
+      });
     }
     previousCodeRef.current = codeString;
   }, [code]);

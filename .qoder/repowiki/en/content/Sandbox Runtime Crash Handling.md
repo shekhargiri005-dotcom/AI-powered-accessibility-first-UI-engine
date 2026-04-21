@@ -8,6 +8,14 @@
 - [RightPanel.tsx](file://components/ide/RightPanel.tsx)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Enhanced auto-remount mechanism for preventing iframe crashes during code refinement
+- Improved crash detection with 30-second initial state timeout protection
+- Added queueMicrotask optimization for state updates during code changes
+- Strengthened error boundaries and crash recovery system
+- Enhanced screenshot capture integration with fallback mechanisms
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [System Architecture](#system-architecture)
@@ -24,7 +32,7 @@
 
 The Sandbox Runtime Crash Handling system is a critical component of the AI-powered accessibility-first UI engine designed to provide robust error detection, recovery mechanisms, and graceful degradation when the Sandpack runtime encounters failures. This system ensures that generated UI components can be previewed reliably even when encountering runtime crashes, dependency conflicts, or memory limitations.
 
-The system operates through multiple layers of monitoring, error containment, and automatic recovery mechanisms that work together to maintain a smooth user experience during the AI-generated UI development process.
+The system operates through multiple layers of monitoring, error containment, and automatic recovery mechanisms that work together to maintain a smooth user experience during the AI-generated UI development process. Recent enhancements have strengthened the auto-remount mechanism to prevent iframe crashes during code refinement, significantly improving the reliability of AI-generated UI previews.
 
 ## System Architecture
 
@@ -41,6 +49,7 @@ subgraph "Monitoring Layer"
 CrashObserver[Crash Observer]
 StatusMonitor[Status Monitor]
 ErrorBoundary[Error Boundary]
+AutoRemount[Auto Remount Mechanism]
 end
 subgraph "Runtime Layer"
 Sandpack[Sandpack Runtime]
@@ -48,7 +57,7 @@ Vite[Vite Bundler]
 NodeBox[NodeBox Go Runtime]
 end
 subgraph "Recovery Layer"
-AutoRemount[Auto Remount]
+CrashOverlay[Crash Overlay]
 RetryMechanism[Retry Mechanism]
 FallbackUI[Fallback UI]
 end
@@ -57,11 +66,12 @@ Editor --> CrashObserver
 Preview --> CrashObserver
 CrashObserver --> StatusMonitor
 StatusMonitor --> ErrorBoundary
-ErrorBoundary --> Sandpack
+ErrorBoundary --> AutoRemount
+AutoRemount --> Sandpack
 Sandpack --> Vite
 Vite --> NodeBox
-NodeBox --> AutoRemount
-AutoRemount --> RetryMechanism
+NodeBox --> CrashOverlay
+CrashOverlay --> RetryMechanism
 RetryMechanism --> FallbackUI
 ```
 
@@ -69,7 +79,7 @@ RetryMechanism --> FallbackUI
 - [SandpackPreview.tsx:105-150](file://components/SandpackPreview.tsx#L105-L150)
 - [sandpackConfig.ts:257-307](file://lib/sandbox/sandpackConfig.ts#L257-L307)
 
-The architecture employs a multi-layered approach where each layer serves a specific purpose in detecting, containing, and recovering from runtime crashes.
+The architecture employs a multi-layered approach where each layer serves a specific purpose in detecting, containing, and recovering from runtime crashes. The enhanced auto-remount mechanism provides an additional layer of protection against iframe crashes during code refinement.
 
 ## Crash Detection Mechanisms
 
@@ -82,6 +92,7 @@ sequenceDiagram
 participant User as User Interface
 participant Observer as Crash Observer
 participant Runtime as Sandpack Runtime
+participant AutoRemount as Auto Remount
 participant Handler as Crash Handler
 User->>Observer : Initialize Preview
 Observer->>Runtime : Monitor Status
@@ -91,14 +102,18 @@ Observer->>Runtime : Check sandpack.status
 alt Error Detected
 Runtime-->>Observer : sandpack.error present
 Observer->>Handler : onCrashDetected()
+Observer->>AutoRemount : Trigger Auto Remount
 else Timeout Detected
 Runtime-->>Observer : status === 'timeout'
 Observer->>Handler : onCrashDetected()
+Observer->>AutoRemount : Trigger Auto Remount
 else Long Initial Wait
 Runtime-->>Observer : status === 'initial' for 30s+
 Observer->>Handler : onCrashDetected()
+Observer->>AutoRemount : Trigger Auto Remount
 end
 end
+AutoRemount->>Runtime : Force Component Remount
 Handler->>User : Show Crash Overlay
 User->>Handler : Click Reload
 Handler->>Runtime : Force Remount
@@ -109,21 +124,23 @@ Handler->>Runtime : Force Remount
 
 ### Multi-Faceted Detection Criteria
 
-The crash detection system monitors several critical indicators:
+The crash detection system monitors several critical indicators with enhanced reliability:
 
-| Detection Method | Trigger Condition | Timeout Threshold | Action Taken |
-|------------------|-------------------|-------------------|--------------|
-| Error Object Check | `sandpack.error` exists | Immediate | Crash detected |
-| Timeout Status Check | `sandpack.status === 'timeout'` | Immediate | Crash detected |
-| Initial State Timeout | `sandpack.status === 'initial'` for > 30 seconds | 30,000ms | Crash detected |
-| Manual Override | User-initiated reload | N/A | Force remount |
+| Detection Method | Trigger Condition | Timeout Threshold | Action Taken | Enhancement |
+|------------------|-------------------|-------------------|--------------|-------------|
+| Error Object Check | `sandpack.error` exists | Immediate | Crash detected + Auto Remount | Enhanced |
+| Timeout Status Check | `sandpack.status === 'timeout'` | Immediate | Crash detected + Auto Remount | Enhanced |
+| Initial State Timeout | `sandpack.status === 'initial'` for > 30 seconds | 30,000ms | Crash detected + Auto Remount | New |
+| Manual Override | User-initiated reload | N/A | Force remount | Standard |
+| Code Change Detection | New code detected | N/A | Auto remount with state reset | New |
 
 **Section sources**
 - [SandpackPreview.tsx:122-146](file://components/SandpackPreview.tsx#L122-L146)
+- [SandpackPreview.tsx:208-220](file://components/SandpackPreview.tsx#L208-L220)
 
-### Automatic Component Remounting
+### Enhanced Auto-Remount Mechanism
 
-When a crash is detected, the system automatically triggers a component remount to reset the runtime environment:
+When a crash is detected or code changes occur, the system automatically triggers a component remount to reset the runtime environment:
 
 ```mermaid
 flowchart TD
@@ -132,18 +149,20 @@ SetFlag --> ShowOverlay[Show Crash Overlay]
 ShowOverlay --> UserAction{User Action}
 UserAction --> |Click Reload| ResetState[Reset Crash State]
 ResetState --> ForceRemount[Force Component Remount]
-ForceRemount --> ClearKey[Increment refreshKey]
-ClearKey --> NewMount[New Sandpack Instance]
+ForceRemount --> IncrementKey[Increment refreshKey]
+IncrementKey --> NewMount[New Sandpack Instance]
 NewMount --> NormalOperation[Normal Operation Restored]
 UserAction --> |Wait| AutoRemount[Auto Remount After Code Change]
-AutoRemount --> NormalOperation
+AutoRemount --> QueueMicrotask[queueMicrotask Optimization]
+QueueMicrotask --> ResetState
+ResetState --> ForceRemount
 ```
 
 **Diagram sources**
-- [SandpackPreview.tsx:208-228](file://components/SandpackPreview.tsx#L208-L228)
+- [SandpackPreview.tsx:208-230](file://components/SandpackPreview.tsx#L208-L230)
 
 **Section sources**
-- [SandpackPreview.tsx:208-218](file://components/SandpackPreview.tsx#L208-L218)
+- [SandpackPreview.tsx:208-230](file://components/SandpackPreview.tsx#L208-L230)
 
 ## Error Boundaries and Recovery
 
@@ -186,15 +205,16 @@ CaptureWrapper --> CrashOverlay : displays when needed
 - [SandpackPreview.tsx:156-187](file://components/SandpackPreview.tsx#L156-L187)
 - [sandpackConfig.ts:260-307](file://lib/sandbox/sandpackConfig.ts#L260-L307)
 
-### Error Boundary Implementation Details
+### Enhanced Error Boundary Implementation Details
 
-The error boundaries serve distinct purposes in the crash recovery hierarchy:
+The error boundaries serve distinct purposes in the crash recovery hierarchy with improved reliability:
 
-| Boundary Type | Purpose | Error Scope | Recovery Mechanism |
-|---------------|---------|-------------|-------------------|
-| PreviewErrorBoundary | Top-level UI boundary | Component rendering failures | Local retry button |
-| SandboxErrorBoundary | Sandpack-contained boundary | Generated component crashes | Sandpack-level recovery |
-| CaptureWrapper | Integration boundary | Message handling conflicts | Fallback UI display |
+| Boundary Type | Purpose | Error Scope | Recovery Mechanism | Enhancement |
+|---------------|---------|-------------|-------------------|-------------|
+| PreviewErrorBoundary | Top-level UI boundary | Component rendering failures | Local retry button | Enhanced |
+| SandboxErrorBoundary | Sandpack-contained boundary | Generated component crashes | Sandpack-level recovery | Enhanced |
+| CaptureWrapper | Integration boundary | Message handling conflicts | Fallback UI display | Enhanced |
+| AutoRemount | Runtime boundary | Code change crashes | Component remount | New |
 
 **Section sources**
 - [sandpackConfig.ts:260-284](file://lib/sandbox/sandpackConfig.ts#L260-L284)
@@ -202,7 +222,7 @@ The error boundaries serve distinct purposes in the crash recovery hierarchy:
 
 ### Graceful Degradation UI
 
-When crashes occur, the system provides informative fallback interfaces:
+When crashes occur, the system provides informative fallback interfaces with enhanced user experience:
 
 ```mermaid
 stateDiagram-v2
@@ -211,7 +231,8 @@ NormalOperation --> CrashDetected : Runtime Failure
 CrashDetected --> ShowOverlay : Display Crash Message
 ShowOverlay --> UserInteraction : Wait for User Input
 UserInteraction --> ForceRemount : Click Reload
-ForceRemount --> NormalOperation : Component Remounted
+ForceRemount --> AutoRemount : Auto Remount Process
+AutoRemount --> NormalOperation : Component Remounted
 UserInteraction --> [*] : Ignore Crash
 NormalOperation --> [*] : Component Unmounted
 ```
@@ -250,12 +271,12 @@ VirtualFS --> SandpackRuntime[Sandpack Runtime]
 
 The system implements intelligent dependency resolution to minimize runtime overhead:
 
-| Dependency Category | Detection Method | Action Taken | Performance Impact |
-|---------------------|------------------|--------------|-------------------|
-| Direct Dependencies | Regex pattern matching | Inject minimal packages | Low |
-| Transitive Dependencies | Package graph traversal | Include only needed files | Medium |
-| Unused Dependencies | Code analysis | Exclude from virtual FS | High |
-| Circular Dependencies | Graph cycle detection | Break cycles with stubs | Medium |
+| Dependency Category | Detection Method | Action Taken | Performance Impact | Enhancement |
+|---------------------|------------------|--------------|-------------------|-------------|
+| Direct Dependencies | Regex pattern matching | Inject minimal packages | Low | Optimized |
+| Transitive Dependencies | Package graph traversal | Include only needed files | Medium | Enhanced |
+| Unused Dependencies | Code analysis | Exclude from virtual FS | High | Improved |
+| Circular Dependencies | Graph cycle detection | Break cycles with stubs | Medium | Refined |
 
 **Section sources**
 - [importSanitizer.ts:169-205](file://lib/sandbox/importSanitizer.ts#L169-L205)
@@ -263,7 +284,7 @@ The system implements intelligent dependency resolution to minimize runtime over
 
 ### Memory and Resource Optimization
 
-The runtime environment is optimized to prevent memory-related crashes:
+The runtime environment is optimized to prevent memory-related crashes with enhanced safeguards:
 
 ```mermaid
 graph TB
@@ -271,6 +292,7 @@ subgraph "Memory Management"
 HeapSize[Heap Size Monitoring]
 GCTrigger[Garbage Collection Trigger]
 ResourceLimit[Resource Limits]
+AutoRemount[Auto Remount Protection]
 end
 subgraph "Optimization Strategies"
 LazyLoading[Lazy Loading]
@@ -284,7 +306,8 @@ GracefulDegradation[Graceful Degradation]
 end
 HeapSize --> GCTrigger
 GCTrigger --> ResourceLimit
-ResourceLimit --> LazyLoading
+ResourceLimit --> AutoRemount
+AutoRemount --> LazyLoading
 LazyLoading --> CodeSplitting
 CodeSplitting --> BundleMinification
 BundleMinification --> TimeoutHandling
@@ -324,16 +347,16 @@ ScreenshotAPI->>Parent : Return Image Data
 - [sandpackConfig.ts:289-293](file://lib/sandbox/sandpackConfig.ts#L289-L293)
 - [RightPanel.tsx:132-173](file://components/ide/RightPanel.tsx#L132-L173)
 
-### Fallback Capture Mechanisms
+### Enhanced Fallback Capture Mechanisms
 
-The system provides multiple capture fallback strategies:
+The system provides multiple capture fallback strategies with improved reliability:
 
-| Capture Method | Trigger Condition | Fallback Behavior | Reliability |
-|----------------|-------------------|-------------------|-------------|
-| Post-Message | Sandpack supports messaging | Direct capture | High |
-| Flag URL | Local iframe capture | Internal preview URL | Medium |
-| External URL | External iframe source | Direct iframe URL | Medium |
-| Timeout | No response within 12s | Null result | Low |
+| Capture Method | Trigger Condition | Fallback Behavior | Reliability | Enhancement |
+|----------------|-------------------|-------------------|-------------|-------------|
+| Post-Message | Sandpack supports messaging | Direct capture | High | Enhanced |
+| Flag URL | Local iframe capture | Internal preview URL | Medium | Improved |
+| External URL | External iframe source | Direct iframe URL | Medium | Refined |
+| Timeout | No response within 12s | Null result | Low | Maintained |
 
 **Section sources**
 - [RightPanel.tsx:143-173](file://components/ide/RightPanel.tsx#L143-L173)
@@ -351,6 +374,7 @@ subgraph "Startup Optimization"
 CodeInjection[Selective Code Injection]
 LazyInitialization[Lazy Initialization]
 ParallelLoading[Parallel Loading]
+AutoRemount[Auto Remount Optimization]
 end
 subgraph "Runtime Optimization"
 MemoryPooling[Memory Pooling]
@@ -364,7 +388,8 @@ ResourceMonitoring[Resource Monitoring]
 end
 CodeInjection --> LazyInitialization
 LazyInitialization --> ParallelLoading
-ParallelLoading --> MemoryPooling
+ParallelLoading --> AutoRemount
+AutoRemount --> MemoryPooling
 MemoryPooling --> RequestDebouncing
 RequestDebouncing --> CacheOptimization
 CacheOptimization --> DependencyPruning
@@ -375,35 +400,38 @@ BundleAnalysis --> ResourceMonitoring
 **Diagram sources**
 - [sandpackConfig.ts:393-450](file://lib/sandbox/sandpackConfig.ts#L393-L450)
 
-### Resource Management
+### Enhanced Resource Management
 
-The system employs sophisticated resource management to prevent memory exhaustion:
+The system employs sophisticated resource management to prevent memory exhaustion with improved safeguards:
 
-| Resource Type | Monitoring Method | Threshold | Recovery Action |
-|---------------|-------------------|-----------|-----------------|
-| Memory Usage | Heap snapshot analysis | 80% threshold | Trigger GC |
-| CPU Usage | Performance metrics | 90% threshold | Pause non-essential tasks |
-| Network Requests | Request queue monitoring | 50 concurrent limit | Queue requests |
-| File System | Virtual FS size tracking | 10MB limit | Purge unused files |
+| Resource Type | Monitoring Method | Threshold | Recovery Action | Enhancement |
+|---------------|-------------------|-----------|-----------------|-------------|
+| Memory Usage | Heap snapshot analysis | 80% threshold | Trigger GC | Enhanced |
+| CPU Usage | Performance metrics | 90% threshold | Pause non-essential tasks | Improved |
+| Network Requests | Request queue monitoring | 50 concurrent limit | Queue requests | Refined |
+| File System | Virtual FS size tracking | 10MB limit | Purge unused files | Enhanced |
+| Code Changes | Microtask queuing | N/A | Prevent cascading renders | New |
 
 **Section sources**
 - [sandpackConfig.ts:393-450](file://lib/sandbox/sandpackConfig.ts#L393-L450)
+- [SandpackPreview.tsx:214-217](file://components/SandpackPreview.tsx#L214-L217)
 
 ## Troubleshooting and Debugging
 
 ### Common Crash Scenarios and Solutions
 
-| Scenario | Symptoms | Root Cause | Solution |
-|----------|----------|------------|----------|
-| Timeout Error | Status remains 'initial' for 30s+ | Too many dependencies | Reduce imports |
-| Memory Crash | Out of memory errors | Large bundle size | Split components |
-| Import Error | "Cannot resolve import" | Unknown package | Use allowed packages |
-| Runtime Error | Component fails to mount | Invalid React syntax | Fix code generation |
-| Infinite Loop | High CPU usage | Recursive rendering | Add memoization |
+| Scenario | Symptoms | Root Cause | Solution | Enhancement |
+|----------|----------|------------|----------|-------------|
+| Timeout Error | Status remains 'initial' for 30s+ | Too many dependencies | Reduce imports + Auto Remount | Enhanced |
+| Memory Crash | Out of memory errors | Large bundle size | Split components + Auto Remount | Improved |
+| Import Error | "Cannot resolve import" | Unknown package | Use allowed packages | Maintained |
+| Runtime Error | Component fails to mount | Invalid React syntax | Fix code generation | Enhanced |
+| Infinite Loop | High CPU usage | Recursive rendering | Add memoization | Improved |
+| Code Refinement Crash | Preview fails after edits | Dead iframe state | Auto Remount mechanism | New |
 
-### Debug Information Collection
+### Enhanced Debug Information Collection
 
-The system captures comprehensive debug information for crash analysis:
+The system captures comprehensive debug information for crash analysis with improved detail:
 
 ```mermaid
 flowchart TD
@@ -415,55 +443,63 @@ GenerateReport --> SendToAnalytics[Send to Analytics]
 LogError --> MonitorMetrics[Monitor Performance Metrics]
 MonitorMetrics --> AnalyzePatterns[Analyze Crash Patterns]
 AnalyzePatterns --> UpdateSafetyRules[Update Safety Rules]
+AutoRemount --> ResetState[Reset Crash State]
+ResetState --> ForceRemount[Force Component Remount]
+ForceRemount --> NewInstance[New Sandpack Instance]
 ```
 
 **Diagram sources**
 - [SandpackPreview.tsx:125-137](file://components/SandpackPreview.tsx#L125-L137)
 
-### Developer Tools Integration
+### Enhanced Developer Tools Integration
 
-The system provides developer-friendly debugging capabilities:
+The system provides developer-friendly debugging capabilities with improved insights:
 
-| Tool | Functionality | Access Method |
-|------|---------------|---------------|
-| Error Console | Display crash details | Click on error message |
-| Code Inspector | View problematic code | Right-click on component |
-| Dependency Viewer | See loaded packages | Preview menu option |
-| Performance Monitor | Track resource usage | Developer panel |
-| Crash History | View recent failures | Settings panel |
+| Tool | Functionality | Access Method | Enhancement |
+|------|---------------|---------------|-------------|
+| Error Console | Display crash details | Click on error message | Enhanced |
+| Code Inspector | View problematic code | Right-click on component | Improved |
+| Dependency Viewer | See loaded packages | Preview menu option | Enhanced |
+| Performance Monitor | Track resource usage | Developer panel | New |
+| Crash History | View recent failures | Settings panel | Enhanced |
+| Auto Remount Log | Track remount events | Console | New |
 
 **Section sources**
 - [SandpackPreview.tsx:168-186](file://components/SandpackPreview.tsx#L168-L186)
 
 ## Best Practices
 
-### Code Generation Guidelines
+### Enhanced Code Generation Guidelines
 
-To minimize crash probability, follow these best practices:
+To minimize crash probability, follow these best practices with improved reliability:
 
 1. **Dependency Management**
    - Use only allowed packages from the whitelist
    - Avoid deep import chains
    - Prefer lightweight alternatives
+   - Monitor for circular dependencies
 
 2. **Component Structure**
    - Keep components small and focused
    - Use proper React patterns
    - Avoid complex lifecycle methods
+   - Implement proper error boundaries
 
 3. **Error Handling**
    - Implement proper try-catch blocks
    - Handle async operations carefully
    - Validate all user inputs
+   - Use queueMicrotask for state updates
 
 4. **Performance Considerations**
    - Use memoization for expensive computations
    - Implement lazy loading for heavy components
    - Optimize rendering performance
+   - Monitor memory usage during refinement
 
-### Runtime Environment Setup
+### Enhanced Runtime Environment Setup
 
-Configure the runtime environment for optimal stability:
+Configure the runtime environment for optimal stability with improved safeguards:
 
 ```mermaid
 graph TB
@@ -472,6 +508,7 @@ AllowedPackages[Allowed Package List]
 MemoryLimits[Memory Limits]
 TimeoutSettings[Timeout Configuration]
 SecurityPolicies[Security Policies]
+AutoRemount[Auto Remount Settings]
 end
 subgraph "Validation Steps"
 ImportValidation[Import Validation]
@@ -489,10 +526,11 @@ AllowedPackages --> ImportValidation
 MemoryLimits --> CodeSanitization
 TimeoutSettings --> DependencyVerification
 SecurityPolicies --> SecurityScan
-ImportValidation --> SafeMode
-CodeSanitization --> Monitoring
-DependencyVerification --> AutoRecovery
-SecurityScan --> Reporting
+AutoRemount --> SafeMode
+ImportValidation --> Monitoring
+CodeSanitization --> AutoRecovery
+DependencyVerification --> Reporting
+SecurityScan --> Monitoring
 ```
 
 **Diagram sources**
@@ -503,10 +541,13 @@ SecurityScan --> Reporting
 
 The Sandbox Runtime Crash Handling system represents a comprehensive solution for maintaining stability in AI-generated UI environments. Through its multi-layered approach combining real-time monitoring, intelligent error containment, and automatic recovery mechanisms, the system ensures reliable operation even when encountering unexpected runtime failures.
 
-Key strengths of the system include:
+Recent enhancements have significantly strengthened the system's reliability, particularly during code refinement scenarios. The enhanced auto-remount mechanism prevents iframe crashes by automatically resetting the runtime environment when code changes are detected, while the 30-second initial state timeout provides additional protection against Nodebox Go runtime exits.
+
+Key strengths of the enhanced system include:
 
 - **Proactive Detection**: Multiple monitoring strategies prevent crashes from going unnoticed
-- **Intelligent Recovery**: Automatic component remounting restores functionality quickly
+- **Intelligent Recovery**: Automatic component remounting with queueMicrotask optimization restores functionality quickly
+- **Enhanced Auto Remount**: Specialized protection against iframe crashes during code refinement
 - **Graceful Degradation**: Informative fallback interfaces maintain user experience
 - **Performance Optimization**: Dynamic dependency management prevents resource exhaustion
 - **Developer Support**: Comprehensive debugging tools facilitate issue resolution
