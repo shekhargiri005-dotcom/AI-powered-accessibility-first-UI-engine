@@ -106,6 +106,14 @@ export default function FeedbackBar({
     }
   }, [barState, fetchAnalytics]);
 
+  // Auto-dismiss "done" toast after 3 seconds
+  useEffect(() => {
+    if (barState === 'done') {
+      const timer = setTimeout(() => setBarState('idle'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [barState]);
+
   const submit = useCallback(async (
     signal:        'thumbs_up' | 'thumbs_down' | 'corrected' | 'discarded',
     note?:         string,
